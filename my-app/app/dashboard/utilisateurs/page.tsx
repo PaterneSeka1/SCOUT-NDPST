@@ -8,7 +8,6 @@ import type { Utilisateur } from '@/hooks/useUtilisateurs'
 
 const ROLES_FILTRE = Object.keys(LABELS_ROLES)
 
-// Ligne squelette pour l'état de chargement
 function SkeletonRow() {
   return (
     <tr>
@@ -21,14 +20,71 @@ function SkeletonRow() {
   )
 }
 
+// Composant séparé afin d'appeler useModifierUtilisateur en haut de composant
+function LigneUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
+  const { mutateAsync, isPending } = useModifierUtilisateur(utilisateur.id)
+
+  const handleToggle = async () => {
+    await mutateAsync({ actif: !utilisateur.actif })
+  }
+
+  return (
+    <tr className="hover:bg-gray-50 transition-colors">
+      <td className="px-4 py-3 font-mono text-gray-700 font-medium">{utilisateur.matricule}</td>
+      <td className="px-4 py-3 text-gray-800 font-medium">
+        {utilisateur.nom} {utilisateur.prenom}
+      </td>
+      <td className="px-4 py-3">
+        <span
+          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+            COULEURS_ROLES[utilisateur.role] ?? 'bg-gray-100 text-gray-700'
+          }`}
+        >
+          {LABELS_ROLES[utilisateur.role] ?? utilisateur.role}
+        </span>
+      </td>
+      <td className="px-4 py-3">
+        {utilisateur.actif ? (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+            Actif
+          </span>
+        ) : (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+            Inactif
+          </span>
+        )}
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/dashboard/utilisateurs/${utilisateur.id}/modifier`}
+            className="text-[#1a4731] hover:underline text-xs font-medium"
+          >
+            Modifier
+          </Link>
+          <span className="text-gray-300">|</span>
+          <button
+            onClick={handleToggle}
+            disabled={isPending}
+            className={`text-xs font-medium transition-colors disabled:opacity-50 ${
+              utilisateur.actif
+                ? 'text-red-600 hover:text-red-700'
+                : 'text-green-600 hover:text-green-700'
+            }`}
+          >
+            {isPending ? '…' : utilisateur.actif ? 'Désactiver' : 'Activer'}
+          </button>
+        </div>
+      </td>
+    </tr>
+  )
+}
+
 export default function UtilisateursPage() {
   const [recherche, setRecherche] = useState('')
   const [rechercheDebounce, setRechercheDebounce] = useState('')
   const [roleFiltre, setRoleFiltre] = useState('')
   const [page, setPage] = useState(1)
-  const [toggling, setToggling] = useState<string | null>(null)
-
-  // Debounce manuel via useEffect
   const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
 
   const handleRechercheChange = (valeur: string) => {
@@ -51,18 +107,6 @@ export default function UtilisateursPage() {
     recherche: rechercheDebounce || undefined,
     role: roleFiltre || undefined,
   })
-
-  const modifierUtilisateur = useModifierUtilisateur('')
-
-  const toggleActif = async (utilisateur: Utilisateur) => {
-    setToggling(utilisateur.id)
-    try {
-      const mutation = useModifierUtilisateurDirect(utilisateur.id)
-      await mutation({ actif: !utilisateur.actif })
-    } finally {
-      setToggling(null)
-    }
-  }
 
   const utilisateurs = data?.utilisateurs ?? []
   const totalPages = data?.totalPages ?? 1
@@ -150,14 +194,7 @@ export default function UtilisateursPage() {
                   </td>
                 </tr>
               ) : (
-                utilisateurs.map((u) => (
-                  <ToggleRow
-                    key={u.id}
-                    utilisateur={u}
-                    toggling={toggling}
-                    onToggle={setToggling}
-                  />
-                ))
+                utilisateurs.map((u) => <LigneUtilisateur key={u.id} utilisateur={u} />)
               )}
             </tbody>
           </table>
@@ -190,83 +227,4 @@ export default function UtilisateursPage() {
       )}
     </div>
   )
-}
-
-// Composant séparé pour isoler la mutation toggle par utilisateur
-function ToggleRow({
-  utilisateur,
-  toggling,
-  onToggle,
-}: {
-  utilisateur: Utilisateur
-  toggling: string | null
-  onToggle: (id: string | null) => void
-}) {
-  const { mutateAsync } = useModifierUtilisateur(utilisateur.id)
-
-  const handleToggle = async () => {
-    onToggle(utilisateur.id)
-    try {
-      await mutateAsync({ actif: !utilisateur.actif })
-    } finally {
-      onToggle(null)
-    }
-  }
-
-  return (
-    <tr className="hover:bg-gray-50 transition-colors">
-      <td className="px-4 py-3 font-mono text-gray-700 font-medium">{utilisateur.matricule}</td>
-      <td className="px-4 py-3 text-gray-800 font-medium">
-        {utilisateur.nom} {utilisateur.prenom}
-      </td>
-      <td className="px-4 py-3">
-        <span
-          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-            COULEURS_ROLES[utilisateur.role] ?? 'bg-gray-100 text-gray-700'
-          }`}
-        >
-          {LABELS_ROLES[utilisateur.role] ?? utilisateur.role}
-        </span>
-      </td>
-      <td className="px-4 py-3">
-        {utilisateur.actif ? (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-            Actif
-          </span>
-        ) : (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
-            Inactif
-          </span>
-        )}
-      </td>
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/dashboard/utilisateurs/${utilisateur.id}/modifier`}
-            className="text-[#1a4731] hover:underline text-xs font-medium"
-          >
-            Modifier
-          </Link>
-          <span className="text-gray-300">|</span>
-          <button
-            onClick={handleToggle}
-            disabled={toggling === utilisateur.id}
-            className={`text-xs font-medium transition-colors disabled:opacity-50 ${
-              utilisateur.actif
-                ? 'text-red-600 hover:text-red-700'
-                : 'text-green-600 hover:text-green-700'
-            }`}
-          >
-            {toggling === utilisateur.id ? '…' : utilisateur.actif ? 'Désactiver' : 'Activer'}
-          </button>
-        </div>
-      </td>
-    </tr>
-  )
-}
-
-// Fonction utilitaire non-hook pour contourner la règle des hooks dans les callbacks
-function useModifierUtilisateurDirect(_id: string) {
-  // Cette fonction n'est pas utilisée directement — voir ToggleRow
-  return async (_data: Record<string, unknown>) => {}
 }
