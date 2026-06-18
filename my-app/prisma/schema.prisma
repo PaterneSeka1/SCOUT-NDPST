@@ -103,8 +103,9 @@ model Utilisateur {
   id        String          @id @default(cuid())
   nom       String
   prenom    String
-  email     String          @unique
-  password  String          // Stocké hashé (bcryptjs)
+  matricule String          @unique
+  email     String?         @unique
+  password  String
   role      RoleUtilisateur
   actif     Boolean         @default(true)
   createdAt DateTime        @default(now())
@@ -115,13 +116,13 @@ model Utilisateur {
   paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
 
   // Relations
-  posteGroupe       PosteGroupe?
-  postesBranche     PosteBranche[]
-  liensParent       LienParentScout[]   // Si rôle PARENT
-  activitesCreees   Activite[]          @relation("ActiviteCreePar")
+  posteGroupe          PosteGroupe?
+  postesBranche        PosteBranche[]
+  liensParent          LienParentScout[]
+  activitesCreees      Activite[]         @relation("ActiviteCreePar")
   progressionsValidees ProgressionScout[] @relation("ProgressionValidePar")
 
-  @@index([email])
+  @@index([matricule])
   @@index([paroisseId])
   @@index([role])
 }

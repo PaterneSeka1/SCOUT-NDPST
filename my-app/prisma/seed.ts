@@ -22,11 +22,12 @@ async function main() {
 
   const passwordAdmin = await hash('Admin1234!', 12)
   const admin = await prisma.utilisateur.upsert({
-    where: { email: 'admin@scout-test.ci' },
+    where: { matricule: 'ADMIN001A' },
     update: {},
     create: {
       nom: 'Administrateur',
       prenom: 'Super',
+      matricule: 'ADMIN001A',
       email: 'admin@scout-test.ci',
       password: passwordAdmin,
       role: 'ADMIN_PAROISSE',
@@ -34,15 +35,16 @@ async function main() {
     },
   })
 
-  console.log(`Utilisateur admin créé : ${admin.email}`)
+  console.log(`Utilisateur admin créé : ${admin.matricule}`)
 
   const passwordChef = await hash('Chef1234!', 12)
   const chef = await prisma.utilisateur.upsert({
-    where: { email: 'chef@scout-test.ci' },
+    where: { matricule: '0545247O' },
     update: {},
     create: {
       nom: 'Kouassi',
       prenom: 'Jean-Baptiste',
+      matricule: '0545247O',
       email: 'chef@scout-test.ci',
       password: passwordChef,
       role: 'CHEF_GROUPE',
@@ -50,7 +52,7 @@ async function main() {
     },
   })
 
-  console.log(`Utilisateur chef créé : ${chef.email}`)
+  console.log(`Utilisateur chef créé : ${chef.matricule}`)
   console.log('\nSeed terminé avec succès.')
 }
 
