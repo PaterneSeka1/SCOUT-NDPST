@@ -103,7 +103,8 @@ model Utilisateur {
   id        String          @id @default(cuid())
   nom       String
   prenom    String
-  matricule String          @unique
+  matricule String?         @unique  // Requis pour chefs/scouts, absent pour parents
+  telephone String?         @unique  // Requis pour parents, optionnel pour les autres
   email     String?         @unique
   password  String
   role      RoleUtilisateur
@@ -123,6 +124,7 @@ model Utilisateur {
   progressionsValidees ProgressionScout[] @relation("ProgressionValidePar")
 
   @@index([matricule])
+  @@index([telephone])
   @@index([paroisseId])
   @@index([role])
 }

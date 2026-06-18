@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [matricule, setMatricule] = useState('')
+  const [identifiant, setIdentifiant] = useState('')
   const [password, setPassword] = useState('')
   const [erreur, setErreur] = useState('')
   const [chargement, setChargement] = useState(false)
@@ -17,7 +17,7 @@ export default function LoginPage() {
     setChargement(true)
 
     const result = await signIn('credentials', {
-      matricule,
+      identifiant,
       password,
       redirect: false,
     })
@@ -25,7 +25,7 @@ export default function LoginPage() {
     setChargement(false)
 
     if (result?.error) {
-      setErreur('Matricule ou mot de passe incorrect.')
+      setErreur('Identifiant ou mot de passe incorrect.')
     } else {
       router.push('/dashboard')
     }
@@ -48,20 +48,20 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label
-                htmlFor="matricule"
+                htmlFor="identifiant"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Matricule
+                Matricule ou numéro de téléphone
               </label>
               <input
-                id="matricule"
+                id="identifiant"
                 type="text"
-                value={matricule}
-                onChange={(e) => setMatricule(e.target.value.toUpperCase())}
+                value={identifiant}
+                onChange={(e) => setIdentifiant(e.target.value)}
                 required
                 autoComplete="username"
-                placeholder="0545247O"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-[#27ae60] focus:border-transparent transition uppercase"
+                placeholder="Ex : 0545247O ou 0712345678"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#27ae60] focus:border-transparent transition"
               />
             </div>
 

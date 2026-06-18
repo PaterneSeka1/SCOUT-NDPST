@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth/next'
 import { hash } from 'bcryptjs'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { genererMatricule } from '@/lib/matricule'
 import { RoleUtilisateur } from '@/app/generated/prisma/client'
 
 export async function GET(request: NextRequest) {
@@ -82,11 +81,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { nom, prenom, email, matricule, role, password } = body as {
+    const { nom, prenom, email, matricule, telephone, role, password } = body as {
       nom?: string
       prenom?: string
       email?: string
-      matricule?: string
+      matricule?: string | null
+      telephone?: string | null
       role?: string
       password?: string
     }
@@ -102,32 +102,51 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Rôle invalide' }, { status: 400 })
     }
 
-    const paroisseId = session.user.paroisseId
-    const matriculeFinal = matricule?.trim() || genererMatricule(paroisseId)
+    const estParent = role === 'PARENT'
 
-    // Verify matricule uniqueness
-    const existingByMatricule = await prisma.utilisateur.findFirst({
-      where: { matricule: matriculeFinal },
-      select: { id: true },
-    })
-    if (existingByMatricule) {
+    if (estParent && !telephone?.trim()) {
       return NextResponse.json(
-        { error: 'Ce matricule est déjà utilisé' },
+        { error: 'Le numéro de téléphone est requis pour un parent' },
         { status: 400 },
       )
     }
 
-    // Verify email uniqueness if provided
-    if (email) {
+    if (!estParent && !matricule?.trim()) {
+      return NextResponse.json(
+        { error: 'Le matricule est requis' },
+        { status: 400 },
+      )
+    }
+
+    const paroisseId = session.user.paroisseId
+
+    if (matricule?.trim()) {
+      const existingByMatricule = await prisma.utilisateur.findUnique({
+        where: { matricule: matricule.trim() },
+        select: { id: true },
+      })
+      if (existingByMatricule) {
+        return NextResponse.json({ error: 'Ce matricule est déjà utilisé' }, { status: 400 })
+      }
+    }
+
+    if (telephone?.trim()) {
+      const existingByTel = await prisma.utilisateur.findUnique({
+        where: { telephone: telephone.trim() },
+        select: { id: true },
+      })
+      if (existingByTel) {
+        return NextResponse.json({ error: 'Ce numéro de téléphone est déjà utilisé' }, { status: 400 })
+      }
+    }
+
+    if (email?.trim()) {
       const existingByEmail = await prisma.utilisateur.findUnique({
-        where: { email },
+        where: { email: email.trim() },
         select: { id: true },
       })
       if (existingByEmail) {
-        return NextResponse.json(
-          { error: 'Cette adresse e-mail est déjà utilisée' },
-          { status: 400 },
-        )
+        return NextResponse.json({ error: 'Cette adresse e-mail est déjà utilisée' }, { status: 400 })
       }
     }
 
@@ -137,8 +156,9 @@ export async function POST(request: NextRequest) {
       data: {
         nom,
         prenom,
-        email: email ?? '',
-        matricule: matriculeFinal,
+        email: email?.trim() || null,
+        matricule: matricule?.trim() || null,
+        telephone: telephone?.trim() || null,
         role: role as RoleUtilisateur,
         password: passwordHache,
         paroisseId,
@@ -148,6 +168,7 @@ export async function POST(request: NextRequest) {
         nom: true,
         prenom: true,
         matricule: true,
+        telephone: true,
         email: true,
         role: true,
         actif: true,

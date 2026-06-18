@@ -34,8 +34,7 @@ async function main() {
       paroisseId: paroisse.id,
     },
   })
-
-  console.log(`Utilisateur admin créé : ${admin.matricule}`)
+  console.log(`Admin créé : matricule=${admin.matricule}`)
 
   const passwordChef = await hash('Chef1234!', 12)
   const chef = await prisma.utilisateur.upsert({
@@ -51,8 +50,22 @@ async function main() {
       paroisseId: paroisse.id,
     },
   })
+  console.log(`Chef créé : matricule=${chef.matricule}`)
 
-  console.log(`Utilisateur chef créé : ${chef.matricule}`)
+  const passwordParent = await hash('Parent1234!', 12)
+  const parent = await prisma.utilisateur.upsert({
+    where: { telephone: '0712345678' },
+    update: {},
+    create: {
+      nom: 'Koné',
+      prenom: 'Marie',
+      telephone: '0712345678',
+      password: passwordParent,
+      role: 'PARENT',
+      paroisseId: paroisse.id,
+    },
+  })
+  console.log(`Parent créé : téléphone=${parent.telephone}`)
   console.log('\nSeed terminé avec succès.')
 }
 

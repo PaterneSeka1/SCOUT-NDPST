@@ -11,7 +11,8 @@ import {
 
 export interface Utilisateur {
   id: string
-  matricule: string
+  matricule: string | null
+  telephone: string | null
   nom: string
   prenom: string
   role: string
@@ -46,7 +47,8 @@ export interface DonneesCreerUtilisateur {
   nom: string
   prenom: string
   email?: string | null
-  matricule?: string
+  matricule?: string | null
+  telephone?: string | null
   role: string
   password: string
 }
@@ -55,6 +57,8 @@ export interface DonneesModifierUtilisateur {
   nom?: string
   prenom?: string
   email?: string | null
+  matricule?: string | null
+  telephone?: string | null
   role?: string
   actif?: boolean
 }
