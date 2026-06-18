@@ -145,11 +145,12 @@ model PosteGroupe {
   paroisseId String
   paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
 
-  @@unique([paroisseId, role], name: "unique_role_par_paroisse", map: "poste_groupe_paroisse_role_unique")
-  // Note : la contrainte @@unique couvre CHEF_GROUPE et ADJOINT_GROUPE naturellement.
-  // Pour ASSISTANT_GROUPE (N possible), on l'exclut via la logique applicative
-  // grâce au partial unique index ci-dessous.
+  // Règle : 1 seul CHEF_GROUPE et 1 seul ADJOINT_GROUPE par paroisse, N ASSISTANT_GROUPE possible.
+  // La contrainte d'unicité pour CHEF et ADJOINT est gérée en logique applicative (service layer).
+  // En migration SQL, un partial unique index peut être ajouté manuellement :
+  //   CREATE UNIQUE INDEX ON "PosteGroupe"("paroisseId", role) WHERE role != 'ASSISTANT_GROUPE';
   @@index([paroisseId])
+  @@index([role])
 }
 
 // ---------------------------------------------------------------------------
@@ -172,7 +173,10 @@ model PosteBranche {
   paroisseId String
   paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
 
-  @@unique([paroisseId, brancheType, role], name: "unique_role_branche_paroisse", map: "poste_branche_paroisse_branche_role_unique")
+  // Règle : 1 seul RESPONSABLE et 1 seul ADJOINT par (brancheType, paroisse), N ASSISTANT possible.
+  // Contrainte RESPONSABLE/ADJOINT gérée en logique applicative.
+  // En migration SQL, partial unique index recommandé :
+  //   CREATE UNIQUE INDEX ON "PosteBranche"("paroisseId", "brancheType", role) WHERE role != 'ASSISTANT';
   @@index([paroisseId])
   @@index([brancheType])
   @@index([utilisateurId])
