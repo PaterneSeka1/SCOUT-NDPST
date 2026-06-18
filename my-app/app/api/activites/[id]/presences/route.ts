@@ -26,45 +26,27 @@ export async function GET(
     where: { activiteId: id },
     include: {
       scout: {
-        select: {
-          id: true,
-          nom: true,
-          prenom: true,
-          numeroAdhesion: true,
-          brancheType: true,
-        },
+        select: { id: true, nom: true, prenom: true, matricule: true, brancheType: true },
       },
     },
+    orderBy: { scout: { nom: 'asc' } },
   })
 
   // Si aucune présence n'existe encore, retourner tous les scouts de la branche concernée
   if (presences.length === 0) {
-    const whereScout: Record<string, unknown> = {
-      paroisseId: session.user.paroisseId,
-    }
+    const whereScout: Record<string, unknown> = { paroisseId: session.user.paroisseId, actif: true }
     if (activite.brancheType) {
       whereScout.brancheType = activite.brancheType
     }
 
     const scouts = await prisma.scout.findMany({
       where: whereScout,
-      select: {
-        id: true,
-        nom: true,
-        prenom: true,
-        numeroAdhesion: true,
-        brancheType: true,
-      },
+      select: { id: true, nom: true, prenom: true, matricule: true, brancheType: true },
       orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
     })
 
     return NextResponse.json(
-      scouts.map((scout) => ({
-        id: null,
-        present: false,
-        commentaire: null,
-        scout,
-      }))
+      scouts.map((scout) => ({ id: null, present: false, commentaire: null, scout }))
     )
   }
 
@@ -99,7 +81,6 @@ export async function POST(
     return NextResponse.json({ error: 'Format invalide' }, { status: 400 })
   }
 
-  // Upsert chaque présence
   const resultats = await Promise.all(
     presences.map((p) =>
       prisma.presence.upsert({
