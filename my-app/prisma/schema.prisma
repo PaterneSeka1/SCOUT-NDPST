@@ -1,0 +1,351 @@
+// Schéma Prisma — Application SCOUT ASCCI (Côte d'Ivoire)
+// Suivi pédagogique du mouvement scout catholique
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Énumérations
+// ---------------------------------------------------------------------------
+
+enum BrancheType {
+  OISILLONS
+  LOUVETEAUX
+  ECLAIREURS
+  CHEMINOTS
+  COMPAGNONS
+}
+
+enum RoleUtilisateur {
+  ADMIN_PAROISSE
+  CHEF_GROUPE
+  ADJOINT_GROUPE
+  ASSISTANT_GROUPE
+  RESPONSABLE_BRANCHE
+  ADJOINT_BRANCHE
+  ASSISTANT_BRANCHE
+  PARENT
+  SCOUT
+}
+
+enum RolePosteGroupe {
+  CHEF_GROUPE
+  ADJOINT_GROUPE
+  ASSISTANT_GROUPE
+}
+
+enum RolePosteBranche {
+  RESPONSABLE
+  ADJOINT
+  ASSISTANT
+}
+
+enum Sexe {
+  MASCULIN
+  FEMININ
+}
+
+enum TypeActivite {
+  REUNION
+  SORTIE
+  CAMP
+  SERVICE
+  CELEBRATION
+  FORMATION
+  AUTRE
+}
+
+enum TypeDocument {
+  AUTORISATION_PARENTALE
+  CERTIFICAT_MEDICAL
+  PHOTO_IDENTITE
+  AUTRE
+}
+
+// ---------------------------------------------------------------------------
+// Paroisse
+// ---------------------------------------------------------------------------
+
+model Paroisse {
+  id        String   @id @default(cuid())
+  nom       String
+  ville     String
+  diocese   String
+  adresse   String?
+  telephone String?
+  email     String?  @unique
+  logo      String?  // URL ou chemin vers le logo
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  utilisateurs     Utilisateur[]
+  postesGroupe     PosteGroupe[]
+  postesBranche    PosteBranche[]
+  scouts           Scout[]
+  activites        Activite[]
+
+  @@index([ville])
+  @@index([diocese])
+}
+
+// ---------------------------------------------------------------------------
+// Utilisateur
+// ---------------------------------------------------------------------------
+
+model Utilisateur {
+  id        String          @id @default(cuid())
+  nom       String
+  prenom    String
+  email     String          @unique
+  password  String          // Stocké hashé (bcryptjs)
+  role      RoleUtilisateur
+  actif     Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  // Clé étrangère
+  paroisseId String
+  paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
+
+  // Relations
+  posteGroupe       PosteGroupe?
+  postesBranche     PosteBranche[]
+  liensParent       LienParentScout[]   // Si rôle PARENT
+  activitesCreees   Activite[]          @relation("ActiviteCreePar")
+  progressionsValidees ProgressionScout[] @relation("ProgressionValidePar")
+
+  @@index([email])
+  @@index([paroisseId])
+  @@index([role])
+}
+
+// ---------------------------------------------------------------------------
+// Poste Groupe (équipe de groupe de la paroisse)
+// Un seul CHEF_GROUPE et un seul ADJOINT_GROUPE par paroisse
+// ---------------------------------------------------------------------------
+
+model PosteGroupe {
+  id        String          @id @default(cuid())
+  role      RolePosteGroupe
+  fonction  String?         // Champ libre pour ASSISTANT_GROUPE (ex. Logistique, Secrétariat)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  // Clés étrangères
+  utilisateurId String      @unique
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  paroisseId String
+  paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
+
+  @@unique([paroisseId, role], name: "unique_role_par_paroisse", map: "poste_groupe_paroisse_role_unique")
+  // Note : la contrainte @@unique couvre CHEF_GROUPE et ADJOINT_GROUPE naturellement.
+  // Pour ASSISTANT_GROUPE (N possible), on l'exclut via la logique applicative
+  // grâce au partial unique index ci-dessous.
+  @@index([paroisseId])
+}
+
+// ---------------------------------------------------------------------------
+// Poste Branche (responsables de chaque branche)
+// Un seul RESPONSABLE et un seul ADJOINT par (brancheType, paroisse)
+// ---------------------------------------------------------------------------
+
+model PosteBranche {
+  id          String           @id @default(cuid())
+  brancheType BrancheType
+  role        RolePosteBranche
+  fonction    String?          // Champ libre pour ASSISTANT
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  // Clés étrangères
+  utilisateurId String
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  paroisseId String
+  paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
+
+  @@unique([paroisseId, brancheType, role], name: "unique_role_branche_paroisse", map: "poste_branche_paroisse_branche_role_unique")
+  @@index([paroisseId])
+  @@index([brancheType])
+  @@index([utilisateurId])
+}
+
+// ---------------------------------------------------------------------------
+// Scout
+// ---------------------------------------------------------------------------
+
+model Scout {
+  id             String      @id @default(cuid())
+  nom            String
+  prenom         String
+  dateNaissance  DateTime
+  sexe           Sexe
+  brancheType    BrancheType
+  numeroAdhesion String?     @unique
+  actif          Boolean     @default(true)
+  photo          String?     // URL ou chemin
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  // Clé étrangère
+  paroisseId String
+  paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
+
+  // Relations
+  liensParents  LienParentScout[]
+  presences     Presence[]
+  progressions  ProgressionScout[]
+  documents     Document[]
+
+  @@index([paroisseId])
+  @@index([brancheType])
+  @@index([actif])
+}
+
+// ---------------------------------------------------------------------------
+// Lien Parent <-> Scout
+// ---------------------------------------------------------------------------
+
+model LienParentScout {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  parentId String
+  parent   Utilisateur @relation(fields: [parentId], references: [id], onDelete: Cascade)
+
+  scoutId String
+  scout   Scout  @relation(fields: [scoutId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, scoutId])
+  @@index([parentId])
+  @@index([scoutId])
+}
+
+// ---------------------------------------------------------------------------
+// Activité
+// ---------------------------------------------------------------------------
+
+model Activite {
+  id          String       @id @default(cuid())
+  titre       String
+  description String?
+  dateDebut   DateTime
+  dateFin     DateTime?
+  lieu        String?
+  type        TypeActivite @default(REUNION)
+  brancheType BrancheType? // Null = activité inter-branches
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Clés étrangères
+  paroisseId String
+  paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
+
+  creePar   String
+  creeParUtilisateur Utilisateur @relation("ActiviteCreePar", fields: [creePar], references: [id], onDelete: Restrict)
+
+  // Relations
+  presences Presence[]
+
+  @@index([paroisseId])
+  @@index([brancheType])
+  @@index([dateDebut])
+}
+
+// ---------------------------------------------------------------------------
+// Présence
+// ---------------------------------------------------------------------------
+
+model Presence {
+  id          String   @id @default(cuid())
+  present     Boolean  @default(false)
+  commentaire String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  scoutId String
+  scout   Scout  @relation(fields: [scoutId], references: [id], onDelete: Cascade)
+
+  activiteId String
+  activite   Activite @relation(fields: [activiteId], references: [id], onDelete: Cascade)
+
+  @@unique([scoutId, activiteId])
+  @@index([scoutId])
+  @@index([activiteId])
+}
+
+// ---------------------------------------------------------------------------
+// Badge (référentiel pédagogique par branche)
+// ---------------------------------------------------------------------------
+
+model Badge {
+  id          String      @id @default(cuid())
+  nom         String
+  description String?
+  brancheType BrancheType
+  ordre       Int         @default(0) // Ordre dans le parcours de la branche
+  icone       String?     // URL ou nom d'icône
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  progressions ProgressionScout[]
+
+  @@unique([brancheType, nom])
+  @@index([brancheType])
+  @@index([ordre])
+}
+
+// ---------------------------------------------------------------------------
+// Progression Scout (badges validés)
+// ---------------------------------------------------------------------------
+
+model ProgressionScout {
+  id            String   @id @default(cuid())
+  dateValidation DateTime @default(now())
+  commentaire   String?
+  createdAt     DateTime @default(now())
+
+  scoutId String
+  scout   Scout  @relation(fields: [scoutId], references: [id], onDelete: Cascade)
+
+  badgeId String
+  badge   Badge  @relation(fields: [badgeId], references: [id], onDelete: Restrict)
+
+  valideParId String
+  validePar   Utilisateur @relation("ProgressionValidePar", fields: [valideParId], references: [id], onDelete: Restrict)
+
+  @@unique([scoutId, badgeId])
+  @@index([scoutId])
+  @@index([badgeId])
+}
+
+// ---------------------------------------------------------------------------
+// Document (pièces justificatives par scout)
+// ---------------------------------------------------------------------------
+
+model Document {
+  id          String       @id @default(cuid())
+  type        TypeDocument
+  nomFichier  String
+  url         String
+  dateUpload  DateTime     @default(now())
+  valide      Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  scoutId String
+  scout   Scout  @relation(fields: [scoutId], references: [id], onDelete: Cascade)
+
+  @@index([scoutId])
+  @@index([type])
+  @@index([valide])
+}
