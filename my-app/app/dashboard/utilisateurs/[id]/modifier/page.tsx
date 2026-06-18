@@ -4,16 +4,11 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { LABELS_ROLES } from '@/lib/roles'
-
-interface Utilisateur {
-  id: string
-  matricule: string
-  nom: string
-  prenom: string
-  email: string | null
-  role: string
-  actif: boolean
-}
+import {
+  useUtilisateur,
+  useModifierUtilisateur,
+  useResetPassword,
+} from '@/hooks/useUtilisateurs'
 
 interface FormInfos {
   nom: string
@@ -46,9 +41,9 @@ export default function ModifierUtilisateurPage() {
   const router = useRouter()
   const id = params.id as string
 
-  // Chargement initial
-  const [chargement, setChargement] = useState(true)
-  const [erreurChargement, setErreurChargement] = useState('')
+  const { data: utilisateur, isLoading, isError } = useUtilisateur(id)
+  const { mutateAsync: modifier, isPending: soumissionInfos } = useModifierUtilisateur(id)
+  const { mutateAsync: resetPassword, isPending: soumissionMdp } = useResetPassword(id)
 
   // Section infos générales
   const [formInfos, setFormInfos] = useState<FormInfos>({
@@ -61,7 +56,6 @@ export default function ModifierUtilisateurPage() {
   const [erreursInfos, setErreursInfos] = useState<FormInfosErrors>({})
   const [erreurServeurInfos, setErreurServeurInfos] = useState('')
   const [succesInfos, setSuccesInfos] = useState(false)
-  const [soumissionInfos, setSoumissionInfos] = useState(false)
 
   // Section mot de passe
   const [formMdp, setFormMdp] = useState<FormMotDePasse>({
@@ -71,41 +65,26 @@ export default function ModifierUtilisateurPage() {
   const [erreursMdp, setErreursMdp] = useState<FormMotDePasseErrors>({})
   const [erreurServeurMdp, setErreurServeurMdp] = useState('')
   const [succesMdp, setSuccesMdp] = useState(false)
-  const [soumissionMdp, setSoumissionMdp] = useState(false)
 
+  // Pré-remplissage du formulaire une fois les données chargées
   useEffect(() => {
-    if (!id) return
-    const charger = async () => {
-      setChargement(true)
-      setErreurChargement('')
-      try {
-        const res = await fetch(`/api/utilisateurs/${id}`)
-        if (res.status === 404) throw new Error('Utilisateur introuvable')
-        if (!res.ok) throw new Error('Erreur lors du chargement')
-        const data: Utilisateur = await res.json()
-        setFormInfos({
-          nom: data.nom,
-          prenom: data.prenom,
-          email: data.email ?? '',
-          role: data.role,
-          actif: data.actif,
-        })
-      } catch (err) {
-        setErreurChargement(err instanceof Error ? err.message : 'Une erreur est survenue')
-      } finally {
-        setChargement(false)
-      }
+    if (utilisateur) {
+      setFormInfos({
+        nom: utilisateur.nom,
+        prenom: utilisateur.prenom,
+        email: utilisateur.email ?? '',
+        role: utilisateur.role,
+        actif: utilisateur.actif,
+      })
     }
-    charger()
-  }, [id])
+  }, [utilisateur])
 
   // Handlers infos générales
   const handleInfosChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value, type } = e.target
-    const val =
-      type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
+    const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     setFormInfos((prev) => ({ ...prev, [name]: val }))
     if (erreursInfos[name as keyof FormInfosErrors]) {
       setErreursInfos((prev) => ({ ...prev, [name]: undefined }))
@@ -127,31 +106,18 @@ export default function ModifierUtilisateurPage() {
     setSuccesInfos(false)
     if (!validerInfos()) return
 
-    setSoumissionInfos(true)
     try {
-      const res = await fetch(`/api/utilisateurs/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nom: formInfos.nom.trim(),
-          prenom: formInfos.prenom.trim(),
-          email: formInfos.email.trim() || null,
-          role: formInfos.role,
-          actif: formInfos.actif,
-        }),
+      await modifier({
+        nom: formInfos.nom.trim(),
+        prenom: formInfos.prenom.trim(),
+        email: formInfos.email.trim() || null,
+        role: formInfos.role,
+        actif: formInfos.actif,
       })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.message ?? 'Erreur lors de la mise à jour')
-      }
       setSuccesInfos(true)
-      setTimeout(() => {
-        router.push(`/dashboard/utilisateurs/${id}`)
-      }, 1500)
+      setTimeout(() => router.push('/dashboard/utilisateurs'), 1500)
     } catch (err) {
       setErreurServeurInfos(err instanceof Error ? err.message : 'Une erreur est survenue')
-    } finally {
-      setSoumissionInfos(false)
     }
   }
 
@@ -186,27 +152,16 @@ export default function ModifierUtilisateurPage() {
     setSuccesMdp(false)
     if (!validerMdp()) return
 
-    setSoumissionMdp(true)
     try {
-      const res = await fetch(`/api/utilisateurs/${id}/password`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: formMdp.motDePasse }),
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.message ?? 'Erreur lors de la réinitialisation')
-      }
+      await resetPassword({ nouveauMotDePasse: formMdp.motDePasse })
       setSuccesMdp(true)
       setFormMdp({ motDePasse: '', confirmation: '' })
     } catch (err) {
       setErreurServeurMdp(err instanceof Error ? err.message : 'Une erreur est survenue')
-    } finally {
-      setSoumissionMdp(false)
     }
   }
 
-  if (chargement) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
         <div className="w-8 h-8 border-4 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
@@ -214,7 +169,7 @@ export default function ModifierUtilisateurPage() {
     )
   }
 
-  if (erreurChargement) {
+  if (isError || !utilisateur) {
     return (
       <div className="space-y-4">
         <Link
@@ -224,7 +179,7 @@ export default function ModifierUtilisateurPage() {
           ← Retour à la liste
         </Link>
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
-          {erreurChargement}
+          Utilisateur introuvable ou erreur lors du chargement.
         </div>
       </div>
     )
@@ -235,10 +190,10 @@ export default function ModifierUtilisateurPage() {
       {/* Navigation */}
       <div className="flex items-center gap-4">
         <Link
-          href={`/dashboard/utilisateurs/${id}`}
+          href="/dashboard/utilisateurs"
           className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
         >
-          ← Retour à la fiche
+          ← Retour à la liste
         </Link>
       </div>
 

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { LABELS_ROLES } from '@/lib/roles'
+import { useCreerUtilisateur } from '@/hooks/useUtilisateurs'
 
 interface FormData {
   nom: string
@@ -23,7 +24,7 @@ interface FormErrors {
   confirmation?: string
 }
 
-function genererMatricule(): string {
+function genererMatriculeClient(): string {
   const chiffres = Math.floor(Math.random() * 9000000 + 1000000).toString()
   const lettre = String.fromCharCode(65 + Math.floor(Math.random() * 26))
   return chiffres + lettre
@@ -33,23 +34,21 @@ const ROLES_LISTE = Object.keys(LABELS_ROLES)
 
 export default function NouvelUtilisateurPage() {
   const router = useRouter()
+  const { mutateAsync, isPending } = useCreerUtilisateur()
 
   const [form, setForm] = useState<FormData>({
     nom: '',
     prenom: '',
     email: '',
-    matricule: genererMatricule(),
+    matricule: genererMatriculeClient(),
     role: '',
     motDePasse: '',
     confirmation: '',
   })
   const [erreurs, setErreurs] = useState<FormErrors>({})
   const [erreurServeur, setErreurServeur] = useState('')
-  const [soumission, setSoumission] = useState(false)
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setForm((prev) => ({ ...prev, [name]: value }))
     if (erreurs[name as keyof FormErrors]) {
@@ -84,31 +83,18 @@ export default function NouvelUtilisateurPage() {
 
     if (!valider()) return
 
-    setSoumission(true)
     try {
-      const res = await fetch('/api/utilisateurs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nom: form.nom.trim(),
-          prenom: form.prenom.trim(),
-          email: form.email.trim() || null,
-          matricule: form.matricule.trim(),
-          role: form.role,
-          password: form.motDePasse,
-        }),
+      await mutateAsync({
+        nom: form.nom.trim(),
+        prenom: form.prenom.trim(),
+        email: form.email.trim() || null,
+        matricule: form.matricule.trim(),
+        role: form.role,
+        password: form.motDePasse,
       })
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.message ?? "Erreur lors de la création de l'utilisateur")
-      }
-
       router.push('/dashboard/utilisateurs')
     } catch (err) {
       setErreurServeur(err instanceof Error ? err.message : 'Une erreur est survenue')
-    } finally {
-      setSoumission(false)
     }
   }
 
@@ -150,9 +136,7 @@ export default function NouvelUtilisateurPage() {
                 erreurs.nom ? 'border-red-400' : 'border-gray-300'
               }`}
             />
-            {erreurs.nom && (
-              <p className="mt-1 text-xs text-red-600">{erreurs.nom}</p>
-            )}
+            {erreurs.nom && <p className="mt-1 text-xs text-red-600">{erreurs.nom}</p>}
           </div>
 
           {/* Prénom */}
@@ -171,9 +155,7 @@ export default function NouvelUtilisateurPage() {
                 erreurs.prenom ? 'border-red-400' : 'border-gray-300'
               }`}
             />
-            {erreurs.prenom && (
-              <p className="mt-1 text-xs text-red-600">{erreurs.prenom}</p>
-            )}
+            {erreurs.prenom && <p className="mt-1 text-xs text-red-600">{erreurs.prenom}</p>}
           </div>
 
           {/* Email */}
@@ -232,9 +214,7 @@ export default function NouvelUtilisateurPage() {
                 </option>
               ))}
             </select>
-            {erreurs.role && (
-              <p className="mt-1 text-xs text-red-600">{erreurs.role}</p>
-            )}
+            {erreurs.role && <p className="mt-1 text-xs text-red-600">{erreurs.role}</p>}
           </div>
 
           {/* Mot de passe */}
@@ -286,10 +266,10 @@ export default function NouvelUtilisateurPage() {
           <div className="flex items-center gap-3 pt-2">
             <button
               type="submit"
-              disabled={soumission}
+              disabled={isPending}
               className="bg-[#1a4731] text-white px-4 py-2 rounded-md hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {soumission ? 'Enregistrement…' : 'Créer l\'utilisateur'}
+              {isPending ? 'Enregistrement…' : "Créer l'utilisateur"}
             </button>
             <Link
               href="/dashboard/utilisateurs"
