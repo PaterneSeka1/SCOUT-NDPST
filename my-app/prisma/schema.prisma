@@ -120,7 +120,8 @@ model Utilisateur {
   posteGroupe          PosteGroupe?
   postesBranche        PosteBranche[]
   liensParent          LienParentScout[]
-  ficheScout           Scout?             // Lien vers la fiche Scout si rôle SCOUT
+  contactsUrgence      ContactUrgence[]   // Contacts d'urgence liés à ce compte
+  ficheScout           Scout?             // Fiche Scout liée (si rôle SCOUT)
   activitesCreees      Activite[]         @relation("ActiviteCreePar")
   progressionsValidees ProgressionScout[] @relation("ProgressionValidePar")
 
@@ -212,14 +213,41 @@ model Scout {
   utilisateur   Utilisateur? @relation(fields: [utilisateurId], references: [id], onDelete: SetNull)
 
   // Relations
-  liensParents  LienParentScout[]
-  presences     Presence[]
-  progressions  ProgressionScout[]
-  documents     Document[]
+  liensParents      LienParentScout[]   // Parents avec compte dans l'application
+  contactsUrgence   ContactUrgence[]    // Contacts d'urgence (avec ou sans compte)
+  presences         Presence[]
+  progressions      ProgressionScout[]
+  documents         Document[]
 
   @@index([paroisseId])
   @@index([brancheType])
   @@index([actif])
+}
+
+// ---------------------------------------------------------------------------
+// Contact d'urgence d'un scout
+// Nom + téléphone à contacter — pas besoin d'avoir un compte dans l'application
+// ---------------------------------------------------------------------------
+
+model ContactUrgence {
+  id        String   @id @default(cuid())
+  nom       String
+  prenom    String?
+  telephone String
+  relation  String?  // Ex : Père, Mère, Tuteur, Oncle...
+  principal Boolean  @default(false) // Contact prioritaire
+
+  scoutId String
+  scout   Scout  @relation(fields: [scoutId], references: [id], onDelete: Cascade)
+
+  // Lien optionnel si ce contact a aussi un compte dans l'application
+  utilisateurId String?
+  utilisateur   Utilisateur? @relation(fields: [utilisateurId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([scoutId])
 }
 
 // ---------------------------------------------------------------------------
