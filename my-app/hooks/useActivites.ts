@@ -23,7 +23,7 @@ export interface PresenceScout {
     id: string
     nom: string
     prenom: string
-    matricule: string | null
+    numeroAdhesion: string | null
     brancheType: string | null
   }
 }
