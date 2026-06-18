@@ -120,6 +120,7 @@ model Utilisateur {
   posteGroupe          PosteGroupe?
   postesBranche        PosteBranche[]
   liensParent          LienParentScout[]
+  ficheScout           Scout?             // Lien vers la fiche Scout si rôle SCOUT
   activitesCreees      Activite[]         @relation("ActiviteCreePar")
   progressionsValidees ProgressionScout[] @relation("ProgressionValidePar")
 
@@ -196,7 +197,7 @@ model Scout {
   dateNaissance DateTime
   sexe          Sexe
   brancheType   BrancheType
-  matricule     String?     @unique  // Ajouté plus tard par le mouvement, pas obligatoire à l'inscription
+  matricule     String?     @unique  // Optionnel à l'inscription, ajouté plus tard
   actif         Boolean     @default(true)
   photo         String?
   createdAt     DateTime    @default(now())
@@ -205,6 +206,10 @@ model Scout {
   // Clé étrangère
   paroisseId String
   paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
+
+  // Compte utilisateur optionnel (certains scouts ont un espace personnel)
+  utilisateurId String?     @unique
+  utilisateur   Utilisateur? @relation(fields: [utilisateurId], references: [id], onDelete: SetNull)
 
   // Relations
   liensParents  LienParentScout[]
