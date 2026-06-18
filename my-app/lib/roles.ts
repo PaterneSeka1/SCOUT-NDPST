@@ -1,3 +1,4 @@
+// Les enfants (scouts) sont gérés via la fiche Scout, pas via un compte Utilisateur
 export const LABELS_ROLES: Record<string, string> = {
   ADMIN_PAROISSE: 'Administrateur',
   CHEF_GROUPE: 'Chef de Groupe',
@@ -7,7 +8,6 @@ export const LABELS_ROLES: Record<string, string> = {
   ADJOINT_BRANCHE: 'Adjoint de Branche',
   ASSISTANT_BRANCHE: 'Assistant de Branche',
   PARENT: 'Parent',
-  SCOUT: 'Scout',
 }
 
 export const COULEURS_ROLES: Record<string, string> = {
@@ -19,5 +19,4 @@ export const COULEURS_ROLES: Record<string, string> = {
   ADJOINT_BRANCHE: 'bg-blue-50 text-blue-700',
   ASSISTANT_BRANCHE: 'bg-indigo-50 text-indigo-700',
   PARENT: 'bg-purple-100 text-purple-800',
-  SCOUT: 'bg-orange-100 text-orange-800',
 }
