@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { hash } from 'bcryptjs'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { RoleUtilisateur } from '@/app/generated/prisma/client'
+import { Prisma, RoleUtilisateur } from '@/app/generated/prisma/client'
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     const paroisseId = session.user.paroisseId
 
-    const where: Parameters<typeof prisma.utilisateur.findMany>[0]['where'] = {
+    const where: Prisma.UtilisateurWhereInput = {
       paroisseId,
       ...(role ? { role: role as RoleUtilisateur } : {}),
       ...(recherche

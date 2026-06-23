@@ -26,9 +26,14 @@ echo ""
 command -v node >/dev/null 2>&1 || err "Node.js n'est pas installé. Télécharge-le sur https://nodejs.org"
 command -v npm  >/dev/null 2>&1 || err "npm n'est pas installé."
 command -v docker >/dev/null 2>&1 || err "Docker n'est pas installé. Télécharge-le sur https://docker.com"
-command -v docker-compose >/dev/null 2>&1 || \
-  docker compose version >/dev/null 2>&1   || \
-  err "docker-compose n'est pas installé."
+
+if docker compose version >/dev/null 2>&1; then
+  COMPOSE=(docker compose)
+elif command -v docker-compose >/dev/null 2>&1; then
+  COMPOSE=(docker-compose)
+else
+  err "Docker Compose n'est pas installé."
+fi
 
 ok "Node.js $(node -v) détecté"
 ok "Docker détecté"
@@ -58,12 +63,11 @@ cd "$SCRIPT_DIR"
 
 # --- Démarrage de la base de données ---
 info "Démarrage de la base de données PostgreSQL..."
-docker compose up -d db 2>/dev/null || docker-compose up -d db
+"${COMPOSE[@]}" up -d db
 
 info "Attente que PostgreSQL soit prêt..."
 TENTATIVES=0
-until docker compose exec -T db pg_isready -U scout -d scout_db >/dev/null 2>&1 || \
-      docker-compose exec -T db pg_isready -U scout -d scout_db >/dev/null 2>&1; do
+until "${COMPOSE[@]}" exec -T db pg_isready -U scout -d scout_db >/dev/null 2>&1; do
   TENTATIVES=$((TENTATIVES + 1))
   if [ $TENTATIVES -gt 30 ]; then
     err "PostgreSQL ne répond pas après 30 secondes. Vérifie Docker."
@@ -75,7 +79,11 @@ ok "PostgreSQL prêt"
 # --- Migrations Prisma ---
 info "Création des tables (migration Prisma)..."
 cd my-app
-npx prisma migrate deploy 2>/dev/null || npx prisma db push --force-reset
+if find prisma/migrations -mindepth 1 -maxdepth 1 -type d 2>/dev/null | read; then
+  npx prisma migrate deploy
+else
+  npx prisma db push
+fi
 ok "Base de données initialisée"
 
 # --- Seed ---

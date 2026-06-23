@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { BrancheType, Sexe } from '@/app/generated/prisma/client'
+import { BrancheType, Prisma, Sexe } from '@/app/generated/prisma/client'
 
 const ROLES_AUTORISES = [
   'ADMIN_PAROISSE',
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 
     const paroisseId = session.user.paroisseId
 
-    const where: Parameters<typeof prisma.scout.findMany>[0]['where'] = {
+    const where: Prisma.ScoutWhereInput = {
       paroisseId,
       ...(branche ? { brancheType: branche as BrancheType } : {}),
       ...(actif !== null ? { actif: actif === 'true' } : {}),

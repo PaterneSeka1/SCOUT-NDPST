@@ -1,14 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useScout, useAttribuerMatricule, useAjouterContact, useSupprimerContact, useCreerCompteScout } from '@/hooks/useScouts'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
 
 export default function FicheScoutPage() {
   const { id } = useParams<{ id: string }>()
-  const router = useRouter()
   const { data: scout, isLoading, isError } = useScout(id)
 
   const { mutateAsync: attribuerMatricule, isPending: matriculeEnCours } = useAttribuerMatricule(id)
@@ -29,6 +28,7 @@ export default function FicheScoutPage() {
   const [telephoneCompte, setTelephoneCompte] = useState('')
   const [erreurCompte, setErreurCompte] = useState('')
   const [succesCompte, setSuccesCompte] = useState('')
+  const [referenceDate] = useState(() => Date.now())
 
   if (isLoading) return (
     <div className="flex items-center justify-center h-48">
@@ -42,13 +42,13 @@ export default function FicheScoutPage() {
     </div>
   )
 
-  const age = Math.floor((Date.now() - new Date(scout.dateNaissance).getTime()) / (1000 * 60 * 60 * 24 * 365))
+  const age = Math.floor((referenceDate - new Date(scout.dateNaissance).getTime()) / (1000 * 60 * 60 * 24 * 365))
 
   const handleAttribuerMatricule = async (e: React.FormEvent) => {
     e.preventDefault()
     setErreurMatricule('')
     try {
-      await attribuerMatricule({ matricule: nouveauMatricule.trim() })
+      await attribuerMatricule(nouveauMatricule.trim())
       setAfficherFormulaireMatricule(false)
       setNouveauMatricule('')
     } catch (err) {

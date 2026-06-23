@@ -65,6 +65,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
+        token.matricule = user.matricule
         token.email = user.email
         token.nom = user.nom
         token.prenom = user.prenom
@@ -75,6 +76,7 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       session.user.id = token.id
+      session.user.matricule = token.matricule
       session.user.email = token.email as string
       session.user.nom = token.nom
       session.user.prenom = token.prenom

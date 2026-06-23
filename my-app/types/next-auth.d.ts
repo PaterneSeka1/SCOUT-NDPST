@@ -4,7 +4,7 @@ declare module 'next-auth' {
   interface Session {
     user: {
       id: string
-      matricule: string
+      matricule: string | null
       role: string
       paroisseId: string
       nom: string
@@ -14,7 +14,7 @@ declare module 'next-auth' {
 
   interface User {
     id: string
-    matricule: string
+    matricule: string | null
     role: string
     paroisseId: string
     nom: string
@@ -25,7 +25,7 @@ declare module 'next-auth' {
 declare module 'next-auth/jwt' {
   interface JWT {
     id: string
-    matricule: string
+    matricule: string | null
     role: string
     paroisseId: string
     nom: string

@@ -16,6 +16,16 @@ err() { echo -e "${ROUGE}✖ $1${RESET}"; exit 1; }
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+command -v docker >/dev/null 2>&1 || err "Docker n'est pas installé. Télécharge-le sur https://docker.com"
+
+if docker compose version >/dev/null 2>&1; then
+  COMPOSE=(docker compose)
+elif command -v docker-compose >/dev/null 2>&1; then
+  COMPOSE=(docker-compose)
+else
+  err "Docker Compose n'est pas installé."
+fi
+
 echo ""
 echo "=================================================="
 echo "  SCOUT ASCCI — Lancement"
@@ -24,14 +34,13 @@ echo ""
 
 # --- Démarrage des conteneurs Docker ---
 info "Démarrage des conteneurs Docker..."
-docker compose up -d db adminer 2>/dev/null || docker-compose up -d db adminer
+"${COMPOSE[@]}" up -d db adminer
 ok "Conteneurs démarrés"
 
 # --- Attente PostgreSQL ---
 info "Attente de PostgreSQL..."
 TENTATIVES=0
-until docker compose exec -T db pg_isready -U scout -d scout_db >/dev/null 2>&1 || \
-      docker-compose exec -T db pg_isready -U scout -d scout_db >/dev/null 2>&1; do
+until "${COMPOSE[@]}" exec -T db pg_isready -U scout -d scout_db >/dev/null 2>&1; do
   TENTATIVES=$((TENTATIVES + 1))
   if [ $TENTATIVES -gt 20 ]; then
     err "PostgreSQL ne répond pas. Lance './setup.sh' si c'est la première fois."
