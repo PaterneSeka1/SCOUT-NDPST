@@ -9,22 +9,50 @@ const LABELS_TYPE: Record<string, string> = {
   CEREMONIE: 'Cérémonie', FORMATION: 'Formation', AUTRE: 'Autre',
 }
 
+const LABELS_STATUT_REUNION: Record<string, { label: string; cls: string; dot: string }> = {
+  PRESENT: { label: 'Présent', cls: 'text-green-700 bg-green-50', dot: 'bg-green-500' },
+  ABSENT: { label: 'Absent', cls: 'text-red-700 bg-red-50', dot: 'bg-red-400' },
+  EXCUSE: { label: 'Excusé', cls: 'text-orange-700 bg-orange-50', dot: 'bg-orange-400' },
+}
+
+const LABELS_ROLE: Record<string, string> = {
+  RESPONSABLE: 'Responsable', ADJOINT: 'Adjoint', ASSISTANT: 'Assistant',
+}
+
+interface PresenceReunion {
+  statut: string
+  jourReunion: { id: string; titre: string | null; dateHeure: string; dateReportee: string | null; brancheType: string | null }
+}
+
 interface Scout {
   id: string; nom: string; prenom: string; brancheType: string
   photo: string | null; actif: boolean; matricule: string | null
-  _count: { presences: number }
+  _count: { presences: number; presencesReunion: number }
   presences: { activite: { titre: string; dateDebut: string; type: string } }[]
+  presencesReunion: PresenceReunion[]
 }
 
 interface Activite {
   id: string; titre: string; dateDebut: string; lieu: string | null; type: string; brancheType: string | null
 }
 
+interface Reunion {
+  id: string; titre: string | null; dateHeure: string; dateReportee: string | null; lieu: string | null; brancheType: string | null
+}
+
+interface Responsable {
+  id: string; brancheType: string; role: string
+  utilisateur: { id: string; prenom: string; nom: string; telephone: string | null; email: string | null; role: string }
+}
+
 export default function PageMesEnfants() {
   const [enfants, setEnfants] = useState<Scout[]>([])
   const [prochaines, setProchaines] = useState<Activite[]>([])
+  const [prochinesReunions, setProchinesReunions] = useState<Reunion[]>([])
+  const [responsables, setResponsables] = useState<Responsable[]>([])
   const [chargement, setChargement] = useState(true)
   const [erreur, setErreur] = useState('')
+  const [ongletEnfant, setOngletEnfant] = useState<Record<string, 'activites' | 'reunions'>>({})
 
   useEffect(() => {
     fetch('/api/mes-enfants')
@@ -33,17 +61,22 @@ export default function PageMesEnfants() {
         if (data.erreur) { setErreur(data.erreur); return }
         setEnfants(data.enfants ?? [])
         setProchaines(data.prochaines ?? [])
+        setProchinesReunions(data.prochinesReunions ?? [])
+        setResponsables(data.responsables ?? [])
       })
       .catch(() => setErreur('Impossible de charger les données'))
       .finally(() => setChargement(false))
   }, [])
+
+  const getOnglet = (scoutId: string) => ongletEnfant[scoutId] ?? 'reunions'
+  const setOnglet = (scoutId: string, val: 'activites' | 'reunions') =>
+    setOngletEnfant((p) => ({ ...p, [scoutId]: val }))
 
   if (chargement) return (
     <div className="flex items-center justify-center h-48">
       <div className="w-6 h-6 border-2 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
     </div>
   )
-
   if (erreur) return <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreur}</div>
 
   return (
@@ -60,12 +93,16 @@ export default function PageMesEnfants() {
           <p className="text-xs text-gray-400 mt-1">Contactez un administrateur pour associer vos enfants</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="space-y-4">
           {enfants.map((scout) => {
             const [bgCls, textCls] = (COULEURS_BRANCHES[scout.brancheType] ?? 'bg-gray-100 text-gray-700').split(' ')
+            const onglet = getOnglet(scout.id)
+            const responsablesBranche = responsables.filter((r) => r.brancheType === scout.brancheType)
+
             return (
               <div key={scout.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <div className="p-5">
+                {/* En-tête scout */}
+                <div className="p-5 pb-4">
                   <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center text-xl font-bold text-gray-500 flex-shrink-0 overflow-hidden">
                       {scout.photo ? <img src={scout.photo} className="w-full h-full object-cover" alt="" /> : `${scout.prenom[0]}${scout.nom[0]}`}
@@ -83,34 +120,153 @@ export default function PageMesEnfants() {
                     </div>
                     <Link href={`/dashboard/scouts/${scout.id}`}
                       className="flex-shrink-0 text-xs text-[#1a4731] border border-[#1a4731]/30 px-3 py-1.5 rounded-lg hover:bg-[#1a4731]/5 transition-colors">
-                      Voir la fiche
+                      Fiche
                     </Link>
                   </div>
+                </div>
 
-                  <div className="mt-4 pt-4 border-t border-gray-100">
-                    <p className="text-xs font-medium text-gray-500 mb-2">
-                      {scout._count.presences} présence{scout._count.presences > 1 ? 's' : ''} au total
-                    </p>
-                    {scout.presences.length === 0 ? (
-                      <p className="text-xs text-gray-400 italic">Aucune participation enregistrée</p>
-                    ) : (
-                      <div className="space-y-1.5">
-                        {scout.presences.slice(0, 4).map((p, i) => (
-                          <div key={i} className="flex items-center gap-2 text-xs text-gray-600">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0" />
-                            <span className="truncate">{p.activite.titre}</span>
-                            <span className="flex-shrink-0 text-gray-400">
-                              {new Date(p.activite.dateDebut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                            </span>
+                {/* Onglets présences */}
+                <div className="border-t border-gray-100">
+                  <div className="flex px-5 gap-1 pt-3">
+                    {([['reunions', `Réunions (${scout._count.presencesReunion})`], ['activites', `Activités (${scout._count.presences})`]] as const).map(([k, label]) => (
+                      <button key={k} onClick={() => setOnglet(scout.id, k)}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${onglet === k ? 'bg-[#1a4731] text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="px-5 py-4">
+                    {onglet === 'reunions' && (
+                      <>
+                        {scout.presencesReunion.length === 0 ? (
+                          <p className="text-xs text-gray-400 italic">Aucune réunion enregistrée</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {scout.presencesReunion.map((pr, i) => {
+                              const date = new Date(pr.jourReunion.dateReportee ?? pr.jourReunion.dateHeure)
+                              const cfg = LABELS_STATUT_REUNION[pr.statut] ?? LABELS_STATUT_REUNION.ABSENT
+                              return (
+                                <div key={i} className="flex items-center gap-3 text-xs">
+                                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot}`} />
+                                  <span className="text-gray-500 flex-shrink-0 w-20">
+                                    {date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                                  </span>
+                                  <span className="flex-1 text-gray-700 truncate">
+                                    {pr.jourReunion.titre || `Réunion ${pr.jourReunion.brancheType ? (LABELS_BRANCHES[pr.jourReunion.brancheType] ?? pr.jourReunion.brancheType) : ''}`}
+                                  </span>
+                                  <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.cls}`}>
+                                    {cfg.label}
+                                  </span>
+                                </div>
+                              )
+                            })}
                           </div>
-                        ))}
-                      </div>
+                        )}
+                      </>
+                    )}
+
+                    {onglet === 'activites' && (
+                      <>
+                        {scout.presences.length === 0 ? (
+                          <p className="text-xs text-gray-400 italic">Aucune participation enregistrée</p>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {scout.presences.slice(0, 5).map((p, i) => (
+                              <div key={i} className="flex items-center gap-2 text-xs text-gray-600">
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0" />
+                                <span className="truncate">{p.activite.titre}</span>
+                                <span className="flex-shrink-0 text-gray-400">
+                                  {new Date(p.activite.dateDebut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
+
+                {/* Responsables de la branche */}
+                {responsablesBranche.length > 0 && (
+                  <div className="border-t border-gray-100 px-5 py-4 bg-gray-50/50">
+                    <p className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wide">
+                      Responsables {LABELS_BRANCHES[scout.brancheType] ?? scout.brancheType}
+                    </p>
+                    <div className="space-y-2">
+                      {responsablesBranche.map((r) => (
+                        <div key={r.id} className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-[#1a4731]/10 flex items-center justify-center text-xs font-bold text-[#1a4731] flex-shrink-0">
+                            {r.utilisateur.prenom[0]}{r.utilisateur.nom[0]}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-800">
+                              {r.utilisateur.prenom} {r.utilisateur.nom}
+                            </p>
+                            <p className="text-xs text-gray-400">{LABELS_ROLE[r.role] ?? r.role}</p>
+                          </div>
+                          <div className="flex-shrink-0 flex gap-2">
+                            {r.utilisateur.telephone && (
+                              <a href={`tel:${r.utilisateur.telephone}`}
+                                className="w-7 h-7 rounded-lg bg-[#1a4731]/10 flex items-center justify-center hover:bg-[#1a4731]/20 transition-colors"
+                                title={r.utilisateur.telephone}>
+                                <svg className="w-3.5 h-3.5 text-[#1a4731]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                </svg>
+                              </a>
+                            )}
+                            {r.utilisateur.email && (
+                              <a href={`mailto:${r.utilisateur.email}`}
+                                className="w-7 h-7 rounded-lg bg-[#1a4731]/10 flex items-center justify-center hover:bg-[#1a4731]/20 transition-colors"
+                                title={r.utilisateur.email}>
+                                <svg className="w-3.5 h-3.5 text-[#1a4731]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Prochaines réunions */}
+      {prochinesReunions.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
+          <h2 className="text-sm font-semibold text-gray-800 mb-4">Prochaines réunions</h2>
+          <div className="space-y-3">
+            {prochinesReunions.map((r) => {
+              const date = new Date(r.dateReportee ?? r.dateHeure)
+              return (
+                <div key={r.id} className="flex items-center gap-4">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[#1a4731]/10 flex flex-col items-center justify-center">
+                    <span className="text-xs font-bold text-[#1a4731] leading-none">
+                      {date.toLocaleDateString('fr-FR', { day: '2-digit' })}
+                    </span>
+                    <span className="text-xs text-[#1a4731]/70 leading-none">
+                      {date.toLocaleDateString('fr-FR', { month: 'short' })}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {r.titre || `Réunion ${r.brancheType ? (LABELS_BRANCHES[r.brancheType] ?? r.brancheType) : ''}`}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                      {r.lieu ? ` · ${r.lieu}` : ''}
+                    </p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 
@@ -121,11 +277,11 @@ export default function PageMesEnfants() {
           <div className="space-y-3">
             {prochaines.map((a) => (
               <div key={a.id} className="flex items-center gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[#1a4731]/10 flex flex-col items-center justify-center">
-                  <span className="text-xs font-bold text-[#1a4731] leading-none">
+                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[#f39c12]/10 flex flex-col items-center justify-center">
+                  <span className="text-xs font-bold text-[#f39c12] leading-none">
                     {new Date(a.dateDebut).toLocaleDateString('fr-FR', { day: '2-digit' })}
                   </span>
-                  <span className="text-xs text-[#1a4731]/70 leading-none">
+                  <span className="text-xs text-[#f39c12]/70 leading-none">
                     {new Date(a.dateDebut).toLocaleDateString('fr-FR', { month: 'short' })}
                   </span>
                 </div>

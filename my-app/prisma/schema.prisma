@@ -68,6 +68,19 @@ enum TypeDocument {
   AUTRE
 }
 
+enum StatutReunion {
+  PLANIFIEE
+  REPORTEE
+  ANNULEE
+  TERMINEE
+}
+
+enum StatutPresenceReunion {
+  PRESENT
+  ABSENT
+  EXCUSE
+}
+
 // ---------------------------------------------------------------------------
 // Paroisse
 // ---------------------------------------------------------------------------
@@ -92,6 +105,8 @@ model Paroisse {
   postesBranche    PosteBranche[]
   scouts           Scout[]
   activites        Activite[]
+  joursReunion     JourReunion[]
+  configsReunion   ConfigReunionBranche[]
 
   @@index([ville])
   @@index([diocese])
@@ -119,13 +134,15 @@ model Utilisateur {
   paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
 
   // Relations
-  posteGroupe          PosteGroupe?
-  postesBranche        PosteBranche[]
-  liensParent          LienParentScout[]
-  contactsUrgence      ContactUrgence[]   // Contacts d'urgence liés à ce compte
-  ficheScout           Scout?             // Fiche Scout liée (si rôle SCOUT)
-  activitesCreees      Activite[]         @relation("ActiviteCreePar")
-  progressionsValidees ProgressionScout[] @relation("ProgressionValidePar")
+  posteGroupe               PosteGroupe?
+  postesBranche             PosteBranche[]
+  liensParent               LienParentScout[]
+  contactsUrgence           ContactUrgence[]        // Contacts d'urgence liés à ce compte
+  ficheScout                Scout?                  // Fiche Scout liée (si rôle SCOUT)
+  activitesCreees           Activite[]              @relation("ActiviteCreePar")
+  progressionsValidees      ProgressionScout[]      @relation("ProgressionValidePar")
+  joursReunionCrees         JourReunion[]           @relation("JourReunionCreePar")
+  presencesReunionMarquees  PresenceReunion[]       @relation("PresenceReunionMarquePar")
 
   @@index([matricule])
   @@index([telephone])
@@ -218,6 +235,7 @@ model Scout {
   liensParents      LienParentScout[]   // Parents avec compte dans l'application
   contactsUrgence   ContactUrgence[]    // Contacts d'urgence (avec ou sans compte)
   presences         Presence[]
+  presencesReunion  PresenceReunion[]
   progressions      ProgressionScout[]
   documents         Document[]
 
@@ -390,4 +408,81 @@ model Document {
   @@index([scoutId])
   @@index([type])
   @@index([valide])
+}
+
+// ---------------------------------------------------------------------------
+// Jour de réunion
+// ---------------------------------------------------------------------------
+
+model JourReunion {
+  id           String        @id @default(cuid())
+  brancheType  BrancheType?  // null = toutes branches
+  titre        String?
+  dateHeure    DateTime
+  dureeMinutes Int?
+  lieu         String?
+  statut       StatutReunion @default(PLANIFIEE)
+  dateReportee DateTime?     // nouvelle date si statut = REPORTEE
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  paroisseId String
+  paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
+
+  creePar            String
+  creeParUtilisateur Utilisateur @relation("JourReunionCreePar", fields: [creePar], references: [id], onDelete: Restrict)
+
+  presences PresenceReunion[]
+
+  @@index([paroisseId])
+  @@index([brancheType])
+  @@index([dateHeure])
+  @@index([statut])
+}
+
+// ---------------------------------------------------------------------------
+// Présence à une réunion
+// ---------------------------------------------------------------------------
+
+model PresenceReunion {
+  id        String                @id @default(cuid())
+  statut    StatutPresenceReunion @default(ABSENT)
+  note      String?
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+
+  jourReunionId String
+  jourReunion   JourReunion @relation(fields: [jourReunionId], references: [id], onDelete: Cascade)
+
+  scoutId String
+  scout   Scout @relation(fields: [scoutId], references: [id], onDelete: Cascade)
+
+  marqueParId String?
+  marquePar   Utilisateur? @relation("PresenceReunionMarquePar", fields: [marqueParId], references: [id], onDelete: SetNull)
+
+  @@unique([jourReunionId, scoutId])
+  @@index([jourReunionId])
+  @@index([scoutId])
+}
+
+// ---------------------------------------------------------------------------
+// Configuration des jours de réunion par branche (permanente, toutes années)
+// ---------------------------------------------------------------------------
+
+model ConfigReunionBranche {
+  id           String      @id @default(cuid())
+  brancheType  BrancheType
+  jourSemaine  Int         // 0=dim, 1=lun, 2=mar, 3=mer, 4=jeu, 5=ven, 6=sam
+  heureDebut   String      // "09:00"
+  dureeMinutes Int         @default(90)
+  lieu         String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  paroisseId String
+  paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Cascade)
+
+  @@unique([paroisseId, brancheType])
+  @@index([paroisseId])
 }

@@ -6,18 +6,21 @@ import { useSession } from 'next-auth/react'
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
+const LABELS_TYPE: Record<string, string> = {
+  REUNION: 'Réunion', SORTIE: 'Sortie', CAMP: 'Camp', MESSE: 'Messe',
+  CEREMONIE: 'Cérémonie', FORMATION: 'Formation', AUTRE: 'Autre',
+}
+
 interface Paroisse {
-  id: string
-  nom: string
-  ville: string
-  diocese: string
-  ocean: string | null
-  doyenne: string | null
-  adresse: string | null
-  telephone: string | null
-  email: string | null
-  logo: string | null
+  id: string; nom: string; ville: string; diocese: string
+  ocean: string | null; doyenne: string | null
+  adresse: string | null; telephone: string | null; email: string | null; logo: string | null
   _count: { scouts: number; utilisateurs: number; activites: number }
+}
+
+interface Activite {
+  id: string; titre: string; dateDebut: string; dateFin: string | null
+  lieu: string | null; type: string; brancheType: string | null
 }
 
 interface FormParoisse {
@@ -28,33 +31,44 @@ interface FormParoisse {
 
 export default function PageParoisse() {
   const { data: session } = useSession()
-  const estAdmin = session?.user?.role === 'ADMIN_PAROISSE'
+  const role = session?.user?.role
+  const estAdmin = role === 'ADMIN_PAROISSE'
+  const estChefGroupe = role === 'CHEF_GROUPE'
+  const estParent = role === 'PARENT'
+  const voitStatsDetaillees = estAdmin || estChefGroupe
 
   const [paroisse, setParoisse] = useState<Paroisse | null>(null)
+  const [activitesAVenir, setActivitesAVenir] = useState<Activite[]>([])
   const [chargement, setChargement] = useState(true)
   const [erreur, setErreur] = useState('')
 
   const [modeEdition, setModeEdition] = useState(false)
-  const [form, setForm] = useState<FormParoisse>({ nom: '', ville: '', diocese: '', adresse: '', telephone: '', email: '' })
+  const [form, setForm] = useState<FormParoisse>({ nom: '', ville: '', diocese: '', ocean: '', doyenne: '', adresse: '', telephone: '', email: '' })
   const [soumission, setSoumission] = useState(false)
   const [succes, setSucces] = useState(false)
   const [erreurForm, setErreurForm] = useState('')
 
-  // Upload logo
   const [logoPreview, setLogoPreview] = useState('')
   const [uploadLogo, setUploadLogo] = useState(false)
   const [erreurLogo, setErreurLogo] = useState('')
 
   useEffect(() => {
-    fetch('/api/paroisse')
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.erreur) { setErreur(data.erreur); return }
-        setParoisse(data)
-        setForm({ nom: data.nom, ville: data.ville, diocese: data.diocese, ocean: data.ocean ?? '', doyenne: data.doyenne ?? '', adresse: data.adresse ?? '', telephone: data.telephone ?? '', email: data.email ?? '' })
-        if (data.logo) setLogoPreview(data.logo)
+    Promise.all([
+      fetch('/api/paroisse').then((r) => r.json()),
+      fetch('/api/activites?page=1&limite=50').then((r) => r.json()),
+    ]).then(([paroisseData, activitesData]) => {
+      if (paroisseData.erreur) { setErreur(paroisseData.erreur); return }
+      setParoisse(paroisseData)
+      setForm({ nom: paroisseData.nom, ville: paroisseData.ville, diocese: paroisseData.diocese, ocean: paroisseData.ocean ?? '', doyenne: paroisseData.doyenne ?? '', adresse: paroisseData.adresse ?? '', telephone: paroisseData.telephone ?? '', email: paroisseData.email ?? '' })
+      if (paroisseData.logo) setLogoPreview(paroisseData.logo)
+
+      const maintenant = new Date()
+      const aVenir = (activitesData.activites ?? []).filter((a: Activite) => {
+        const fin = a.dateFin ? new Date(a.dateFin) : new Date(a.dateDebut)
+        return fin >= maintenant
       })
-      .catch(() => setErreur('Impossible de charger les informations de la paroisse'))
+      setActivitesAVenir(aVenir)
+    }).catch(() => setErreur('Impossible de charger les informations'))
       .finally(() => setChargement(false))
   }, [])
 
@@ -70,7 +84,6 @@ export default function PageParoisse() {
       const res = await fetch('/api/upload', { method: 'POST', body: fd })
       const data = await res.json()
       if (!res.ok) { setErreurLogo(data.erreur ?? 'Erreur upload'); setLogoPreview(paroisse?.logo ?? ''); return }
-      // Enregistre immédiatement le nouveau logo
       await fetch('/api/paroisse', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ logo: data.url }) })
       setParoisse((p) => p ? { ...p, logo: data.url } : p)
     } catch {
@@ -111,10 +124,7 @@ export default function PageParoisse() {
     </div>
   )
 
-  if (erreur) return (
-    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreur}</div>
-  )
-
+  if (erreur) return <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreur}</div>
   if (!paroisse) return null
 
   return (
@@ -122,7 +132,7 @@ export default function PageParoisse() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Ma paroisse</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Informations et statistiques du groupe scout</p>
+          <p className="text-sm text-gray-500 mt-0.5">Informations du groupe scout</p>
         </div>
         {estAdmin && !modeEdition && (
           <button onClick={() => setModeEdition(true)}
@@ -138,24 +148,31 @@ export default function PageParoisse() {
       {succes && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">Informations mises à jour avec succès.</div>}
 
       {/* Statistiques */}
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: 'Scouts', valeur: paroisse._count.scouts, couleur: 'bg-[#1a4731]' },
-          { label: 'Utilisateurs', valeur: paroisse._count.utilisateurs, couleur: 'bg-[#27ae60]' },
-          { label: 'Activités', valeur: paroisse._count.activites, couleur: 'bg-[#f39c12]' },
-        ].map(({ label, valeur, couleur }) => (
-          <div key={label} className={`${couleur} text-white rounded-xl p-4 text-center`}>
-            <p className="text-2xl sm:text-3xl font-bold">{valeur}</p>
-            <p className="text-xs sm:text-sm opacity-90 mt-0.5">{label}</p>
+      {!estParent && (
+        <div className={`grid gap-3 ${voitStatsDetaillees ? 'grid-cols-3' : 'grid-cols-1'}`}>
+          {voitStatsDetaillees && (
+            <>
+              <div className="bg-[#1a4731] text-white rounded-xl p-4 text-center">
+                <p className="text-2xl sm:text-3xl font-bold">{paroisse._count.scouts}</p>
+                <p className="text-xs sm:text-sm opacity-90 mt-0.5">Scouts</p>
+              </div>
+              <div className="bg-[#27ae60] text-white rounded-xl p-4 text-center">
+                <p className="text-2xl sm:text-3xl font-bold">{paroisse._count.utilisateurs}</p>
+                <p className="text-xs sm:text-sm opacity-90 mt-0.5">Utilisateurs</p>
+              </div>
+            </>
+          )}
+          <div className="bg-[#f39c12] text-white rounded-xl p-4 text-center">
+            <p className="text-2xl sm:text-3xl font-bold">{paroisse._count.activites}</p>
+            <p className="text-xs sm:text-sm opacity-90 mt-0.5">Activités</p>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
 
       {/* Carte identité */}
       {!modeEdition ? (
         <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
           <div className="flex items-start gap-5">
-            {/* Logo */}
             <div className="flex-shrink-0">
               <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl border-2 border-dashed border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center relative group">
                 {logoPreview ? (
@@ -225,7 +242,6 @@ export default function PageParoisse() {
           </div>
         </div>
       ) : (
-        /* Formulaire d'édition */
         <form onSubmit={handleSubmit}>
           <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">
             <h2 className="text-sm font-semibold text-gray-800 border-b border-gray-100 pb-3">Modifier les informations</h2>
@@ -288,6 +304,42 @@ export default function PageParoisse() {
           </div>
         </form>
       )}
+
+      {/* Activités à venir — visible pour tous les rôles */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
+        <h2 className="text-sm font-semibold text-gray-800 mb-4">Prochaines activités</h2>
+        {activitesAVenir.length === 0 ? (
+          <p className="text-sm text-gray-400 italic text-center py-4">Aucune activité à venir pour le moment</p>
+        ) : (
+          <div className="space-y-3">
+            {activitesAVenir.map((a) => {
+              const debut = new Date(a.dateDebut)
+              return (
+                <div key={a.id} className="flex items-center gap-4 py-2 border-b border-gray-50 last:border-0">
+                  <div className="flex-shrink-0 w-11 h-11 rounded-xl bg-[#1a4731]/10 flex flex-col items-center justify-center">
+                    <span className="text-xs font-bold text-[#1a4731] leading-none">
+                      {debut.toLocaleDateString('fr-FR', { day: '2-digit' })}
+                    </span>
+                    <span className="text-xs text-[#1a4731]/70 leading-none mt-0.5">
+                      {debut.toLocaleDateString('fr-FR', { month: 'short' })}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{a.titre}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {LABELS_TYPE[a.type] ?? a.type}
+                      {a.lieu ? ` · ${a.lieu}` : ''}
+                    </p>
+                  </div>
+                  <span className="flex-shrink-0 text-xs bg-[#1a4731]/10 text-[#1a4731] px-2 py-0.5 rounded-full font-medium">
+                    {debut.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

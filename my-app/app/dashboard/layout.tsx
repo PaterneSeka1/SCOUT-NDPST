@@ -21,6 +21,7 @@ function getMenuItems(role: string): MenuItem[] {
         { label: 'Branches', href: '/dashboard/branches', icone: '🌿' },
         { label: 'Scouts', href: '/dashboard/scouts', icone: '⚜️' },
         { label: 'Activités', href: '/dashboard/activites', icone: '📅' },
+        { label: 'Réunions', href: '/dashboard/reunions', icone: '🗓️' },
         { label: 'Rapports', href: '/dashboard/rapports', icone: '📈' },
       ]
     case 'CHEF_GROUPE':
@@ -31,34 +32,41 @@ function getMenuItems(role: string): MenuItem[] {
         { label: 'Branches', href: '/dashboard/branches', icone: '🌿' },
         { label: 'Scouts', href: '/dashboard/scouts', icone: '⚜️' },
         { label: 'Activités', href: '/dashboard/activites', icone: '📅' },
+        { label: 'Réunions', href: '/dashboard/reunions', icone: '🗓️' },
         { label: 'Rapports', href: '/dashboard/rapports', icone: '📈' },
       ]
     case 'ADJOINT_GROUPE':
     case 'ASSISTANT_GROUPE':
       return [
         { label: 'Tableau de bord', href: '/dashboard', icone: '📊' },
+        { label: 'Paroisse', href: '/dashboard/paroisse', icone: '⛪' },
         { label: 'Branches', href: '/dashboard/branches', icone: '🌿' },
         { label: 'Scouts', href: '/dashboard/scouts', icone: '⚜️' },
         { label: 'Activités', href: '/dashboard/activites', icone: '📅' },
+        { label: 'Réunions', href: '/dashboard/reunions', icone: '🗓️' },
       ]
     case 'RESPONSABLE_BRANCHE':
     case 'ADJOINT_BRANCHE':
     case 'ASSISTANT_BRANCHE':
       return [
         { label: 'Tableau de bord', href: '/dashboard', icone: '📊' },
+        { label: 'Paroisse', href: '/dashboard/paroisse', icone: '⛪' },
         { label: 'Ma branche', href: '/dashboard/ma-branche', icone: '🌿' },
         { label: 'Scouts', href: '/dashboard/scouts', icone: '⚜️' },
         { label: 'Activités', href: '/dashboard/activites', icone: '📅' },
+        { label: 'Réunions', href: '/dashboard/reunions', icone: '🗓️' },
         { label: 'Présences', href: '/dashboard/presences', icone: '✅' },
       ]
     case 'PARENT':
       return [
         { label: 'Tableau de bord', href: '/dashboard', icone: '📊' },
+        { label: 'Paroisse', href: '/dashboard/paroisse', icone: '⛪' },
         { label: 'Mes enfants', href: '/dashboard/mes-enfants', icone: '👨‍👧‍👦' },
       ]
     case 'SCOUT':
       return [
         { label: 'Tableau de bord', href: '/dashboard', icone: '📊' },
+        { label: 'Paroisse', href: '/dashboard/paroisse', icone: '⛪' },
         { label: 'Ma progression', href: '/dashboard/ma-progression', icone: '🏅' },
       ]
     default:

@@ -23,10 +23,36 @@ export async function GET() {
             orderBy: { activite: { dateDebut: 'desc' } },
             take: 5,
           },
-          _count: { select: { presences: true } },
+          presencesReunion: {
+            include: {
+              jourReunion: {
+                select: { id: true, titre: true, dateHeure: true, dateReportee: true, brancheType: true },
+              },
+            },
+            orderBy: { jourReunion: { dateHeure: 'desc' } },
+            take: 8,
+          },
+          _count: { select: { presences: true, presencesReunion: true } },
         },
       },
     },
+  })
+
+  const enfants = liens.map((l) => l.scout)
+
+  // Responsables de chaque branche représentée
+  const branches = [...new Set(enfants.map((s) => s.brancheType))]
+  const responsables = await prisma.posteBranche.findMany({
+    where: {
+      paroisseId: session.user.paroisseId ?? undefined,
+      brancheType: { in: branches as any[] },
+    },
+    include: {
+      utilisateur: {
+        select: { id: true, prenom: true, nom: true, telephone: true, email: true, role: true },
+      },
+    },
+    orderBy: { role: 'asc' },
   })
 
   // Prochaines activités de la paroisse
@@ -40,5 +66,18 @@ export async function GET() {
     select: { id: true, titre: true, dateDebut: true, lieu: true, type: true, brancheType: true },
   })
 
-  return NextResponse.json({ enfants: liens.map((l) => l.scout), prochaines })
+  // Prochaines réunions
+  const prochinesReunions = await prisma.jourReunion.findMany({
+    where: {
+      paroisseId: session.user.paroisseId ?? undefined,
+      statut: { in: ['PLANIFIEE', 'REPORTEE'] },
+      dateHeure: { gte: new Date() },
+      ...(branches.length > 0 ? { brancheType: { in: branches as any[] } } : {}),
+    },
+    orderBy: { dateHeure: 'asc' },
+    take: 5,
+    select: { id: true, titre: true, dateHeure: true, dateReportee: true, lieu: true, brancheType: true },
+  })
+
+  return NextResponse.json({ enfants, prochaines, prochinesReunions, responsables })
 }
