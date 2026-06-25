@@ -45,7 +45,7 @@ export async function GET() {
   const responsables = await prisma.posteBranche.findMany({
     where: {
       paroisseId: session.user.paroisseId ?? undefined,
-      brancheType: { in: branches as any[] },
+      brancheType: { in: branches as never[] },
     },
     include: {
       utilisateur: {
@@ -72,7 +72,7 @@ export async function GET() {
       paroisseId: session.user.paroisseId ?? undefined,
       statut: { in: ['PLANIFIEE', 'REPORTEE'] },
       dateHeure: { gte: new Date() },
-      ...(branches.length > 0 ? { brancheType: { in: branches as any[] } } : {}),
+      ...(branches.length > 0 ? { brancheType: { in: branches as never[] } } : {}),
     },
     orderBy: { dateHeure: 'asc' },
     take: 5,

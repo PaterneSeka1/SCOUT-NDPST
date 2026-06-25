@@ -4,6 +4,8 @@ import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
+import { ParoisseLogoImage } from '@/app/components/ParoisseLogoImage'
+import { useSiteInfo } from '@/app/components/useSiteInfo'
 
 type MenuItem = {
   label: string
@@ -23,6 +25,7 @@ function getMenuItems(role: string): MenuItem[] {
         { label: 'Activités', href: '/dashboard/activites', icone: '📅' },
         { label: 'Réunions', href: '/dashboard/reunions', icone: '🗓️' },
         { label: 'Rapports', href: '/dashboard/rapports', icone: '📈' },
+        { label: 'Apparence du site', href: '/dashboard/site-config', icone: '🎨' },
       ]
     case 'CHEF_GROUPE':
       return [
@@ -34,6 +37,7 @@ function getMenuItems(role: string): MenuItem[] {
         { label: 'Activités', href: '/dashboard/activites', icone: '📅' },
         { label: 'Réunions', href: '/dashboard/reunions', icone: '🗓️' },
         { label: 'Rapports', href: '/dashboard/rapports', icone: '📈' },
+        { label: 'Apparence du site', href: '/dashboard/site-config', icone: '🎨' },
       ]
     case 'ADJOINT_GROUPE':
     case 'ASSISTANT_GROUPE':
@@ -102,20 +106,27 @@ function SidebarContent({
   role: string
   onNavigate?: () => void
 }) {
+  const { logoUrl, nomSite, sousTitreSite } = useSiteInfo()
+
   return (
     <>
-      {/* Logo */}
-      <div className="px-6 py-5 border-b border-[#27ae60]/30 flex-shrink-0">
+      {/* Logo paroisse + nom du site */}
+      <div className="px-6 py-5 border-b border-white/15 flex-shrink-0">
         <div className="flex items-center gap-3">
-          <span className="text-2xl">⚜️</span>
-          <div>
-            <p className="text-white font-bold text-sm leading-tight">SCOUT ASCCI</p>
-            <p className="text-[#a8d5b5] text-xs">Côte d&apos;Ivoire</p>
+          <div
+            className="flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden"
+            style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}
+          >
+            <ParoisseLogoImage logoUrl={logoUrl} taille="xl" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-white font-bold text-sm leading-tight truncate">{nomSite}</p>
+            <p className="text-white/60 text-xs truncate">{sousTitreSite}</p>
           </div>
         </div>
       </div>
 
-      {/* Nav */}
+      {/* Navigation */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto">
         <ul className="space-y-1">
           {menuItems.map((item) => {
@@ -125,10 +136,8 @@ function SidebarContent({
                 <Link
                   href={item.href}
                   onClick={onNavigate}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 ${
-                    actif
-                      ? 'bg-[#27ae60] text-white'
-                      : 'text-[#a8d5b5] hover:bg-[#27ae60]/20 hover:text-white'
+                  className={`snav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium ${
+                    actif ? 'snav-active' : ''
                   }`}
                 >
                   <span className="text-base">{item.icone}</span>
@@ -140,13 +149,13 @@ function SidebarContent({
         </ul>
       </nav>
 
-      {/* Pied */}
-      <div className="px-4 py-4 border-t border-[#27ae60]/30 flex-shrink-0">
-        <p className="text-[#a8d5b5] text-xs truncate mb-0.5">{nomComplet}</p>
+      {/* Pied de sidebar */}
+      <div className="px-4 py-4 border-t border-white/15 flex-shrink-0">
+        <p className="text-white/60 text-xs truncate mb-0.5">{nomComplet}</p>
         <p className="text-[#f39c12] text-xs font-medium mb-3">{libelleRole(role)}</p>
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}
-          className="w-full text-xs text-[#a8d5b5] hover:text-white hover:bg-red-700/40 px-3 py-2 rounded-lg transition-colors flex items-center gap-2"
+          className="w-full text-xs text-white/60 hover:text-white hover:bg-red-700/40 px-3 py-2 rounded-lg transition-colors flex items-center gap-2"
         >
           <span>🚪</span>
           Déconnexion
@@ -161,7 +170,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname()
   const [sidebarOuverte, setSidebarOuverte] = useState(false)
 
-  // Fermer la sidebar si l'écran s'agrandit au-delà du breakpoint lg
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1024px)')
     const handler = (e: MediaQueryListEvent) => { if (e.matches) setSidebarOuverte(false) }
@@ -173,6 +181,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const menuItems = getMenuItems(role)
   const nomComplet = session?.user ? `${session.user.prenom} ${session.user.nom}` : '…'
   const titrePage = menuItems.find((m) => m.href === pathname)?.label ?? 'Tableau de bord'
+  const initiale = session?.user?.prenom?.[0] ?? '?'
+
+  const sidebarStyle = { backgroundColor: 'var(--cp)' }
 
   return (
     <div className="flex h-screen bg-gray-100 overflow-hidden">
@@ -185,8 +196,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         />
       )}
 
-      {/* Sidebar desktop (toujours visible) */}
-      <aside className="hidden lg:flex w-64 bg-[#1a4731] flex-col flex-shrink-0">
+      {/* Sidebar desktop */}
+      <aside className="hidden lg:flex w-64 flex-col flex-shrink-0" style={sidebarStyle}>
         <SidebarContent
           menuItems={menuItems}
           pathname={pathname}
@@ -197,9 +208,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Sidebar mobile (drawer) */}
       <aside
-        className={`fixed inset-y-0 left-0 z-30 w-72 bg-[#1a4731] flex flex-col transition-transform duration-300 lg:hidden ${
+        className={`fixed inset-y-0 left-0 z-30 w-72 flex flex-col transition-transform duration-300 lg:hidden ${
           sidebarOuverte ? 'translate-x-0' : '-translate-x-full'
         }`}
+        style={sidebarStyle}
       >
         <SidebarContent
           menuItems={menuItems}
@@ -216,7 +228,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Header */}
         <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between flex-shrink-0 gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            {/* Bouton hamburger — mobile seulement */}
             <button
               className="lg:hidden flex items-center justify-center w-9 h-9 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
               onClick={() => setSidebarOuverte(true)}
@@ -234,8 +245,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <p className="text-sm font-medium text-gray-800 leading-tight">{nomComplet}</p>
               <p className="text-xs text-gray-500">{libelleRole(role)}</p>
             </div>
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#1a4731] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-              {session?.user?.prenom?.[0] ?? '?'}
+            <div
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+              style={{ backgroundColor: 'var(--cp)' }}
+            >
+              {initiale}
             </div>
           </div>
         </header>

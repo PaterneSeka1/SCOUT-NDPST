@@ -1,0 +1,462 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 900">
+  <title>Scouts ASCCI – Côte d'Ivoire</title>
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#071610"/>
+      <stop offset="65%" stop-color="#0e2518"/>
+      <stop offset="100%" stop-color="#1c3d28"/>
+    </linearGradient>
+    <linearGradient id="gndGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#bf5820"/>
+      <stop offset="100%" stop-color="#7a3510"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="62%" cy="28%" r="55%">
+      <stop offset="0%" stop-color="#2d7040" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#071610" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="shirtGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2268f0"/>
+      <stop offset="100%" stop-color="#1444c0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ===== FOND CIEL ===== -->
+  <rect width="1920" height="900" fill="url(#bgGrad)"/>
+  <rect width="1920" height="900" fill="url(#glow)"/>
+
+  <!-- Masse végétale arrière-plan gauche -->
+  <ellipse cx="235" cy="495" rx="295" ry="365" fill="#0b1d12" opacity="0.85"/>
+  <!-- Masse végétale arrière-plan droite -->
+  <ellipse cx="1585" cy="460" rx="360" ry="380" fill="#0a1c10" opacity="0.75"/>
+  <ellipse cx="1845" cy="515" rx="215" ry="325" fill="#0a1e12" opacity="0.8"/>
+  <!-- Masse végétale centre -->
+  <ellipse cx="860" cy="425" rx="215" ry="275" fill="#0c2016" opacity="0.4"/>
+
+  <!-- ===== PALMIERS ===== -->
+  <!-- Palmier 1 – loin gauche -->
+  <rect x="82" y="215" width="16" height="555" rx="3" fill="#060e07"/>
+  <path d="M90,213 Q22,172 -25,148" stroke="#091508" stroke-width="30" fill="none" stroke-linecap="round"/>
+  <path d="M90,213 Q158,170 206,145" stroke="#091508" stroke-width="30" fill="none" stroke-linecap="round"/>
+  <path d="M90,213 Q103,162 99,116" stroke="#091508" stroke-width="26" fill="none" stroke-linecap="round"/>
+  <path d="M90,213 Q43,192 14,210" stroke="#091508" stroke-width="25" fill="none" stroke-linecap="round"/>
+  <path d="M90,213 Q126,174 150,160" stroke="#091508" stroke-width="21" fill="none" stroke-linecap="round"/>
+
+  <!-- Palmier 2 -->
+  <rect x="345" y="252" width="14" height="528" rx="3" fill="#060e07"/>
+  <path d="M352,250 Q284,214 242,190" stroke="#081308" stroke-width="27" fill="none" stroke-linecap="round"/>
+  <path d="M352,250 Q421,212 464,188" stroke="#081308" stroke-width="27" fill="none" stroke-linecap="round"/>
+  <path d="M352,250 Q365,200 361,155" stroke="#081308" stroke-width="23" fill="none" stroke-linecap="round"/>
+
+  <!-- Palmier 3 – centre-droite arrière -->
+  <rect x="1158" y="230" width="16" height="565" rx="3" fill="#060e07"/>
+  <path d="M1166,228 Q1095,190 1054,164" stroke="#091508" stroke-width="29" fill="none" stroke-linecap="round"/>
+  <path d="M1166,228 Q1237,188 1280,162" stroke="#091508" stroke-width="29" fill="none" stroke-linecap="round"/>
+  <path d="M1166,228 Q1178,176 1173,132" stroke="#091508" stroke-width="25" fill="none" stroke-linecap="round"/>
+  <path d="M1166,228 Q1120,206 1098,224" stroke="#091508" stroke-width="23" fill="none" stroke-linecap="round"/>
+
+  <!-- Palmier 4 – droite -->
+  <rect x="1720" y="260" width="18" height="535" rx="4" fill="#060e07"/>
+  <path d="M1729,258 Q1659,220 1618,194" stroke="#091508" stroke-width="31" fill="none" stroke-linecap="round"/>
+  <path d="M1729,258 Q1800,218 1846,192" stroke="#091508" stroke-width="31" fill="none" stroke-linecap="round"/>
+  <path d="M1729,258 Q1742,206 1737,160" stroke="#091508" stroke-width="27" fill="none" stroke-linecap="round"/>
+  <path d="M1729,258 Q1686,242 1668,262" stroke="#091508" stroke-width="22" fill="none" stroke-linecap="round"/>
+
+  <!-- Palmier 5 – extrême droite -->
+  <rect x="1870" y="297" width="14" height="496" rx="3" fill="#060e07"/>
+  <path d="M1877,295 Q1813,260 1776,240" stroke="#081308" stroke-width="25" fill="none" stroke-linecap="round"/>
+  <path d="M1877,295 Q1922,268 1948,252" stroke="#081308" stroke-width="25" fill="none" stroke-linecap="round"/>
+
+  <!-- ===== BÂTIMENT BLANC ARRIÈRE-PLAN ===== -->
+  <rect x="1452" y="510" width="295" height="256" rx="5" fill="#1c4530" opacity="0.52"/>
+  <rect x="1442" y="500" width="315" height="20" rx="3" fill="#142e1c" opacity="0.52"/>
+  <!-- Toiture -->
+  <path d="M1442,500 L1600,460 L1758,500" fill="#0e2418" opacity="0.48"/>
+  <!-- Fenêtres -->
+  <rect x="1478" y="542" width="44" height="38" rx="3" fill="#0a1a10" opacity="0.5"/>
+  <rect x="1542" y="542" width="44" height="38" rx="3" fill="#0a1a10" opacity="0.5"/>
+  <rect x="1606" y="542" width="44" height="38" rx="3" fill="#0a1a10" opacity="0.5"/>
+  <rect x="1670" y="542" width="44" height="38" rx="3" fill="#0a1a10" opacity="0.5"/>
+  <rect x="1478" y="598" width="44" height="38" rx="3" fill="#0a1a10" opacity="0.45"/>
+  <rect x="1542" y="598" width="44" height="38" rx="3" fill="#0a1a10" opacity="0.45"/>
+  <!-- Porte -->
+  <rect x="1600" y="662" width="48" height="104" rx="4" fill="#0a1a10" opacity="0.58"/>
+
+  <!-- ===== SOL LATÉRITE ===== -->
+  <path d="M0,808 Q480,793 960,803 Q1440,813 1920,799 L1920,900 L0,900 Z" fill="url(#gndGrad)"/>
+  <!-- Ombre des silhouettes sur sol -->
+  <ellipse cx="1090" cy="814" rx="560" ry="13" fill="rgba(0,0,0,0.18)"/>
+  <!-- Texture cailloux -->
+  <circle cx="682" cy="829" r="2.5" fill="#903a14" opacity="0.4"/>
+  <circle cx="844" cy="839" r="2" fill="#903a14" opacity="0.35"/>
+  <circle cx="1025" cy="832" r="3" fill="#903a14" opacity="0.38"/>
+  <circle cx="1208" cy="844" r="2" fill="#903a14" opacity="0.3"/>
+  <circle cx="1388" cy="834" r="2.5" fill="#903a14" opacity="0.38"/>
+  <circle cx="1504" cy="847" r="2" fill="#903a14" opacity="0.3"/>
+  <circle cx="584" cy="849" r="2" fill="#703010" opacity="0.28"/>
+  <circle cx="1626" cy="840" r="3" fill="#703010" opacity="0.32"/>
+  <circle cx="1688" cy="856" r="2" fill="#703010" opacity="0.28"/>
+  <!-- Herbe premier plan -->
+  <ellipse cx="548" cy="811" rx="112" ry="25" fill="#0c2016" opacity="0.5"/>
+  <ellipse cx="1700" cy="809" rx="133" ry="29" fill="#0c2016" opacity="0.5"/>
+  <ellipse cx="1860" cy="815" rx="88" ry="22" fill="#0c2016" opacity="0.4"/>
+
+  <!-- ================================================ -->
+  <!-- SILHOUETTES SCOUTS                               -->
+  <!-- Sol référence y=822                              -->
+  <!-- Chaque figure : translate(cx, 822) scale(s)      -->
+  <!-- Anatomie de base (du sol=0 vers le haut) :       -->
+  <!--   Chaussures 0 à -15                             -->
+  <!--   Jambes    -15 à -108                           -->
+  <!--   Hanche    -108 à -126                          -->
+  <!--   Ceinture  -126 à -135                          -->
+  <!--   Chemise   -135 à -252                          -->
+  <!--   Bras      -140 à -235                          -->
+  <!--   Foulard   -152 à -252                          -->
+  <!--   Cou       -252 à -270                          -->
+  <!--   Tête      centre -298, r=30                    -->
+  <!--   Cheveux   -312 env.                            -->
+  <!-- Hauteur totale ~330px à échelle 1.0              -->
+  <!-- ================================================ -->
+
+  <!-- ── SCOUT 1 ── x=600 scale=0.88 · Homme · #7a4018 · Bras le long du corps -->
+  <g transform="translate(600,822) scale(0.88)">
+    <ellipse cx="0" cy="5" rx="38" ry="9" fill="rgba(0,0,0,0.22)"/>
+    <rect x="-28" y="-15" width="22" height="15" rx="5" fill="#1e1008"/>
+    <rect x="6" y="-15" width="22" height="15" rx="5" fill="#251400"/>
+    <rect x="-27" y="-108" width="20" height="93" rx="3" fill="#c4a862"/>
+    <rect x="7" y="-108" width="20" height="93" rx="3" fill="#b89850"/>
+    <rect x="-30" y="-126" width="60" height="19" rx="3" fill="#c4a862"/>
+    <rect x="-31" y="-135" width="62" height="8" rx="2" fill="#3d2004"/>
+    <rect x="-6" y="-135" width="12" height="8" rx="1" fill="#c89010"/>
+    <rect x="-38" y="-252" width="76" height="119" rx="5" fill="url(#shirtGrad)"/>
+    <polygon points="0,-168 -12,-252 12,-252" fill="#1040b0"/>
+    <rect x="-56" y="-246" width="20" height="98" rx="9" fill="#1544c8"/>
+    <rect x="36" y="-246" width="20" height="98" rx="9" fill="#1544c8"/>
+    <ellipse cx="-46" cy="-150" rx="10" ry="8" fill="#7a4018"/>
+    <ellipse cx="46" cy="-150" rx="10" ry="8" fill="#7a4018"/>
+    <!-- Foulard tricolore -->
+    <polygon points="0,-168 -24,-250 24,-250" fill="#f97316"/>
+    <polygon points="0,-168 -18,-240 18,-240" fill="#f5ede0"/>
+    <polygon points="0,-168 -11,-227 11,-227" fill="#16a34a"/>
+    <circle cx="0" cy="-168" r="5.5" fill="#d97316"/>
+    <!-- Badge et poche -->
+    <rect x="-34" y="-240" width="16" height="20" rx="2" fill="#e8b820"/>
+    <text x="-26" y="-225" text-anchor="middle" fill="#5a3a00" font-size="10" font-family="serif">⚜</text>
+    <rect x="16" y="-230" width="18" height="16" rx="2" fill="none" stroke="#0f3fa8" stroke-width="1.5"/>
+    <rect x="-10" y="-266" width="20" height="18" rx="4" fill="#7a4018"/>
+    <circle cx="0" cy="-294" r="30" fill="#7a4018"/>
+    <ellipse cx="0" cy="-312" rx="32" ry="14" fill="#130800"/>
+    <ellipse cx="-11" cy="-296" rx="4" ry="5" fill="white"/>
+    <ellipse cx="11" cy="-296" rx="4" ry="5" fill="white"/>
+    <circle cx="-11" cy="-295" r="2.9" fill="#0a0400"/>
+    <circle cx="11" cy="-295" r="2.9" fill="#0a0400"/>
+    <circle cx="-9.5" cy="-297" r="1.1" fill="white"/>
+    <circle cx="12.5" cy="-297" r="1.1" fill="white"/>
+    <path d="M-9,-283 Q0,-277 9,-283" stroke="#3d1808" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- ── SCOUT 2 ── x=720 scale=0.93 · Femme · #8a5a26 · Bras droit vers S3 -->
+  <g transform="translate(720,822) scale(0.93)">
+    <ellipse cx="0" cy="5" rx="40" ry="9" fill="rgba(0,0,0,0.22)"/>
+    <rect x="-27" y="-15" width="21" height="15" rx="5" fill="#1e1008"/>
+    <rect x="6" y="-15" width="21" height="15" rx="5" fill="#251400"/>
+    <rect x="-26" y="-108" width="20" height="93" rx="3" fill="#c4a862"/>
+    <rect x="6" y="-108" width="20" height="93" rx="3" fill="#b89850"/>
+    <rect x="-32" y="-126" width="64" height="19" rx="3" fill="#c4a862"/>
+    <rect x="-32" y="-135" width="64" height="8" rx="2" fill="#3d2004"/>
+    <rect x="-40" y="-252" width="80" height="119" rx="5" fill="url(#shirtGrad)"/>
+    <polygon points="0,-168 -13,-252 13,-252" fill="#1040b0"/>
+    <!-- Bras gauche standard -->
+    <rect x="-58" y="-246" width="20" height="98" rx="9" fill="#1544c8"/>
+    <ellipse cx="-48" cy="-150" rx="10" ry="8" fill="#8a5a26"/>
+    <!-- Bras droit étendu vers S3 -->
+    <path d="M46,-238 Q72,-232 96,-242" stroke="#1544c8" stroke-width="20" fill="none" stroke-linecap="round"/>
+    <!-- Foulard -->
+    <polygon points="0,-168 -24,-250 24,-250" fill="#f97316"/>
+    <polygon points="0,-168 -18,-240 18,-240" fill="#f5ede0"/>
+    <polygon points="0,-168 -11,-227 11,-227" fill="#16a34a"/>
+    <circle cx="0" cy="-168" r="5.5" fill="#d97316"/>
+    <rect x="-36" y="-240" width="16" height="20" rx="2" fill="#e8b820"/>
+    <text x="-28" y="-225" text-anchor="middle" fill="#5a3a00" font-size="10" font-family="serif">⚜</text>
+    <rect x="18" y="-230" width="18" height="16" rx="2" fill="none" stroke="#0f3fa8" stroke-width="1.5"/>
+    <rect x="-10" y="-266" width="20" height="18" rx="4" fill="#8a5a26"/>
+    <circle cx="0" cy="-294" r="30" fill="#8a5a26"/>
+    <!-- Coiffure féminine (tresses) -->
+    <ellipse cx="0" cy="-310" rx="34" ry="16" fill="#130800"/>
+    <rect x="-34" y="-318" width="68" height="14" rx="7" fill="#130800"/>
+    <rect x="-34" y="-300" width="8" height="38" rx="4" fill="#0a0500"/>
+    <rect x="26" y="-300" width="8" height="36" rx="4" fill="#0a0500"/>
+    <ellipse cx="-11" cy="-296" rx="4" ry="5" fill="white"/>
+    <ellipse cx="11" cy="-296" rx="4" ry="5" fill="white"/>
+    <circle cx="-11" cy="-295" r="2.9" fill="#0a0400"/>
+    <circle cx="11" cy="-295" r="2.9" fill="#0a0400"/>
+    <circle cx="-9.5" cy="-297" r="1.1" fill="white"/>
+    <circle cx="12.5" cy="-297" r="1.1" fill="white"/>
+    <path d="M-10,-283 Q0,-275 10,-283" stroke="#4d2410" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- ── SCOUT 3 ── x=840 scale=0.96 · Homme · #5a2d10 · Bras gauche vers S2 -->
+  <g transform="translate(840,822) scale(0.96)">
+    <ellipse cx="0" cy="5" rx="38" ry="9" fill="rgba(0,0,0,0.22)"/>
+    <rect x="-28" y="-15" width="22" height="15" rx="5" fill="#1e1008"/>
+    <rect x="6" y="-15" width="22" height="15" rx="5" fill="#251400"/>
+    <rect x="-27" y="-108" width="20" height="93" rx="3" fill="#c4a862"/>
+    <rect x="7" y="-108" width="20" height="93" rx="3" fill="#b89850"/>
+    <rect x="-30" y="-126" width="60" height="19" rx="3" fill="#c4a862"/>
+    <rect x="-31" y="-135" width="62" height="8" rx="2" fill="#3d2004"/>
+    <rect x="-6" y="-135" width="12" height="8" rx="1" fill="#c89010"/>
+    <rect x="-38" y="-252" width="76" height="119" rx="5" fill="url(#shirtGrad)"/>
+    <polygon points="0,-168 -12,-252 12,-252" fill="#1040b0"/>
+    <!-- Bras gauche vers S2 -->
+    <path d="M-56,-238 Q-80,-232 -104,-242" stroke="#1544c8" stroke-width="20" fill="none" stroke-linecap="round"/>
+    <!-- Bras droit standard -->
+    <rect x="36" y="-246" width="20" height="98" rx="9" fill="#1544c8"/>
+    <ellipse cx="46" cy="-150" rx="10" ry="8" fill="#5a2d10"/>
+    <polygon points="0,-168 -24,-250 24,-250" fill="#f97316"/>
+    <polygon points="0,-168 -18,-240 18,-240" fill="#f5ede0"/>
+    <polygon points="0,-168 -11,-227 11,-227" fill="#16a34a"/>
+    <circle cx="0" cy="-168" r="5.5" fill="#d97316"/>
+    <rect x="-34" y="-240" width="16" height="20" rx="2" fill="#e8b820"/>
+    <text x="-26" y="-225" text-anchor="middle" fill="#5a3a00" font-size="10" font-family="serif">⚜</text>
+    <rect x="16" y="-230" width="18" height="16" rx="2" fill="none" stroke="#0f3fa8" stroke-width="1.5"/>
+    <rect x="-10" y="-266" width="20" height="18" rx="4" fill="#5a2d10"/>
+    <circle cx="0" cy="-294" r="30" fill="#5a2d10"/>
+    <ellipse cx="0" cy="-312" rx="32" ry="14" fill="#0e0500"/>
+    <ellipse cx="-11" cy="-296" rx="4" ry="5" fill="white"/>
+    <ellipse cx="11" cy="-296" rx="4" ry="5" fill="white"/>
+    <circle cx="-11" cy="-295" r="2.9" fill="#0a0400"/>
+    <circle cx="11" cy="-295" r="2.9" fill="#0a0400"/>
+    <circle cx="-9.5" cy="-297" r="1.1" fill="white"/>
+    <circle cx="12.5" cy="-297" r="1.1" fill="white"/>
+    <path d="M-9,-283 Q0,-277 9,-283" stroke="#3d1808" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- ── SCOUT 4 ── x=958 scale=0.91 · Femme · #9a6830 · Bras le long du corps -->
+  <g transform="translate(958,822) scale(0.91)">
+    <ellipse cx="0" cy="5" rx="40" ry="9" fill="rgba(0,0,0,0.22)"/>
+    <rect x="-27" y="-15" width="21" height="15" rx="5" fill="#1e1008"/>
+    <rect x="6" y="-15" width="21" height="15" rx="5" fill="#251400"/>
+    <rect x="-26" y="-108" width="20" height="93" rx="3" fill="#c4a862"/>
+    <rect x="6" y="-108" width="20" height="93" rx="3" fill="#b89850"/>
+    <rect x="-33" y="-126" width="66" height="19" rx="3" fill="#c4a862"/>
+    <rect x="-33" y="-135" width="66" height="8" rx="2" fill="#3d2004"/>
+    <rect x="-40" y="-252" width="80" height="119" rx="5" fill="url(#shirtGrad)"/>
+    <polygon points="0,-168 -13,-252 13,-252" fill="#1040b0"/>
+    <rect x="-58" y="-246" width="20" height="98" rx="9" fill="#1544c8"/>
+    <rect x="38" y="-246" width="20" height="98" rx="9" fill="#1544c8"/>
+    <ellipse cx="-48" cy="-150" rx="10" ry="8" fill="#9a6830"/>
+    <ellipse cx="48" cy="-150" rx="10" ry="8" fill="#9a6830"/>
+    <polygon points="0,-168 -24,-250 24,-250" fill="#f97316"/>
+    <polygon points="0,-168 -18,-240 18,-240" fill="#f5ede0"/>
+    <polygon points="0,-168 -11,-227 11,-227" fill="#16a34a"/>
+    <circle cx="0" cy="-168" r="5.5" fill="#d97316"/>
+    <rect x="-36" y="-240" width="16" height="20" rx="2" fill="#e8b820"/>
+    <text x="-28" y="-225" text-anchor="middle" fill="#5a3a00" font-size="10" font-family="serif">⚜</text>
+    <rect x="18" y="-230" width="18" height="16" rx="2" fill="none" stroke="#0f3fa8" stroke-width="1.5"/>
+    <rect x="-10" y="-266" width="20" height="18" rx="4" fill="#9a6830"/>
+    <circle cx="0" cy="-294" r="30" fill="#9a6830"/>
+    <!-- Tresses longues -->
+    <ellipse cx="0" cy="-310" rx="34" ry="16" fill="#130800"/>
+    <rect x="-34" y="-320" width="68" height="14" rx="7" fill="#130800"/>
+    <rect x="-36" y="-302" width="9" height="50" rx="4.5" fill="#0a0500"/>
+    <rect x="27" y="-302" width="9" height="48" rx="4.5" fill="#0a0500"/>
+    <rect x="-38" y="-296" width="9" height="44" rx="4.5" fill="#0c0600"/>
+    <ellipse cx="-11" cy="-296" rx="4" ry="5" fill="white"/>
+    <ellipse cx="11" cy="-296" rx="4" ry="5" fill="white"/>
+    <circle cx="-11" cy="-295" r="2.9" fill="#0a0400"/>
+    <circle cx="11" cy="-295" r="2.9" fill="#0a0400"/>
+    <circle cx="-9.5" cy="-297" r="1.1" fill="white"/>
+    <circle cx="12.5" cy="-297" r="1.1" fill="white"/>
+    <path d="M-10,-283 Q0,-275 10,-283" stroke="#5a3010" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- ── SCOUT 5 ── x=1080 scale=1.00 · Homme · #613018 · Bras croisés (central) -->
+  <g transform="translate(1080,822) scale(1.00)">
+    <ellipse cx="0" cy="5" rx="40" ry="9" fill="rgba(0,0,0,0.25)"/>
+    <rect x="-28" y="-15" width="22" height="15" rx="5" fill="#1e1008"/>
+    <rect x="6" y="-15" width="22" height="15" rx="5" fill="#251400"/>
+    <rect x="-27" y="-108" width="20" height="93" rx="3" fill="#c4a862"/>
+    <rect x="7" y="-108" width="20" height="93" rx="3" fill="#b89850"/>
+    <rect x="-30" y="-126" width="60" height="19" rx="3" fill="#c4a862"/>
+    <rect x="-31" y="-135" width="62" height="8" rx="2" fill="#3d2004"/>
+    <rect x="-6" y="-135" width="12" height="8" rx="1" fill="#c89010"/>
+    <rect x="-38" y="-252" width="76" height="119" rx="5" fill="url(#shirtGrad)"/>
+    <polygon points="0,-168 -12,-252 12,-252" fill="#1040b0"/>
+    <!-- Bras croisés -->
+    <path d="M-56,-242 Q-32,-228 18,-234" stroke="#1544c8" stroke-width="22" fill="none" stroke-linecap="round"/>
+    <path d="M56,-242 Q32,-228 -18,-234" stroke="#1544c8" stroke-width="22" fill="none" stroke-linecap="round"/>
+    <ellipse cx="0" cy="-232" rx="22" ry="11" fill="#1442c8"/>
+    <polygon points="0,-168 -24,-250 24,-250" fill="#f97316"/>
+    <polygon points="0,-168 -18,-240 18,-240" fill="#f5ede0"/>
+    <polygon points="0,-168 -11,-227 11,-227" fill="#16a34a"/>
+    <circle cx="0" cy="-168" r="5.5" fill="#d97316"/>
+    <rect x="-34" y="-240" width="16" height="20" rx="2" fill="#e8b820"/>
+    <text x="-26" y="-225" text-anchor="middle" fill="#5a3a00" font-size="10" font-family="serif">⚜</text>
+    <rect x="16" y="-230" width="18" height="16" rx="2" fill="none" stroke="#0f3fa8" stroke-width="1.5"/>
+    <rect x="-10" y="-266" width="20" height="18" rx="4" fill="#613018"/>
+    <circle cx="0" cy="-294" r="30" fill="#613018"/>
+    <ellipse cx="0" cy="-312" rx="32" ry="14" fill="#130800"/>
+    <ellipse cx="-11" cy="-296" rx="4" ry="5" fill="white"/>
+    <ellipse cx="11" cy="-296" rx="4" ry="5" fill="white"/>
+    <circle cx="-11" cy="-295" r="2.9" fill="#0a0400"/>
+    <circle cx="11" cy="-295" r="2.9" fill="#0a0400"/>
+    <circle cx="-9.5" cy="-297" r="1.1" fill="white"/>
+    <circle cx="12.5" cy="-297" r="1.1" fill="white"/>
+    <path d="M-9,-283 Q0,-277 9,-283" stroke="#3d1808" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- ── SCOUT 6 ── x=1198 scale=0.95 · Homme · #784218 · Bras droit vers S7 -->
+  <g transform="translate(1198,822) scale(0.95)">
+    <ellipse cx="0" cy="5" rx="38" ry="9" fill="rgba(0,0,0,0.22)"/>
+    <rect x="-28" y="-15" width="22" height="15" rx="5" fill="#1e1008"/>
+    <rect x="6" y="-15" width="22" height="15" rx="5" fill="#251400"/>
+    <rect x="-27" y="-108" width="20" height="93" rx="3" fill="#c4a862"/>
+    <rect x="7" y="-108" width="20" height="93" rx="3" fill="#b89850"/>
+    <rect x="-30" y="-126" width="60" height="19" rx="3" fill="#c4a862"/>
+    <rect x="-31" y="-135" width="62" height="8" rx="2" fill="#3d2004"/>
+    <rect x="-6" y="-135" width="12" height="8" rx="1" fill="#c89010"/>
+    <rect x="-38" y="-252" width="76" height="119" rx="5" fill="url(#shirtGrad)"/>
+    <polygon points="0,-168 -12,-252 12,-252" fill="#1040b0"/>
+    <rect x="-56" y="-246" width="20" height="98" rx="9" fill="#1544c8"/>
+    <ellipse cx="-46" cy="-150" rx="10" ry="8" fill="#784218"/>
+    <!-- Bras droit vers S7 -->
+    <path d="M46,-238 Q70,-232 94,-242" stroke="#1544c8" stroke-width="20" fill="none" stroke-linecap="round"/>
+    <polygon points="0,-168 -24,-250 24,-250" fill="#f97316"/>
+    <polygon points="0,-168 -18,-240 18,-240" fill="#f5ede0"/>
+    <polygon points="0,-168 -11,-227 11,-227" fill="#16a34a"/>
+    <circle cx="0" cy="-168" r="5.5" fill="#d97316"/>
+    <rect x="-34" y="-240" width="16" height="20" rx="2" fill="#e8b820"/>
+    <text x="-26" y="-225" text-anchor="middle" fill="#5a3a00" font-size="10" font-family="serif">⚜</text>
+    <rect x="16" y="-230" width="18" height="16" rx="2" fill="none" stroke="#0f3fa8" stroke-width="1.5"/>
+    <rect x="-10" y="-266" width="20" height="18" rx="4" fill="#784218"/>
+    <circle cx="0" cy="-294" r="30" fill="#784218"/>
+    <ellipse cx="0" cy="-312" rx="32" ry="14" fill="#130800"/>
+    <ellipse cx="-11" cy="-296" rx="4" ry="5" fill="white"/>
+    <ellipse cx="11" cy="-296" rx="4" ry="5" fill="white"/>
+    <circle cx="-11" cy="-295" r="2.9" fill="#0a0400"/>
+    <circle cx="11" cy="-295" r="2.9" fill="#0a0400"/>
+    <circle cx="-9.5" cy="-297" r="1.1" fill="white"/>
+    <circle cx="12.5" cy="-297" r="1.1" fill="white"/>
+    <path d="M-9,-283 Q0,-277 9,-283" stroke="#3d1808" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- ── SCOUT 7 ── x=1312 scale=0.92 · Femme · #8a6030 · Lunettes · Bras gauche vers S6 -->
+  <g transform="translate(1312,822) scale(0.92)">
+    <ellipse cx="0" cy="5" rx="40" ry="9" fill="rgba(0,0,0,0.22)"/>
+    <rect x="-27" y="-15" width="21" height="15" rx="5" fill="#1e1008"/>
+    <rect x="6" y="-15" width="21" height="15" rx="5" fill="#251400"/>
+    <rect x="-26" y="-108" width="20" height="93" rx="3" fill="#c4a862"/>
+    <rect x="6" y="-108" width="20" height="93" rx="3" fill="#b89850"/>
+    <rect x="-33" y="-126" width="66" height="19" rx="3" fill="#c4a862"/>
+    <rect x="-33" y="-135" width="66" height="8" rx="2" fill="#3d2004"/>
+    <rect x="-40" y="-252" width="80" height="119" rx="5" fill="url(#shirtGrad)"/>
+    <polygon points="0,-168 -13,-252 13,-252" fill="#1040b0"/>
+    <!-- Bras gauche vers S6 -->
+    <path d="M-58,-238 Q-80,-232 -104,-242" stroke="#1544c8" stroke-width="20" fill="none" stroke-linecap="round"/>
+    <rect x="38" y="-246" width="20" height="98" rx="9" fill="#1544c8"/>
+    <ellipse cx="48" cy="-150" rx="10" ry="8" fill="#8a6030"/>
+    <polygon points="0,-168 -24,-250 24,-250" fill="#f97316"/>
+    <polygon points="0,-168 -18,-240 18,-240" fill="#f5ede0"/>
+    <polygon points="0,-168 -11,-227 11,-227" fill="#16a34a"/>
+    <circle cx="0" cy="-168" r="5.5" fill="#d97316"/>
+    <rect x="-36" y="-240" width="16" height="20" rx="2" fill="#e8b820"/>
+    <text x="-28" y="-225" text-anchor="middle" fill="#5a3a00" font-size="10" font-family="serif">⚜</text>
+    <rect x="18" y="-230" width="18" height="16" rx="2" fill="none" stroke="#0f3fa8" stroke-width="1.5"/>
+    <rect x="-10" y="-266" width="20" height="18" rx="4" fill="#8a6030"/>
+    <circle cx="0" cy="-294" r="30" fill="#8a6030"/>
+    <!-- Tresses femme -->
+    <ellipse cx="0" cy="-310" rx="34" ry="16" fill="#130800"/>
+    <rect x="-34" y="-318" width="68" height="14" rx="7" fill="#130800"/>
+    <rect x="-34" y="-300" width="8" height="40" rx="4" fill="#0a0500"/>
+    <rect x="26" y="-300" width="8" height="38" rx="4" fill="#0a0500"/>
+    <!-- Lunettes de soleil -->
+    <rect x="-22" y="-302" width="18" height="12" rx="5" fill="#121212" opacity="0.92"/>
+    <rect x="4" y="-302" width="18" height="12" rx="5" fill="#121212" opacity="0.92"/>
+    <line x1="-4" y1="-296" x2="4" y2="-296" stroke="#121212" stroke-width="2.5"/>
+    <line x1="-22" y1="-296" x2="-28" y2="-294" stroke="#121212" stroke-width="2"/>
+    <line x1="22" y1="-296" x2="28" y2="-294" stroke="#121212" stroke-width="2"/>
+    <path d="M-10,-283 Q0,-276 10,-283" stroke="#4d2810" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- ── SCOUT 8 ── x=1424 scale=0.97 · Homme · #4a2808 · Bras le long du corps -->
+  <g transform="translate(1424,822) scale(0.97)">
+    <ellipse cx="0" cy="5" rx="38" ry="9" fill="rgba(0,0,0,0.22)"/>
+    <rect x="-28" y="-15" width="22" height="15" rx="5" fill="#1e1008"/>
+    <rect x="6" y="-15" width="22" height="15" rx="5" fill="#251400"/>
+    <rect x="-27" y="-108" width="20" height="93" rx="3" fill="#c4a862"/>
+    <rect x="7" y="-108" width="20" height="93" rx="3" fill="#b89850"/>
+    <rect x="-30" y="-126" width="60" height="19" rx="3" fill="#c4a862"/>
+    <rect x="-31" y="-135" width="62" height="8" rx="2" fill="#3d2004"/>
+    <rect x="-6" y="-135" width="12" height="8" rx="1" fill="#c89010"/>
+    <rect x="-38" y="-252" width="76" height="119" rx="5" fill="url(#shirtGrad)"/>
+    <polygon points="0,-168 -12,-252 12,-252" fill="#1040b0"/>
+    <rect x="-56" y="-246" width="20" height="98" rx="9" fill="#1544c8"/>
+    <rect x="36" y="-246" width="20" height="98" rx="9" fill="#1544c8"/>
+    <ellipse cx="-46" cy="-150" rx="10" ry="8" fill="#4a2808"/>
+    <ellipse cx="46" cy="-150" rx="10" ry="8" fill="#4a2808"/>
+    <polygon points="0,-168 -24,-250 24,-250" fill="#f97316"/>
+    <polygon points="0,-168 -18,-240 18,-240" fill="#f5ede0"/>
+    <polygon points="0,-168 -11,-227 11,-227" fill="#16a34a"/>
+    <circle cx="0" cy="-168" r="5.5" fill="#d97316"/>
+    <rect x="-34" y="-240" width="16" height="20" rx="2" fill="#e8b820"/>
+    <text x="-26" y="-225" text-anchor="middle" fill="#5a3a00" font-size="10" font-family="serif">⚜</text>
+    <rect x="16" y="-230" width="18" height="16" rx="2" fill="none" stroke="#0f3fa8" stroke-width="1.5"/>
+    <rect x="-10" y="-266" width="20" height="18" rx="4" fill="#4a2808"/>
+    <circle cx="0" cy="-294" r="30" fill="#4a2808"/>
+    <ellipse cx="0" cy="-312" rx="32" ry="14" fill="#0a0400"/>
+    <ellipse cx="-11" cy="-296" rx="4" ry="5" fill="white"/>
+    <ellipse cx="11" cy="-296" rx="4" ry="5" fill="white"/>
+    <circle cx="-11" cy="-295" r="2.9" fill="#0a0400"/>
+    <circle cx="11" cy="-295" r="2.9" fill="#0a0400"/>
+    <circle cx="-9.5" cy="-297" r="1.1" fill="white"/>
+    <circle cx="12.5" cy="-297" r="1.1" fill="white"/>
+    <path d="M-9,-283 Q0,-277 9,-283" stroke="#3d1808" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- ── SCOUT 9 ── x=1532 scale=0.89 · Homme · #704020 · Main droite sur la hanche -->
+  <g transform="translate(1532,822) scale(0.89)">
+    <ellipse cx="0" cy="5" rx="38" ry="9" fill="rgba(0,0,0,0.22)"/>
+    <rect x="-28" y="-15" width="22" height="15" rx="5" fill="#1e1008"/>
+    <rect x="6" y="-15" width="22" height="15" rx="5" fill="#251400"/>
+    <rect x="-27" y="-108" width="20" height="93" rx="3" fill="#c4a862"/>
+    <rect x="7" y="-108" width="20" height="93" rx="3" fill="#b89850"/>
+    <rect x="-30" y="-126" width="60" height="19" rx="3" fill="#c4a862"/>
+    <rect x="-31" y="-135" width="62" height="8" rx="2" fill="#3d2004"/>
+    <rect x="-6" y="-135" width="12" height="8" rx="1" fill="#c89010"/>
+    <rect x="-38" y="-252" width="76" height="119" rx="5" fill="url(#shirtGrad)"/>
+    <polygon points="0,-168 -12,-252 12,-252" fill="#1040b0"/>
+    <!-- Bras gauche standard -->
+    <rect x="-56" y="-246" width="20" height="98" rx="9" fill="#1544c8"/>
+    <ellipse cx="-46" cy="-150" rx="10" ry="8" fill="#704020"/>
+    <!-- Bras droit plié, main sur la hanche -->
+    <path d="M56,-242 Q66,-202 50,-174" stroke="#1544c8" stroke-width="20" fill="none" stroke-linecap="round"/>
+    <ellipse cx="50" cy="-170" rx="10" ry="8" fill="#704020"/>
+    <polygon points="0,-168 -24,-250 24,-250" fill="#f97316"/>
+    <polygon points="0,-168 -18,-240 18,-240" fill="#f5ede0"/>
+    <polygon points="0,-168 -11,-227 11,-227" fill="#16a34a"/>
+    <circle cx="0" cy="-168" r="5.5" fill="#d97316"/>
+    <rect x="-34" y="-240" width="16" height="20" rx="2" fill="#e8b820"/>
+    <text x="-26" y="-225" text-anchor="middle" fill="#5a3a00" font-size="10" font-family="serif">⚜</text>
+    <rect x="16" y="-230" width="18" height="16" rx="2" fill="none" stroke="#0f3fa8" stroke-width="1.5"/>
+    <rect x="-10" y="-266" width="20" height="18" rx="4" fill="#704020"/>
+    <circle cx="0" cy="-294" r="30" fill="#704020"/>
+    <ellipse cx="0" cy="-312" rx="32" ry="14" fill="#130800"/>
+    <ellipse cx="-11" cy="-296" rx="4" ry="5" fill="white"/>
+    <ellipse cx="11" cy="-296" rx="4" ry="5" fill="white"/>
+    <circle cx="-11" cy="-295" r="2.9" fill="#0a0400"/>
+    <circle cx="11" cy="-295" r="2.9" fill="#0a0400"/>
+    <circle cx="-9.5" cy="-297" r="1.1" fill="white"/>
+    <circle cx="12.5" cy="-297" r="1.1" fill="white"/>
+    <path d="M-9,-283 Q0,-277 9,-283" stroke="#3d1808" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- ===== EMBLÈME ASCCI discret (bas droite) ===== -->
+  <g transform="translate(1830, 840)" opacity="0.22">
+    <circle cx="0" cy="-52" r="46" fill="none" stroke="white" stroke-width="1.8"/>
+    <text x="0" y="-35" text-anchor="middle" fill="white" font-size="48" font-family="Georgia, serif">⚜</text>
+    <text x="0" y="-10" text-anchor="middle" fill="white" font-size="8.5" font-family="Arial, sans-serif" letter-spacing="1.5">SCOUT ASCCI</text>
+    <text x="0" y="0" text-anchor="middle" fill="white" font-size="7.5" font-family="Arial, sans-serif" letter-spacing="1">CÔTE D'IVOIRE</text>
+  </g>
+
+</svg>

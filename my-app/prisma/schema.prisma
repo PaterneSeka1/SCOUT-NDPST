@@ -143,6 +143,7 @@ model Utilisateur {
   progressionsValidees      ProgressionScout[]      @relation("ProgressionValidePar")
   joursReunionCrees         JourReunion[]           @relation("JourReunionCreePar")
   presencesReunionMarquees  PresenceReunion[]       @relation("PresenceReunionMarquePar")
+  tokensReinitialisation    TokenReinitialisation[]
 
   @@index([matricule])
   @@index([telephone])
@@ -464,6 +465,24 @@ model PresenceReunion {
   @@unique([jourReunionId, scoutId])
   @@index([jourReunionId])
   @@index([scoutId])
+}
+
+// ---------------------------------------------------------------------------
+// Token de réinitialisation de mot de passe
+// ---------------------------------------------------------------------------
+
+model TokenReinitialisation {
+  id            String   @id @default(cuid())
+  token         String   @unique
+  expiresAt     DateTime
+  utilise       Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  utilisateurId String
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([utilisateurId])
 }
 
 // ---------------------------------------------------------------------------

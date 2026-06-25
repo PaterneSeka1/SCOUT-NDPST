@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { ParoisseLogoImageAuto } from '@/app/components/ParoisseLogoImage'
+import { useSiteInfo } from '@/app/components/useSiteInfo'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -10,6 +12,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [erreur, setErreur] = useState('')
   const [chargement, setChargement] = useState(false)
+  const { nomSite } = useSiteInfo()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,14 +35,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0f2418]">
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--cf)' }}>
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-2xl p-8">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#1a4731] mb-4">
-              <span className="text-3xl">⚜️</span>
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 overflow-hidden" style={{ backgroundColor: 'var(--cp)' }}>
+              <ParoisseLogoImageAuto taille="lg" />
             </div>
-            <h1 className="text-2xl font-bold text-[#1a4731]">SCOUT ASCCI</h1>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--cp)' }}>{nomSite}</h1>
             <p className="text-sm text-gray-500 mt-1">
               Suivi pédagogique — Côte d&apos;Ivoire
             </p>
@@ -93,7 +96,8 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={chargement}
-              className="w-full py-3 px-4 bg-[#1a4731] hover:bg-[#27ae60] text-white font-semibold rounded-lg transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              style={{ backgroundColor: 'var(--cp)' }}
+              className="w-full py-3 px-4 hover:brightness-110 text-white font-semibold rounded-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {chargement ? (
                 <>
@@ -104,6 +108,12 @@ export default function LoginPage() {
                 'Se connecter'
               )}
             </button>
+
+            <div className="text-center">
+              <a href="/mot-de-passe-oublie" className="text-sm text-gray-500 hover:text-[#1a4731] transition-colors">
+                Mot de passe oublié ?
+              </a>
+            </div>
           </form>
 
           <p className="text-center text-xs text-gray-400 mt-6">

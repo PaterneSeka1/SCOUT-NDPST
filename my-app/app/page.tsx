@@ -1,5 +1,60 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { readFile } from 'fs/promises'
+import path from 'path'
+import { prisma } from '@/lib/prisma'
+import { ParoisseLogoImage } from '@/app/components/ParoisseLogoImage'
+
+type SiteConfig = {
+  nomSite?: string
+  sousTitreSite?: string
+  hero: {
+    imageUrl: string
+    imageAlt: string
+    badge: string
+    titre: string
+    sousTitre: string
+  }
+  stats: { value: string; label: string }[]
+}
+
+const DEFAULT_CONFIG: SiteConfig = {
+  nomSite: 'SCOUT ASCCI',
+  sousTitreSite: "Côte d'Ivoire",
+  hero: {
+    imageUrl: '/scout-ascci-hero.svg',
+    imageAlt: "Responsables et scouts réunis dans une cour de paroisse – ASCCI Côte d'Ivoire",
+    badge: 'Suivi pédagogique paroissial',
+    titre: 'SCOUT ASCCI',
+    sousTitre:
+      "Une application claire pour gérer les scouts catholiques de Côte d'Ivoire, suivre les activités, les présences et la progression pédagogique depuis un même espace.",
+  },
+  stats: [
+    { value: '5', label: 'Branches suivies' },
+    { value: '4', label: 'Profils principaux' },
+    { value: '1', label: 'Base paroissiale' },
+    { value: '100%', label: 'Historique centralisé' },
+  ],
+}
+
+async function getSiteConfig(): Promise<SiteConfig> {
+  try {
+    const configPath = path.join(process.cwd(), 'config', 'site.json')
+    const raw = await readFile(configPath, 'utf-8')
+    return JSON.parse(raw) as SiteConfig
+  } catch {
+    return DEFAULT_CONFIG
+  }
+}
+
+async function getParoisseLogo(): Promise<string | null> {
+  try {
+    const p = await prisma.paroisse.findFirst({ select: { logo: true } })
+    return p?.logo ?? null
+  } catch {
+    return null
+  }
+}
 
 const modules = [
   {
@@ -37,15 +92,22 @@ const steps = [
   'Suivre les progressions et garder les informations à jour.',
 ]
 
-export default function Home() {
+export default async function Home() {
+  const [config, logoUrl] = await Promise.all([getSiteConfig(), getParoisseLogo()])
+  const { hero, stats } = config
+  const nomSite = config.nomSite ?? 'SCOUT ASCCI'
+  const sousTitreSite = config.sousTitreSite ?? "Côte d'Ivoire"
+  const isSvg = hero.imageUrl.endsWith('.svg')
+
   return (
     <main className="min-h-screen bg-[#f7faf7] text-[#15241b]">
-      <section className="relative min-h-[82svh] overflow-hidden bg-[#102419] text-white">
+      <section className="relative min-h-[82svh] overflow-hidden text-white" style={{ backgroundColor: 'var(--cf)' }}>
         <Image
-          src="/scout-ascci-hero.png"
-          alt="Responsables et scouts réunis dans une cour de paroisse"
+          src={hero.imageUrl}
+          alt={hero.imageAlt}
           fill
           priority
+          unoptimized={isSvg}
           sizes="100vw"
           className="object-cover object-center"
         />
@@ -53,16 +115,20 @@ export default function Home() {
 
         <div className="relative z-10 mx-auto flex min-h-[82svh] w-full max-w-7xl flex-col px-5 py-5 sm:px-8 lg:px-10">
           <header className="flex items-center justify-between gap-4">
-            <Link href="/" className="flex items-center gap-3" aria-label="SCOUT ASCCI">
-              <span className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/25 bg-white/12 text-sm font-bold backdrop-blur">
-                SA
+            <Link href="/" className="flex items-center gap-3" aria-label={nomSite}>
+              <span className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/25 bg-white/12 text-sm font-bold backdrop-blur overflow-hidden">
+                {logoUrl ? (
+                  <ParoisseLogoImage logoUrl={logoUrl} taille="md" />
+                ) : (
+                  nomSite.slice(0, 2).toUpperCase()
+                )}
               </span>
               <span>
                 <span className="block text-sm font-bold tracking-[0.18em]">
-                  SCOUT ASCCI
+                  {nomSite}
                 </span>
                 <span className="block text-xs text-white/72">
-                  Côte d&apos;Ivoire
+                  {sousTitreSite}
                 </span>
               </span>
             </Link>
@@ -90,15 +156,13 @@ export default function Home() {
           <div className="flex flex-1 items-center py-12 sm:py-16">
             <div className="max-w-2xl">
               <p className="mb-5 inline-flex rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-[#f7cf77] backdrop-blur">
-                Suivi pédagogique paroissial
+                {hero.badge}
               </p>
               <h1 className="text-5xl font-black leading-[0.95] tracking-normal text-white sm:text-6xl lg:text-7xl">
-                SCOUT ASCCI
+                {hero.titre}
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-8 text-white/84 sm:text-xl">
-                Une application claire pour gérer les scouts catholiques de Côte
-                d&apos;Ivoire, suivre les activités, les présences et la
-                progression pédagogique depuis un même espace.
+                {hero.sousTitre}
               </p>
               <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                 <Link
@@ -121,14 +185,9 @@ export default function Home() {
 
       <section className="border-b border-[#d9e5dc] bg-white">
         <div className="mx-auto grid max-w-7xl grid-cols-2 gap-px px-5 py-8 sm:px-8 lg:grid-cols-4 lg:px-10">
-          {[
-            ['5', 'Branches suivies'],
-            ['4', 'Profils principaux'],
-            ['1', 'Base paroissiale'],
-            ['100%', 'Historique centralisé'],
-          ].map(([value, label]) => (
+          {stats.map(({ value, label }) => (
             <div key={label} className="py-3">
-              <p className="text-3xl font-black text-[#1a4731]">{value}</p>
+              <p className="text-3xl font-black" style={{ color: 'var(--cp)' }}>{value}</p>
               <p className="mt-1 text-sm font-medium text-[#607064]">{label}</p>
             </div>
           ))}
@@ -146,9 +205,8 @@ export default function Home() {
             </h2>
           </div>
           <p className="max-w-2xl text-base leading-8 text-[#5d6d62]">
-            La landing mène directement vers l&apos;application, mais pose aussi
-            clairement ce que SCOUT ASCCI apporte aux équipes : moins de carnets
-            dispersés, plus de visibilité et des informations mieux tenues.
+            La plateforme centralise tout ce dont les équipes ont besoin : effectifs, activités,
+            présences et suivi pédagogique, sans carnets dispersés.
           </p>
         </div>
 
@@ -166,7 +224,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="parcours" className="bg-[#173625] text-white">
+      <section id="parcours" className="text-white" style={{ backgroundColor: 'var(--cp)' }}>
         <div className="mx-auto grid max-w-7xl gap-10 px-5 py-18 sm:px-8 lg:grid-cols-[1fr_1fr] lg:px-10">
           <div>
             <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#f7cf77]">
@@ -180,7 +238,10 @@ export default function Home() {
           <div className="space-y-4">
             {steps.map((step, index) => (
               <div key={step} className="grid grid-cols-[3rem_1fr] gap-4">
-                <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-white text-sm font-black text-[#173625]">
+                <span
+                  className="flex h-12 w-12 items-center justify-center rounded-lg bg-white text-sm font-black"
+                  style={{ color: 'var(--cp)' }}
+                >
                   {String(index + 1).padStart(2, '0')}
                 </span>
                 <p className="border-b border-white/16 pb-5 text-base leading-7 text-white/84">
@@ -211,7 +272,8 @@ export default function Home() {
             {audiences.map((audience) => (
               <div
                 key={audience}
-                className="rounded-lg border border-[#dbe6df] bg-white px-5 py-4 text-sm font-bold text-[#1a4731] shadow-sm"
+                className="rounded-lg border border-[#dbe6df] bg-white px-5 py-4 text-sm font-bold shadow-sm"
+                style={{ color: 'var(--cp)' }}
               >
                 {audience}
               </div>
@@ -232,7 +294,8 @@ export default function Home() {
           </div>
           <Link
             href="/login"
-            className="rounded-lg bg-[#1a4731] px-6 py-3 text-center text-sm font-bold text-white transition hover:bg-[#22613f]"
+            className="rounded-lg px-6 py-3 text-center text-sm font-bold text-white transition hover:brightness-110"
+            style={{ backgroundColor: 'var(--cp)' }}
           >
             Aller à la connexion
           </Link>

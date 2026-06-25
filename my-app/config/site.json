@@ -1,0 +1,36 @@
+{
+  "logoSite": "/uploads/1782406593933-ofe45g.jpeg",
+  "nomSite": "WIRADJURI",
+  "sousTitreSite": "Côte d'Ivoire",
+  "theme": {
+    "couleurPrimaire": "#BD765A",
+    "couleurAccent": "#5D3732",
+    "couleurFond": "#C39A77",
+    "couleurHover": "#5D3732"
+  },
+  "hero": {
+    "imageUrl": "/uploads/1782405923291-yjcr57.jpg",
+    "imageAlt": "Responsables et scouts réunis dans une cour de paroisse – ASCCI Côte d'Ivoire",
+    "badge": "Suivi pédagogique paroissial",
+    "titre": "SCOUT ASCCI",
+    "sousTitre": "Une application claire pour gérer les scouts catholiques de Côte d'Ivoire, suivre les activités, les présences et la progression pédagogique depuis un même espace."
+  },
+  "stats": [
+    {
+      "value": "5",
+      "label": "Branches suivies"
+    },
+    {
+      "value": "4",
+      "label": "Profils principaux"
+    },
+    {
+      "value": "1",
+      "label": "Base paroissiale"
+    },
+    {
+      "value": "100%",
+      "label": "Historique centralisé"
+    }
+  ]
+}
