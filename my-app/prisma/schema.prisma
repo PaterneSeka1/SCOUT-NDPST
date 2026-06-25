@@ -77,6 +77,8 @@ model Paroisse {
   nom       String
   ville     String
   diocese   String
+  ocean     String?
+  doyenne   String?
   adresse   String?
   telephone String?
   email     String?  @unique

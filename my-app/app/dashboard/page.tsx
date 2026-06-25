@@ -1,50 +1,60 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
+import { useEffect, useState } from 'react'
 
-type StatCard = {
+type ActiviteRecente = {
+  id: string
   titre: string
-  valeur: number | string
-  icone: string
-  couleur: string
+  dateDebut: string
+  type: string
+  brancheType: string | null
+  lieu: string | null
+  _count: { presences: number }
 }
 
-const cardsAdmin: StatCard[] = [
-  { titre: 'Scouts actifs', valeur: 0, icone: '⚜️', couleur: 'bg-[#1a4731]' },
-  { titre: 'Activités ce mois', valeur: 0, icone: '📅', couleur: 'bg-[#27ae60]' },
-  { titre: 'Taux de présence', valeur: '0 %', icone: '✅', couleur: 'bg-[#f39c12]' },
-  { titre: 'Branches actives', valeur: 0, icone: '🌿', couleur: 'bg-blue-600' },
+type KpisData = {
+  kpis: Record<string, number | string>
+  activitesRecentes: ActiviteRecente[]
+}
+
+const ICONES_KPI: Record<string, string> = {
+  'Scouts actifs': '⚜️',
+  'Activités ce mois': '📅',
+  'Taux de présence': '✅',
+  'Branches actives': '🌿',
+  'Branches': '🌿',
+  'Scouts dans la branche': '⚜️',
+  'Présences ce mois': '✅',
+  'Mes enfants': '👨‍👧‍👦',
+  'Prochaines activités': '📅',
+  'Badges obtenus': '🏅',
+  'Activités participées': '📅',
+}
+
+const COULEURS_KPI = [
+  'bg-[#1a4731]',
+  'bg-[#27ae60]',
+  'bg-[#f39c12]',
+  'bg-blue-600',
 ]
 
-const cardsGroupe: StatCard[] = [
-  { titre: 'Scouts actifs', valeur: 0, icone: '⚜️', couleur: 'bg-[#1a4731]' },
-  { titre: 'Activités ce mois', valeur: 0, icone: '📅', couleur: 'bg-[#27ae60]' },
-  { titre: 'Branches', valeur: 0, icone: '🌿', couleur: 'bg-[#f39c12]' },
-]
+const LIBELLES_TYPE: Record<string, string> = {
+  REUNION: 'Réunion',
+  SORTIE: 'Sortie',
+  CAMP: 'Camp',
+  SERVICE: 'Service',
+  CELEBRATION: 'Célébration',
+  FORMATION: 'Formation',
+  AUTRE: 'Autre',
+}
 
-const cardsBranche: StatCard[] = [
-  { titre: 'Scouts dans la branche', valeur: 0, icone: '⚜️', couleur: 'bg-[#1a4731]' },
-  { titre: 'Activités ce mois', valeur: 0, icone: '📅', couleur: 'bg-[#27ae60]' },
-  { titre: 'Présences ce mois', valeur: 0, icone: '✅', couleur: 'bg-[#f39c12]' },
-]
-
-const cardsParent: StatCard[] = [
-  { titre: 'Mes enfants', valeur: 0, icone: '👨‍👧‍👦', couleur: 'bg-[#1a4731]' },
-  { titre: 'Prochaines activités', valeur: 0, icone: '📅', couleur: 'bg-[#27ae60]' },
-]
-
-const cardsScout: StatCard[] = [
-  { titre: 'Badges obtenus', valeur: 0, icone: '🏅', couleur: 'bg-[#1a4731]' },
-  { titre: 'Activités participées', valeur: 0, icone: '📅', couleur: 'bg-[#27ae60]' },
-]
-
-function getCards(role: string): StatCard[] {
-  if (role === 'ADMIN_PAROISSE') return cardsAdmin
-  if (['CHEF_GROUPE', 'ADJOINT_GROUPE', 'ASSISTANT_GROUPE'].includes(role)) return cardsGroupe
-  if (['RESPONSABLE_BRANCHE', 'ADJOINT_BRANCHE', 'ASSISTANT_BRANCHE'].includes(role)) return cardsBranche
-  if (role === 'PARENT') return cardsParent
-  if (role === 'SCOUT') return cardsScout
-  return cardsAdmin
+const LIBELLES_BRANCHE: Record<string, string> = {
+  OISILLONS: 'Oisillons',
+  LOUVETEAUX: 'Louveteaux',
+  ECLAIREURS: 'Éclaireurs',
+  CHEMINOTS: 'Cheminots',
+  COMPAGNONS: 'Compagnons',
 }
 
 function libelleRole(role: string): string {
@@ -62,46 +72,116 @@ function libelleRole(role: string): string {
   return libelles[role] ?? role
 }
 
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
 export default function DashboardPage() {
   const { data: session } = useSession()
   const role = session?.user?.role ?? ''
-  const cards = getCards(role)
+
+  const [data, setData] = useState<KpisData | null>(null)
+  const [chargement, setChargement] = useState(true)
+
+  useEffect(() => {
+    if (!session?.user) return
+    fetch('/api/dashboard/kpis')
+      .then((r) => r.json())
+      .then((d: KpisData) => setData(d))
+      .finally(() => setChargement(false))
+  }, [session])
+
+  const entrees = data ? Object.entries(data.kpis) : []
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-        <h1 className="text-xl font-bold text-[#1a4731]">
+    <div className="space-y-4 sm:space-y-6">
+      {/* En-tête */}
+      <div className="bg-white rounded-xl px-4 py-4 sm:p-6 shadow-sm border border-gray-100">
+        <h1 className="text-base sm:text-xl font-bold text-[#1a4731] leading-snug">
           Bienvenue, {session?.user?.prenom} {session?.user?.nom} 👋
         </h1>
-        <p className="text-gray-500 mt-1 text-sm">
+        <p className="text-gray-500 mt-0.5 text-xs sm:text-sm">
           Profil : <span className="font-medium text-[#27ae60]">{libelleRole(role)}</span>
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {cards.map((card) => (
-          <div
-            key={card.titre}
-            className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex items-center gap-4"
-          >
-            <div
-              className={`w-12 h-12 ${card.couleur} rounded-xl flex items-center justify-center text-2xl flex-shrink-0`}
-            >
-              {card.icone}
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-800">{card.valeur}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{card.titre}</p>
-            </div>
-          </div>
-        ))}
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {chargement
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-gray-100 animate-pulse"
+              >
+                <div className="w-8 h-8 bg-gray-200 rounded-lg mb-3" />
+                <div className="h-5 bg-gray-200 rounded w-12 mb-1.5" />
+                <div className="h-3 bg-gray-100 rounded w-20" />
+              </div>
+            ))
+          : entrees.map(([titre, valeur], i) => (
+              <div
+                key={titre}
+                className="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-gray-100"
+              >
+                <div
+                  className={`w-8 h-8 sm:w-10 sm:h-10 ${COULEURS_KPI[i % COULEURS_KPI.length]} rounded-lg flex items-center justify-center text-base sm:text-xl mb-3`}
+                >
+                  {ICONES_KPI[titre] ?? '📊'}
+                </div>
+                <p className="text-xl sm:text-2xl font-bold text-gray-800 leading-none">{valeur}</p>
+                <p className="text-xs text-gray-500 mt-1 leading-tight">{titre}</p>
+              </div>
+            ))}
       </div>
 
+      {/* Activités récentes */}
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">Activités récentes</h2>
-        <p className="text-sm text-gray-400 text-center py-8">
-          Aucune activité récente pour le moment.
-        </p>
+        <h2 className="text-sm font-semibold text-gray-700 mb-4">Activités récentes</h2>
+
+        {chargement ? (
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-12 bg-gray-100 rounded-lg animate-pulse" />
+            ))}
+          </div>
+        ) : !data?.activitesRecentes?.length ? (
+          <p className="text-sm text-gray-400 text-center py-8">
+            Aucune activité récente pour le moment.
+          </p>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {data.activitesRecentes.map((a) => (
+              <div key={a.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 first:pt-0 last:pb-0 gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 bg-[#1a4731]/10 rounded-lg flex items-center justify-center text-sm flex-shrink-0">
+                    {a.type === 'CAMP' ? '⛺' : a.type === 'SORTIE' ? '🥾' : a.type === 'SERVICE' ? '🤝' : a.type === 'CELEBRATION' ? '🎉' : a.type === 'FORMATION' ? '📚' : '📋'}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{a.titre}</p>
+                    <p className="text-xs text-gray-400 truncate">
+                      {formatDate(a.dateDebut)}
+                      {a.lieu && ` · ${a.lieu}`}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center flex-wrap gap-2 sm:flex-shrink-0 sm:ml-4 pl-11 sm:pl-0">
+                  {a.brancheType && (
+                    <span className="text-xs bg-[#1a4731]/10 text-[#1a4731] font-medium px-2 py-0.5 rounded-full">
+                      {LIBELLES_BRANCHE[a.brancheType] ?? a.brancheType}
+                    </span>
+                  )}
+                  <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                    {LIBELLES_TYPE[a.type] ?? a.type}
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {a._count.presences} présence{a._count.presences !== 1 ? 's' : ''}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

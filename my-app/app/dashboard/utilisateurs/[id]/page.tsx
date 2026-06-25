@@ -100,14 +100,14 @@ export default function FicheUtilisateurPage() {
 
             {/* Informations */}
             <dl className="space-y-4">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 <dt className="text-sm font-medium text-gray-500 col-span-1">Nom complet</dt>
                 <dd className="text-sm text-gray-900 font-medium col-span-2">
                   {utilisateur.nom} {utilisateur.prenom}
                 </dd>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 <dt className="text-sm font-medium text-gray-500 col-span-1">Email</dt>
                 <dd className="text-sm text-gray-900 col-span-2">
                   {utilisateur.email ?? (
@@ -116,7 +116,7 @@ export default function FicheUtilisateurPage() {
                 </dd>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 <dt className="text-sm font-medium text-gray-500 col-span-1">Rôle</dt>
                 <dd className="col-span-2">
                   <span
@@ -129,7 +129,7 @@ export default function FicheUtilisateurPage() {
                 </dd>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 <dt className="text-sm font-medium text-gray-500 col-span-1">Statut</dt>
                 <dd className="col-span-2">
                   {utilisateur.actif ? (
@@ -144,7 +144,7 @@ export default function FicheUtilisateurPage() {
                 </dd>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 <dt className="text-sm font-medium text-gray-500 col-span-1">Créé le</dt>
                 <dd className="text-sm text-gray-900 col-span-2">
                   {formaterDateFrancaise(utilisateur.createdAt)}

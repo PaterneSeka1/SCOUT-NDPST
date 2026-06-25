@@ -8,6 +8,22 @@ import type { Utilisateur } from '@/hooks/useUtilisateurs'
 
 const ROLES_FILTRE = Object.keys(LABELS_ROLES)
 
+function SkeletonCard() {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse space-y-3">
+      <div className="flex justify-between">
+        <div className="h-4 bg-gray-200 rounded w-32" />
+        <div className="h-5 bg-gray-100 rounded-full w-12" />
+      </div>
+      <div className="h-3 bg-gray-100 rounded w-24" />
+      <div className="flex gap-3 pt-1">
+        <div className="h-3 bg-gray-100 rounded w-14" />
+        <div className="h-3 bg-gray-100 rounded w-16" />
+      </div>
+    </div>
+  )
+}
+
 function SkeletonRow() {
   return (
     <tr>
@@ -20,39 +36,79 @@ function SkeletonRow() {
   )
 }
 
-// Composant séparé afin d'appeler useModifierUtilisateur en haut de composant
+function CarteUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
+  const { mutateAsync, isPending } = useModifierUtilisateur(utilisateur.id)
+  const handleToggle = async () => { await mutateAsync({ actif: !utilisateur.actif }) }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2.5">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-semibold text-gray-900 leading-tight">
+          {utilisateur.nom} {utilisateur.prenom}
+        </p>
+        <span className={`flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+          utilisateur.actif ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+        }`}>
+          {utilisateur.actif ? 'Actif' : 'Inactif'}
+        </span>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+          COULEURS_ROLES[utilisateur.role] ?? 'bg-gray-100 text-gray-700'
+        }`}>
+          {LABELS_ROLES[utilisateur.role] ?? utilisateur.role}
+        </span>
+        {utilisateur.matricule && (
+          <span className="font-mono text-xs text-gray-500">{utilisateur.matricule}</span>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3 pt-1 border-t border-gray-50">
+        <Link
+          href={`/dashboard/utilisateurs/${utilisateur.id}/modifier`}
+          className="text-[#1a4731] font-medium text-xs hover:underline"
+        >
+          Modifier
+        </Link>
+        <span className="text-gray-200">|</span>
+        <button
+          onClick={handleToggle}
+          disabled={isPending}
+          className={`text-xs font-medium disabled:opacity-50 ${
+            utilisateur.actif ? 'text-red-600' : 'text-green-600'
+          }`}
+        >
+          {isPending ? '…' : utilisateur.actif ? 'Désactiver' : 'Activer'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function LigneUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
   const { mutateAsync, isPending } = useModifierUtilisateur(utilisateur.id)
-
-  const handleToggle = async () => {
-    await mutateAsync({ actif: !utilisateur.actif })
-  }
+  const handleToggle = async () => { await mutateAsync({ actif: !utilisateur.actif }) }
 
   return (
     <tr className="hover:bg-gray-50 transition-colors">
-      <td className="px-4 py-3 font-mono text-gray-700 font-medium">{utilisateur.matricule}</td>
-      <td className="px-4 py-3 text-gray-800 font-medium">
+      <td className="px-4 py-3 font-mono text-gray-700 text-sm">{utilisateur.matricule ?? '—'}</td>
+      <td className="px-4 py-3 text-gray-800 font-medium text-sm">
         {utilisateur.nom} {utilisateur.prenom}
       </td>
       <td className="px-4 py-3">
-        <span
-          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-            COULEURS_ROLES[utilisateur.role] ?? 'bg-gray-100 text-gray-700'
-          }`}
-        >
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+          COULEURS_ROLES[utilisateur.role] ?? 'bg-gray-100 text-gray-700'
+        }`}>
           {LABELS_ROLES[utilisateur.role] ?? utilisateur.role}
         </span>
       </td>
       <td className="px-4 py-3">
-        {utilisateur.actif ? (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-            Actif
-          </span>
-        ) : (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
-            Inactif
-          </span>
-        )}
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+          utilisateur.actif ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+        }`}>
+          {utilisateur.actif ? 'Actif' : 'Inactif'}
+        </span>
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
@@ -66,10 +122,8 @@ function LigneUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
           <button
             onClick={handleToggle}
             disabled={isPending}
-            className={`text-xs font-medium transition-colors disabled:opacity-50 ${
-              utilisateur.actif
-                ? 'text-red-600 hover:text-red-700'
-                : 'text-green-600 hover:text-green-700'
+            className={`text-xs font-medium disabled:opacity-50 ${
+              utilisateur.actif ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'
             }`}
           >
             {isPending ? '…' : utilisateur.actif ? 'Désactiver' : 'Activer'}
@@ -90,16 +144,8 @@ export default function UtilisateursPage() {
   const handleRechercheChange = (valeur: string) => {
     setRecherche(valeur)
     if (debounceTimer) clearTimeout(debounceTimer)
-    const timer = setTimeout(() => {
-      setRechercheDebounce(valeur)
-      setPage(1)
-    }, 300)
+    const timer = setTimeout(() => { setRechercheDebounce(valeur); setPage(1) }, 300)
     setDebounceTimer(timer)
-  }
-
-  const handleRoleFiltreChange = (valeur: string) => {
-    setRoleFiltre(valeur)
-    setPage(1)
   }
 
   const { data, isLoading, isError, error } = useUtilisateurs({
@@ -113,75 +159,68 @@ export default function UtilisateursPage() {
   const total = data?.total ?? 0
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* En-tête */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Gestion des utilisateurs</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Utilisateurs</h1>
         <Link
           href="/dashboard/utilisateurs/nouveau"
-          className="bg-[#1a4731] text-white px-4 py-2 rounded-md hover:bg-[#163d29] transition-colors text-sm font-medium"
+          className="inline-flex items-center justify-center bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium"
         >
           + Nouvel utilisateur
         </Link>
       </div>
 
       {/* Filtres */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1">
-            <input
-              type="text"
-              placeholder="Rechercher par nom, prénom ou matricule…"
-              value={recherche}
-              onChange={(e) => handleRechercheChange(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent text-sm"
-            />
-          </div>
-          <div className="sm:w-56">
-            <select
-              value={roleFiltre}
-              onChange={(e) => handleRoleFiltreChange(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent text-sm bg-white"
-            >
-              <option value="">Tous les rôles</option>
-              {ROLES_FILTRE.map((role) => (
-                <option key={role} value={role}>
-                  {LABELS_ROLES[role]}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+      <div className="flex flex-col sm:flex-row gap-2">
+        <input
+          type="text"
+          placeholder="Rechercher…"
+          value={recherche}
+          onChange={(e) => handleRechercheChange(e.target.value)}
+          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1a4731] bg-white"
+        />
+        <select
+          value={roleFiltre}
+          onChange={(e) => { setRoleFiltre(e.target.value); setPage(1) }}
+          className="sm:w-48 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a4731] bg-white"
+        >
+          <option value="">Tous les rôles</option>
+          {ROLES_FILTRE.map((role) => (
+            <option key={role} value={role}>{LABELS_ROLES[role]}</option>
+          ))}
+        </select>
       </div>
 
-      {/* Message d'erreur */}
+      {/* Erreur */}
       {isError && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
           {error instanceof Error ? error.message : 'Une erreur est survenue'}
         </div>
       )}
 
-      {/* Tableau */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      {/* Vue mobile — cartes */}
+      <div className="sm:hidden space-y-2">
+        {isLoading ? (
+          Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
+        ) : utilisateurs.length === 0 ? (
+          <p className="text-center text-gray-400 text-sm py-12">Aucun utilisateur trouvé.</p>
+        ) : (
+          utilisateurs.map((u) => <CarteUtilisateur key={u.id} utilisateur={u} />)
+        )}
+      </div>
+
+      {/* Vue desktop — tableau */}
+      <div className="hidden sm:block bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Matricule
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Nom Prénom
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Rôle
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Statut
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+                {['Matricule', 'Nom Prénom', 'Rôle', 'Statut', 'Actions'].map((h) => (
+                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -203,24 +242,24 @@ export default function UtilisateursPage() {
 
       {/* Pagination */}
       {!isLoading && totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-500">
-            Page {page} sur {totalPages} — {total} utilisateur{total !== 1 ? 's' : ''}
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-xs sm:text-sm text-gray-500">
+            {total} utilisateur{total !== 1 ? 's' : ''} — p. {page}/{totalPages}
           </p>
           <div className="flex gap-2">
             <button
               onClick={() => setPage((p) => p - 1)}
               disabled={page <= 1}
-              className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50 text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-sm disabled:opacity-40 transition-colors hover:bg-gray-50"
             >
-              Précédent
+              ←
             </button>
             <button
               onClick={() => setPage((p) => p + 1)}
               disabled={page >= totalPages}
-              className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50 text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-sm disabled:opacity-40 transition-colors hover:bg-gray-50"
             >
-              Suivant
+              →
             </button>
           </div>
         </div>

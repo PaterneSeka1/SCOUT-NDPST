@@ -219,14 +219,14 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
 
       {/* Bouton sticky */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-4 shadow-lg">
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <p className="text-sm text-gray-600 font-medium">
             {nbPresents} présent(s) sur {nbTotal} scout(s)
           </p>
           <button
             onClick={handleEnregistrer}
             disabled={enregistrerPresences.isPending || scouts.length === 0}
-            className="bg-[#1a4731] text-white px-6 py-2 rounded-lg hover:bg-[#15392a] disabled:opacity-50 transition-colors text-sm font-medium"
+            className="w-full sm:w-auto bg-[#1a4731] text-white px-6 py-2 rounded-lg hover:bg-[#15392a] disabled:opacity-50 transition-colors text-sm font-medium"
           >
             {enregistrerPresences.isPending ? 'Enregistrement...' : 'Enregistrer les présences'}
           </button>

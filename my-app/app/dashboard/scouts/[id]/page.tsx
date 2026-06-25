@@ -86,7 +86,7 @@ export default function FicheScoutPage() {
   return (
     <div className="space-y-6 max-w-3xl">
       {/* En-tête */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Link href="/dashboard/scouts" className="text-sm text-gray-500 hover:text-gray-700">
           ← Retour à la liste
         </Link>
@@ -256,7 +256,7 @@ export default function FicheScoutPage() {
 
         {afficherFormulaireContact && (
           <form onSubmit={handleAjouterContact} className="mt-4 border-t pt-4 space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Nom <span className="text-red-500">*</span></label>
                 <input type="text" value={nouveauContact.nom} onChange={e => setNouveauContact(p => ({ ...p, nom: e.target.value }))} required
@@ -268,7 +268,7 @@ export default function FicheScoutPage() {
                   className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a4731]" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Téléphone <span className="text-red-500">*</span></label>
                 <input type="tel" value={nouveauContact.telephone} onChange={e => setNouveauContact(p => ({ ...p, telephone: e.target.value }))} required
