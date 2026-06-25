@@ -13,7 +13,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
-    if (session.user.role !== 'ADMIN_PAROISSE') {
+    const ROLES_AUTORISES = ['ADMIN_PAROISSE', 'CHEF_GROUPE']
+    if (!ROLES_AUTORISES.includes(session.user.role)) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 
@@ -25,8 +26,13 @@ export async function GET(request: NextRequest) {
 
     const paroisseId = session.user.paroisseId
 
+    // Exclure l'utilisateur connecté et les admins si on est chef de groupe
+    const exclusions: Prisma.UtilisateurWhereInput[] = [{ id: session.user.id }]
+    if (session.user.role === 'CHEF_GROUPE') exclusions.push({ role: 'ADMIN_PAROISSE' })
+
     const where: Prisma.UtilisateurWhereInput = {
       paroisseId,
+      NOT: exclusions.length === 1 ? exclusions[0] : { OR: exclusions },
       ...(role ? { role: role as RoleUtilisateur } : {}),
       ...(recherche
         ? {

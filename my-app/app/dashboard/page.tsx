@@ -107,30 +107,30 @@ export default function DashboardPage() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="flex flex-wrap gap-3">
         {chargement
           ? Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
-                className="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-gray-100 animate-pulse"
+                className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 animate-pulse flex-1 min-w-0"
               >
-                <div className="w-8 h-8 bg-gray-200 rounded-lg mb-3" />
-                <div className="h-5 bg-gray-200 rounded w-12 mb-1.5" />
-                <div className="h-3 bg-gray-100 rounded w-20" />
+                <div className="w-10 h-10 bg-gray-200 rounded-lg mb-4" />
+                <div className="h-7 bg-gray-200 rounded w-16 mb-2" />
+                <div className="h-3 bg-gray-100 rounded w-24" />
               </div>
             ))
           : entrees.map(([titre, valeur], i) => (
               <div
                 key={titre}
-                className="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-gray-100"
+                className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 flex-1 min-w-0"
               >
                 <div
-                  className={`w-8 h-8 sm:w-10 sm:h-10 ${COULEURS_KPI[i % COULEURS_KPI.length]} rounded-lg flex items-center justify-center text-base sm:text-xl mb-3`}
+                  className={`w-10 h-10 sm:w-12 sm:h-12 ${COULEURS_KPI[i % COULEURS_KPI.length]} rounded-xl flex items-center justify-center text-xl sm:text-2xl mb-4`}
                 >
                   {ICONES_KPI[titre] ?? '📊'}
                 </div>
-                <p className="text-xl sm:text-2xl font-bold text-gray-800 leading-none">{valeur}</p>
-                <p className="text-xs text-gray-500 mt-1 leading-tight">{titre}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-800 leading-none">{valeur}</p>
+                <p className="text-sm text-gray-500 mt-1.5 leading-tight">{titre}</p>
               </div>
             ))}
       </div>
