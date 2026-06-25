@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { toast } from 'sonner'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
@@ -40,24 +41,21 @@ export default function PageParoisse() {
   const [paroisse, setParoisse] = useState<Paroisse | null>(null)
   const [activitesAVenir, setActivitesAVenir] = useState<Activite[]>([])
   const [chargement, setChargement] = useState(true)
-  const [erreur, setErreur] = useState('')
+  const [chargementErreur, setChargementErreur] = useState(false)
 
   const [modeEdition, setModeEdition] = useState(false)
   const [form, setForm] = useState<FormParoisse>({ nom: '', ville: '', diocese: '', ocean: '', doyenne: '', adresse: '', telephone: '', email: '' })
   const [soumission, setSoumission] = useState(false)
-  const [succes, setSucces] = useState(false)
-  const [erreurForm, setErreurForm] = useState('')
 
   const [logoPreview, setLogoPreview] = useState('')
   const [uploadLogo, setUploadLogo] = useState(false)
-  const [erreurLogo, setErreurLogo] = useState('')
 
   useEffect(() => {
     Promise.all([
       fetch('/api/paroisse').then((r) => r.json()),
       fetch('/api/activites?page=1&limite=50').then((r) => r.json()),
     ]).then(([paroisseData, activitesData]) => {
-      if (paroisseData.erreur) { setErreur(paroisseData.erreur); return }
+      if (paroisseData.erreur) { toast.error(paroisseData.erreur); setChargementErreur(true); return }
       setParoisse(paroisseData)
       setForm({ nom: paroisseData.nom, ville: paroisseData.ville, diocese: paroisseData.diocese, ocean: paroisseData.ocean ?? '', doyenne: paroisseData.doyenne ?? '', adresse: paroisseData.adresse ?? '', telephone: paroisseData.telephone ?? '', email: paroisseData.email ?? '' })
       if (paroisseData.logo) setLogoPreview(paroisseData.logo)
@@ -68,14 +66,13 @@ export default function PageParoisse() {
         return fin >= maintenant
       })
       setActivitesAVenir(aVenir)
-    }).catch(() => setErreur('Impossible de charger les informations'))
+    }).catch(() => { toast.error('Impossible de charger les informations'); setChargementErreur(true) })
       .finally(() => setChargement(false))
   }, [])
 
   const handleChangeLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fichier = e.target.files?.[0]
     if (!fichier) return
-    setErreurLogo('')
     setLogoPreview(URL.createObjectURL(fichier))
     setUploadLogo(true)
     try {
@@ -83,11 +80,11 @@ export default function PageParoisse() {
       fd.append('fichier', fichier)
       const res = await fetch('/api/upload', { method: 'POST', body: fd })
       const data = await res.json()
-      if (!res.ok) { setErreurLogo(data.erreur ?? 'Erreur upload'); setLogoPreview(paroisse?.logo ?? ''); return }
+      if (!res.ok) { toast.error(data.erreur ?? 'Erreur upload'); setLogoPreview(paroisse?.logo ?? ''); return }
       await fetch('/api/paroisse', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ logo: data.url }) })
       setParoisse((p) => p ? { ...p, logo: data.url } : p)
     } catch {
-      setErreurLogo("Erreur lors de l'envoi")
+      toast.error("Erreur lors de l'envoi du logo")
       setLogoPreview(paroisse?.logo ?? '')
     } finally {
       setUploadLogo(false)
@@ -96,23 +93,20 @@ export default function PageParoisse() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setErreurForm('')
-    setSucces(false)
     if (!form.nom.trim() || !form.ville.trim() || !form.diocese.trim()) {
-      setErreurForm('Le nom, la ville et le diocèse sont obligatoires.')
+      toast.error('Le nom, la ville et le diocèse sont obligatoires.')
       return
     }
     setSoumission(true)
     try {
       const res = await fetch('/api/paroisse', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
       const data = await res.json()
-      if (!res.ok) { setErreurForm(data.erreur ?? 'Erreur serveur'); return }
+      if (!res.ok) { toast.error(data.erreur ?? 'Erreur serveur'); return }
       setParoisse((p) => p ? { ...p, ...data } : data)
-      setSucces(true)
+      toast.success('Informations mises à jour avec succès.')
       setModeEdition(false)
-      setTimeout(() => setSucces(false), 3000)
     } catch {
-      setErreurForm('Erreur lors de la sauvegarde')
+      toast.error('Erreur lors de la sauvegarde')
     } finally {
       setSoumission(false)
     }
@@ -124,7 +118,7 @@ export default function PageParoisse() {
     </div>
   )
 
-  if (erreur) return <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreur}</div>
+  if (chargementErreur) return null
   if (!paroisse) return null
 
   return (
@@ -144,8 +138,6 @@ export default function PageParoisse() {
           </button>
         )}
       </div>
-
-      {succes && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">Informations mises à jour avec succès.</div>}
 
       {/* Statistiques */}
       {!estParent && (
@@ -191,7 +183,6 @@ export default function PageParoisse() {
                 )}
               </div>
               {uploadLogo && <p className="text-xs text-gray-400 text-center mt-1">Envoi…</p>}
-              {erreurLogo && <p className="text-xs text-red-500 text-center mt-1">{erreurLogo}</p>}
             </div>
 
             <div className="flex-1 min-w-0 space-y-3">
@@ -246,8 +237,6 @@ export default function PageParoisse() {
           <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">
             <h2 className="text-sm font-semibold text-gray-800 border-b border-gray-100 pb-3">Modifier les informations</h2>
 
-            {erreurForm && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreurForm}</div>}
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
                 <label className={CLS_LABEL}>Nom de la paroisse <span className="text-red-500">*</span></label>
@@ -296,7 +285,7 @@ export default function PageParoisse() {
                 className="sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
                 {soumission ? 'Enregistrement…' : 'Enregistrer'}
               </button>
-              <button type="button" onClick={() => { setModeEdition(false); setErreurForm('') }}
+              <button type="button" onClick={() => setModeEdition(false)}
                 className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm">
                 Annuler
               </button>

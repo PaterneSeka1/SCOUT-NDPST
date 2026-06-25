@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { ParoisseLogoImageAuto } from '@/app/components/ParoisseLogoImage'
 import { useSiteInfo } from '@/app/components/useSiteInfo'
 
@@ -9,12 +10,10 @@ export default function PageMotDePasseOublie() {
   const [email, setEmail] = useState('')
   const [soumission, setSoumission] = useState(false)
   const [envoye, setEnvoye] = useState(false)
-  const [erreur, setErreur] = useState('')
   const { nomSite } = useSiteInfo()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setErreur('')
     setSoumission(true)
     try {
       const res = await fetch('/api/auth/mot-de-passe-oublie', {
@@ -23,10 +22,10 @@ export default function PageMotDePasseOublie() {
         body: JSON.stringify({ email }),
       })
       const data = await res.json()
-      if (!res.ok) { setErreur(data.erreur ?? 'Erreur serveur'); return }
+      if (!res.ok) { toast.error(data.erreur ?? 'Erreur serveur'); return }
       setEnvoye(true)
     } catch {
-      setErreur('Erreur réseau. Veuillez réessayer.')
+      toast.error('Erreur réseau. Veuillez réessayer.')
     } finally {
       setSoumission(false)
     }
@@ -84,12 +83,6 @@ export default function PageMotDePasseOublie() {
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#27ae60] focus:border-transparent transition"
                 />
               </div>
-
-              {erreur && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
-                  {erreur}
-                </div>
-              )}
 
               <button
                 type="submit"

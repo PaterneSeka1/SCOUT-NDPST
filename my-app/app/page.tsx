@@ -48,12 +48,18 @@ async function getSiteConfig(): Promise<SiteConfig> {
 }
 
 async function getParoisseLogo(): Promise<string | null> {
+  // Priorité 1 : logo paroisse depuis la BDD
   try {
     const p = await prisma.paroisse.findFirst({ select: { logo: true } })
-    return p?.logo ?? null
-  } catch {
-    return null
-  }
+    if (p?.logo) return p.logo
+  } catch { }
+  // Priorité 2 : logoSite depuis la config
+  try {
+    const raw = await readFile(path.join(process.cwd(), 'config', 'site.json'), 'utf-8')
+    const cfg = JSON.parse(raw)
+    return cfg.logoSite || null
+  } catch { }
+  return null
 }
 
 const modules = [

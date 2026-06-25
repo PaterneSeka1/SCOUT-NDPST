@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { LABELS_ROLES } from '@/lib/roles'
 import { useCreerUtilisateur } from '@/hooks/useUtilisateurs'
 
@@ -43,7 +44,6 @@ export default function NouvelUtilisateurPage() {
     nom: '', prenom: '', email: '', matricule: '', telephone: '', role: '', motDePasse: '', confirmation: '',
   })
   const [erreurs, setErreurs] = useState<FormErrors>({})
-  const [erreurServeur, setErreurServeur] = useState('')
 
   const estParent = form.role === 'PARENT'
 
@@ -73,7 +73,6 @@ export default function NouvelUtilisateurPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setErreurServeur('')
     if (!valider()) return
     try {
       await mutateAsync({
@@ -87,7 +86,7 @@ export default function NouvelUtilisateurPage() {
       })
       router.push('/dashboard/utilisateurs')
     } catch (err) {
-      setErreurServeur(err instanceof Error ? err.message : 'Une erreur est survenue')
+      toast.error(err instanceof Error ? err.message : 'Une erreur est survenue')
     }
   }
 
@@ -98,10 +97,6 @@ export default function NouvelUtilisateurPage() {
       </Link>
 
       <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Nouvel utilisateur</h1>
-
-      {erreurServeur && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreurServeur}</div>
-      )}
 
       <form onSubmit={handleSubmit} noValidate>
         <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 
 const BRANCHES_ORDRE = ['OISILLONS', 'LOUVETEAUX', 'ECLAIREURS', 'CHEMINOTS', 'COMPAGNONS']
 const BRANCHES: Record<string, string> = {
@@ -72,7 +73,6 @@ export default function PageReunions() {
   const [configs, setConfigs] = useState<Config[]>([])
   const [brancheUtilisateur, setBrancheUtilisateur] = useState<string | null>(null)
   const [chargement, setChargement] = useState(true)
-  const [erreur, setErreur] = useState('')
   const [onglet, setOnglet] = useState<'reunions' | 'config'>('reunions')
 
   // Modal reporter
@@ -86,11 +86,11 @@ export default function PageReunions() {
     if (estBranche) fetches.push(fetch('/api/me/branche').then((r) => r.json()))
 
     Promise.all(fetches).then(([reunionsData, extra]) => {
-      if (reunionsData.erreur) { setErreur(reunionsData.erreur); return }
+      if (reunionsData.erreur) { toast.error(reunionsData.erreur); return }
       setReunions(reunionsData)
       if (estGroupe && extra) setConfigs(extra)
       if (estBranche && extra?.brancheType) setBrancheUtilisateur(extra.brancheType)
-    }).catch(() => setErreur('Impossible de charger les réunions'))
+    }).catch(() => toast.error('Impossible de charger les réunions'))
       .finally(() => setChargement(false))
   }, [estGroupe, estBranche])
 
@@ -142,8 +142,6 @@ export default function PageReunions() {
       <div className="w-6 h-6 border-2 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
     </div>
   )
-  if (erreur) return <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreur}</div>
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
@@ -268,7 +266,6 @@ function CarteConfig({ branche, config, onSave }: {
   const [dureeMinutes, setDureeMinutes] = useState(config?.dureeMinutes ?? 90)
   const [lieu, setLieu] = useState(config?.lieu ?? '')
   const [sauvegarde, setSauvegarde] = useState(false)
-  const [succes, setSucces] = useState(false)
 
   const handleSave = async () => {
     setSauvegarde(true)
@@ -280,9 +277,8 @@ function CarteConfig({ branche, config, onSave }: {
     if (res.ok) {
       const data = await res.json()
       onSave(data)
-      setSucces(true)
+      toast.success('Enregistré')
       setOuvert(false)
-      setTimeout(() => setSucces(false), 2000)
     }
     setSauvegarde(false)
   }
@@ -305,7 +301,6 @@ function CarteConfig({ branche, config, onSave }: {
           )}
         </div>
         <div className="flex items-center gap-2">
-          {succes && <span className="text-xs text-green-600 font-medium">Enregistré ✓</span>}
           <svg className={`w-4 h-4 text-gray-400 transition-transform ${ouvert ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>

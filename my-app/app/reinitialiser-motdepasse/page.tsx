@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { ParoisseLogoImageAuto } from '@/app/components/ParoisseLogoImage'
 import { useSiteInfo } from '@/app/components/useSiteInfo'
 
@@ -17,7 +18,6 @@ function FormulaireReinitialisation() {
   const [confirmation, setConfirmation] = useState('')
   const [soumission, setSoumission] = useState(false)
   const [succes, setSucces] = useState(false)
-  const [erreur, setErreur] = useState('')
 
   useEffect(() => {
     if (!token) { setEtatToken('invalide'); return }
@@ -29,14 +29,13 @@ function FormulaireReinitialisation() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setErreur('')
 
     if (motDePasse.length < 6) {
-      setErreur('Le mot de passe doit contenir au moins 6 caractères.')
+      toast.error('Le mot de passe doit contenir au moins 6 caractères.')
       return
     }
     if (motDePasse !== confirmation) {
-      setErreur('Les mots de passe ne correspondent pas.')
+      toast.error('Les mots de passe ne correspondent pas.')
       return
     }
 
@@ -48,11 +47,11 @@ function FormulaireReinitialisation() {
         body: JSON.stringify({ token, motDePasse }),
       })
       const data = await res.json()
-      if (!res.ok) { setErreur(data.erreur ?? 'Erreur serveur'); return }
+      if (!res.ok) { toast.error(data.erreur ?? 'Erreur serveur'); return }
       setSucces(true)
       setTimeout(() => router.push('/login'), 3000)
     } catch {
-      setErreur('Erreur réseau. Veuillez réessayer.')
+      toast.error('Erreur réseau. Veuillez réessayer.')
     } finally {
       setSoumission(false)
     }
@@ -137,12 +136,6 @@ function FormulaireReinitialisation() {
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent transition"
                 />
               </div>
-
-              {erreur && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
-                  {erreur}
-                </div>
-              )}
 
               <button
                 type="submit"

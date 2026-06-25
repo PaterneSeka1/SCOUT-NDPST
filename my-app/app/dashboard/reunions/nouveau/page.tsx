@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -75,7 +76,6 @@ export default function PageNouvelleReunion() {
 
   const [configAppliquee, setConfigAppliquee] = useState(false)
   const [soumission, setSoumission] = useState(false)
-  const [erreur, setErreur] = useState('')
 
   useEffect(() => {
     const fetches: Promise<any>[] = [fetch('/api/reunions/config').then((r) => r.json())]
@@ -107,18 +107,17 @@ export default function PageNouvelleReunion() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setErreur('')
     let dates: string[] = []
 
     if (mode === 'unique') {
-      if (!dateHeure) { setErreur('La date et heure sont requises'); return }
+      if (!dateHeure) { toast.error('La date et heure sont requises'); return }
       dates = [new Date(dateHeure).toISOString()]
     } else {
-      if (!dateDebut || !dateFin) { setErreur('Les dates de début et de fin sont requises'); return }
-      if (new Date(dateFin) <= new Date(dateDebut)) { setErreur('La date de fin doit être après la date de début'); return }
+      if (!dateDebut || !dateFin) { toast.error('Les dates de début et de fin sont requises'); return }
+      if (new Date(dateFin) <= new Date(dateDebut)) { toast.error('La date de fin doit être après la date de début'); return }
       dates = genererDates(jourSemaine, heure, dateDebut, dateFin)
-      if (dates.length === 0) { setErreur('Aucune date générée avec ces paramètres'); return }
-      if (dates.length > 60) { setErreur('Maximum 60 réunions par création en série'); return }
+      if (dates.length === 0) { toast.error('Aucune date générée avec ces paramètres'); return }
+      if (dates.length > 60) { toast.error('Maximum 60 réunions par création en série'); return }
     }
 
     setSoumission(true)
@@ -136,10 +135,10 @@ export default function PageNouvelleReunion() {
         }),
       })
       const data = await res.json()
-      if (!res.ok) { setErreur(data.erreur ?? 'Erreur serveur'); return }
+      if (!res.ok) { toast.error(data.erreur ?? 'Erreur serveur'); return }
       router.push('/dashboard/reunions')
     } catch {
-      setErreur('Erreur lors de la création')
+      toast.error('Erreur lors de la création')
     } finally {
       setSoumission(false)
     }
@@ -162,8 +161,6 @@ export default function PageNouvelleReunion() {
 
       <form onSubmit={handleSubmit}>
         <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-5">
-          {erreur && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreur}</div>}
-
           {/* Mode */}
           <div>
             <label className={CLS_LABEL}>Type de planification</label>

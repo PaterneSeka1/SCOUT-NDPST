@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
+import { toast } from 'sonner'
 
 type Theme = {
   couleurPrimaire: string
@@ -77,7 +78,6 @@ export default function SiteConfigPage() {
   const [sauvegarde, setSauvegarde] = useState(false)
   const [uploadHero, setUploadHero] = useState(false)
   const [uploadLogo, setUploadLogo] = useState(false)
-  const [message, setMessage] = useState<{ type: 'succes' | 'erreur'; texte: string } | null>(null)
   const heroRef = useRef<HTMLInputElement>(null)
   const logoRef = useRef<HTMLInputElement>(null)
 
@@ -111,11 +111,6 @@ export default function SiteConfigPage() {
     root.style.setProperty('--ch-rgb', hexToRgb(ch))
   }, [config.theme, chargement])
 
-  function afficherMessage(type: 'succes' | 'erreur', texte: string) {
-    setMessage({ type, texte })
-    setTimeout(() => setMessage(null), 5000)
-  }
-
   async function handleUpload(
     e: React.ChangeEvent<HTMLInputElement>,
     dest: 'hero' | 'logo',
@@ -134,9 +129,9 @@ export default function SiteConfigPage() {
       } else {
         setConfig((prev) => ({ ...prev, logoSite: data.url }))
       }
-      afficherMessage('succes', 'Fichier téléversé avec succès.')
+      toast.success('Fichier téléversé avec succès.')
     } catch (err) {
-      afficherMessage('erreur', err instanceof Error ? err.message : "Erreur lors de l'upload")
+      toast.error(err instanceof Error ? err.message : "Erreur lors de l'upload")
     } finally {
       dest === 'hero' ? setUploadHero(false) : setUploadLogo(false)
       const ref = dest === 'hero' ? heroRef : logoRef
@@ -157,9 +152,9 @@ export default function SiteConfigPage() {
         const data = await res.json()
         throw new Error(data.erreur ?? 'Erreur sauvegarde')
       }
-      afficherMessage('succes', 'Configuration mise à jour. Les nouvelles couleurs s\'appliquent au prochain chargement de page.')
+      toast.success("Configuration mise à jour. Les nouvelles couleurs s'appliquent au prochain chargement de page.")
     } catch (err) {
-      afficherMessage('erreur', err instanceof Error ? err.message : 'Erreur inconnue')
+      toast.error(err instanceof Error ? err.message : 'Erreur inconnue')
     } finally {
       setSauvegarde(false)
     }
@@ -200,18 +195,6 @@ export default function SiteConfigPage() {
           Logo, couleurs, nom, image héro et statistiques de la page d&apos;accueil.
         </p>
       </div>
-
-      {message && (
-        <div
-          className={`rounded-lg px-4 py-3 text-sm font-medium ${
-            message.type === 'succes'
-              ? 'bg-green-50 text-green-800 border border-green-200'
-              : 'bg-red-50 text-red-800 border border-red-200'
-          }`}
-        >
-          {message.texte}
-        </div>
-      )}
 
       <form onSubmit={handleSauvegarder} className="space-y-8">
 

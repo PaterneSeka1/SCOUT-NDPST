@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
 
 const LABELS_TYPE: Record<string, string> = {
@@ -61,13 +62,12 @@ function JaugeTaux({ taux }: { taux: number }) {
 export default function PageRapports() {
   const [rapport, setRapport] = useState<Rapport | null>(null)
   const [chargement, setChargement] = useState(true)
-  const [erreur, setErreur] = useState('')
 
   useEffect(() => {
     fetch('/api/rapports')
       .then((r) => r.json())
-      .then((data) => { if (data.erreur) { setErreur(data.erreur); return }; setRapport(data) })
-      .catch(() => setErreur('Impossible de charger les rapports'))
+      .then((data) => { if (data.erreur) { toast.error(data.erreur); return }; setRapport(data) })
+      .catch(() => toast.error('Impossible de charger les rapports'))
       .finally(() => setChargement(false))
   }, [])
 
@@ -76,7 +76,6 @@ export default function PageRapports() {
       <div className="w-6 h-6 border-2 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
     </div>
   )
-  if (erreur) return <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreur}</div>
   if (!rapport) return null
 
   const maxScouts = Math.max(...rapport.scoutsParBranche.map((b) => b._count.id), 1)

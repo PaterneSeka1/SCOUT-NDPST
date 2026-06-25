@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 
 const STATUTS = [
   { value: 'PRESENT', label: 'Présent', cls: 'bg-green-100 text-green-700 border-green-200', active: 'bg-green-500 text-white border-green-500' },
@@ -35,16 +36,14 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
   const [scouts, setScouts] = useState<Scout[]>([])
   const [statuts, setStatuts] = useState<StatutMap>({})
   const [chargement, setChargement] = useState(true)
-  const [erreur, setErreur] = useState('')
   const [sauvegarde, setSauvegarde] = useState(false)
-  const [succes, setSucces] = useState(false)
   const [modifie, setModifie] = useState(false)
 
   useEffect(() => {
     fetch(`/api/reunions/${id}/presences`)
       .then((r) => r.json())
       .then((data) => {
-        if (data.erreur) { setErreur(data.erreur); return }
+        if (data.erreur) { toast.error(data.erreur); return }
         setReunion(data.reunion)
         setScouts(data.scouts)
         const init: StatutMap = {}
@@ -53,7 +52,7 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
         })
         setStatuts(init)
       })
-      .catch(() => setErreur('Impossible de charger la feuille de présences'))
+      .catch(() => toast.error('Impossible de charger la feuille de présences'))
       .finally(() => setChargement(false))
   }, [id])
 
@@ -82,7 +81,6 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
 
   const handleSauvegarder = async () => {
     setSauvegarde(true)
-    setSucces(false)
     try {
       const presences = scouts.map((s) => ({ scoutId: s.id, statut: statuts[s.id] ?? 'ABSENT' }))
       const res = await fetch(`/api/reunions/${id}/presences`, {
@@ -91,15 +89,14 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
         body: JSON.stringify({ presences }),
       })
       if (res.ok) {
-        setSucces(true)
+        toast.success('Présences enregistrées.')
         setModifie(false)
-        setTimeout(() => setSucces(false), 3000)
       } else {
         const d = await res.json()
-        setErreur(d.erreur ?? 'Erreur lors de la sauvegarde')
+        toast.error(d.erreur ?? 'Erreur lors de la sauvegarde')
       }
     } catch {
-      setErreur('Erreur réseau')
+      toast.error('Erreur réseau')
     } finally {
       setSauvegarde(false)
     }
@@ -123,7 +120,6 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
     </div>
   )
 
-  if (erreur) return <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreur}</div>
   if (!reunion) return null
 
   return (
@@ -176,8 +172,6 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
           <p className="text-xs text-red-500 mt-0.5">Absent{stats.absent > 1 ? 's' : ''}</p>
         </div>
       </div>
-
-      {succes && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">Présences enregistrées.</div>}
 
       {/* Actions rapides */}
       {scouts.length > 0 && (

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { useCreerScout } from '@/hooks/useScouts'
 import type { DonneesContact } from '@/hooks/useScouts'
@@ -50,7 +51,6 @@ export default function NouveauScoutPage() {
   const [erreurPhoto, setErreurPhoto] = useState('')
   const [contacts, setContacts] = useState<ContactForm[]>([contactVide()])
   const [erreurs, setErreurs] = useState<FormErrors>({})
-  const [erreurServeur, setErreurServeur] = useState('')
 
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fichier = e.target.files?.[0]
@@ -118,7 +118,6 @@ export default function NouveauScoutPage() {
 
   const handleSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault()
-    setErreurServeur('')
     if (!valider()) return
     try {
       const donneesContacts: DonneesContact[] = contacts.map((c) => ({
@@ -131,7 +130,7 @@ export default function NouveauScoutPage() {
       await mutateAsync({ nom: nom.trim(), prenom: prenom.trim(), dateNaissance, sexe, brancheType, photo: photo.trim() || undefined, contactsUrgence: donneesContacts })
       router.push('/dashboard/scouts')
     } catch (err) {
-      setErreurServeur(err instanceof Error ? err.message : 'Une erreur est survenue')
+      toast.error(err instanceof Error ? err.message : 'Une erreur est survenue')
     }
   }
 
@@ -142,10 +141,6 @@ export default function NouveauScoutPage() {
       </Link>
 
       <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Inscrire un scout</h1>
-
-      {erreurServeur && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreurServeur}</div>
-      )}
 
       <form onSubmit={handleSubmit} noValidate className="space-y-6">
         {/* Informations de l'enfant */}

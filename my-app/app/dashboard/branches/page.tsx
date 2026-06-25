@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
 
 const ORDRE_BRANCHES = ['OISILLONS', 'LOUVETEAUX', 'ECLAIREURS', 'CHEMINOTS', 'COMPAGNONS']
@@ -24,17 +25,16 @@ export default function PageBranches() {
   const [postes, setPostes] = useState<Poste[]>([])
   const [comptes, setComptes] = useState<Record<string, number>>({})
   const [chargement, setChargement] = useState(true)
-  const [erreur, setErreur] = useState('')
 
   useEffect(() => {
     fetch('/api/branches')
       .then((r) => r.json())
       .then((data) => {
-        if (data.erreur) { setErreur(data.erreur); return }
+        if (data.erreur) { toast.error(data.erreur); return }
         setPostes(data.postes)
         setComptes(data.comptesParBranche)
       })
-      .catch(() => setErreur('Impossible de charger les branches'))
+      .catch(() => toast.error('Impossible de charger les branches'))
       .finally(() => setChargement(false))
   }, [])
 
@@ -43,8 +43,6 @@ export default function PageBranches() {
       <div className="w-6 h-6 border-2 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
     </div>
   )
-
-  if (erreur) return <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreur}</div>
 
   return (
     <div className="space-y-6">

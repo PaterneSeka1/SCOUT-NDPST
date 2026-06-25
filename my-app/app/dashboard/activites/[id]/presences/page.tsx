@@ -2,6 +2,7 @@
 
 import { use, useState, useEffect } from 'react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { useActivite, usePresencesActivite, useEnregistrerPresences } from '@/hooks/useActivites'
 import { LABELS_BRANCHES } from '@/lib/branches'
 
@@ -18,8 +19,6 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
   const enregistrerPresences = useEnregistrerPresences(id)
 
   const [presences, setPresences] = useState<EtatPresence[]>([])
-  const [message, setMessage] = useState('')
-  const [enregistre, setEnregistre] = useState(false)
 
   useEffect(() => {
     if (presencesData && Array.isArray(presencesData)) {
@@ -40,28 +39,23 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
     setPresences((prev) =>
       prev.map((p) => (p.scoutId === scoutId ? { ...p, present: !p.present } : p))
     )
-    setEnregistre(false)
   }
 
   function setCommentaire(scoutId: string, commentaire: string) {
     setPresences((prev) =>
       prev.map((p) => (p.scoutId === scoutId ? { ...p, commentaire } : p))
     )
-    setEnregistre(false)
   }
 
   function toutCocher() {
     setPresences((prev) => prev.map((p) => ({ ...p, present: true })))
-    setEnregistre(false)
   }
 
   function toutDecocher() {
     setPresences((prev) => prev.map((p) => ({ ...p, present: false })))
-    setEnregistre(false)
   }
 
   async function handleEnregistrer() {
-    setMessage('')
     try {
       await enregistrerPresences.mutateAsync(
         presences.map((p) => ({
@@ -70,10 +64,9 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
           commentaire: p.commentaire || undefined,
         }))
       )
-      setEnregistre(true)
-      setMessage('Présences enregistrées avec succès.')
+      toast.success('Présences enregistrées avec succès.')
     } catch (err) {
-      setMessage((err as Error).message)
+      toast.error((err as Error).message)
     }
   }
 
@@ -125,13 +118,6 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
           </div>
         </div>
       </div>
-
-      {/* Message feedback */}
-      {message && (
-        <div className={`px-4 py-3 rounded-lg text-sm ${enregistre ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
-          {message}
-        </div>
-      )}
 
       {/* Liste des scouts */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">

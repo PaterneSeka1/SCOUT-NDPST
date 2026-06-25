@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { ParoisseLogoImageAuto } from '@/app/components/ParoisseLogoImage'
 import { useSiteInfo } from '@/app/components/useSiteInfo'
 
@@ -10,13 +11,11 @@ export default function LoginPage() {
   const router = useRouter()
   const [identifiant, setIdentifiant] = useState('')
   const [password, setPassword] = useState('')
-  const [erreur, setErreur] = useState('')
   const [chargement, setChargement] = useState(false)
   const { nomSite } = useSiteInfo()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setErreur('')
     setChargement(true)
 
     const result = await signIn('credentials', {
@@ -28,7 +27,7 @@ export default function LoginPage() {
     setChargement(false)
 
     if (result?.error) {
-      setErreur('Identifiant ou mot de passe incorrect.')
+      toast.error('Identifiant ou mot de passe incorrect.')
     } else {
       router.push('/dashboard')
     }
@@ -86,12 +85,6 @@ export default function LoginPage() {
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#27ae60] focus:border-transparent transition"
               />
             </div>
-
-            {erreur && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
-                {erreur}
-              </div>
-            )}
 
             <button
               type="submit"

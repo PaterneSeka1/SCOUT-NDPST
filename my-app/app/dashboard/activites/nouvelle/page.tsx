@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { useCreerActivite } from '@/hooks/useActivites'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
 import { LABELS_BRANCHES } from '@/lib/branches'
@@ -24,12 +25,10 @@ export default function PageNouvelleActivite() {
   const [lieu, setLieu] = useState('')
   const [brancheType, setBrancheType] = useState('')
   const [description, setDescription] = useState('')
-  const [erreur, setErreur] = useState('')
   const [erreursChamps, setErreursChamps] = useState<{ titre?: string; dateDebut?: string }>({})
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setErreur('')
     const errs: { titre?: string; dateDebut?: string } = {}
     if (!titre.trim()) errs.titre = 'Le titre est requis'
     if (!dateDebut) errs.dateDebut = 'La date de début est requise'
@@ -48,7 +47,7 @@ export default function PageNouvelleActivite() {
       })
       router.push('/dashboard/activites')
     } catch (err) {
-      setErreur((err as Error).message)
+      toast.error((err as Error).message)
     }
   }
 
@@ -65,8 +64,6 @@ export default function PageNouvelleActivite() {
 
       <form onSubmit={handleSubmit}>
         <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">
-
-          {erreur && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreur}</div>}
 
           {/* Titre */}
           <div>
