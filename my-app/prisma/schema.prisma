@@ -95,18 +95,19 @@ model Paroisse {
   adresse   String?
   telephone String?
   email     String?  @unique
-  logo      String?  // URL ou chemin vers le logo
+  logo      String? // URL ou chemin vers le logo
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  utilisateurs     Utilisateur[]
-  postesGroupe     PosteGroupe[]
-  postesBranche    PosteBranche[]
-  scouts           Scout[]
-  activites        Activite[]
-  joursReunion     JourReunion[]
-  configsReunion   ConfigReunionBranche[]
+  utilisateurs   Utilisateur[]
+  postesGroupe   PosteGroupe[]
+  postesBranche  PosteBranche[]
+  scouts         Scout[]
+  activites      Activite[]
+  joursReunion   JourReunion[]
+  configsReunion ConfigReunionBranche[]
+  programmes     Programme[]
 
   @@index([ville])
   @@index([diocese])
@@ -120,8 +121,8 @@ model Utilisateur {
   id        String          @id @default(cuid())
   nom       String
   prenom    String
-  matricule String?         @unique  // Requis pour chefs/scouts, absent pour parents
-  telephone String?         @unique  // Requis pour parents, optionnel pour les autres
+  matricule String?         @unique // Requis pour chefs/scouts, absent pour parents
+  telephone String?         @unique // Requis pour parents, optionnel pour les autres
   email     String?         @unique
   password  String
   role      RoleUtilisateur
@@ -134,16 +135,17 @@ model Utilisateur {
   paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
 
   // Relations
-  posteGroupe               PosteGroupe?
-  postesBranche             PosteBranche[]
-  liensParent               LienParentScout[]
-  contactsUrgence           ContactUrgence[]        // Contacts d'urgence liés à ce compte
-  ficheScout                Scout?                  // Fiche Scout liée (si rôle SCOUT)
-  activitesCreees           Activite[]              @relation("ActiviteCreePar")
-  progressionsValidees      ProgressionScout[]      @relation("ProgressionValidePar")
-  joursReunionCrees         JourReunion[]           @relation("JourReunionCreePar")
-  presencesReunionMarquees  PresenceReunion[]       @relation("PresenceReunionMarquePar")
-  tokensReinitialisation    TokenReinitialisation[]
+  posteGroupe              PosteGroupe?
+  postesBranche            PosteBranche[]
+  liensParent              LienParentScout[]
+  contactsUrgence          ContactUrgence[] // Contacts d'urgence liés à ce compte
+  ficheScout               Scout? // Fiche Scout liée (si rôle SCOUT)
+  activitesCreees          Activite[]              @relation("ActiviteCreePar")
+  progressionsValidees     ProgressionScout[]      @relation("ProgressionValidePar")
+  joursReunionCrees        JourReunion[]           @relation("JourReunionCreePar")
+  presencesReunionMarquees PresenceReunion[]       @relation("PresenceReunionMarquePar")
+  tokensReinitialisation   TokenReinitialisation[]
+  programmesCrees          Programme[]             @relation("ProgrammeCreePar")
 
   @@index([matricule])
   @@index([telephone])
@@ -159,7 +161,7 @@ model Utilisateur {
 model PosteGroupe {
   id        String          @id @default(cuid())
   role      RolePosteGroupe
-  fonction  String?         // Champ libre pour ASSISTANT_GROUPE (ex. Logistique, Secrétariat)
+  fonction  String? // Champ libre pour ASSISTANT_GROUPE (ex. Logistique, Secrétariat)
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
 
@@ -187,7 +189,7 @@ model PosteBranche {
   id          String           @id @default(cuid())
   brancheType BrancheType
   role        RolePosteBranche
-  fonction    String?          // Champ libre pour ASSISTANT
+  fonction    String? // Champ libre pour ASSISTANT
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
@@ -218,7 +220,7 @@ model Scout {
   dateNaissance DateTime
   sexe          Sexe
   brancheType   BrancheType
-  matricule     String?     @unique  // Optionnel à l'inscription, ajouté plus tard
+  matricule     String?     @unique // Optionnel à l'inscription, ajouté plus tard
   actif         Boolean     @default(true)
   photo         String?
   createdAt     DateTime    @default(now())
@@ -229,16 +231,16 @@ model Scout {
   paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
 
   // Compte utilisateur optionnel (certains scouts ont un espace personnel)
-  utilisateurId String?     @unique
+  utilisateurId String?      @unique
   utilisateur   Utilisateur? @relation(fields: [utilisateurId], references: [id], onDelete: SetNull)
 
   // Relations
-  liensParents      LienParentScout[]   // Parents avec compte dans l'application
-  contactsUrgence   ContactUrgence[]    // Contacts d'urgence (avec ou sans compte)
-  presences         Presence[]
-  presencesReunion  PresenceReunion[]
-  progressions      ProgressionScout[]
-  documents         Document[]
+  liensParents     LienParentScout[] // Parents avec compte dans l'application
+  contactsUrgence  ContactUrgence[] // Contacts d'urgence (avec ou sans compte)
+  presences        Presence[]
+  presencesReunion PresenceReunion[]
+  progressions     ProgressionScout[]
+  documents        Document[]
 
   @@index([paroisseId])
   @@index([brancheType])
@@ -251,12 +253,12 @@ model Scout {
 // ---------------------------------------------------------------------------
 
 model ContactUrgence {
-  id        String   @id @default(cuid())
+  id        String  @id @default(cuid())
   nom       String
   prenom    String?
   telephone String
-  relation  String?  // Ex : Père, Mère, Tuteur, Oncle...
-  principal Boolean  @default(false) // Contact prioritaire
+  relation  String? // Ex : Père, Mère, Tuteur, Oncle...
+  principal Boolean @default(false) // Contact prioritaire
 
   scoutId String
   scout   Scout  @relation(fields: [scoutId], references: [id], onDelete: Cascade)
@@ -310,11 +312,12 @@ model Activite {
   paroisseId String
   paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
 
-  creePar   String
+  creePar            String
   creeParUtilisateur Utilisateur @relation("ActiviteCreePar", fields: [creePar], references: [id], onDelete: Restrict)
 
   // Relations
-  presences Presence[]
+  presences      Presence[]
+  ligneProgramme LigneProgramme?
 
   @@index([paroisseId])
   @@index([brancheType])
@@ -353,7 +356,7 @@ model Badge {
   description String?
   brancheType BrancheType
   ordre       Int         @default(0) // Ordre dans le parcours de la branche
-  icone       String?     // URL ou nom d'icône
+  icone       String? // URL ou nom d'icône
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
@@ -370,10 +373,10 @@ model Badge {
 // ---------------------------------------------------------------------------
 
 model ProgressionScout {
-  id            String   @id @default(cuid())
+  id             String   @id @default(cuid())
   dateValidation DateTime @default(now())
-  commentaire   String?
-  createdAt     DateTime @default(now())
+  commentaire    String?
+  createdAt      DateTime @default(now())
 
   scoutId String
   scout   Scout  @relation(fields: [scoutId], references: [id], onDelete: Cascade)
@@ -394,14 +397,14 @@ model ProgressionScout {
 // ---------------------------------------------------------------------------
 
 model Document {
-  id          String       @id @default(cuid())
-  type        TypeDocument
-  nomFichier  String
-  url         String
-  dateUpload  DateTime     @default(now())
-  valide      Boolean      @default(false)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id         String       @id @default(cuid())
+  type       TypeDocument
+  nomFichier String
+  url        String
+  dateUpload DateTime     @default(now())
+  valide     Boolean      @default(false)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
 
   scoutId String
   scout   Scout  @relation(fields: [scoutId], references: [id], onDelete: Cascade)
@@ -417,13 +420,13 @@ model Document {
 
 model JourReunion {
   id           String        @id @default(cuid())
-  brancheType  BrancheType?  // null = toutes branches
+  brancheType  BrancheType? // null = toutes branches
   titre        String?
   dateHeure    DateTime
   dureeMinutes Int?
   lieu         String?
   statut       StatutReunion @default(PLANIFIEE)
-  dateReportee DateTime?     // nouvelle date si statut = REPORTEE
+  dateReportee DateTime? // nouvelle date si statut = REPORTEE
   notes        String?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
@@ -457,7 +460,7 @@ model PresenceReunion {
   jourReunion   JourReunion @relation(fields: [jourReunionId], references: [id], onDelete: Cascade)
 
   scoutId String
-  scout   Scout @relation(fields: [scoutId], references: [id], onDelete: Cascade)
+  scout   Scout  @relation(fields: [scoutId], references: [id], onDelete: Cascade)
 
   marqueParId String?
   marquePar   Utilisateur? @relation("PresenceReunionMarquePar", fields: [marqueParId], references: [id], onDelete: SetNull)
@@ -472,11 +475,11 @@ model PresenceReunion {
 // ---------------------------------------------------------------------------
 
 model TokenReinitialisation {
-  id            String   @id @default(cuid())
-  token         String   @unique
-  expiresAt     DateTime
-  utilise       Boolean  @default(false)
-  createdAt     DateTime @default(now())
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  utilise   Boolean  @default(false)
+  createdAt DateTime @default(now())
 
   utilisateurId String
   utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
@@ -492,8 +495,8 @@ model TokenReinitialisation {
 model ConfigReunionBranche {
   id           String      @id @default(cuid())
   brancheType  BrancheType
-  jourSemaine  Int         // 0=dim, 1=lun, 2=mar, 3=mer, 4=jeu, 5=ven, 6=sam
-  heureDebut   String      // "09:00"
+  jourSemaine  Int // 0=dim, 1=lun, 2=mar, 3=mer, 4=jeu, 5=ven, 6=sam
+  heureDebut   String // "09:00"
   dureeMinutes Int         @default(90)
   lieu         String?
   createdAt    DateTime    @default(now())
@@ -504,4 +507,55 @@ model ConfigReunionBranche {
 
   @@unique([paroisseId, brancheType])
   @@index([paroisseId])
+}
+
+// ---------------------------------------------------------------------------
+// Programme d'activités (groupe ou branche, sur une période donnée)
+// brancheType = null : programme du groupe. brancheType défini : programme propre à la branche.
+// ---------------------------------------------------------------------------
+
+model Programme {
+  id           String       @id @default(cuid())
+  titre        String
+  description  String?
+  periodeDebut DateTime
+  periodeFin   DateTime
+  brancheType  BrancheType? // null = programme du groupe
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  paroisseId String
+  paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
+
+  creePar            String
+  creeParUtilisateur Utilisateur @relation("ProgrammeCreePar", fields: [creePar], references: [id], onDelete: Restrict)
+
+  lignes LigneProgramme[]
+
+  @@index([paroisseId])
+  @@index([brancheType])
+  @@index([periodeDebut])
+}
+
+// ---------------------------------------------------------------------------
+// Ligne de programme (thème/étape planifiée, éventuellement réalisée via une Activité)
+// ---------------------------------------------------------------------------
+
+model LigneProgramme {
+  id         String    @id @default(cuid())
+  theme      String
+  objectif   String?
+  datePrevue DateTime?
+  ordre      Int       @default(0)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  programmeId String
+  programme   Programme @relation(fields: [programmeId], references: [id], onDelete: Cascade)
+
+  // Lien optionnel vers l'Activité qui réalise concrètement cette ligne
+  activiteId String?   @unique
+  activite   Activite? @relation(fields: [activiteId], references: [id], onDelete: SetNull)
+
+  @@index([programmeId])
 }

@@ -24,6 +24,7 @@ function getMenuItems(role: string): MenuItem[] {
         { label: 'Scouts', href: '/dashboard/scouts', icone: '⚜️' },
         { label: 'Activités', href: '/dashboard/activites', icone: '📅' },
         { label: 'Réunions', href: '/dashboard/reunions', icone: '🗓️' },
+        { label: 'Programmes', href: '/dashboard/programmes', icone: '📘' },
         { label: 'Rapports', href: '/dashboard/rapports', icone: '📈' },
         { label: 'Apparence du site', href: '/dashboard/site-config', icone: '🎨' },
       ]
@@ -36,6 +37,7 @@ function getMenuItems(role: string): MenuItem[] {
         { label: 'Scouts', href: '/dashboard/scouts', icone: '⚜️' },
         { label: 'Activités', href: '/dashboard/activites', icone: '📅' },
         { label: 'Réunions', href: '/dashboard/reunions', icone: '🗓️' },
+        { label: 'Programmes', href: '/dashboard/programmes', icone: '📘' },
         { label: 'Rapports', href: '/dashboard/rapports', icone: '📈' },
         { label: 'Apparence du site', href: '/dashboard/site-config', icone: '🎨' },
       ]
@@ -48,6 +50,7 @@ function getMenuItems(role: string): MenuItem[] {
         { label: 'Scouts', href: '/dashboard/scouts', icone: '⚜️' },
         { label: 'Activités', href: '/dashboard/activites', icone: '📅' },
         { label: 'Réunions', href: '/dashboard/reunions', icone: '🗓️' },
+        { label: 'Programmes', href: '/dashboard/programmes', icone: '📘' },
       ]
     case 'RESPONSABLE_BRANCHE':
     case 'ADJOINT_BRANCHE':
@@ -59,6 +62,7 @@ function getMenuItems(role: string): MenuItem[] {
         { label: 'Scouts', href: '/dashboard/scouts', icone: '⚜️' },
         { label: 'Activités', href: '/dashboard/activites', icone: '📅' },
         { label: 'Réunions', href: '/dashboard/reunions', icone: '🗓️' },
+        { label: 'Programmes', href: '/dashboard/programmes', icone: '📘' },
         { label: 'Présences', href: '/dashboard/presences', icone: '✅' },
       ]
     case 'PARENT':
