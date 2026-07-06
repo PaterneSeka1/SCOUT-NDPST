@@ -3,10 +3,9 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { RoleUtilisateur } from '@/app/generated/prisma/client'
+import { ROLES_GROUPE as ROLES_AUTORISES } from '@/lib/roles'
 
 type RouteParams = { params: Promise<{ id: string }> }
-
-const ROLES_AUTORISES = ['ADMIN_PAROISSE', 'CHEF_GROUPE']
 
 // Vérifie que l'utilisateur ciblé n'est pas admin (protection pour CHEF_GROUPE)
 async function cibleAutorisee(session: any, id: string): Promise<boolean> {

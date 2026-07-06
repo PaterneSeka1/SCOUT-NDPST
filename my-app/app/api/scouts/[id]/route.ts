@@ -3,18 +3,10 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { BrancheType, Sexe } from '@/app/generated/prisma/client'
+import { ROLES_TOUT_STAFF as ROLES_AUTORISES } from '@/lib/roles'
+import { estCheminLocalValide } from '@/lib/validation'
 
 type RouteParams = { params: Promise<{ id: string }> }
-
-const ROLES_AUTORISES = [
-  'ADMIN_PAROISSE',
-  'CHEF_GROUPE',
-  'ADJOINT_GROUPE',
-  'ASSISTANT_GROUPE',
-  'RESPONSABLE_BRANCHE',
-  'ADJOINT_BRANCHE',
-  'ASSISTANT_BRANCHE',
-]
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   try {
@@ -115,6 +107,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
     if (brancheType !== undefined && !(brancheType in BrancheType)) {
       return NextResponse.json({ error: 'Branche invalide' }, { status: 400 })
+    }
+    if (photo != null && photo !== '' && !estCheminLocalValide(photo)) {
+      return NextResponse.json({ error: 'photo doit être un chemin local (ex : /api/fichiers/…)' }, { status: 400 })
     }
 
     const scout = await prisma.scout.update({

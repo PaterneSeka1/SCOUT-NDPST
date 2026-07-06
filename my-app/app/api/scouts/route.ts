@@ -3,16 +3,8 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { BrancheType, Prisma, Sexe } from '@/app/generated/prisma/client'
-
-const ROLES_AUTORISES = [
-  'ADMIN_PAROISSE',
-  'CHEF_GROUPE',
-  'ADJOINT_GROUPE',
-  'ASSISTANT_GROUPE',
-  'RESPONSABLE_BRANCHE',
-  'ADJOINT_BRANCHE',
-  'ASSISTANT_BRANCHE',
-]
+import { ROLES_TOUT_STAFF as ROLES_AUTORISES } from '@/lib/roles'
+import { estCheminLocalValide } from '@/lib/validation'
 
 export async function GET(request: NextRequest) {
   try {
@@ -128,6 +120,9 @@ export async function POST(request: NextRequest) {
     }
     if (!brancheType || !(brancheType in BrancheType)) {
       return NextResponse.json({ error: 'La branche est invalide ou manquante' }, { status: 400 })
+    }
+    if (photo != null && photo !== '' && !estCheminLocalValide(photo)) {
+      return NextResponse.json({ error: 'photo doit être un chemin local (ex : /api/fichiers/…)' }, { status: 400 })
     }
 
     // Validation des contacts d'urgence

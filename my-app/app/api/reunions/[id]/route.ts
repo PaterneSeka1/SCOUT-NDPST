@@ -2,13 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { ROLES_BRANCHE, ROLES_GESTION as ROLES_CREATION, ROLES_TOUT_STAFF as ROLES_LECTURE } from '@/lib/roles'
+import { StatutReunionSchema, BrancheTypeSchema } from '@/lib/validation'
 
 type RouteParams = { params: Promise<{ id: string }> }
-
-const ROLES_GROUPE = ['ADMIN_PAROISSE', 'CHEF_GROUPE']
-const ROLES_BRANCHE = ['RESPONSABLE_BRANCHE', 'ADJOINT_BRANCHE', 'ASSISTANT_BRANCHE']
-const ROLES_CREATION = [...ROLES_GROUPE, ...ROLES_BRANCHE]
-const ROLES_LECTURE = [...ROLES_GROUPE, 'ADJOINT_GROUPE', 'ASSISTANT_GROUPE', ...ROLES_BRANCHE]
 
 async function getBrancheUtilisateur(userId: string, paroisseId: string): Promise<string | null> {
   const poste = await prisma.posteBranche.findFirst({
@@ -75,6 +72,13 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       if (!bt || existant.brancheType !== bt) {
         return NextResponse.json({ erreur: 'Accès refusé à cette réunion' }, { status: 403 })
       }
+    }
+
+    if (statut !== undefined && !StatutReunionSchema.safeParse(statut).success) {
+      return NextResponse.json({ erreur: 'Statut invalide' }, { status: 400 })
+    }
+    if (brancheType != null && !BrancheTypeSchema.safeParse(brancheType).success) {
+      return NextResponse.json({ erreur: 'Branche invalide' }, { status: 400 })
     }
 
     if (statut === 'REPORTEE' && !dateReportee) {

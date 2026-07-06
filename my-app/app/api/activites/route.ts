@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { ROLES_TOUT_STAFF } from '@/lib/roles'
+import { TypeActiviteSchema, BrancheTypeSchema } from '@/lib/validation'
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+  }
+  if (!ROLES_TOUT_STAFF.includes(session.user.role)) {
+    return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
   }
 
   const { searchParams } = new URL(request.url)
@@ -59,12 +64,22 @@ export async function POST(request: NextRequest) {
   if (!session?.user) {
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
   }
+  if (!ROLES_TOUT_STAFF.includes(session.user.role)) {
+    return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+  }
 
   const corps = await request.json()
   const { titre, description, dateDebut, dateFin, lieu, type, brancheType } = corps
 
   if (!titre || !dateDebut) {
     return NextResponse.json({ error: 'Le titre et la date de début sont obligatoires' }, { status: 400 })
+  }
+
+  if (type !== undefined && !TypeActiviteSchema.safeParse(type).success) {
+    return NextResponse.json({ error: "Type d'activité invalide" }, { status: 400 })
+  }
+  if (brancheType != null && !BrancheTypeSchema.safeParse(brancheType).success) {
+    return NextResponse.json({ error: 'Branche invalide' }, { status: 400 })
   }
 
   const activite = await prisma.activite.create({

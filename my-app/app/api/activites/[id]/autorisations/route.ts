@@ -3,18 +3,10 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { TypeAutorisationCamp } from '@/app/generated/prisma/client'
+import { ROLES_TOUT_STAFF as ROLES_STAFF } from '@/lib/roles'
+import { estCheminLocalValide } from '@/lib/validation'
 
 type RouteParams = { params: Promise<{ id: string }> }
-
-const ROLES_STAFF = [
-  'ADMIN_PAROISSE',
-  'CHEF_GROUPE',
-  'ADJOINT_GROUPE',
-  'ASSISTANT_GROUPE',
-  'RESPONSABLE_BRANCHE',
-  'ADJOINT_BRANCHE',
-  'ASSISTANT_BRANCHE',
-]
 
 async function peutAgirSurScout(
   role: string,
@@ -61,6 +53,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
     if (mode === 'DOCUMENT' && (!documentUrl?.trim() || !documentNomFichier?.trim())) {
       return NextResponse.json({ erreur: 'Le document est requis pour ce mode' }, { status: 400 })
+    }
+    if (mode === 'DOCUMENT' && !estCheminLocalValide(documentUrl?.trim())) {
+      return NextResponse.json({ erreur: 'documentUrl doit être un chemin local (ex : /api/fichiers/…)' }, { status: 400 })
     }
 
     const scout = await prisma.scout.findFirst({

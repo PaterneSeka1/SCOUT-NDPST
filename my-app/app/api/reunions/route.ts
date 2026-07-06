@@ -2,12 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-
-const ROLES_BRANCHE = ['RESPONSABLE_BRANCHE', 'ADJOINT_BRANCHE', 'ASSISTANT_BRANCHE']
-const ROLES_GROUPE = ['ADMIN_PAROISSE', 'CHEF_GROUPE']
-const ROLES_LECTURE = [
-  ...ROLES_GROUPE, 'ADJOINT_GROUPE', 'ASSISTANT_GROUPE', ...ROLES_BRANCHE,
-]
+import { ROLES_GROUPE, ROLES_BRANCHE, ROLES_TOUT_STAFF as ROLES_LECTURE } from '@/lib/roles'
+import { BrancheTypeSchema } from '@/lib/validation'
 
 async function getBrancheUtilisateur(userId: string, paroisseId: string) {
   const poste = await prisma.posteBranche.findFirst({
@@ -75,6 +71,9 @@ export async function POST(req: NextRequest) {
 
     if (!dates?.length) return NextResponse.json({ erreur: 'Au moins une date est requise' }, { status: 400 })
     if (dates.length > 60) return NextResponse.json({ erreur: 'Maximum 60 réunions par création en série' }, { status: 400 })
+    if (brancheType != null && !BrancheTypeSchema.safeParse(brancheType).success) {
+      return NextResponse.json({ erreur: 'Branche invalide' }, { status: 400 })
+    }
 
     // Un chef de branche ne peut créer que pour sa propre branche
     let brancheEffective: string | null = brancheType ?? null

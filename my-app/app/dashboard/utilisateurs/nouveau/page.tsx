@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { LABELS_ROLES } from '@/lib/roles'
 import { useCreerUtilisateur } from '@/hooks/useUtilisateurs'
 import { PasswordInput } from '@/app/components/PasswordInput'
+import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -65,7 +66,7 @@ export default function NouvelUtilisateurPage() {
       if (!form.matricule.trim()) e.matricule = 'Le matricule est requis'
     }
     if (!form.motDePasse) e.motDePasse = 'Le mot de passe est requis'
-    else if (form.motDePasse.length < 6) e.motDePasse = 'Minimum 6 caractères'
+    else if (!motDePasseValide(form.motDePasse)) e.motDePasse = REGLE_MOT_DE_PASSE
     if (!form.confirmation) e.confirmation = 'La confirmation est requise'
     else if (form.motDePasse !== form.confirmation) e.confirmation = 'Les mots de passe ne correspondent pas'
     setErreurs(e)
@@ -166,7 +167,7 @@ export default function NouvelUtilisateurPage() {
               <div>
                 <label className={CLS_LABEL}>Mot de passe <span className="text-red-500">*</span></label>
                 <PasswordInput id="motDePasse" name="motDePasse" value={form.motDePasse} onChange={handleChange}
-                  placeholder="Minimum 6 caractères" className={erreurs.motDePasse ? CLS_INPUT_ERR : CLS_INPUT} />
+                  placeholder={REGLE_MOT_DE_PASSE} className={erreurs.motDePasse ? CLS_INPUT_ERR : CLS_INPUT} />
                 {erreurs.motDePasse && <p className="mt-1 text-xs text-red-600">{erreurs.motDePasse}</p>}
               </div>
               <div>

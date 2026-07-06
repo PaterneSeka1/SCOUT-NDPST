@@ -21,7 +21,8 @@
     "pg": "^8.21.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "sonner": "^2.0.7"
+    "sonner": "^2.0.7",
+    "zod": "^4.4.3"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"

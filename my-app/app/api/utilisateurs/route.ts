@@ -4,6 +4,9 @@ import { hash } from 'bcryptjs'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { Prisma, RoleUtilisateur } from '@/app/generated/prisma/client'
+import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
+import { ROLES_GROUPE as ROLES_AUTORISES } from '@/lib/roles'
+import { RoleUtilisateurSchema } from '@/lib/validation'
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,7 +16,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
-    const ROLES_AUTORISES = ['ADMIN_PAROISSE', 'CHEF_GROUPE']
     if (!ROLES_AUTORISES.includes(session.user.role)) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
@@ -21,7 +23,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
     const limite = Math.max(1, parseInt(searchParams.get('limite') ?? '20', 10))
-    const role = searchParams.get('role') ?? undefined
+    const roleParam = searchParams.get('role')
+    const role = roleParam && RoleUtilisateurSchema.safeParse(roleParam).success ? roleParam : undefined
     const recherche = searchParams.get('recherche') ?? undefined
 
     const paroisseId = session.user.paroisseId
@@ -104,8 +107,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (password.length < 6) {
-      return NextResponse.json({ error: 'Le mot de passe doit contenir au moins 6 caractères' }, { status: 400 })
+    if (!motDePasseValide(password)) {
+      return NextResponse.json({ error: REGLE_MOT_DE_PASSE }, { status: 400 })
     }
 
     if (!(role in RoleUtilisateur)) {

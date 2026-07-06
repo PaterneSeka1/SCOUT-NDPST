@@ -3,15 +3,10 @@ import { getServerSession } from 'next-auth/next'
 import { hash } from 'bcryptjs'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
+import { ROLES_GROUPE_ETENDU as ROLES_AUTORISES } from '@/lib/roles'
 
 type RouteParams = { params: Promise<{ id: string }> }
-
-const ROLES_AUTORISES = [
-  'ADMIN_PAROISSE',
-  'CHEF_GROUPE',
-  'ADJOINT_GROUPE',
-  'ASSISTANT_GROUPE',
-]
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
@@ -53,11 +48,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const body = await request.json()
     const { password, telephone } = body as { password?: string; telephone?: string }
 
-    if (!password || password.length < 6) {
-      return NextResponse.json(
-        { error: 'Le mot de passe est requis (minimum 6 caractères)' },
-        { status: 400 },
-      )
+    if (!password || !motDePasseValide(password)) {
+      return NextResponse.json({ error: REGLE_MOT_DE_PASSE }, { status: 400 })
     }
 
     // Vérifier que le matricule n'est pas déjà utilisé par un utilisateur

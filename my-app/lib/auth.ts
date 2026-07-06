@@ -10,6 +10,11 @@ const FENETRE_CONNEXION_MS = 15 * 60 * 1000 // 15 minutes
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
+    // Par défaut NextAuth garde une session valide 30 jours : trop long pour des
+    // comptes qui peuvent gérer des données de mineurs. 12h de validité totale,
+    // prolongée automatiquement par tranches d'1h tant que la session est active.
+    maxAge: 12 * 60 * 60,
+    updateAge: 60 * 60,
   },
   providers: [
     CredentialsProvider({

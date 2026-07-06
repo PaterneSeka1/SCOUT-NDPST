@@ -2,12 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { ROLES_BRANCHE, ROLES_GESTION } from '@/lib/roles'
 
 type RouteParams = { params: Promise<{ id: string; ligneId: string }> }
-
-const ROLES_GROUPE = ['ADMIN_PAROISSE', 'CHEF_GROUPE']
-const ROLES_BRANCHE = ['RESPONSABLE_BRANCHE', 'ADJOINT_BRANCHE', 'ASSISTANT_BRANCHE']
-const ROLES_GESTION = [...ROLES_GROUPE, ...ROLES_BRANCHE]
 
 async function getBrancheUtilisateur(userId: string, paroisseId: string): Promise<string | null> {
   const poste = await prisma.posteBranche.findFirst({

@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth/next'
 import { hash } from 'bcryptjs'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
+import { ROLES_GROUPE } from '@/lib/roles'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -14,7 +16,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
-    if (!['ADMIN_PAROISSE', 'CHEF_GROUPE'].includes(session.user.role)) {
+    if (!ROLES_GROUPE.includes(session.user.role)) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 
@@ -37,11 +39,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const body = await request.json()
     const { nouveauMotDePasse } = body as { nouveauMotDePasse?: string }
 
-    if (!nouveauMotDePasse || nouveauMotDePasse.trim().length < 6) {
-      return NextResponse.json(
-        { error: 'Le nouveau mot de passe doit contenir au moins 6 caractères' },
-        { status: 400 },
-      )
+    if (!nouveauMotDePasse || !motDePasseValide(nouveauMotDePasse)) {
+      return NextResponse.json({ error: REGLE_MOT_DE_PASSE }, { status: 400 })
     }
 
     const passwordHache = await hash(nouveauMotDePasse, 12)

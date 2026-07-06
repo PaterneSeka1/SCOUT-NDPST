@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { ParoisseLogoImageAuto } from '@/app/components/ParoisseLogoImage'
 import { useSiteInfo } from '@/app/components/useSiteInfo'
 import { PasswordInput } from '@/app/components/PasswordInput'
+import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 
 function FormulaireReinitialisation() {
   const searchParams = useSearchParams()
@@ -31,8 +32,8 @@ function FormulaireReinitialisation() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (motDePasse.length < 6) {
-      toast.error('Le mot de passe doit contenir au moins 6 caractères.')
+    if (!motDePasseValide(motDePasse)) {
+      toast.error(REGLE_MOT_DE_PASSE)
       return
     }
     if (motDePasse !== confirmation) {
@@ -114,7 +115,7 @@ function FormulaireReinitialisation() {
                   onChange={(e) => setMotDePasse(e.target.value)}
                   required
                   autoFocus
-                  placeholder="Au moins 6 caractères"
+                  placeholder={REGLE_MOT_DE_PASSE}
                   autoComplete="new-password"
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent transition"
                   style={{ '--tw-ring-color': 'var(--ca)' } as React.CSSProperties}

@@ -7,6 +7,7 @@ import { useScout, useAttribuerMatricule, useAjouterContact, useSupprimerContact
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
 import { LABELS_TYPE_DOCUMENT, ICONES_TYPE_DOCUMENT } from '@/lib/documents'
 import { PasswordInput } from '@/app/components/PasswordInput'
+import { REGLE_MOT_DE_PASSE } from '@/lib/password'
 
 export default function FicheScoutPage() {
   const { id } = useParams<{ id: string }>()
@@ -232,7 +233,7 @@ export default function FicheScoutPage() {
                   <form onSubmit={handleCreerCompte} className="space-y-3 mt-3">
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Mot de passe <span className="text-red-500">*</span></label>
-                      <PasswordInput value={passwordCompte} onChange={e => setPasswordCompte(e.target.value)} required placeholder="Minimum 6 caractères"
+                      <PasswordInput value={passwordCompte} onChange={e => setPasswordCompte(e.target.value)} required placeholder={REGLE_MOT_DE_PASSE}
                         className="border border-gray-300 rounded-md px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#1a4731]" />
                     </div>
                     <div>

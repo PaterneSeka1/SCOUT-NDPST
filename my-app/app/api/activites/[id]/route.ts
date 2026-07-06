@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { ROLES_TOUT_STAFF } from '@/lib/roles'
+import { TypeActiviteSchema, BrancheTypeSchema } from '@/lib/validation'
 
 export async function GET(
   request: NextRequest,
@@ -10,6 +12,9 @@ export async function GET(
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+  }
+  if (!ROLES_TOUT_STAFF.includes(session.user.role)) {
+    return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
   }
 
   const { id } = await params
@@ -36,6 +41,9 @@ export async function PUT(
   if (!session?.user) {
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
   }
+  if (!ROLES_TOUT_STAFF.includes(session.user.role)) {
+    return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+  }
 
   const { id } = await params
 
@@ -49,6 +57,13 @@ export async function PUT(
 
   const corps = await request.json()
   const { titre, description, dateDebut, dateFin, lieu, type, brancheType } = corps
+
+  if (type !== undefined && !TypeActiviteSchema.safeParse(type).success) {
+    return NextResponse.json({ error: "Type d'activité invalide" }, { status: 400 })
+  }
+  if (brancheType != null && brancheType !== '' && !BrancheTypeSchema.safeParse(brancheType).success) {
+    return NextResponse.json({ error: 'Branche invalide' }, { status: 400 })
+  }
 
   const activite = await prisma.activite.update({
     where: { id },
@@ -76,6 +91,9 @@ export async function DELETE(
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+  }
+  if (!ROLES_TOUT_STAFF.includes(session.user.role)) {
+    return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
   }
 
   const { id } = await params

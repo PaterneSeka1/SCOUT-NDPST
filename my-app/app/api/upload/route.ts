@@ -3,13 +3,10 @@ import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { ROLES_GROUPE as ROLES_PUBLICATION } from '@/lib/roles'
 
 const TAILLE_MAX = 5 * 1024 * 1024 // 5 Mo
 const TYPES_AUTORISES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf']
-
-// Rôles autorisés à téléverser un fichier "public" (logo, image d'accueil) :
-// mêmes rôles que ceux habilités à modifier l'apparence du site (cf. /api/admin/site-config).
-const ROLES_PUBLICATION = ['ADMIN_PAROISSE', 'CHEF_GROUPE']
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)

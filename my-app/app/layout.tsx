@@ -35,6 +35,15 @@ const THEME_DEFAUT: Theme = {
   couleurHover: '#27ae60',
 }
 
+// Ces valeurs sont injectées telles quelles dans une balise <style> (voir plus
+// bas, dangerouslySetInnerHTML) : on revalide strictement le format hexadécimal
+// ici aussi, en défense en profondeur de la validation faite à l'écriture par
+// /api/admin/site-config, pour empêcher toute injection HTML/JS via le thème.
+const COULEUR_HEX_REGEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
+function couleurSure(valeur: string | undefined, defaut: string): string {
+  return valeur && COULEUR_HEX_REGEX.test(valeur) ? valeur : defaut
+}
+
 function hexToRgb(hex: string): string {
   const h = hex.replace('#', '')
   if (h.length !== 6) return '39, 174, 96'
@@ -51,8 +60,14 @@ async function getTheme(): Promise<{ theme: Theme; nomSite: string; logoSite: st
       'utf-8',
     )
     const config: SiteConfig = JSON.parse(raw)
+    const theme: Theme = {
+      couleurPrimaire: couleurSure(config.theme?.couleurPrimaire, THEME_DEFAUT.couleurPrimaire),
+      couleurAccent: couleurSure(config.theme?.couleurAccent, THEME_DEFAUT.couleurAccent),
+      couleurFond: couleurSure(config.theme?.couleurFond, THEME_DEFAUT.couleurFond),
+      couleurHover: couleurSure(config.theme?.couleurHover, THEME_DEFAUT.couleurHover),
+    }
     return {
-      theme: { ...THEME_DEFAUT, ...(config.theme ?? {}) },
+      theme,
       nomSite: config.nomSite ?? 'SCOUT ASCCI',
       logoSite: config.logoSite || null,
     }

@@ -2,13 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { ROLES_TOUT_STAFF as ROLES_PRESENCES } from '@/lib/roles'
+import { StatutPresenceReunionSchema } from '@/lib/validation'
 
 type RouteParams = { params: Promise<{ id: string }> }
-
-const ROLES_PRESENCES = [
-  'ADMIN_PAROISSE', 'CHEF_GROUPE', 'ADJOINT_GROUPE', 'ASSISTANT_GROUPE',
-  'RESPONSABLE_BRANCHE', 'ADJOINT_BRANCHE', 'ASSISTANT_BRANCHE',
-]
 
 // GET — feuille de présences : réunion + scouts de la branche + statuts existants
 export async function GET(_req: NextRequest, { params }: RouteParams) {
@@ -70,6 +67,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     }
 
     if (!Array.isArray(presences)) return NextResponse.json({ erreur: 'Format invalide' }, { status: 400 })
+    if (presences.some((p) => !p.scoutId || !StatutPresenceReunionSchema.safeParse(p.statut).success)) {
+      return NextResponse.json({ erreur: 'Statut de présence invalide' }, { status: 400 })
+    }
 
     await prisma.$transaction(
       presences.map(({ scoutId, statut, note }) =>

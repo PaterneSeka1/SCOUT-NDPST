@@ -3,18 +3,10 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { TypeDocument } from '@/app/generated/prisma/client'
+import { ROLES_TOUT_STAFF as ROLES_AUTORISES } from '@/lib/roles'
+import { estCheminLocalValide } from '@/lib/validation'
 
 type RouteParams = { params: Promise<{ id: string }> }
-
-const ROLES_AUTORISES = [
-  'ADMIN_PAROISSE',
-  'CHEF_GROUPE',
-  'ADJOINT_GROUPE',
-  'ASSISTANT_GROUPE',
-  'RESPONSABLE_BRANCHE',
-  'ADJOINT_BRANCHE',
-  'ASSISTANT_BRANCHE',
-]
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
@@ -51,6 +43,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
     if (!nomFichier?.trim() || !url?.trim()) {
       return NextResponse.json({ error: 'Le fichier est requis' }, { status: 400 })
+    }
+    if (!estCheminLocalValide(url.trim())) {
+      return NextResponse.json({ error: 'url doit être un chemin local (ex : /api/fichiers/…)' }, { status: 400 })
     }
 
     const document = await prisma.document.create({

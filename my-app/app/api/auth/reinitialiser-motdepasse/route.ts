@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { hash } from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { limiterTaux } from '@/lib/rateLimit'
+import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 
 export async function POST(req: NextRequest) {
   try {
     const { token, motDePasse } = await req.json() as { token?: string; motDePasse?: string }
 
     if (!token?.trim()) return NextResponse.json({ erreur: 'Token manquant' }, { status: 400 })
-    if (!motDePasse || motDePasse.length < 6) {
-      return NextResponse.json({ erreur: 'Le mot de passe doit contenir au moins 6 caractères' }, { status: 400 })
+    if (!motDePasse || !motDePasseValide(motDePasse)) {
+      return NextResponse.json({ erreur: REGLE_MOT_DE_PASSE }, { status: 400 })
     }
 
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'ip-inconnue'

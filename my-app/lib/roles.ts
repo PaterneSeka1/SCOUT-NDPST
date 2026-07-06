@@ -21,3 +21,31 @@ export const COULEURS_ROLES: Record<string, string> = {
   PARENT: 'bg-purple-100 text-purple-800',
   SCOUT: 'bg-orange-100 text-orange-800',
 }
+
+// ---------------------------------------------------------------------------
+// Groupes de rôles utilisés pour les contrôles d'accès des routes API.
+// Centralisés ici pour éviter que chaque route ne redéfinisse sa propre copie
+// (risque d'oubli d'un rôle lors d'une future évolution). Les routes existantes
+// gardent leur propre variable locale (ex: `ROLES_AUTORISES`) qui pointe vers
+// l'une de ces constantes — cela ne change aucun comportement, seulement la
+// source de vérité.
+// ---------------------------------------------------------------------------
+
+// Types larges (string[], pas de tuple littéral) : `session.user.role` est typé
+// `string` côté NextAuth, donc un tableau de littéraux ferait échouer `.includes()`
+// à la compilation.
+
+/** Direction du groupe : administrateur + chef de groupe. */
+export const ROLES_GROUPE: string[] = ['ADMIN_PAROISSE', 'CHEF_GROUPE']
+
+/** Toute l'équipe de groupe (direction + adjoint/assistants de groupe). */
+export const ROLES_GROUPE_ETENDU: string[] = [...ROLES_GROUPE, 'ADJOINT_GROUPE', 'ASSISTANT_GROUPE']
+
+/** Encadrement d'une branche (responsable, adjoint, assistants). */
+export const ROLES_BRANCHE: string[] = ['RESPONSABLE_BRANCHE', 'ADJOINT_BRANCHE', 'ASSISTANT_BRANCHE']
+
+/** Tout le staff paroissial (tous les rôles sauf PARENT et SCOUT). */
+export const ROLES_TOUT_STAFF: string[] = [...ROLES_GROUPE_ETENDU, ...ROLES_BRANCHE]
+
+/** Direction du groupe + encadrement de branche (sans les adjoints/assistants de groupe). */
+export const ROLES_GESTION: string[] = [...ROLES_GROUPE, ...ROLES_BRANCHE]
