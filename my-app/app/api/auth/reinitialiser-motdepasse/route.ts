@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { hash } from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
+import { limiterTaux } from '@/lib/rateLimit'
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,6 +10,11 @@ export async function POST(req: NextRequest) {
     if (!token?.trim()) return NextResponse.json({ erreur: 'Token manquant' }, { status: 400 })
     if (!motDePasse || motDePasse.length < 6) {
       return NextResponse.json({ erreur: 'Le mot de passe doit contenir au moins 6 caractères' }, { status: 400 })
+    }
+
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'ip-inconnue'
+    if (!limiterTaux(`reset-mdp:ip:${ip}`, 10, 15 * 60 * 1000).autorise) {
+      return NextResponse.json({ erreur: 'Trop de tentatives. Réessayez dans quelques minutes.' }, { status: 429 })
     }
 
     const tokenRecord = await prisma.tokenReinitialisation.findUnique({
@@ -24,7 +30,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ erreur: 'Ce lien a expiré. Veuillez faire une nouvelle demande.' }, { status: 400 })
     }
 
-    const passwordHache = await hash(motDePasse, 10)
+    const passwordHache = await hash(motDePasse, 12)
 
     await prisma.$transaction([
       prisma.utilisateur.update({

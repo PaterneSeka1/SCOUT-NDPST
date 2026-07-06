@@ -120,6 +120,7 @@ export default function SiteConfigPage() {
     dest === 'hero' ? setUploadHero(true) : setUploadLogo(true)
     const form = new FormData()
     form.append('fichier', fichier)
+    form.append('visibilite', 'publique')
     try {
       const res = await fetch('/api/upload', { method: 'POST', body: form })
       const data = await res.json()

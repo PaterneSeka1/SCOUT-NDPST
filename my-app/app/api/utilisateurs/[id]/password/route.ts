@@ -37,14 +37,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const body = await request.json()
     const { nouveauMotDePasse } = body as { nouveauMotDePasse?: string }
 
-    if (!nouveauMotDePasse || nouveauMotDePasse.trim().length === 0) {
+    if (!nouveauMotDePasse || nouveauMotDePasse.trim().length < 6) {
       return NextResponse.json(
-        { error: 'Le nouveau mot de passe est requis' },
+        { error: 'Le nouveau mot de passe doit contenir au moins 6 caractères' },
         { status: 400 },
       )
     }
 
-    const passwordHache = await hash(nouveauMotDePasse, 10)
+    const passwordHache = await hash(nouveauMotDePasse, 12)
 
     await prisma.utilisateur.update({
       where: { id },

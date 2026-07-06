@@ -78,6 +78,7 @@ export default function PageParoisse() {
     try {
       const fd = new FormData()
       fd.append('fichier', fichier)
+      fd.append('visibilite', 'publique')
       const res = await fetch('/api/upload', { method: 'POST', body: fd })
       const data = await res.json()
       if (!res.ok) { toast.error(data.erreur ?? 'Erreur upload'); setLogoPreview(paroisse?.logo ?? ''); return }

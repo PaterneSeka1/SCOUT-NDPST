@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { envoyerEmailReinitialisation } from '@/lib/email'
+import { limiterTaux } from '@/lib/rateLimit'
+
+const MAX_DEMANDES = 5
+const FENETRE_MS = 15 * 60 * 1000 // 15 minutes
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,6 +13,13 @@ export async function POST(req: NextRequest) {
 
     if (!email?.trim()) {
       return NextResponse.json({ erreur: 'Email requis' }, { status: 400 })
+    }
+
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'ip-inconnue'
+    const parIp = limiterTaux(`mdp-oublie:ip:${ip}`, MAX_DEMANDES, FENETRE_MS)
+    const parEmail = limiterTaux(`mdp-oublie:email:${email.trim().toLowerCase()}`, MAX_DEMANDES, FENETRE_MS)
+    if (!parIp.autorise || !parEmail.autorise) {
+      return NextResponse.json({ erreur: 'Trop de demandes. Réessayez dans quelques minutes.' }, { status: 429 })
     }
 
     // Réponse toujours identique pour ne pas révéler si l'email existe

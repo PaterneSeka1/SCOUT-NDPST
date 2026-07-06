@@ -2,6 +2,10 @@ import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { compare } from 'bcryptjs'
 import { prisma } from './prisma'
+import { limiterTaux } from './rateLimit'
+
+const MAX_TENTATIVES_CONNEXION = 5
+const FENETRE_CONNEXION_MS = 15 * 60 * 1000 // 15 minutes
 
 export const authOptions: NextAuthOptions = {
   session: {
@@ -14,9 +18,20 @@ export const authOptions: NextAuthOptions = {
         identifiant: { label: 'Matricule ou téléphone', type: 'text' },
         password: { label: 'Mot de passe', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.identifiant || !credentials?.password) {
           return null
+        }
+
+        const forwardedFor = req?.headers?.['x-forwarded-for']
+        const ip = (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor)?.split(',')[0]?.trim() ?? 'ip-inconnue'
+
+        // Limite par identifiant ET par IP : empêche aussi bien le brute-force d'un
+        // compte précis que le credential stuffing depuis une seule source.
+        const parIdentifiant = limiterTaux(`login:id:${credentials.identifiant}`, MAX_TENTATIVES_CONNEXION, FENETRE_CONNEXION_MS)
+        const parIp = limiterTaux(`login:ip:${ip}`, MAX_TENTATIVES_CONNEXION * 4, FENETRE_CONNEXION_MS)
+        if (!parIdentifiant.autorise || !parIp.autorise) {
+          throw new Error('Trop de tentatives. Réessayez dans quelques minutes.')
         }
 
         const utilisateur = await prisma.utilisateur.findFirst({

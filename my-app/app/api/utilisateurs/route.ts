@@ -104,6 +104,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (password.length < 6) {
+      return NextResponse.json({ error: 'Le mot de passe doit contenir au moins 6 caractères' }, { status: 400 })
+    }
+
     if (!(role in RoleUtilisateur)) {
       return NextResponse.json({ error: 'Rôle invalide' }, { status: 400 })
     }
@@ -156,7 +160,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const passwordHache = await hash(password, 10)
+    const passwordHache = await hash(password, 12)
 
     const utilisateur = await prisma.utilisateur.create({
       data: {

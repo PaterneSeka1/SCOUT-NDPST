@@ -72,7 +72,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    const passwordHache = await hash(password, 10)
+    const passwordHache = await hash(password, 12)
 
     const utilisateur = await prisma.$transaction(async (tx) => {
       const nouvelUtilisateur = await tx.utilisateur.create({

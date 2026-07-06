@@ -28,7 +28,11 @@ export default function LoginPage() {
     setChargement(false)
 
     if (result?.error) {
-      toast.error('Identifiant ou mot de passe incorrect.')
+      toast.error(
+        result.error === 'CredentialsSignin'
+          ? 'Identifiant ou mot de passe incorrect.'
+          : result.error,
+      )
     } else {
       router.push('/dashboard')
     }
