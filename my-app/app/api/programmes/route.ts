@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { BrancheType } from '@/app/generated/prisma/client'
 
 const ROLES_BRANCHE = ['RESPONSABLE_BRANCHE', 'ADJOINT_BRANCHE', 'ASSISTANT_BRANCHE']
 const ROLES_GROUPE = ['ADMIN_PAROISSE', 'CHEF_GROUPE']
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest) {
     const programmes = await prisma.programme.findMany({
       where: {
         paroisseId: session.user.paroisseId,
-        ...(filtreBranche ? { brancheType: filtreBranche as any } : {}),
+        ...(filtreBranche ? { brancheType: filtreBranche as BrancheType } : {}),
       },
       include: {
         _count: { select: { lignes: true } },
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
         description: description ?? null,
         periodeDebut: new Date(periodeDebut),
         periodeFin: new Date(periodeFin),
-        brancheType: brancheEffective as any ?? null,
+        brancheType: (brancheEffective as BrancheType | null) ?? null,
         paroisseId: session.user.paroisseId,
         creePar: session.user.id,
       },

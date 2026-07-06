@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { ParoisseLogoImageAuto } from '@/app/components/ParoisseLogoImage'
 import { useSiteInfo } from '@/app/components/useSiteInfo'
+import { PasswordInput } from '@/app/components/PasswordInput'
 
 function FormulaireReinitialisation() {
   const searchParams = useSearchParams()
@@ -107,9 +108,8 @@ function FormulaireReinitialisation() {
                 <label htmlFor="motDePasse" className="block text-sm font-medium text-gray-700 mb-1">
                   Nouveau mot de passe
                 </label>
-                <input
+                <PasswordInput
                   id="motDePasse"
-                  type="password"
                   value={motDePasse}
                   onChange={(e) => setMotDePasse(e.target.value)}
                   required
@@ -125,9 +125,8 @@ function FormulaireReinitialisation() {
                 <label htmlFor="confirmation" className="block text-sm font-medium text-gray-700 mb-1">
                   Confirmer le mot de passe
                 </label>
-                <input
+                <PasswordInput
                   id="confirmation"
-                  type="password"
                   value={confirmation}
                   onChange={(e) => setConfirmation(e.target.value)}
                   required

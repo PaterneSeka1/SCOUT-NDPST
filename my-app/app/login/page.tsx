@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { ParoisseLogoImageAuto } from '@/app/components/ParoisseLogoImage'
 import { useSiteInfo } from '@/app/components/useSiteInfo'
+import { PasswordInput } from '@/app/components/PasswordInput'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -74,9 +75,8 @@ export default function LoginPage() {
               >
                 Mot de passe
               </label>
-              <input
+              <PasswordInput
                 id="password"
-                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required

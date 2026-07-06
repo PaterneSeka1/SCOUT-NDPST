@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_ROLES } from '@/lib/roles'
 import { useCreerUtilisateur } from '@/hooks/useUtilisateurs'
+import { PasswordInput } from '@/app/components/PasswordInput'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -164,13 +165,13 @@ export default function NouvelUtilisateurPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className={CLS_LABEL}>Mot de passe <span className="text-red-500">*</span></label>
-                <input id="motDePasse" name="motDePasse" type="password" value={form.motDePasse} onChange={handleChange}
+                <PasswordInput id="motDePasse" name="motDePasse" value={form.motDePasse} onChange={handleChange}
                   placeholder="Minimum 6 caractères" className={erreurs.motDePasse ? CLS_INPUT_ERR : CLS_INPUT} />
                 {erreurs.motDePasse && <p className="mt-1 text-xs text-red-600">{erreurs.motDePasse}</p>}
               </div>
               <div>
                 <label className={CLS_LABEL}>Confirmation <span className="text-red-500">*</span></label>
-                <input id="confirmation" name="confirmation" type="password" value={form.confirmation} onChange={handleChange}
+                <PasswordInput id="confirmation" name="confirmation" value={form.confirmation} onChange={handleChange}
                   placeholder="Répéter le mot de passe" className={erreurs.confirmation ? CLS_INPUT_ERR : CLS_INPUT} />
                 {erreurs.confirmation && <p className="mt-1 text-xs text-red-600">{erreurs.confirmation}</p>}
               </div>
