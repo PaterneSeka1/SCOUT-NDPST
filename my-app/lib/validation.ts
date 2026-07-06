@@ -28,6 +28,17 @@ export const TypeAutorisationCampSchema = z.enum(['FICHE_MEDICALE', 'AUTORISATIO
 // Refuse les URL absolues ("https://…", "//hote/…") pour empêcher qu'une URL
 // externe arbitraire ne soit enregistrée puis potentiellement exploitée (SSRF,
 // hameçonnage via un lien qui semble interne à l'application).
+//
+// Le préfixe "/" seul ne suffit pas : un navigateur résout "/\exemple.com/x"
+// comme "https://exemple.com/x" (le backslash est traité comme un séparateur
+// de chemin par le parseur d'URL pour les schémas http/https). On revérifie
+// donc via le parseur d'URL lui-même que la valeur ne change pas d'origine
+// une fois résolue, plutôt que de se fier à une simple vérification de préfixe.
 export function estCheminLocalValide(valeur: unknown): valeur is string {
-  return typeof valeur === 'string' && valeur.startsWith('/') && !valeur.startsWith('//')
+  if (typeof valeur !== 'string' || !valeur.startsWith('/') || valeur.startsWith('//')) return false
+  try {
+    return new URL(valeur, 'https://internal.invalid').origin === 'https://internal.invalid'
+  } catch {
+    return false
+  }
 }
