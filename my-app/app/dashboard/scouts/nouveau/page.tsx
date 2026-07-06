@@ -47,6 +47,8 @@ export default function NouveauScoutPage() {
   const [brancheType, setBrancheType] = useState('')
   const [photo, setPhoto] = useState('')
   const [photoPreview, setPhotoPreview] = useState('')
+  const [allergies, setAllergies] = useState('')
+  const [traitementsMedicaux, setTraitementsMedicaux] = useState('')
   const [uploadEnCours, setUploadEnCours] = useState(false)
   const [erreurPhoto, setErreurPhoto] = useState('')
   const [contacts, setContacts] = useState<ContactForm[]>([contactVide()])
@@ -127,7 +129,13 @@ export default function NouveauScoutPage() {
         relation: c.relation.trim() || undefined,
         principal: c.principal,
       }))
-      await mutateAsync({ nom: nom.trim(), prenom: prenom.trim(), dateNaissance, sexe, brancheType, photo: photo.trim() || undefined, contactsUrgence: donneesContacts })
+      await mutateAsync({
+        nom: nom.trim(), prenom: prenom.trim(), dateNaissance, sexe, brancheType,
+        photo: photo.trim() || undefined,
+        allergies: allergies.trim() || undefined,
+        traitementsMedicaux: traitementsMedicaux.trim() || undefined,
+        contactsUrgence: donneesContacts,
+      })
       router.push('/dashboard/scouts')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Une erreur est survenue')
@@ -219,6 +227,28 @@ export default function NouveauScoutPage() {
                 {erreurPhoto && <p className="mt-1 text-xs text-red-600">{erreurPhoto}</p>}
                 {photo && !erreurPhoto && <p className="mt-1 text-xs text-green-600">Photo enregistrée</p>}
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Informations médicales */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">
+          <div className="border-b border-gray-100 pb-3">
+            <h2 className="text-sm font-semibold text-gray-800">Informations médicales</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              À connaître en cas d&apos;urgence (activité, camp) — en complément du certificat médical.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={CLS_LABEL}>Allergies <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
+              <textarea value={allergies} onChange={(e) => setAllergies(e.target.value)} rows={2}
+                placeholder="Ex : arachides, pénicilline…" className={CLS_INPUT} />
+            </div>
+            <div>
+              <label className={CLS_LABEL}>Traitements en cours <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
+              <textarea value={traitementsMedicaux} onChange={(e) => setTraitementsMedicaux(e.target.value)} rows={2}
+                placeholder="Ex : inhalateur pour asthme, à prendre matin et soir" className={CLS_INPUT} />
             </div>
           </div>
         </div>

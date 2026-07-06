@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { useActivite, usePresencesActivite, useEnregistrerPresences } from '@/hooks/useActivites'
 import { LABELS_BRANCHES } from '@/lib/branches'
+import { ScannerQR } from '@/app/components/ScannerQR'
+import { decoderQrScout } from '@/lib/qr'
 
 interface EtatPresence {
   scoutId: string
@@ -19,6 +21,7 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
   const enregistrerPresences = useEnregistrerPresences(id)
 
   const [presences, setPresences] = useState<EtatPresence[]>([])
+  const [scannerOuvert, setScannerOuvert] = useState(false)
 
   useEffect(() => {
     if (presencesData && Array.isArray(presencesData)) {
@@ -39,6 +42,21 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
     setPresences((prev) =>
       prev.map((p) => (p.scoutId === scoutId ? { ...p, present: !p.present } : p))
     )
+  }
+
+  function setPresent(scoutId: string) {
+    setPresences((prev) =>
+      prev.map((p) => (p.scoutId === scoutId ? { ...p, present: true } : p))
+    )
+  }
+
+  function handleScan(contenu: string) {
+    const scoutId = decoderQrScout(contenu)
+    if (!scoutId) { toast.error('QR code non reconnu'); return }
+    const trouve = scouts.find((p: { scout: { id: string } }) => p.scout.id === scoutId)
+    if (!trouve) { toast.error('Ce scout ne fait pas partie de cette liste'); return }
+    setPresent(scoutId)
+    toast.success(`${trouve.scout.prenom} ${trouve.scout.nom} — présent`)
   }
 
   function setCommentaire(scoutId: string, commentaire: string) {
@@ -116,8 +134,18 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
               Tout décocher
             </button>
           </div>
+          <button
+            onClick={() => setScannerOuvert(true)}
+            className="text-xs px-3 py-2 bg-[#1a4731] text-white rounded-lg hover:bg-[#163d29] transition-colors font-medium flex items-center gap-1.5"
+          >
+            📷 Scanner
+          </button>
         </div>
       </div>
+
+      {scannerOuvert && (
+        <ScannerQR onDetection={handleScan} onFermer={() => setScannerOuvert(false)} />
+      )}
 
       {/* Liste des scouts */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">

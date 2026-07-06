@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer'
+import { logger } from './logger'
 
 function createTransporter() {
   if (!process.env.SMTP_HOST) return null
@@ -13,22 +14,38 @@ function createTransporter() {
   })
 }
 
-export async function envoyerEmailReinitialisation(email: string, prenom: string, lien: string) {
+// Envoi d'e-mail générique — sans SMTP configuré (dev), le contenu est tracé
+// dans les logs au lieu d'échouer, pour ne jamais bloquer le flux appelant.
+export async function envoyerEmailBrut(
+  destinataire: string,
+  sujet: string,
+  html: string,
+): Promise<{ ok: boolean; mode: 'email' | 'console' | 'erreur' }> {
   const transporter = createTransporter()
 
   if (!transporter) {
-    // Pas de SMTP configuré — afficher le lien en console (dev)
-    console.log('\n[RESET PASSWORD LINK]', lien, '\n')
+    logger.info('email.non_configure', { destinataire, sujet })
     return { ok: true, mode: 'console' }
   }
 
   const from = process.env.SMTP_FROM ?? process.env.SMTP_USER ?? 'noreply@scout-ascci.ci'
 
-  await transporter.sendMail({
-    from: `"SCOUT ASCCI" <${from}>`,
-    to: email,
-    subject: 'Réinitialisation de votre mot de passe',
-    html: `
+  try {
+    await transporter.sendMail({
+      from: `"SCOUT ASCCI" <${from}>`,
+      to: destinataire,
+      subject: sujet,
+      html,
+    })
+    return { ok: true, mode: 'email' }
+  } catch (error) {
+    logger.error('email.envoi_echoue', error)
+    return { ok: false, mode: 'erreur' }
+  }
+}
+
+export async function envoyerEmailReinitialisation(email: string, prenom: string, lien: string) {
+  const html = `
       <div style="font-family:sans-serif;max-width:500px;margin:auto;padding:24px">
         <div style="text-align:center;margin-bottom:24px">
           <h1 style="color:#1a4731;font-size:22px;margin:0">⚜️ SCOUT ASCCI</h1>
@@ -54,8 +71,13 @@ export async function envoyerEmailReinitialisation(email: string, prenom: string
           Association Scouts Catholiques de Côte d'Ivoire
         </p>
       </div>
-    `,
-  })
+    `
 
-  return { ok: true, mode: 'email' }
+  if (process.env.SMTP_HOST) {
+    return envoyerEmailBrut(email, 'Réinitialisation de votre mot de passe', html)
+  }
+  // Comportement historique en dev sans SMTP : afficher le lien directement,
+  // plus pratique que de devoir aller lire les logs pour le retrouver.
+  console.log('\n[RESET PASSWORD LINK]', lien, '\n')
+  return { ok: true, mode: 'console' as const }
 }

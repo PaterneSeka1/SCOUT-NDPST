@@ -18,9 +18,10 @@ export default function ModifierScoutPage() {
   const { data: scout, isLoading } = useScout(id)
   const { mutateAsync, isPending } = useModifierScout(id)
 
-  const [form, setForm] = useState({ nom: '', prenom: '', dateNaissance: '', sexe: '', brancheType: '' })
+  const [form, setForm] = useState({ nom: '', prenom: '', dateNaissance: '', sexe: '', brancheType: '', allergies: '', traitementsMedicaux: '' })
   const [photo, setPhoto] = useState<string | null>(null)
   const [photoPreview, setPhotoPreview] = useState('')
+  const [consentementImage, setConsentementImage] = useState(false)
   const [uploadEnCours, setUploadEnCours] = useState(false)
   const [erreurPhoto, setErreurPhoto] = useState('')
   const [erreur, setErreur] = useState('')
@@ -34,15 +35,18 @@ export default function ModifierScoutPage() {
         dateNaissance: scout.dateNaissance.split('T')[0],
         sexe: scout.sexe,
         brancheType: scout.brancheType,
+        allergies: scout.allergies ?? '',
+        traitementsMedicaux: scout.traitementsMedicaux ?? '',
       })
       if (scout.photo) {
         setPhoto(scout.photo)
         setPhotoPreview(scout.photo)
       }
+      setConsentementImage(scout.consentementImage)
     }
   }, [scout])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm((p) => ({ ...p, [e.target.name]: e.target.value }))
 
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,7 +75,7 @@ export default function ModifierScoutPage() {
     setErreur('')
     setSucces('')
     try {
-      await mutateAsync({ ...form, photo: photo ?? undefined })
+      await mutateAsync({ ...form, photo: photo ?? undefined, consentementImage })
       setSucces('Modifications enregistrées.')
       setTimeout(() => router.push(`/dashboard/scouts/${id}`), 1200)
     } catch (err) {
@@ -160,6 +164,32 @@ export default function ModifierScoutPage() {
               </select>
             </div>
           </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-gray-100 pt-4">
+            <div>
+              <label className={CLS_LABEL}>Allergies <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
+              <textarea name="allergies" value={form.allergies} onChange={handleChange} rows={2}
+                placeholder="Ex : arachides, pénicilline…" className={CLS_INPUT} />
+            </div>
+            <div>
+              <label className={CLS_LABEL}>Traitements en cours <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
+              <textarea name="traitementsMedicaux" value={form.traitementsMedicaux} onChange={handleChange} rows={2}
+                placeholder="Ex : inhalateur pour asthme, à prendre matin et soir" className={CLS_INPUT} />
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2.5 cursor-pointer border-t border-gray-100 pt-4">
+            <input type="checkbox" checked={consentementImage} onChange={(e) => setConsentementImage(e.target.checked)}
+              className="w-4 h-4 accent-[#1a4731] rounded" />
+            <span className="text-sm text-gray-700">
+              Droit à l&apos;image accordé (photo utilisable dans l&apos;application et les communications de la paroisse)
+            </span>
+          </label>
+          {scout?.consentementImageDate && (
+            <p className="text-xs text-gray-400 -mt-2">
+              Dernière confirmation le {new Date(scout.consentementImageDate).toLocaleDateString('fr-FR')}
+            </p>
+          )}
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={isPending || uploadEnCours}

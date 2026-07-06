@@ -81,6 +81,18 @@ enum StatutPresenceReunion {
   EXCUSE
 }
 
+enum TypeCotisation {
+  ADHESION_ANNUELLE
+  CAMP
+  AUTRE
+}
+
+enum StatutCotisation {
+  EN_ATTENTE
+  PAYEE
+  EXONEREE
+}
+
 // ---------------------------------------------------------------------------
 // Paroisse
 // ---------------------------------------------------------------------------
@@ -108,6 +120,8 @@ model Paroisse {
   joursReunion   JourReunion[]
   configsReunion ConfigReunionBranche[]
   programmes     Programme[]
+  journalAudit   JournalAudit[]
+  cotisations    Cotisation[]
 
   @@index([ville])
   @@index([diocese])
@@ -127,6 +141,7 @@ model Utilisateur {
   password  String
   role      RoleUtilisateur
   actif     Boolean         @default(true)
+  tokenCalendrier String?   @unique // Jeton d'abonnement au flux iCal personnel (généré à la demande)
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
 
@@ -147,6 +162,9 @@ model Utilisateur {
   tokensReinitialisation      TokenReinitialisation[]
   programmesCrees             Programme[]             @relation("ProgrammeCreePar")
   autorisationsCampConfirmees AutorisationCamp[]      @relation("AutorisationCampConfirmePar")
+  consentementsImageConfirmes Scout[]                 @relation("ScoutConsentementImageConfirmePar")
+  actionsAudit                JournalAudit[]
+  cotisationsEnregistrees     Cotisation[]            @relation("CotisationEnregistreePar")
 
   @@index([matricule])
   @@index([telephone])
@@ -215,17 +233,26 @@ model PosteBranche {
 // ---------------------------------------------------------------------------
 
 model Scout {
-  id            String      @id @default(cuid())
-  nom           String
-  prenom        String
-  dateNaissance DateTime
-  sexe          Sexe
-  brancheType   BrancheType
-  matricule     String?     @unique // Optionnel à l'inscription, ajouté plus tard
-  actif         Boolean     @default(true)
-  photo         String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id                  String      @id @default(cuid())
+  nom                 String
+  prenom              String
+  dateNaissance       DateTime
+  sexe                Sexe
+  brancheType         BrancheType
+  matricule           String?     @unique // Optionnel à l'inscription, ajouté plus tard
+  actif               Boolean     @default(true)
+  photo               String?
+  allergies           String? // Champ libre : allergies connues (alimentaires, médicamenteuses…)
+  traitementsMedicaux String? // Champ libre : traitements en cours, à connaître en cas d'urgence (camp, activité)
+
+  // Consentement des parents à l'utilisation de la photo/image du scout
+  // (publications, communication de la paroisse). Refusé par défaut tant que
+  // personne ne l'a explicitement accordé.
+  consentementImage     Boolean   @default(false)
+  consentementImageDate DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Clé étrangère
   paroisseId String
@@ -235,6 +262,10 @@ model Scout {
   utilisateurId String?      @unique
   utilisateur   Utilisateur? @relation(fields: [utilisateurId], references: [id], onDelete: SetNull)
 
+  // Qui a confirmé le consentement à l'image (parent ou staff)
+  consentementImageParId String?
+  consentementImagePar   Utilisateur? @relation("ScoutConsentementImageConfirmePar", fields: [consentementImageParId], references: [id], onDelete: SetNull)
+
   // Relations
   liensParents      LienParentScout[] // Parents avec compte dans l'application
   contactsUrgence   ContactUrgence[] // Contacts d'urgence (avec ou sans compte)
@@ -243,6 +274,7 @@ model Scout {
   progressions      ProgressionScout[]
   documents         Document[]
   autorisationsCamp AutorisationCamp[]
+  cotisations       Cotisation[]
 
   @@index([paroisseId])
   @@index([brancheType])
@@ -400,14 +432,15 @@ model ProgressionScout {
 // ---------------------------------------------------------------------------
 
 model Document {
-  id         String       @id @default(cuid())
-  type       TypeDocument
-  nomFichier String
-  url        String
-  dateUpload DateTime     @default(now())
-  valide     Boolean      @default(false)
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  id             String       @id @default(cuid())
+  type           TypeDocument
+  nomFichier     String
+  url            String
+  dateUpload     DateTime     @default(now())
+  dateExpiration DateTime? // Ex : certificat médical valable 1 an. Null = pas de péremption connue.
+  valide         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   scoutId String
   scout   Scout  @relation(fields: [scoutId], references: [id], onDelete: Cascade)
@@ -415,6 +448,7 @@ model Document {
   @@index([scoutId])
   @@index([type])
   @@index([valide])
+  @@index([dateExpiration])
 }
 
 // ---------------------------------------------------------------------------
@@ -595,4 +629,63 @@ model AutorisationCamp {
   @@unique([activiteId, scoutId, type])
   @@index([activiteId])
   @@index([scoutId])
+}
+
+// ---------------------------------------------------------------------------
+// Journal d'audit — trace les actions sensibles (gestion des comptes, des
+// scouts, des documents…) pour la responsabilité et la conformité. L'acteur
+// est conservé même si son compte est supprimé (onDelete: SetNull) : la trace
+// de l'action doit survivre à la suppression de celui qui l'a effectuée.
+// ---------------------------------------------------------------------------
+
+model JournalAudit {
+  id        String   @id @default(cuid())
+  action    String // Ex : "UTILISATEUR_ROLE_MODIFIE", "SCOUT_SUPPRIME"…
+  entite    String // Ex : "Utilisateur", "Scout", "Document"…
+  entiteId  String?
+  details   Json?
+  createdAt DateTime @default(now())
+
+  paroisseId String
+  paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Cascade)
+
+  acteurId String?
+  acteur   Utilisateur? @relation(fields: [acteurId], references: [id], onDelete: SetNull)
+
+  @@index([paroisseId, createdAt])
+  @@index([entite, entiteId])
+  @@index([acteurId])
+}
+
+// ---------------------------------------------------------------------------
+// Cotisation — suivi des paiements d'adhésion et autres frais (camp…) par
+// scout et par année scolaire. Montants en FCFA (entiers, pas de décimales).
+// ---------------------------------------------------------------------------
+
+model Cotisation {
+  id            String           @id @default(cuid())
+  type          TypeCotisation   @default(ADHESION_ANNUELLE)
+  libelle       String? // Précision libre, surtout utile pour le type AUTRE
+  montant       Int // Montant dû, en FCFA
+  anneeScolaire String // Ex : "2026-2027"
+  statut        StatutCotisation @default(EN_ATTENTE)
+  datePaiement  DateTime?
+  modePaiement  String? // Ex : Espèces, Mobile Money, Virement… champ libre
+  notes         String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  scoutId String
+  scout   Scout  @relation(fields: [scoutId], references: [id], onDelete: Cascade)
+
+  paroisseId String
+  paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Cascade)
+
+  enregistreParId String?
+  enregistrePar   Utilisateur? @relation("CotisationEnregistreePar", fields: [enregistreParId], references: [id], onDelete: SetNull)
+
+  @@index([paroisseId])
+  @@index([scoutId])
+  @@index([statut])
+  @@index([anneeScolaire])
 }

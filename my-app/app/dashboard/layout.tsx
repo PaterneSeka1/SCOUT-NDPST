@@ -23,11 +23,15 @@ function getMenuItems(role: string): MenuItem[] {
         { label: 'Utilisateurs', href: '/dashboard/utilisateurs', icone: '👥' },
         { label: 'Branches', href: '/dashboard/branches', icone: '🌿' },
         { label: 'Scouts', href: '/dashboard/scouts', icone: '⚜️' },
+        { label: 'Documents', href: '/dashboard/documents', icone: '📄' },
+        { label: 'Calendrier', href: '/dashboard/calendrier', icone: '🗓' },
+        { label: 'Cotisations', href: '/dashboard/cotisations', icone: '💶' },
         { label: 'Activités', href: '/dashboard/activites', icone: '📅' },
         { label: 'Réunions', href: '/dashboard/reunions', icone: '🗓️' },
         { label: 'Programmes', href: '/dashboard/programmes', icone: '📘' },
         { label: 'Rapports', href: '/dashboard/rapports', icone: '📈' },
         { label: 'Apparence du site', href: '/dashboard/site-config', icone: '🎨' },
+        { label: "Journal d'audit", href: '/dashboard/audit', icone: '🛡️' },
       ]
     case 'CHEF_GROUPE':
       return [
@@ -36,11 +40,15 @@ function getMenuItems(role: string): MenuItem[] {
         { label: 'Utilisateurs', href: '/dashboard/utilisateurs', icone: '👥' },
         { label: 'Branches', href: '/dashboard/branches', icone: '🌿' },
         { label: 'Scouts', href: '/dashboard/scouts', icone: '⚜️' },
+        { label: 'Documents', href: '/dashboard/documents', icone: '📄' },
+        { label: 'Calendrier', href: '/dashboard/calendrier', icone: '🗓' },
+        { label: 'Cotisations', href: '/dashboard/cotisations', icone: '💶' },
         { label: 'Activités', href: '/dashboard/activites', icone: '📅' },
         { label: 'Réunions', href: '/dashboard/reunions', icone: '🗓️' },
         { label: 'Programmes', href: '/dashboard/programmes', icone: '📘' },
         { label: 'Rapports', href: '/dashboard/rapports', icone: '📈' },
         { label: 'Apparence du site', href: '/dashboard/site-config', icone: '🎨' },
+        { label: "Journal d'audit", href: '/dashboard/audit', icone: '🛡️' },
       ]
     case 'ADJOINT_GROUPE':
     case 'ASSISTANT_GROUPE':
@@ -49,6 +57,9 @@ function getMenuItems(role: string): MenuItem[] {
         { label: 'Paroisse', href: '/dashboard/paroisse', icone: '⛪' },
         { label: 'Branches', href: '/dashboard/branches', icone: '🌿' },
         { label: 'Scouts', href: '/dashboard/scouts', icone: '⚜️' },
+        { label: 'Documents', href: '/dashboard/documents', icone: '📄' },
+        { label: 'Calendrier', href: '/dashboard/calendrier', icone: '🗓' },
+        { label: 'Cotisations', href: '/dashboard/cotisations', icone: '💶' },
         { label: 'Activités', href: '/dashboard/activites', icone: '📅' },
         { label: 'Réunions', href: '/dashboard/reunions', icone: '🗓️' },
         { label: 'Programmes', href: '/dashboard/programmes', icone: '📘' },
@@ -61,6 +72,9 @@ function getMenuItems(role: string): MenuItem[] {
         { label: 'Paroisse', href: '/dashboard/paroisse', icone: '⛪' },
         { label: 'Ma branche', href: '/dashboard/ma-branche', icone: '🌿' },
         { label: 'Scouts', href: '/dashboard/scouts', icone: '⚜️' },
+        { label: 'Documents', href: '/dashboard/documents', icone: '📄' },
+        { label: 'Calendrier', href: '/dashboard/calendrier', icone: '🗓' },
+        { label: 'Cotisations', href: '/dashboard/cotisations', icone: '💶' },
         { label: 'Activités', href: '/dashboard/activites', icone: '📅' },
         { label: 'Réunions', href: '/dashboard/reunions', icone: '🗓️' },
         { label: 'Programmes', href: '/dashboard/programmes', icone: '📘' },
@@ -191,7 +205,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const sidebarStyle = { backgroundColor: 'var(--cp)' }
 
   return (
-    <div className="flex h-screen bg-gray-100 overflow-hidden">
+    <div className="flex h-screen bg-gray-100 overflow-hidden print:h-auto print:overflow-visible">
 
       {/* Overlay mobile */}
       {sidebarOuverte && (
@@ -202,7 +216,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       )}
 
       {/* Sidebar desktop */}
-      <aside className="hidden lg:flex w-64 flex-col flex-shrink-0" style={sidebarStyle}>
+      <aside className="hidden lg:flex w-64 flex-col flex-shrink-0 print:hidden" style={sidebarStyle}>
         <SidebarContent
           menuItems={menuItems}
           pathname={pathname}
@@ -213,7 +227,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Sidebar mobile (drawer) */}
       <aside
-        className={`fixed inset-y-0 left-0 z-30 w-72 flex flex-col transition-transform duration-300 lg:hidden ${
+        className={`fixed inset-y-0 left-0 z-30 w-72 flex flex-col transition-transform duration-300 lg:hidden print:hidden ${
           sidebarOuverte ? 'translate-x-0' : '-translate-x-full'
         }`}
         style={sidebarStyle}
@@ -228,10 +242,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Zone principale */}
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0 print:overflow-visible">
 
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between flex-shrink-0 gap-3">
+        <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between flex-shrink-0 gap-3 print:hidden">
           <div className="flex items-center gap-3 min-w-0">
             <button
               className="lg:hidden flex items-center justify-center w-9 h-9 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
@@ -264,7 +278,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* Contenu */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 print:overflow-visible print:p-0">{children}</main>
       </div>
     </div>
   )

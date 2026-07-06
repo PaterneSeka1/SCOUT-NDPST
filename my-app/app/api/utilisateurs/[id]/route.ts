@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { RoleUtilisateur } from '@/app/generated/prisma/client'
 import { ROLES_GROUPE as ROLES_AUTORISES } from '@/lib/roles'
 import { logger } from '@/lib/logger'
+import { enregistrerAudit } from '@/lib/audit'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -60,7 +61,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const existant = await prisma.utilisateur.findFirst({
       where: { id, paroisseId: session.user.paroisseId },
-      select: { id: true },
+      select: { id: true, role: true, actif: true },
     })
     if (!existant) return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 })
 
@@ -76,8 +77,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (session.user.role === 'CHEF_GROUPE' && role === 'ADMIN_PAROISSE')
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
 
-    if (email !== undefined) {
-      const doublon = await prisma.utilisateur.findFirst({ where: { email, NOT: { id } }, select: { id: true } })
+    if (email !== undefined && email !== null && email !== '') {
+      const doublon = await prisma.utilisateur.findFirst({
+        where: { email: { equals: email, mode: 'insensitive' }, NOT: { id } },
+        select: { id: true },
+      })
       if (doublon) return NextResponse.json({ error: 'Cette adresse e-mail est déjà utilisée' }, { status: 400 })
     }
 
@@ -96,6 +100,26 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         createdAt: true, updatedAt: true,
       },
     })
+
+    if (role !== undefined && role !== existant.role) {
+      await enregistrerAudit({
+        paroisseId: session.user.paroisseId,
+        acteurId: session.user.id,
+        action: 'UTILISATEUR_ROLE_MODIFIE',
+        entite: 'Utilisateur',
+        entiteId: id,
+        details: { ancienRole: existant.role, nouveauRole: role },
+      })
+    }
+    if (actif !== undefined && actif !== existant.actif) {
+      await enregistrerAudit({
+        paroisseId: session.user.paroisseId,
+        acteurId: session.user.id,
+        action: actif ? 'UTILISATEUR_REACTIVE' : 'UTILISATEUR_DESACTIVE',
+        entite: 'Utilisateur',
+        entiteId: id,
+      })
+    }
 
     return NextResponse.json(utilisateur)
   } catch (error) {
@@ -129,6 +153,14 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
         email: true, role: true, actif: true, paroisseId: true,
         createdAt: true, updatedAt: true,
       },
+    })
+
+    await enregistrerAudit({
+      paroisseId: session.user.paroisseId,
+      acteurId: session.user.id,
+      action: 'UTILISATEUR_DESACTIVE',
+      entite: 'Utilisateur',
+      entiteId: id,
     })
 
     return NextResponse.json(utilisateur)

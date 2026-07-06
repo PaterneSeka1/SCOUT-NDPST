@@ -4,6 +4,8 @@ import { useState, useEffect, use } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { ScannerQR } from '@/app/components/ScannerQR'
+import { decoderQrScout } from '@/lib/qr'
 
 const STATUTS = [
   { value: 'PRESENT', label: 'Présent', cls: 'bg-green-100 text-green-700 border-green-200', active: 'bg-green-500 text-white border-green-500' },
@@ -38,6 +40,7 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
   const [chargement, setChargement] = useState(true)
   const [sauvegarde, setSauvegarde] = useState(false)
   const [modifie, setModifie] = useState(false)
+  const [scannerOuvert, setScannerOuvert] = useState(false)
 
   useEffect(() => {
     fetch(`/api/reunions/${id}/presences`)
@@ -77,6 +80,15 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
     const next: StatutMap = {}
     scouts.forEach((s) => { next[s.id] = val })
     setStatuts(next)
+  }
+
+  const handleScan = (contenu: string) => {
+    const scoutId = decoderQrScout(contenu)
+    if (!scoutId) { toast.error('QR code non reconnu') ; return }
+    const scout = scouts.find((s) => s.id === scoutId)
+    if (!scout) { toast.error('Ce scout ne fait pas partie de cette liste') ; return }
+    setStatut(scoutId, 'PRESENT')
+    toast.success(`${scout.prenom} ${scout.nom} — présent`)
   }
 
   const handleSauvegarder = async () => {
@@ -175,7 +187,7 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
 
       {/* Actions rapides */}
       {scouts.length > 0 && (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <span className="text-xs text-gray-500 font-medium">Tout marquer :</span>
           <button onClick={() => marquerTous('PRESENT')}
             className="text-xs border border-green-200 text-green-700 px-3 py-1.5 rounded-lg hover:bg-green-50 transition-colors font-medium">
@@ -185,7 +197,15 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
             className="text-xs border border-red-200 text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors font-medium">
             Tous absents
           </button>
+          <button onClick={() => setScannerOuvert(true)}
+            className="ml-auto text-xs bg-[#1a4731] text-white px-3 py-1.5 rounded-lg hover:bg-[#163d29] transition-colors font-medium flex items-center gap-1.5">
+            📷 Scanner un QR
+          </button>
         </div>
+      )}
+
+      {scannerOuvert && (
+        <ScannerQR onDetection={handleScan} onFermer={() => setScannerOuvert(false)} />
       )}
 
       {/* Liste scouts */}

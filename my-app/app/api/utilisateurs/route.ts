@@ -8,6 +8,9 @@ import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { ROLES_GROUPE as ROLES_AUTORISES } from '@/lib/roles'
 import { RoleUtilisateurSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
+import { enregistrerAudit } from '@/lib/audit'
+import { envoyerEmailBienvenue } from '@/lib/notifications'
+import { LABELS_ROLES } from '@/lib/roles'
 
 export async function GET(request: NextRequest) {
   try {
@@ -155,8 +158,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (email?.trim()) {
-      const existingByEmail = await prisma.utilisateur.findUnique({
-        where: { email: email.trim() },
+      // Insensible à la casse : évite qu'un doublon "Jean@x.com" / "jean@x.com"
+      // passe inaperçu, ce qui rendrait ensuite la réinitialisation par email ambiguë.
+      const existingByEmail = await prisma.utilisateur.findFirst({
+        where: { email: { equals: email.trim(), mode: 'insensitive' } },
         select: { id: true },
       })
       if (existingByEmail) {
@@ -189,6 +194,27 @@ export async function POST(request: NextRequest) {
         createdAt: true,
       },
     })
+
+    await enregistrerAudit({
+      paroisseId,
+      acteurId: session.user.id,
+      action: 'UTILISATEUR_CREE',
+      entite: 'Utilisateur',
+      entiteId: utilisateur.id,
+      details: { role: utilisateur.role },
+    })
+
+    if (utilisateur.email) {
+      // Meilleur effort : un échec d'envoi ne doit jamais faire échouer la création du compte.
+      envoyerEmailBienvenue({
+        email: utilisateur.email,
+        prenom: utilisateur.prenom,
+        identifiant: utilisateur.matricule ?? utilisateur.telephone ?? utilisateur.email,
+        roleLabel: LABELS_ROLES[utilisateur.role] ?? utilisateur.role,
+        nomSite: 'SCOUT ASCCI',
+        urlConnexion: `${process.env.NEXTAUTH_URL ?? ''}/login`,
+      }).catch((error) => logger.error('utilisateurs.email_bienvenue_echoue', error))
+    }
 
     return NextResponse.json(utilisateur, { status: 201 })
   } catch (error) {

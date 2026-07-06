@@ -27,8 +27,11 @@ export async function POST(req: NextRequest) {
     // Réponse toujours identique pour ne pas révéler si l'email existe
     const reponse = { message: 'Si un compte correspond à cet email, un lien de réinitialisation a été envoyé.' }
 
+    // Recherche insensible à la casse : les emails sont stockés tels que saisis
+    // (sans normalisation) à la création du compte, alors qu'un utilisateur ne
+    // retape jamais son adresse avec exactement la même casse.
     const utilisateur = await prisma.utilisateur.findFirst({
-      where: { email: email.trim().toLowerCase() },
+      where: { email: { equals: email.trim(), mode: 'insensitive' } },
       select: { id: true, prenom: true, email: true },
     })
 

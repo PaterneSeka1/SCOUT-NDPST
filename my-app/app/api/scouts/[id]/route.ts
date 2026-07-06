@@ -6,6 +6,7 @@ import { BrancheType, Sexe } from '@/app/generated/prisma/client'
 import { ROLES_TOUT_STAFF as ROLES_AUTORISES } from '@/lib/roles'
 import { estCheminLocalValide } from '@/lib/validation'
 import { logger } from '@/lib/logger'
+import { enregistrerAudit } from '@/lib/audit'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -93,7 +94,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const body = await request.json()
-    const { nom, prenom, dateNaissance, sexe, brancheType, actif, photo } = body as {
+    const { nom, prenom, dateNaissance, sexe, brancheType, actif, photo, allergies, traitementsMedicaux, consentementImage } = body as {
       nom?: string
       prenom?: string
       dateNaissance?: string
@@ -101,6 +102,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       brancheType?: string
       actif?: boolean
       photo?: string
+      allergies?: string | null
+      traitementsMedicaux?: string | null
+      consentementImage?: boolean
     }
 
     if (sexe !== undefined && !(sexe in Sexe)) {
@@ -123,11 +127,31 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         ...(brancheType !== undefined ? { brancheType: brancheType as BrancheType } : {}),
         ...(actif !== undefined ? { actif } : {}),
         ...(photo !== undefined ? { photo: photo?.trim() || null } : {}),
+        ...(allergies !== undefined ? { allergies: allergies?.trim() || null } : {}),
+        ...(traitementsMedicaux !== undefined ? { traitementsMedicaux: traitementsMedicaux?.trim() || null } : {}),
+        ...(consentementImage !== undefined
+          ? {
+              consentementImage,
+              consentementImageDate: consentementImage ? new Date() : null,
+              consentementImageParId: consentementImage ? session.user.id : null,
+            }
+          : {}),
       },
       include: {
         contactsUrgence: true,
       },
     })
+
+    if (consentementImage !== undefined) {
+      await enregistrerAudit({
+        paroisseId: session.user.paroisseId,
+        acteurId: session.user.id,
+        action: 'SCOUT_CONSENTEMENT_IMAGE_MODIFIE',
+        entite: 'Scout',
+        entiteId: id,
+        details: { consentementImage },
+      })
+    }
 
     return NextResponse.json(scout)
   } catch (error) {

@@ -21,8 +21,19 @@ export default function FicheScoutPage() {
   const { mutateAsync: supprimerDocument } = useSupprimerDocument(id)
 
   const [typeDocument, setTypeDocument] = useState('CERTIFICAT_MEDICAL')
+  const [dateExpirationDocument, setDateExpirationDocument] = useState('')
   const [uploadDocumentEnCours, setUploadDocumentEnCours] = useState(false)
   const [erreurDocument, setErreurDocument] = useState('')
+
+  const changerTypeDocument = (type: string) => {
+    setTypeDocument(type)
+    // Suggestion par défaut pour une fiche médicale : valable 1 an.
+    if (type === 'CERTIFICAT_MEDICAL' && !dateExpirationDocument) {
+      const dans1An = new Date()
+      dans1An.setFullYear(dans1An.getFullYear() + 1)
+      setDateExpirationDocument(dans1An.toISOString().slice(0, 10))
+    }
+  }
 
   const [afficherFormulaireMatricule, setAfficherFormulaireMatricule] = useState(false)
   const [nouveauMatricule, setNouveauMatricule] = useState('')
@@ -88,7 +99,13 @@ export default function FicheScoutPage() {
       const res = await fetch('/api/upload', { method: 'POST', body: fd })
       const data = await res.json()
       if (!res.ok) { setErreurDocument(data.erreur ?? 'Erreur upload'); return }
-      await ajouterDocument({ type: typeDocument, nomFichier: fichier.name, url: data.url })
+      await ajouterDocument({
+        type: typeDocument,
+        nomFichier: fichier.name,
+        url: data.url,
+        dateExpiration: dateExpirationDocument || null,
+      })
+      setDateExpirationDocument('')
     } catch (err) {
       setErreurDocument(err instanceof Error ? err.message : "Erreur lors de l'envoi du document")
     } finally {
@@ -128,12 +145,20 @@ export default function FicheScoutPage() {
         <Link href="/dashboard/scouts" className="text-sm text-gray-500 hover:text-gray-700">
           ← Retour à la liste
         </Link>
-        <Link
-          href={`/dashboard/scouts/${id}/modifier`}
-          className="bg-[#1a4731] text-white px-4 py-2 rounded-md text-sm hover:bg-[#163d29] transition-colors"
-        >
-          Modifier
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/dashboard/scouts/${id}/carte`}
+            className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50 transition-colors"
+          >
+            Carte QR
+          </Link>
+          <Link
+            href={`/dashboard/scouts/${id}/modifier`}
+            className="bg-[#1a4731] text-white px-4 py-2 rounded-md text-sm hover:bg-[#163d29] transition-colors"
+          >
+            Modifier
+          </Link>
+        </div>
       </div>
 
       {/* Infos principales */}
@@ -152,6 +177,9 @@ export default function FicheScoutPage() {
                 {scout.actif ? 'Actif' : 'Inactif'}
               </span>
               <span className="text-sm text-gray-500">{age} ans — {scout.sexe === 'MASCULIN' ? 'Garçon' : 'Fille'}</span>
+              <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${scout.consentementImage ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
+                {scout.consentementImage ? '📸 Droit à l\'image autorisé' : '📸 Droit à l\'image non autorisé'}
+              </span>
             </div>
             <p className="text-sm text-gray-500 mt-1">
               Né(e) le {new Date(scout.dateNaissance).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -159,6 +187,21 @@ export default function FicheScoutPage() {
           </div>
         </div>
       </div>
+
+      {/* Informations médicales — mises en avant pour une lecture rapide en cas d'urgence */}
+      {(scout.allergies || scout.traitementsMedicaux) && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 sm:p-6">
+          <h2 className="text-base font-semibold text-amber-900 mb-2 flex items-center gap-2">
+            ⚠️ Informations médicales
+          </h2>
+          {scout.allergies && (
+            <p className="text-sm text-amber-800"><span className="font-medium">Allergies :</span> {scout.allergies}</p>
+          )}
+          {scout.traitementsMedicaux && (
+            <p className="text-sm text-amber-800 mt-1"><span className="font-medium">Traitements en cours :</span> {scout.traitementsMedicaux}</p>
+          )}
+        </div>
+      )}
 
       {/* Matricule */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -354,6 +397,12 @@ export default function FicheScoutPage() {
                   <span className="min-w-0">
                     <span className="block text-sm font-medium text-gray-900 truncate">{LABELS_TYPE_DOCUMENT[doc.type] ?? doc.type}</span>
                     <span className="block text-xs text-gray-500 truncate">{doc.nomFichier}</span>
+                    {doc.dateExpiration && (
+                      <span className={`block text-xs mt-0.5 ${new Date(doc.dateExpiration) < new Date() ? 'text-red-600 font-medium' : 'text-gray-400'}`}>
+                        {new Date(doc.dateExpiration) < new Date() ? 'Expiré le ' : "Expire le "}
+                        {new Date(doc.dateExpiration).toLocaleDateString('fr-FR')}
+                      </span>
+                    )}
                   </span>
                 </a>
                 <button onClick={() => handleSupprimerDocument(doc.id)} className="text-xs text-red-500 hover:text-red-700 ml-2 flex-shrink-0">
@@ -365,12 +414,19 @@ export default function FicheScoutPage() {
         )}
 
         <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center border-t border-gray-100 pt-4">
-          <select value={typeDocument} onChange={(e) => setTypeDocument(e.target.value)}
+          <select value={typeDocument} onChange={(e) => changerTypeDocument(e.target.value)}
             className="border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731]">
             {Object.entries(LABELS_TYPE_DOCUMENT).map(([val, label]) => (
               <option key={val} value={val}>{label}</option>
             ))}
           </select>
+          <input
+            type="date"
+            value={dateExpirationDocument}
+            onChange={(e) => setDateExpirationDocument(e.target.value)}
+            title="Date d'expiration (optionnelle)"
+            className="border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731]"
+          />
           <label className="text-sm bg-[#1a4731] text-white px-3 py-1.5 rounded-md hover:bg-[#163d29] transition-colors cursor-pointer">
             {uploadDocumentEnCours ? 'Envoi…' : '+ Ajouter un fichier'}
             <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"

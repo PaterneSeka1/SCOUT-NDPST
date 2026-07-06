@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { ROLES_GROUPE } from '@/lib/roles'
 import { logger } from '@/lib/logger'
+import { enregistrerAudit } from '@/lib/audit'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -49,6 +50,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     await prisma.utilisateur.update({
       where: { id },
       data: { password: passwordHache },
+    })
+
+    await enregistrerAudit({
+      paroisseId: session.user.paroisseId,
+      acteurId: session.user.id,
+      action: 'UTILISATEUR_MOT_DE_PASSE_REINITIALISE',
+      entite: 'Utilisateur',
+      entiteId: id,
     })
 
     return NextResponse.json({ message: 'Mot de passe mis à jour' })

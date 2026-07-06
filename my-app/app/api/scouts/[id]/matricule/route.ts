@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_GROUPE_ETENDU as ROLES_AUTORISES } from '@/lib/roles'
 import { logger } from '@/lib/logger'
+import { enregistrerAudit } from '@/lib/audit'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -60,6 +61,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         brancheType: true,
         actif: true,
       },
+    })
+
+    await enregistrerAudit({
+      paroisseId: session.user.paroisseId,
+      acteurId: session.user.id,
+      action: 'SCOUT_MATRICULE_ATTRIBUE',
+      entite: 'Scout',
+      entiteId: id,
+      details: { ancienMatricule: existant.matricule, nouveauMatricule: matriculeTrimmed },
     })
 
     return NextResponse.json(scout)

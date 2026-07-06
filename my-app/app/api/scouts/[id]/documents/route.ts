@@ -33,10 +33,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     const body = await request.json()
-    const { type, nomFichier, url } = body as {
+    const { type, nomFichier, url, dateExpiration } = body as {
       type?: string
       nomFichier?: string
       url?: string
+      dateExpiration?: string | null
     }
 
     if (!type || !(type in TypeDocument)) {
@@ -48,12 +49,20 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (!estCheminLocalValide(url.trim())) {
       return NextResponse.json({ error: 'url doit être un chemin local (ex : /api/fichiers/…)' }, { status: 400 })
     }
+    let dateExpirationValide: Date | null = null
+    if (dateExpiration) {
+      dateExpirationValide = new Date(dateExpiration)
+      if (Number.isNaN(dateExpirationValide.getTime())) {
+        return NextResponse.json({ error: "Date d'expiration invalide" }, { status: 400 })
+      }
+    }
 
     const document = await prisma.document.create({
       data: {
         type: type as TypeDocument,
         nomFichier: nomFichier.trim(),
         url: url.trim(),
+        dateExpiration: dateExpirationValide,
         scoutId: id,
       },
     })

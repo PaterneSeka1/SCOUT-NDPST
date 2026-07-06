@@ -47,6 +47,7 @@ export interface DocumentScout {
   nomFichier: string
   url: string
   dateUpload: string
+  dateExpiration: string | null
   valide: boolean
   scoutId: string
 }
@@ -61,6 +62,10 @@ export interface Scout {
   matricule: string | null
   actif: boolean
   photo: string | null
+  allergies: string | null
+  traitementsMedicaux: string | null
+  consentementImage: boolean
+  consentementImageDate: string | null
   paroisseId: string
   utilisateurId: string | null
   contactsUrgence: ContactUrgence[]
@@ -100,6 +105,8 @@ export interface DonneesCreerScout {
   sexe: string
   brancheType: string
   photo?: string
+  allergies?: string
+  traitementsMedicaux?: string
   contactsUrgence: DonneesContact[]
 }
 
@@ -111,6 +118,9 @@ export interface DonneesModifierScout {
   brancheType?: string
   actif?: boolean
   photo?: string
+  allergies?: string
+  traitementsMedicaux?: string
+  consentementImage?: boolean
 }
 
 // ---- Clés de cache --------------------------------------------------------
@@ -301,7 +311,7 @@ export function useAjouterDocument(scoutId: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (donnees: { type: string; nomFichier: string; url: string }): Promise<DocumentScout> => {
+    mutationFn: async (donnees: { type: string; nomFichier: string; url: string; dateExpiration?: string | null }): Promise<DocumentScout> => {
       const res = await fetch(`/api/scouts/${scoutId}/documents`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

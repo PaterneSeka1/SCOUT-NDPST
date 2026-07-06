@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_TOUT_STAFF as ROLES_AUTORISES } from '@/lib/roles'
 import { logger } from '@/lib/logger'
+import { enregistrerAudit } from '@/lib/audit'
 
 type RouteParams = { params: Promise<{ id: string; documentId: string }> }
 
@@ -39,6 +40,15 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     }
 
     await prisma.document.delete({ where: { id: documentId } })
+
+    await enregistrerAudit({
+      paroisseId: session.user.paroisseId,
+      acteurId: session.user.id,
+      action: 'DOCUMENT_SUPPRIME',
+      entite: 'Document',
+      entiteId: documentId,
+      details: { type: document.type, nomFichier: document.nomFichier, scoutId: id },
+    })
 
     return NextResponse.json({ message: 'Document supprimé' })
   } catch (error) {

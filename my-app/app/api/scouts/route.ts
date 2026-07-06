@@ -6,6 +6,7 @@ import { BrancheType, Prisma, Sexe } from '@/app/generated/prisma/client'
 import { ROLES_TOUT_STAFF as ROLES_AUTORISES } from '@/lib/roles'
 import { estCheminLocalValide } from '@/lib/validation'
 import { logger } from '@/lib/logger'
+import { enregistrerAudit } from '@/lib/audit'
 
 export async function GET(request: NextRequest) {
   try {
@@ -90,13 +91,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { nom, prenom, dateNaissance, sexe, brancheType, photo, contactsUrgence } = body as {
+    const { nom, prenom, dateNaissance, sexe, brancheType, photo, allergies, traitementsMedicaux, contactsUrgence } = body as {
       nom?: string
       prenom?: string
       dateNaissance?: string
       sexe?: string
       brancheType?: string
       photo?: string
+      allergies?: string
+      traitementsMedicaux?: string
       contactsUrgence?: Array<{
         nom?: string
         prenom?: string
@@ -161,6 +164,8 @@ export async function POST(request: NextRequest) {
           sexe: sexe as Sexe,
           brancheType: brancheType as BrancheType,
           photo: photo?.trim() || null,
+          allergies: allergies?.trim() || null,
+          traitementsMedicaux: traitementsMedicaux?.trim() || null,
           paroisseId,
         },
       })
@@ -185,6 +190,15 @@ export async function POST(request: NextRequest) {
           contactsUrgence: true,
         },
       })
+    })
+
+    await enregistrerAudit({
+      paroisseId,
+      acteurId: session.user.id,
+      action: 'SCOUT_CREE',
+      entite: 'Scout',
+      entiteId: scout!.id,
+      details: { nom: scout!.nom, prenom: scout!.prenom },
     })
 
     return NextResponse.json(scout, { status: 201 })

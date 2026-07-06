@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
+import { LABELS_TYPE_COTISATION, LABELS_STATUT_COTISATION, COULEURS_STATUT_COTISATION } from '@/lib/cotisations'
 
 const LABELS_TYPE: Record<string, string> = {
   REUNION: 'Réunion', SORTIE: 'Sortie', CAMP: 'Camp', MESSE: 'Messe',
@@ -24,12 +25,19 @@ interface PresenceReunion {
   jourReunion: { id: string; titre: string | null; dateHeure: string; dateReportee: string | null; brancheType: string | null }
 }
 
+interface CotisationEnfant {
+  id: string; type: string; libelle: string | null; montant: number
+  anneeScolaire: string; statut: string; datePaiement: string | null
+}
+
 interface Scout {
   id: string; nom: string; prenom: string; brancheType: string
   photo: string | null; actif: boolean; matricule: string | null
+  consentementImage: boolean; consentementImageDate: string | null
   _count: { presences: number; presencesReunion: number }
   presences: { activite: { titre: string; dateDebut: string; type: string } }[]
   presencesReunion: PresenceReunion[]
+  cotisations: CotisationEnfant[]
 }
 
 interface Activite {
@@ -82,6 +90,21 @@ export default function PageMesEnfants() {
   }
 
   useEffect(() => { charger() }, [])
+
+  async function basculerConsentementImage(scoutId: string, nouvelleValeur: boolean) {
+    setEnCours(`consentement-${scoutId}`)
+    try {
+      const res = await fetch(`/api/mes-enfants/${scoutId}/consentement-image`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ consentement: nouvelleValeur }),
+      })
+      if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.erreur ?? 'Erreur serveur'); return }
+      charger()
+    } finally {
+      setEnCours(null)
+    }
+  }
 
   async function confirmerDigitalement(activiteId: string, scoutId: string, type: 'FICHE_MEDICALE' | 'AUTORISATION_PARENTALE') {
     const cle = `${activiteId}-${scoutId}-${type}`
@@ -177,6 +200,48 @@ export default function PageMesEnfants() {
                     </Link>
                   </div>
                 </div>
+
+                {/* Droit à l'image */}
+                <div className="border-t border-gray-100 px-5 py-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-gray-700">Droit à l&apos;image</p>
+                    <p className="text-xs text-gray-400">
+                      {scout.consentementImage
+                        ? `Autorisé le ${scout.consentementImageDate ? new Date(scout.consentementImageDate).toLocaleDateString('fr-FR') : ''}`
+                        : "Photo non autorisée pour l'instant"}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => basculerConsentementImage(scout.id, !scout.consentementImage)}
+                    disabled={enCours === `consentement-${scout.id}`}
+                    className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60 ${
+                      scout.consentementImage
+                        ? 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                        : 'bg-[#1a4731] text-white hover:bg-[#163d29]'
+                    }`}
+                  >
+                    {enCours === `consentement-${scout.id}` ? '…' : scout.consentementImage ? 'Révoquer' : 'Autoriser'}
+                  </button>
+                </div>
+
+                {/* Cotisations */}
+                {scout.cotisations.length > 0 && (
+                  <div className="border-t border-gray-100 px-5 py-3">
+                    <p className="text-xs font-medium text-gray-700 mb-2">Cotisations</p>
+                    <div className="space-y-1.5">
+                      {scout.cotisations.map((c) => (
+                        <div key={c.id} className="flex items-center justify-between gap-3">
+                          <span className="text-xs text-gray-500 truncate">
+                            {LABELS_TYPE_COTISATION[c.type] ?? c.type}{c.libelle ? ` — ${c.libelle}` : ''} ({c.anneeScolaire})
+                          </span>
+                          <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full ${COULEURS_STATUT_COTISATION[c.statut]}`}>
+                            {LABELS_STATUT_COTISATION[c.statut] ?? c.statut}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Camps à venir — autorisations à signer */}
                 {(campsParEnfant[scout.id]?.length ?? 0) > 0 && (
