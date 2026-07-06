@@ -36,6 +36,9 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
         contactsUrgence: {
           orderBy: [{ principal: 'desc' }, { nom: 'asc' }],
         },
+        documents: {
+          orderBy: { createdAt: 'desc' },
+        },
         liensParents: {
           include: {
             parent: {

@@ -25,6 +25,7 @@ export interface PresenceScout {
     prenom: string
     numeroAdhesion: string | null
     brancheType: string | null
+    ficheMedicale?: boolean
   }
 }
 

@@ -132,7 +132,7 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
             {scouts.map((p: {
               present: boolean
               commentaire: string | null
-              scout: { id: string; nom: string; prenom: string; numeroAdhesion: string | null; brancheType: string | null }
+              scout: { id: string; nom: string; prenom: string; numeroAdhesion: string | null; brancheType: string | null; ficheMedicale?: boolean }
             }) => {
               const etat = presences.find((e) => e.scoutId === p.scout.id)
               const estPresent = etat?.present ?? false
@@ -168,6 +168,19 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
                         <p className="text-xs text-gray-500">{p.scout.numeroAdhesion}</p>
                       )}
                     </div>
+
+                    {/* Fiche médicale (camps uniquement, information seule) */}
+                    {activite?.type === 'CAMP' && (
+                      p.scout.ficheMedicale ? (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-50 text-green-700 border border-green-100 flex-shrink-0">
+                          🩺 Fiche à jour
+                        </span>
+                      ) : (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-50 text-orange-700 border border-orange-100 flex-shrink-0">
+                          ⚠️ Fiche manquante
+                        </span>
+                      )
+                    )}
 
                     {/* Branche */}
                     {p.scout.brancheType && (

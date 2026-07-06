@@ -5,7 +5,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
 const TAILLE_MAX = 5 * 1024 * 1024 // 5 Mo
-const TYPES_AUTORISES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+const TYPES_AUTORISES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf']
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   if (!fichier) return NextResponse.json({ erreur: 'Aucun fichier reçu' }, { status: 400 })
 
   if (!TYPES_AUTORISES.includes(fichier.type))
-    return NextResponse.json({ erreur: 'Type de fichier non autorisé (JPEG, PNG, WebP, GIF)' }, { status: 400 })
+    return NextResponse.json({ erreur: 'Type de fichier non autorisé (JPEG, PNG, WebP, GIF, PDF)' }, { status: 400 })
 
   if (fichier.size > TAILLE_MAX)
     return NextResponse.json({ erreur: 'Fichier trop volumineux (max 5 Mo)' }, { status: 400 })

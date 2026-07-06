@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { useScout, useAttribuerMatricule, useAjouterContact, useSupprimerContact, useCreerCompteScout } from '@/hooks/useScouts'
+import { useScout, useAttribuerMatricule, useAjouterContact, useSupprimerContact, useCreerCompteScout, useAjouterDocument, useSupprimerDocument } from '@/hooks/useScouts'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
+import { LABELS_TYPE_DOCUMENT, ICONES_TYPE_DOCUMENT } from '@/lib/documents'
 
 export default function FicheScoutPage() {
   const { id } = useParams<{ id: string }>()
@@ -14,6 +15,12 @@ export default function FicheScoutPage() {
   const { mutateAsync: ajouterContact, isPending: contactEnCours } = useAjouterContact(id)
   const { mutateAsync: supprimerContact } = useSupprimerContact(id)
   const { mutateAsync: creerCompte, isPending: compteEnCours } = useCreerCompteScout(id)
+  const { mutateAsync: ajouterDocument } = useAjouterDocument(id)
+  const { mutateAsync: supprimerDocument } = useSupprimerDocument(id)
+
+  const [typeDocument, setTypeDocument] = useState('CERTIFICAT_MEDICAL')
+  const [uploadDocumentEnCours, setUploadDocumentEnCours] = useState(false)
+  const [erreurDocument, setErreurDocument] = useState('')
 
   const [afficherFormulaireMatricule, setAfficherFormulaireMatricule] = useState(false)
   const [nouveauMatricule, setNouveauMatricule] = useState('')
@@ -65,6 +72,35 @@ export default function FicheScoutPage() {
       setNouveauContact({ nom: '', prenom: '', telephone: '', relation: '', principal: false })
     } catch (err) {
       setErreurContact(err instanceof Error ? err.message : 'Erreur')
+    }
+  }
+
+  const handleUploadDocument = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fichier = e.target.files?.[0]
+    if (!fichier) return
+    setErreurDocument('')
+    setUploadDocumentEnCours(true)
+    try {
+      const fd = new FormData()
+      fd.append('fichier', fichier)
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) { setErreurDocument(data.erreur ?? 'Erreur upload'); return }
+      await ajouterDocument({ type: typeDocument, nomFichier: fichier.name, url: data.url })
+    } catch (err) {
+      setErreurDocument(err instanceof Error ? err.message : "Erreur lors de l'envoi du document")
+    } finally {
+      setUploadDocumentEnCours(false)
+      e.target.value = ''
+    }
+  }
+
+  const handleSupprimerDocument = async (documentId: string) => {
+    if (!confirm('Supprimer ce document ?')) return
+    try {
+      await supprimerDocument(documentId)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Erreur')
     }
   }
 
@@ -296,6 +332,50 @@ export default function FicheScoutPage() {
             </div>
           </form>
         )}
+      </div>
+
+      {/* Documents */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 className="text-base font-semibold text-gray-900 mb-1">Documents</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Fiche médicale, autorisation parentale… stockées une fois pour toutes, sans besoin de les redemander à chaque activité.
+        </p>
+
+        {scout.documents.length === 0 ? (
+          <p className="text-sm text-gray-500 mb-3">Aucun document enregistré.</p>
+        ) : (
+          <ul className="space-y-2 mb-4">
+            {scout.documents.map((doc) => (
+              <li key={doc.id} className="flex items-center justify-between border border-gray-100 rounded-md p-3">
+                <a href={doc.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 min-w-0 hover:underline">
+                  <span className="text-lg flex-shrink-0">{ICONES_TYPE_DOCUMENT[doc.type] ?? '📎'}</span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-gray-900 truncate">{LABELS_TYPE_DOCUMENT[doc.type] ?? doc.type}</span>
+                    <span className="block text-xs text-gray-500 truncate">{doc.nomFichier}</span>
+                  </span>
+                </a>
+                <button onClick={() => handleSupprimerDocument(doc.id)} className="text-xs text-red-500 hover:text-red-700 ml-2 flex-shrink-0">
+                  Supprimer
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center border-t border-gray-100 pt-4">
+          <select value={typeDocument} onChange={(e) => setTypeDocument(e.target.value)}
+            className="border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731]">
+            {Object.entries(LABELS_TYPE_DOCUMENT).map(([val, label]) => (
+              <option key={val} value={val}>{label}</option>
+            ))}
+          </select>
+          <label className="text-sm bg-[#1a4731] text-white px-3 py-1.5 rounded-md hover:bg-[#163d29] transition-colors cursor-pointer">
+            {uploadDocumentEnCours ? 'Envoi…' : '+ Ajouter un fichier'}
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
+              onChange={handleUploadDocument} disabled={uploadDocumentEnCours} className="hidden" />
+          </label>
+        </div>
+        {erreurDocument && <p className="text-xs text-red-600 mt-2">{erreurDocument}</p>}
       </div>
 
       {/* Parents avec comptes */}

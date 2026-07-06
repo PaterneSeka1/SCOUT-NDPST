@@ -22,12 +22,25 @@ export async function GET(
     return NextResponse.json({ error: 'Activité introuvable' }, { status: 404 })
   }
 
+  // Pour les camps, on vérifie en plus la présence d'une fiche médicale au dossier (information seule, non bloquant)
+  const estCamp = activite.type === 'CAMP'
+  const scoutSelect = {
+    id: true, nom: true, prenom: true, matricule: true, brancheType: true,
+    ...(estCamp
+      ? { documents: { where: { type: 'CERTIFICAT_MEDICAL' as const }, select: { id: true }, take: 1 } }
+      : {}),
+  }
+
+  function avecFicheMedicale<T extends { documents?: { id: string }[] }>(scout: T) {
+    if (!estCamp) return scout
+    const { documents, ...reste } = scout
+    return { ...reste, ficheMedicale: (documents?.length ?? 0) > 0 }
+  }
+
   const presences = await prisma.presence.findMany({
     where: { activiteId: id },
     include: {
-      scout: {
-        select: { id: true, nom: true, prenom: true, matricule: true, brancheType: true },
-      },
+      scout: { select: scoutSelect },
     },
     orderBy: { scout: { nom: 'asc' } },
   })
@@ -41,16 +54,18 @@ export async function GET(
 
     const scouts = await prisma.scout.findMany({
       where: whereScout,
-      select: { id: true, nom: true, prenom: true, matricule: true, brancheType: true },
+      select: scoutSelect,
       orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
     })
 
     return NextResponse.json(
-      scouts.map((scout) => ({ id: null, present: false, commentaire: null, scout }))
+      scouts.map((scout) => ({ id: null, present: false, commentaire: null, scout: avecFicheMedicale(scout) }))
     )
   }
 
-  return NextResponse.json(presences)
+  return NextResponse.json(
+    presences.map((p) => ({ ...p, scout: avecFicheMedicale(p.scout) }))
+  )
 }
 
 export async function POST(

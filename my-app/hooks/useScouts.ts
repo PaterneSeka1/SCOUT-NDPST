@@ -41,6 +41,16 @@ export interface UtilisateurLie {
   actif: boolean
 }
 
+export interface DocumentScout {
+  id: string
+  type: string
+  nomFichier: string
+  url: string
+  dateUpload: string
+  valide: boolean
+  scoutId: string
+}
+
 export interface Scout {
   id: string
   nom: string
@@ -55,6 +65,7 @@ export interface Scout {
   utilisateurId: string | null
   contactsUrgence: ContactUrgence[]
   liensParents: ParentLie[]
+  documents: DocumentScout[]
   utilisateur?: UtilisateurLie | null
   createdAt: string
   _count?: { contactsUrgence: number }
@@ -275,6 +286,53 @@ export function useSupprimerContact(scoutId: string) {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error ?? 'Erreur lors de la suppression du contact')
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.scout(scoutId) })
+    },
+  })
+}
+
+/**
+ * Ajout d'un document (fiche médicale, autorisation…) à un scout.
+ */
+export function useAjouterDocument(scoutId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (donnees: { type: string; nomFichier: string; url: string }): Promise<DocumentScout> => {
+      const res = await fetch(`/api/scouts/${scoutId}/documents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(donnees),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error ?? "Erreur lors de l'ajout du document")
+      }
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.scout(scoutId) })
+    },
+  })
+}
+
+/**
+ * Suppression d'un document d'un scout.
+ */
+export function useSupprimerDocument(scoutId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (documentId: string): Promise<void> => {
+      const res = await fetch(`/api/scouts/${scoutId}/documents/${documentId}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error ?? 'Erreur lors de la suppression du document')
       }
     },
     onSuccess: () => {
