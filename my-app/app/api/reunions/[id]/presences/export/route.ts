@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { logger } from '@/lib/logger'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -92,7 +93,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
       },
     })
   } catch (error) {
-    console.error('[GET /api/reunions/[id]/presences/export]', error)
+    logger.error('GET /api/reunions/[id]/presences/export', error)
     return new NextResponse('Erreur serveur', { status: 500 })
   }
 }

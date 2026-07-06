@@ -28,9 +28,9 @@ export default function PagePresences() {
     fetch(`/api/activites?page=${page}&limite=${parPage}`)
       .then((r) => r.json())
       .then((data) => {
-        if (data.erreur) { setErreur(data.erreur); return }
+        if (data.error) { setErreur(data.error); return }
         setActivites(data.activites ?? [])
-        setTotal(data.total ?? 0)
+        setTotal(data.pagination?.total ?? 0)
       })
       .catch(() => setErreur('Impossible de charger les activités'))
       .finally(() => setChargement(false))

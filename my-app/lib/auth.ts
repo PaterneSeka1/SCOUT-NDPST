@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import { compare } from 'bcryptjs'
 import { prisma } from './prisma'
 import { limiterTaux } from './rateLimit'
+import { logger } from './logger'
 
 const MAX_TENTATIVES_CONNEXION = 5
 const FENETRE_CONNEXION_MS = 15 * 60 * 1000 // 15 minutes
@@ -36,6 +37,9 @@ export const authOptions: NextAuthOptions = {
         const parIdentifiant = limiterTaux(`login:id:${credentials.identifiant}`, MAX_TENTATIVES_CONNEXION, FENETRE_CONNEXION_MS)
         const parIp = limiterTaux(`login:ip:${ip}`, MAX_TENTATIVES_CONNEXION * 4, FENETRE_CONNEXION_MS)
         if (!parIdentifiant.autorise || !parIp.autorise) {
+          // On n'inclut pas l'identifiant (matricule/téléphone = PII) dans le log,
+          // seule l'IP et le type de limite atteinte sont utiles pour la détection.
+          logger.warn('auth.rate_limit', { ip, parIdentifiant: !parIdentifiant.autorise, parIp: !parIp.autorise })
           throw new Error('Trop de tentatives. Réessayez dans quelques minutes.')
         }
 

@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { BrancheType, Prisma, Sexe } from '@/app/generated/prisma/client'
 import { ROLES_TOUT_STAFF as ROLES_AUTORISES } from '@/lib/roles'
 import { estCheminLocalValide } from '@/lib/validation'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ scouts, total, page, totalPages })
   } catch (error) {
-    console.error('[GET /api/scouts]', error)
+    logger.error('GET /api/scouts', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }
@@ -188,7 +189,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(scout, { status: 201 })
   } catch (error) {
-    console.error('[POST /api/scouts]', error)
+    logger.error('POST /api/scouts', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }

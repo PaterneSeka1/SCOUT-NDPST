@@ -15,8 +15,8 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url)
-  const page = parseInt(searchParams.get('page') ?? '1')
-  const limite = 20
+  const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
+  const limite = Math.max(1, parseInt(searchParams.get('limite') ?? '20', 10))
   const decalage = (page - 1) * limite
   const recherche = searchParams.get('recherche') ?? ''
   const type = searchParams.get('type') ?? ''

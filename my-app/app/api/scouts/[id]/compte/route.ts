@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { ROLES_GROUPE_ETENDU as ROLES_AUTORISES } from '@/lib/roles'
+import { logger } from '@/lib/logger'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(utilisateur, { status: 201 })
   } catch (error) {
-    console.error('[POST /api/scouts/[id]/compte]', error)
+    logger.error('POST /api/scouts/[id]/compte', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }

@@ -3,6 +3,7 @@ import { hash } from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { limiterTaux } from '@/lib/rateLimit'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
+import { logger } from '@/lib/logger'
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,6 +16,7 @@ export async function POST(req: NextRequest) {
 
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'ip-inconnue'
     if (!limiterTaux(`reset-mdp:ip:${ip}`, 10, 15 * 60 * 1000).autorise) {
+      logger.warn('reset_mdp.rate_limit', { ip })
       return NextResponse.json({ erreur: 'Trop de tentatives. Réessayez dans quelques minutes.' }, { status: 429 })
     }
 
@@ -46,7 +48,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ message: 'Mot de passe modifié avec succès.' })
   } catch (error) {
-    console.error('[POST /api/auth/reinitialiser-motdepasse]', error)
+    logger.error('reset_mdp.erreur', error)
     return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
   }
 }

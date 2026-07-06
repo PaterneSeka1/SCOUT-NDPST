@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { ROLES_GROUPE } from '@/lib/roles'
+import { logger } from '@/lib/logger'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -52,7 +53,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ message: 'Mot de passe mis à jour' })
   } catch (error) {
-    console.error('[PUT /api/utilisateurs/[id]/password]', error)
+    logger.error('PUT /api/utilisateurs/[id]/password', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }

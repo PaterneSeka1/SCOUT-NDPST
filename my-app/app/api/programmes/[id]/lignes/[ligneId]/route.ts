@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_BRANCHE, ROLES_GESTION } from '@/lib/roles'
+import { logger } from '@/lib/logger'
 
 type RouteParams = { params: Promise<{ id: string; ligneId: string }> }
 
@@ -10,6 +11,7 @@ async function getBrancheUtilisateur(userId: string, paroisseId: string): Promis
   const poste = await prisma.posteBranche.findFirst({
     where: { utilisateurId: userId, paroisseId },
     select: { brancheType: true },
+    orderBy: { createdAt: 'asc' },
   })
   return poste?.brancheType ?? null
 }
@@ -77,7 +79,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(ligne)
   } catch (error) {
-    console.error('[PATCH /api/programmes/[id]/lignes/[ligneId]]', error)
+    logger.error('PATCH /api/programmes/[id]/lignes/[ligneId]', error)
     return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
   }
 }
@@ -95,7 +97,7 @@ export async function DELETE(_req: NextRequest, { params }: RouteParams) {
     await prisma.ligneProgramme.delete({ where: { id: ligneId } })
     return NextResponse.json({ ok: true })
   } catch (error) {
-    console.error('[DELETE /api/programmes/[id]/lignes/[ligneId]]', error)
+    logger.error('DELETE /api/programmes/[id]/lignes/[ligneId]', error)
     return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
   }
 }

@@ -106,7 +106,7 @@ export async function GET() {
       paroisseId: session.user.paroisseId ?? undefined,
       statut: { in: ['PLANIFIEE', 'REPORTEE'] },
       dateHeure: { gte: new Date() },
-      ...(branches.length > 0 ? { brancheType: { in: branches as never[] } } : {}),
+      ...(branches.length > 0 ? { OR: [{ brancheType: null }, { brancheType: { in: branches as never[] } }] } : {}),
     },
     orderBy: { dateHeure: 'asc' },
     take: 5,

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_BRANCHE, ROLES_GESTION } from '@/lib/roles'
+import { logger } from '@/lib/logger'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -10,6 +11,7 @@ async function getBrancheUtilisateur(userId: string, paroisseId: string): Promis
   const poste = await prisma.posteBranche.findFirst({
     where: { utilisateurId: userId, paroisseId },
     select: { brancheType: true },
+    orderBy: { createdAt: 'asc' },
   })
   return poste?.brancheType ?? null
 }
@@ -59,7 +61,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(ligne, { status: 201 })
   } catch (error) {
-    console.error('[POST /api/programmes/[id]/lignes]', error)
+    logger.error('POST /api/programmes/[id]/lignes', error)
     return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
   }
 }

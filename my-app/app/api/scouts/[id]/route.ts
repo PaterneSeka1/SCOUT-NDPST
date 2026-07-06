@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { BrancheType, Sexe } from '@/app/generated/prisma/client'
 import { ROLES_TOUT_STAFF as ROLES_AUTORISES } from '@/lib/roles'
 import { estCheminLocalValide } from '@/lib/validation'
+import { logger } from '@/lib/logger'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -63,7 +64,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(scout)
   } catch (error) {
-    console.error('[GET /api/scouts/[id]]', error)
+    logger.error('GET /api/scouts/[id]', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }
@@ -130,7 +131,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(scout)
   } catch (error) {
-    console.error('[PUT /api/scouts/[id]]', error)
+    logger.error('PUT /api/scouts/[id]', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }

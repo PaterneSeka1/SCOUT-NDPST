@@ -247,7 +247,7 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
 
         {lignesTriees.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-            <p className="text-gray-400 text-sm">Aucun thème ajouté pour l'instant</p>
+            <p className="text-gray-400 text-sm">Aucun thème ajouté pour l&apos;instant</p>
           </div>
         ) : (
           <div className="space-y-2">

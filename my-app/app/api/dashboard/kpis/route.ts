@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { logger } from '@/lib/logger'
 
 function debutDuMois(): Date {
   const d = new Date()
@@ -75,6 +76,7 @@ export async function GET() {
       const poste = await prisma.posteBranche.findFirst({
         where: { utilisateurId: userId },
         select: { brancheType: true },
+        orderBy: { createdAt: 'asc' },
       })
 
       if (poste) {
@@ -176,7 +178,7 @@ export async function GET() {
 
     return NextResponse.json({ kpis, activitesRecentes })
   } catch (error) {
-    console.error('[GET /api/dashboard/kpis]', error)
+    logger.error('GET /api/dashboard/kpis', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }

@@ -70,7 +70,7 @@ export default function PageProgrammes() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Programmes d'activités</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Programmes d&apos;activités</h1>
           <p className="text-sm text-gray-500 mt-0.5">Programme du groupe et programmes propres à chaque branche</p>
         </div>
         {peutCreer && (

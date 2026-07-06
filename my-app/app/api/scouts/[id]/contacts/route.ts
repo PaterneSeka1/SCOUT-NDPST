@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_TOUT_STAFF as ROLES_AUTORISES } from '@/lib/roles'
+import { logger } from '@/lib/logger'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(contact, { status: 201 })
   } catch (error) {
-    console.error('[POST /api/scouts/[id]/contacts]', error)
+    logger.error('POST /api/scouts/[id]/contacts', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }

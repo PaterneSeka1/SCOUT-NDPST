@@ -22,10 +22,10 @@ export async function GET() {
     scoutsInactifs,
     activitesMois,
     activites6mois,
+    activitesCount6mois,
     presences6mois,
     scouts6moisTotal,
     reunionsMois,
-    reunionsTerminees,
     dernieresReunions,
   ] = await Promise.all([
     prisma.scout.groupBy({ by: ['brancheType'], where: { paroisseId }, _count: { id: true } }),
@@ -41,24 +41,16 @@ export async function GET() {
       orderBy: { dateDebut: 'desc' },
       take: 10,
     }),
+    // Nombre réel d'activités sur 6 mois (non plafonné) : sert de dénominateur
+    // au taux de présence, contrairement à `activites6mois` limité à 10 lignes
+    // pour l'affichage.
+    prisma.activite.count({ where: { paroisseId, dateDebut: { gte: il6mois } } }),
     prisma.presence.count({
-      where: { activite: { paroisseId, dateDebut: { gte: il6mois } } },
+      where: { present: true, activite: { paroisseId, dateDebut: { gte: il6mois } } },
     }),
     prisma.scout.count({ where: { paroisseId, actif: true } }),
     prisma.jourReunion.count({
       where: { paroisseId, dateHeure: { gte: debutMois } },
-    }),
-    prisma.jourReunion.findMany({
-      where: { paroisseId, statut: 'TERMINEE', dateHeure: { gte: il6mois } },
-      include: {
-        _count: { select: { presences: true } },
-        presences: {
-          where: { statut: 'PRESENT' },
-          select: { id: true },
-        },
-      },
-      orderBy: { dateHeure: 'desc' },
-      take: 10,
     }),
     prisma.jourReunion.findMany({
       where: { paroisseId, statut: 'TERMINEE', dateHeure: { gte: il6mois } },
@@ -71,8 +63,8 @@ export async function GET() {
     }),
   ])
 
-  const tauxPresence = scouts6moisTotal > 0 && activites6mois.length > 0
-    ? Math.round((presences6mois / (scouts6moisTotal * activites6mois.length)) * 100)
+  const tauxPresence = scouts6moisTotal > 0 && activitesCount6mois > 0
+    ? Math.round((presences6mois / (scouts6moisTotal * activitesCount6mois)) * 100)
     : 0
 
   // Taux de présence moyen aux réunions terminées

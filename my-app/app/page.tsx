@@ -50,7 +50,7 @@ async function getSiteConfig(): Promise<SiteConfig> {
 async function getParoisseLogo(): Promise<string | null> {
   // Priorité 1 : logo paroisse depuis la BDD
   try {
-    const p = await prisma.paroisse.findFirst({ select: { logo: true } })
+    const p = await prisma.paroisse.findFirst({ select: { logo: true }, orderBy: { createdAt: 'asc' } })
     if (p?.logo) return p.logo
   } catch { }
   // Priorité 2 : logoSite depuis la config

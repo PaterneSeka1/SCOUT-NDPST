@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_TOUT_STAFF as ROLES_PRESENCES } from '@/lib/roles'
 import { StatutPresenceReunionSchema } from '@/lib/validation'
+import { logger } from '@/lib/logger'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -42,7 +43,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ reunion, scouts, presencesMap })
   } catch (error) {
-    console.error('[GET /api/reunions/[id]/presences]', error)
+    logger.error('GET /api/reunions/[id]/presences', error)
     return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
   }
 }
@@ -101,7 +102,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ ok: true, count: presences.length })
   } catch (error) {
-    console.error('[POST /api/reunions/[id]/presences]', error)
+    logger.error('POST /api/reunions/[id]/presences', error)
     return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
   }
 }

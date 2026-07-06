@@ -8,7 +8,11 @@ export async function GET() {
   // Logo paroisse depuis la BDD (priorité maximale)
   let logoParoisse: string | null = null
   try {
-    const paroisse = await prisma.paroisse.findFirst({ select: { logo: true } })
+    // NB : sur un déploiement hébergeant plusieurs paroisses, un visiteur non
+    // authentifié n'a aucun moyen d'indiquer la sienne (pas de sous-domaine ni
+    // de sélecteur) — cette route ne peut donc pas savoir quel logo afficher
+    // et retombe sur la première paroisse créée, par ordre déterministe.
+    const paroisse = await prisma.paroisse.findFirst({ select: { logo: true }, orderBy: { createdAt: 'asc' } })
     logoParoisse = paroisse?.logo ?? null
   } catch {
     // DB indisponible

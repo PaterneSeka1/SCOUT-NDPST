@@ -176,7 +176,7 @@ export default function PageReunions() {
       {onglet === 'config' && peutCreer && (
         <div className="space-y-4">
           <p className="text-sm text-gray-500">
-            Définissez le jour et l'heure habituels de réunion pour chaque branche. Cette configuration s'applique à toutes les années et pré-remplit le formulaire de planification.
+            Définissez le jour et l&apos;heure habituels de réunion pour chaque branche. Cette configuration s&apos;applique à toutes les années et pré-remplit le formulaire de planification.
           </p>
           {BRANCHES_ORDRE.map((branche) => {
             const cfg = configs.find((c) => c.brancheType === branche)

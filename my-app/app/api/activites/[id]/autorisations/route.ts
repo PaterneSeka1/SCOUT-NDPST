@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { TypeAutorisationCamp } from '@/app/generated/prisma/client'
 import { ROLES_TOUT_STAFF as ROLES_STAFF } from '@/lib/roles'
 import { estCheminLocalValide } from '@/lib/validation'
+import { logger } from '@/lib/logger'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(autorisation, { status: 201 })
   } catch (error) {
-    console.error('[POST /api/activites/[id]/autorisations]', error)
+    logger.error('POST /api/activites/[id]/autorisations', error)
     return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
   }
 }
@@ -126,7 +127,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ ok: true })
   } catch (error) {
-    console.error('[DELETE /api/activites/[id]/autorisations]', error)
+    logger.error('DELETE /api/activites/[id]/autorisations', error)
     return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
   }
 }

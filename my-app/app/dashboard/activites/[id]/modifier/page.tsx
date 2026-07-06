@@ -75,11 +75,11 @@ export default function PageModifierActivite({ params }: { params: Promise<{ id:
   return (
     <div className="space-y-6">
       <Link href={`/dashboard/activites/${id}`} className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
-        ← Retour à l'activité
+        ← Retour à l&apos;activité
       </Link>
 
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Modifier l'activité</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Modifier l&apos;activité</h1>
         <p className="text-sm text-gray-500 mt-0.5 truncate">{activite.titre}</p>
       </div>
 

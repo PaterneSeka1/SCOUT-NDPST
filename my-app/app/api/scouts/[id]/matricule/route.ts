@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_GROUPE_ETENDU as ROLES_AUTORISES } from '@/lib/roles'
+import { logger } from '@/lib/logger'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -63,7 +64,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(scout)
   } catch (error) {
-    console.error('[PUT /api/scouts/[id]/matricule]', error)
+    logger.error('PUT /api/scouts/[id]/matricule', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }

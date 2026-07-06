@@ -3,6 +3,7 @@ import { randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { envoyerEmailReinitialisation } from '@/lib/email'
 import { limiterTaux } from '@/lib/rateLimit'
+import { logger } from '@/lib/logger'
 
 const MAX_DEMANDES = 5
 const FENETRE_MS = 15 * 60 * 1000 // 15 minutes
@@ -19,6 +20,7 @@ export async function POST(req: NextRequest) {
     const parIp = limiterTaux(`mdp-oublie:ip:${ip}`, MAX_DEMANDES, FENETRE_MS)
     const parEmail = limiterTaux(`mdp-oublie:email:${email.trim().toLowerCase()}`, MAX_DEMANDES, FENETRE_MS)
     if (!parIp.autorise || !parEmail.autorise) {
+      logger.warn('mdp_oublie.rate_limit', { ip, parIp: !parIp.autorise, parEmail: !parEmail.autorise })
       return NextResponse.json({ erreur: 'Trop de demandes. Réessayez dans quelques minutes.' }, { status: 429 })
     }
 
@@ -53,7 +55,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(reponse)
   } catch (error) {
-    console.error('[POST /api/auth/mot-de-passe-oublie]', error)
+    logger.error('mdp_oublie.erreur', error)
     return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
   }
 }

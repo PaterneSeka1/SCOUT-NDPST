@@ -19,6 +19,13 @@ export default function PageMaBranche() {
   const [erreur, setErreur] = useState('')
 
   useEffect(() => {
+    // useSession() démarre en état 'loading' (session === undefined) : sans ce
+    // garde, l'effet tournait une première fois sans utilisateur connu, ne
+    // trouvait jamais le poste, et affichait une erreur qui restait bloquée
+    // à l'écran même une fois la session résolue et les données chargées.
+    if (!session?.user) return
+
+    setErreur('')
     // Récupère le type de branche depuis les postes de l'utilisateur courant
     fetch('/api/branches')
       .then((r) => r.json())

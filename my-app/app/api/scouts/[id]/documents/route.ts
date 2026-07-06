@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { TypeDocument } from '@/app/generated/prisma/client'
 import { ROLES_TOUT_STAFF as ROLES_AUTORISES } from '@/lib/roles'
 import { estCheminLocalValide } from '@/lib/validation'
+import { logger } from '@/lib/logger'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(document, { status: 201 })
   } catch (error) {
-    console.error('[POST /api/scouts/[id]/documents]', error)
+    logger.error('POST /api/scouts/[id]/documents', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }

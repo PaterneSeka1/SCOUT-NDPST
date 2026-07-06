@@ -145,7 +145,7 @@ export default function NouveauScoutPage() {
       <form onSubmit={handleSubmit} noValidate className="space-y-6">
         {/* Informations de l'enfant */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">
-          <h2 className="text-sm font-semibold text-gray-800 border-b border-gray-100 pb-3">Informations de l'enfant</h2>
+          <h2 className="text-sm font-semibold text-gray-800 border-b border-gray-100 pb-3">Informations de l&apos;enfant</h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -226,7 +226,7 @@ export default function NouveauScoutPage() {
         {/* Contacts d'urgence */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">
           <div className="border-b border-gray-100 pb-3">
-            <h2 className="text-sm font-semibold text-gray-800">Contacts d'urgence</h2>
+            <h2 className="text-sm font-semibold text-gray-800">Contacts d&apos;urgence</h2>
             <p className="text-xs text-gray-500 mt-0.5">Au moins un contact est obligatoire.</p>
           </div>
 

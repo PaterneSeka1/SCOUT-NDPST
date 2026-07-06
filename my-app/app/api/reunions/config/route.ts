@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_GROUPE as ROLES_CREATION } from '@/lib/roles'
 import { BrancheTypeSchema } from '@/lib/validation'
+import { logger } from '@/lib/logger'
 
 export async function GET() {
   try {
@@ -17,7 +18,7 @@ export async function GET() {
 
     return NextResponse.json(configs)
   } catch (error) {
-    console.error('[GET /api/reunions/config]', error)
+    logger.error('GET /api/reunions/config', error)
     return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
   }
 }
@@ -67,7 +68,7 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json(config)
   } catch (error) {
-    console.error('[PUT /api/reunions/config]', error)
+    logger.error('PUT /api/reunions/config', error)
     return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
   }
 }

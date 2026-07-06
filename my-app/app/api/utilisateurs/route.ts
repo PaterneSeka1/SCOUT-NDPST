@@ -7,6 +7,7 @@ import { Prisma, RoleUtilisateur } from '@/app/generated/prisma/client'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { ROLES_GROUPE as ROLES_AUTORISES } from '@/lib/roles'
 import { RoleUtilisateurSchema } from '@/lib/validation'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -72,7 +73,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ utilisateurs, total, page, totalPages })
   } catch (error) {
-    console.error('[GET /api/utilisateurs]', error)
+    logger.error('GET /api/utilisateurs', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }
@@ -191,7 +192,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(utilisateur, { status: 201 })
   } catch (error) {
-    console.error('[POST /api/utilisateurs]', error)
+    logger.error('POST /api/utilisateurs', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }

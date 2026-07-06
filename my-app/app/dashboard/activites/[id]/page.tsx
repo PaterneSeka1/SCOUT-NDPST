@@ -38,7 +38,7 @@ export default function PageDetailActivite({ params }: { params: Promise<{ id: s
   if (isLoading) {
     return (
       <div className="max-w-3xl mx-auto p-8 text-center text-gray-500">
-        Chargement de l'activité...
+        Chargement de l&apos;activité...
       </div>
     )
   }

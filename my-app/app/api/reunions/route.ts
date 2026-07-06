@@ -4,11 +4,13 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_GROUPE, ROLES_BRANCHE, ROLES_TOUT_STAFF as ROLES_LECTURE } from '@/lib/roles'
 import { BrancheTypeSchema } from '@/lib/validation'
+import { logger } from '@/lib/logger'
 
 async function getBrancheUtilisateur(userId: string, paroisseId: string) {
   const poste = await prisma.posteBranche.findFirst({
     where: { utilisateurId: userId, paroisseId },
     select: { brancheType: true },
+    orderBy: { createdAt: 'asc' },
   })
   return poste?.brancheType ?? null
 }
@@ -45,7 +47,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(reunions)
   } catch (error) {
-    console.error('[GET /api/reunions]', error)
+    logger.error('GET /api/reunions', error)
     return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
   }
 }
@@ -102,7 +104,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(created, { status: 201 })
   } catch (error) {
-    console.error('[POST /api/reunions]', error)
+    logger.error('POST /api/reunions', error)
     return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
   }
 }

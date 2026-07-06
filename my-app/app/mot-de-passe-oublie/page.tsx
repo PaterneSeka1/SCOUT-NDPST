@@ -65,7 +65,7 @@ export default function PageMotDePasseOublie() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               <p className="text-sm text-gray-600">
-                Entrez l'adresse email associée à votre compte. Nous vous enverrons un lien pour réinitialiser votre mot de passe.
+                Entrez l&apos;adresse email associée à votre compte. Nous vous enverrons un lien pour réinitialiser votre mot de passe.
               </p>
 
               <div>

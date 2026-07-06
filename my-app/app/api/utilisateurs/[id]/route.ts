@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { RoleUtilisateur } from '@/app/generated/prisma/client'
 import { ROLES_GROUPE as ROLES_AUTORISES } from '@/lib/roles'
+import { logger } from '@/lib/logger'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -41,7 +42,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     if (!utilisateur) return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 })
     return NextResponse.json(utilisateur)
   } catch (error) {
-    console.error('[GET /api/utilisateurs/[id]]', error)
+    logger.error('GET /api/utilisateurs/[id]', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }
@@ -98,7 +99,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(utilisateur)
   } catch (error) {
-    console.error('[PUT /api/utilisateurs/[id]]', error)
+    logger.error('PUT /api/utilisateurs/[id]', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }
@@ -132,7 +133,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(utilisateur)
   } catch (error) {
-    console.error('[DELETE /api/utilisateurs/[id]]', error)
+    logger.error('DELETE /api/utilisateurs/[id]', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }
