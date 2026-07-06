@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
-
-const ORDRE_BRANCHES = ['OISILLONS', 'LOUVETEAUX', 'ECLAIREURS', 'CHEMINOTS', 'COMPAGNONS']
+import { LABELS_BRANCHES, COULEURS_BRANCHES, ORDRE_BRANCHES } from '@/lib/branches'
+import { ROLES_GROUPE } from '@/lib/roles'
 
 const LABELS_ROLE: Record<string, string> = {
   RESPONSABLE: 'Responsable',
@@ -22,6 +22,7 @@ interface Poste {
 }
 
 export default function PageBranches() {
+  const { data: session } = useSession()
   const [postes, setPostes] = useState<Poste[]>([])
   const [comptes, setComptes] = useState<Record<string, number>>({})
   const [chargement, setChargement] = useState(true)
@@ -46,9 +47,17 @@ export default function PageBranches() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Branches</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Organisation des branches scouts de la paroisse</p>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Branches</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Organisation des branches scouts de la paroisse</p>
+        </div>
+        {session?.user && ROLES_GROUPE.includes(session.user.role) && (
+          <Link href="/dashboard/branches/passage"
+            className="flex-shrink-0 bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium">
+            Passage de branche
+          </Link>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
