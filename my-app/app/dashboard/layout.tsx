@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { ParoisseLogoImage } from '@/app/components/ParoisseLogoImage'
 import { useSiteInfo } from '@/app/components/useSiteInfo'
+import { RechercheGlobale } from '@/app/components/RechercheGlobale'
 
 type MenuItem = {
   label: string
@@ -242,6 +243,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </svg>
             </button>
             <h2 className="text-gray-800 font-semibold text-sm truncate">{titrePage}</h2>
+          </div>
+
+          <div className="hidden md:block flex-1 max-w-xs">
+            <RechercheGlobale />
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
