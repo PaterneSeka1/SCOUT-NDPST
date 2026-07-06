@@ -22,19 +22,28 @@ export async function GET(
     return NextResponse.json({ error: 'Activité introuvable' }, { status: 404 })
   }
 
-  // Pour les camps, on vérifie en plus la présence d'une fiche médicale au dossier (information seule, non bloquant)
+  // Pour les camps, on vérifie en plus que le parent a signé (fiche médicale + autorisation) pour CE camp précis
+  // (information seule, non bloquant — la décision de présence reste humaine).
   const estCamp = activite.type === 'CAMP'
   const scoutSelect = {
     id: true, nom: true, prenom: true, matricule: true, brancheType: true,
     ...(estCamp
-      ? { documents: { where: { type: 'CERTIFICAT_MEDICAL' as const }, select: { id: true }, take: 1 } }
+      ? { autorisationsCamp: { where: { activiteId: id }, select: { type: true, confirmeLe: true } } }
       : {}),
   }
 
-  function avecFicheMedicale<T extends { documents?: { id: string }[] }>(scout: T) {
+  function avecAutorisationCamp<T extends { autorisationsCamp?: { type: string; confirmeLe: Date | null }[] }>(scout: T) {
     if (!estCamp) return scout
-    const { documents, ...reste } = scout
-    return { ...reste, ficheMedicale: (documents?.length ?? 0) > 0 }
+    const { autorisationsCamp, ...reste } = scout
+    const confirmee = (type: string) =>
+      (autorisationsCamp ?? []).some((a) => a.type === type && a.confirmeLe !== null)
+    return {
+      ...reste,
+      autorisationCamp: {
+        ficheMedicale: confirmee('FICHE_MEDICALE'),
+        autorisationParentale: confirmee('AUTORISATION_PARENTALE'),
+      },
+    }
   }
 
   const presences = await prisma.presence.findMany({
@@ -59,12 +68,12 @@ export async function GET(
     })
 
     return NextResponse.json(
-      scouts.map((scout) => ({ id: null, present: false, commentaire: null, scout: avecFicheMedicale(scout) }))
+      scouts.map((scout) => ({ id: null, present: false, commentaire: null, scout: avecAutorisationCamp(scout) }))
     )
   }
 
   return NextResponse.json(
-    presences.map((p) => ({ ...p, scout: avecFicheMedicale(p.scout) }))
+    presences.map((p) => ({ ...p, scout: avecAutorisationCamp(p.scout) }))
   )
 }
 

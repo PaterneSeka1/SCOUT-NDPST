@@ -132,7 +132,7 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
             {scouts.map((p: {
               present: boolean
               commentaire: string | null
-              scout: { id: string; nom: string; prenom: string; numeroAdhesion: string | null; brancheType: string | null; ficheMedicale?: boolean }
+              scout: { id: string; nom: string; prenom: string; numeroAdhesion: string | null; brancheType: string | null; autorisationCamp?: { ficheMedicale: boolean; autorisationParentale: boolean } }
             }) => {
               const etat = presences.find((e) => e.scoutId === p.scout.id)
               const estPresent = etat?.present ?? false
@@ -169,17 +169,24 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
                       )}
                     </div>
 
-                    {/* Fiche médicale (camps uniquement, information seule) */}
+                    {/* Autorisations de camp signées par le parent (camps uniquement, information seule) */}
                     {activite?.type === 'CAMP' && (
-                      p.scout.ficheMedicale ? (
-                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-50 text-green-700 border border-green-100 flex-shrink-0">
-                          🩺 Fiche à jour
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${
+                          p.scout.autorisationCamp?.ficheMedicale
+                            ? 'bg-green-50 text-green-700 border-green-100'
+                            : 'bg-orange-50 text-orange-700 border-orange-100'
+                        }`}>
+                          🩺 Fiche {p.scout.autorisationCamp?.ficheMedicale ? 'signée' : 'non signée'}
                         </span>
-                      ) : (
-                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-50 text-orange-700 border border-orange-100 flex-shrink-0">
-                          ⚠️ Fiche manquante
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${
+                          p.scout.autorisationCamp?.autorisationParentale
+                            ? 'bg-green-50 text-green-700 border-green-100'
+                            : 'bg-orange-50 text-orange-700 border-orange-100'
+                        }`}>
+                          📝 Autorisation {p.scout.autorisationCamp?.autorisationParentale ? 'signée' : 'non signée'}
                         </span>
-                      )
+                      </div>
                     )}
 
                     {/* Branche */}

@@ -135,17 +135,18 @@ model Utilisateur {
   paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
 
   // Relations
-  posteGroupe              PosteGroupe?
-  postesBranche            PosteBranche[]
-  liensParent              LienParentScout[]
-  contactsUrgence          ContactUrgence[] // Contacts d'urgence liés à ce compte
-  ficheScout               Scout? // Fiche Scout liée (si rôle SCOUT)
-  activitesCreees          Activite[]              @relation("ActiviteCreePar")
-  progressionsValidees     ProgressionScout[]      @relation("ProgressionValidePar")
-  joursReunionCrees        JourReunion[]           @relation("JourReunionCreePar")
-  presencesReunionMarquees PresenceReunion[]       @relation("PresenceReunionMarquePar")
-  tokensReinitialisation   TokenReinitialisation[]
-  programmesCrees          Programme[]             @relation("ProgrammeCreePar")
+  posteGroupe                 PosteGroupe?
+  postesBranche               PosteBranche[]
+  liensParent                 LienParentScout[]
+  contactsUrgence             ContactUrgence[] // Contacts d'urgence liés à ce compte
+  ficheScout                  Scout? // Fiche Scout liée (si rôle SCOUT)
+  activitesCreees             Activite[]              @relation("ActiviteCreePar")
+  progressionsValidees        ProgressionScout[]      @relation("ProgressionValidePar")
+  joursReunionCrees           JourReunion[]           @relation("JourReunionCreePar")
+  presencesReunionMarquees    PresenceReunion[]       @relation("PresenceReunionMarquePar")
+  tokensReinitialisation      TokenReinitialisation[]
+  programmesCrees             Programme[]             @relation("ProgrammeCreePar")
+  autorisationsCampConfirmees AutorisationCamp[]      @relation("AutorisationCampConfirmePar")
 
   @@index([matricule])
   @@index([telephone])
@@ -235,12 +236,13 @@ model Scout {
   utilisateur   Utilisateur? @relation(fields: [utilisateurId], references: [id], onDelete: SetNull)
 
   // Relations
-  liensParents     LienParentScout[] // Parents avec compte dans l'application
-  contactsUrgence  ContactUrgence[] // Contacts d'urgence (avec ou sans compte)
-  presences        Presence[]
-  presencesReunion PresenceReunion[]
-  progressions     ProgressionScout[]
-  documents        Document[]
+  liensParents      LienParentScout[] // Parents avec compte dans l'application
+  contactsUrgence   ContactUrgence[] // Contacts d'urgence (avec ou sans compte)
+  presences         Presence[]
+  presencesReunion  PresenceReunion[]
+  progressions      ProgressionScout[]
+  documents         Document[]
+  autorisationsCamp AutorisationCamp[]
 
   @@index([paroisseId])
   @@index([brancheType])
@@ -316,8 +318,9 @@ model Activite {
   creeParUtilisateur Utilisateur @relation("ActiviteCreePar", fields: [creePar], references: [id], onDelete: Restrict)
 
   // Relations
-  presences      Presence[]
-  ligneProgramme LigneProgramme?
+  presences         Presence[]
+  ligneProgramme    LigneProgramme?
+  autorisationsCamp AutorisationCamp[]
 
   @@index([paroisseId])
   @@index([brancheType])
@@ -558,4 +561,38 @@ model LigneProgramme {
   activite   Activite? @relation(fields: [activiteId], references: [id], onDelete: SetNull)
 
   @@index([programmeId])
+}
+
+// ---------------------------------------------------------------------------
+// Autorisation de camp — signature/confirmation du parent propre à un camp donné
+// Distincte du Document permanent (fiche médicale) : ici on trace le consentement
+// pour CETTE activité précise (fiche médicale à jour + autorisation parentale).
+// ---------------------------------------------------------------------------
+
+enum TypeAutorisationCamp {
+  FICHE_MEDICALE
+  AUTORISATION_PARENTALE
+}
+
+model AutorisationCamp {
+  id                 String               @id @default(cuid())
+  type               TypeAutorisationCamp
+  documentNomFichier String? // Renseigné si confirmé par upload d'un document signé
+  documentUrl        String?
+  confirmeLe         DateTime? // null = pas encore confirmé
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  activiteId String
+  activite   Activite @relation(fields: [activiteId], references: [id], onDelete: Cascade)
+
+  scoutId String
+  scout   Scout  @relation(fields: [scoutId], references: [id], onDelete: Cascade)
+
+  confirmeParId String?
+  confirmePar   Utilisateur? @relation("AutorisationCampConfirmePar", fields: [confirmeParId], references: [id], onDelete: SetNull)
+
+  @@unique([activiteId, scoutId, type])
+  @@index([activiteId])
+  @@index([scoutId])
 }

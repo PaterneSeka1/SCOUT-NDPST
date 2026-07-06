@@ -45,16 +45,28 @@ interface Responsable {
   utilisateur: { id: string; prenom: string; nom: string; telephone: string | null; email: string | null; role: string }
 }
 
+interface CampAutorisation {
+  id: string; titre: string; dateDebut: string; lieu: string | null
+  ficheMedicale: boolean; autorisationParentale: boolean
+}
+
+const LABELS_TYPE_AUTORISATION: Record<'FICHE_MEDICALE' | 'AUTORISATION_PARENTALE', string> = {
+  FICHE_MEDICALE: 'Fiche médicale',
+  AUTORISATION_PARENTALE: 'Autorisation parentale',
+}
+
 export default function PageMesEnfants() {
   const [enfants, setEnfants] = useState<Scout[]>([])
   const [prochaines, setProchaines] = useState<Activite[]>([])
   const [prochinesReunions, setProchinesReunions] = useState<Reunion[]>([])
   const [responsables, setResponsables] = useState<Responsable[]>([])
+  const [campsParEnfant, setCampsParEnfant] = useState<Record<string, CampAutorisation[]>>({})
   const [chargement, setChargement] = useState(true)
   const [erreur, setErreur] = useState('')
   const [ongletEnfant, setOngletEnfant] = useState<Record<string, 'activites' | 'reunions'>>({})
+  const [enCours, setEnCours] = useState<string | null>(null)
 
-  useEffect(() => {
+  const charger = () => {
     fetch('/api/mes-enfants')
       .then((r) => r.json())
       .then((data) => {
@@ -63,10 +75,51 @@ export default function PageMesEnfants() {
         setProchaines(data.prochaines ?? [])
         setProchinesReunions(data.prochinesReunions ?? [])
         setResponsables(data.responsables ?? [])
+        setCampsParEnfant(data.campsParEnfant ?? {})
       })
       .catch(() => setErreur('Impossible de charger les données'))
       .finally(() => setChargement(false))
-  }, [])
+  }
+
+  useEffect(() => { charger() }, [])
+
+  async function confirmerDigitalement(activiteId: string, scoutId: string, type: 'FICHE_MEDICALE' | 'AUTORISATION_PARENTALE') {
+    const cle = `${activiteId}-${scoutId}-${type}`
+    setEnCours(cle)
+    try {
+      const res = await fetch(`/api/activites/${activiteId}/autorisations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scoutId, type, mode: 'CONFIRMATION' }),
+      })
+      if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.erreur ?? 'Erreur serveur'); return }
+      charger()
+    } finally {
+      setEnCours(null)
+    }
+  }
+
+  async function deposerDocument(activiteId: string, scoutId: string, type: 'FICHE_MEDICALE' | 'AUTORISATION_PARENTALE', fichier: File) {
+    const cle = `${activiteId}-${scoutId}-${type}`
+    setEnCours(cle)
+    try {
+      const fd = new FormData()
+      fd.append('fichier', fichier)
+      const uploadRes = await fetch('/api/upload', { method: 'POST', body: fd })
+      const uploadData = await uploadRes.json()
+      if (!uploadRes.ok) { alert(uploadData.erreur ?? 'Erreur upload'); return }
+
+      const res = await fetch(`/api/activites/${activiteId}/autorisations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scoutId, type, mode: 'DOCUMENT', documentUrl: uploadData.url, documentNomFichier: fichier.name }),
+      })
+      if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.erreur ?? 'Erreur serveur'); return }
+      charger()
+    } finally {
+      setEnCours(null)
+    }
+  }
 
   const getOnglet = (scoutId: string) => ongletEnfant[scoutId] ?? 'reunions'
   const setOnglet = (scoutId: string, val: 'activites' | 'reunions') =>
@@ -124,6 +177,55 @@ export default function PageMesEnfants() {
                     </Link>
                   </div>
                 </div>
+
+                {/* Camps à venir — autorisations à signer */}
+                {(campsParEnfant[scout.id]?.length ?? 0) > 0 && (
+                  <div className="border-t border-gray-100 px-5 py-4 bg-amber-50/40 space-y-3">
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Camps à venir — autorisations</p>
+                    {campsParEnfant[scout.id].map((camp) => (
+                      <div key={camp.id} className="bg-white rounded-lg border border-gray-200 p-3 space-y-2">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{camp.titre}</p>
+                          <p className="text-xs text-gray-400">
+                            {new Date(camp.dateDebut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                            {camp.lieu ? ` · ${camp.lieu}` : ''}
+                          </p>
+                        </div>
+                        {(['FICHE_MEDICALE', 'AUTORISATION_PARENTALE'] as const).map((type) => {
+                          const signee = type === 'FICHE_MEDICALE' ? camp.ficheMedicale : camp.autorisationParentale
+                          const cle = `${camp.id}-${scout.id}-${type}`
+                          const chargementLigne = enCours === cle
+                          return (
+                            <div key={type} className="flex items-center justify-between gap-3">
+                              <span className="text-xs text-gray-700">{LABELS_TYPE_AUTORISATION[type]}</span>
+                              {signee ? (
+                                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-50 text-green-700 border border-green-100">
+                                  ✓ Signée
+                                </span>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => confirmerDigitalement(camp.id, scout.id, type)}
+                                    disabled={chargementLigne}
+                                    className="text-xs bg-[#1a4731] text-white px-2.5 py-1 rounded-lg hover:bg-[#163d29] transition-colors disabled:opacity-60"
+                                  >
+                                    {chargementLigne ? '…' : 'Je confirme'}
+                                  </button>
+                                  <label className="text-xs text-gray-500 underline cursor-pointer">
+                                    ou déposer un document signé
+                                    <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf" className="hidden"
+                                      disabled={chargementLigne}
+                                      onChange={(e) => { const f = e.target.files?.[0]; if (f) deposerDocument(camp.id, scout.id, type, f); e.target.value = '' }} />
+                                  </label>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Onglets présences */}
                 <div className="border-t border-gray-100">

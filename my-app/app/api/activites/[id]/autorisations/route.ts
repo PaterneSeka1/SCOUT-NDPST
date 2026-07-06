@@ -1,0 +1,137 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { TypeAutorisationCamp } from '@/app/generated/prisma/client'
+
+type RouteParams = { params: Promise<{ id: string }> }
+
+const ROLES_STAFF = [
+  'ADMIN_PAROISSE',
+  'CHEF_GROUPE',
+  'ADJOINT_GROUPE',
+  'ASSISTANT_GROUPE',
+  'RESPONSABLE_BRANCHE',
+  'ADJOINT_BRANCHE',
+  'ASSISTANT_BRANCHE',
+]
+
+async function peutAgirSurScout(
+  role: string,
+  userId: string,
+  paroisseId: string,
+  scoutId: string,
+): Promise<boolean> {
+  if (ROLES_STAFF.includes(role)) return true
+  if (role === 'PARENT') {
+    const lien = await prisma.lienParentScout.findFirst({
+      where: { parentId: userId, scoutId },
+    })
+    return !!lien
+  }
+  return false
+}
+
+export async function POST(request: NextRequest, { params }: RouteParams) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
+
+    const { id: activiteId } = await params
+
+    const activite = await prisma.activite.findFirst({
+      where: { id: activiteId, paroisseId: session.user.paroisseId },
+    })
+    if (!activite) return NextResponse.json({ erreur: 'Activité introuvable' }, { status: 404 })
+    if (activite.type !== 'CAMP') {
+      return NextResponse.json({ erreur: "Cette confirmation ne concerne que les activités de type Camp" }, { status: 400 })
+    }
+
+    const body = await request.json()
+    const { scoutId, type, mode, documentUrl, documentNomFichier } = body as {
+      scoutId?: string
+      type?: string
+      mode?: 'CONFIRMATION' | 'DOCUMENT'
+      documentUrl?: string
+      documentNomFichier?: string
+    }
+
+    if (!scoutId || !type || !(type in TypeAutorisationCamp)) {
+      return NextResponse.json({ erreur: 'Scout et type sont requis' }, { status: 400 })
+    }
+    if (mode === 'DOCUMENT' && (!documentUrl?.trim() || !documentNomFichier?.trim())) {
+      return NextResponse.json({ erreur: 'Le document est requis pour ce mode' }, { status: 400 })
+    }
+
+    const scout = await prisma.scout.findFirst({
+      where: { id: scoutId, paroisseId: session.user.paroisseId },
+    })
+    if (!scout) return NextResponse.json({ erreur: 'Scout introuvable' }, { status: 404 })
+
+    if (!(await peutAgirSurScout(session.user.role, session.user.id, session.user.paroisseId, scoutId))) {
+      return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
+    }
+
+    const autorisation = await prisma.autorisationCamp.upsert({
+      where: { activiteId_scoutId_type: { activiteId, scoutId, type: type as TypeAutorisationCamp } },
+      create: {
+        activiteId,
+        scoutId,
+        type: type as TypeAutorisationCamp,
+        confirmeLe: new Date(),
+        confirmeParId: session.user.id,
+        documentUrl: mode === 'DOCUMENT' ? documentUrl!.trim() : null,
+        documentNomFichier: mode === 'DOCUMENT' ? documentNomFichier!.trim() : null,
+      },
+      update: {
+        confirmeLe: new Date(),
+        confirmeParId: session.user.id,
+        documentUrl: mode === 'DOCUMENT' ? documentUrl!.trim() : null,
+        documentNomFichier: mode === 'DOCUMENT' ? documentNomFichier!.trim() : null,
+      },
+    })
+
+    return NextResponse.json(autorisation, { status: 201 })
+  } catch (error) {
+    console.error('[POST /api/activites/[id]/autorisations]', error)
+    return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
+
+    const { id: activiteId } = await params
+
+    const activite = await prisma.activite.findFirst({
+      where: { id: activiteId, paroisseId: session.user.paroisseId },
+    })
+    if (!activite) return NextResponse.json({ erreur: 'Activité introuvable' }, { status: 404 })
+
+    const body = await request.json()
+    const { scoutId, type } = body as { scoutId?: string; type?: string }
+    if (!scoutId || !type || !(type in TypeAutorisationCamp)) {
+      return NextResponse.json({ erreur: 'Scout et type sont requis' }, { status: 400 })
+    }
+
+    const existante = await prisma.autorisationCamp.findFirst({
+      where: { activiteId, scoutId, type: type as TypeAutorisationCamp },
+    })
+    if (!existante) return NextResponse.json({ erreur: 'Autorisation introuvable' }, { status: 404 })
+
+    const estStaff = ROLES_STAFF.includes(session.user.role)
+    const estAuteur = existante.confirmeParId === session.user.id
+    if (!estStaff && !estAuteur) {
+      return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
+    }
+
+    await prisma.autorisationCamp.delete({ where: { id: existante.id } })
+
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    console.error('[DELETE /api/activites/[id]/autorisations]', error)
+    return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
+  }
+}

@@ -42,6 +42,40 @@ export async function GET() {
 
   // Responsables de chaque branche représentée
   const branches = [...new Set(enfants.map((s) => s.brancheType))]
+
+  // Camps à venir concernant chaque enfant, avec le statut de signature (fiche médicale + autorisation)
+  const campsAVenir = await prisma.activite.findMany({
+    where: {
+      paroisseId: session.user.paroisseId ?? undefined,
+      type: 'CAMP',
+      dateDebut: { gte: new Date() },
+      OR: [{ brancheType: null }, { brancheType: { in: branches as never[] } }],
+    },
+    orderBy: { dateDebut: 'asc' },
+    select: {
+      id: true, titre: true, dateDebut: true, lieu: true, brancheType: true,
+      autorisationsCamp: {
+        where: { scoutId: { in: enfants.map((s) => s.id) } },
+        select: { scoutId: true, type: true, confirmeLe: true },
+      },
+    },
+  })
+
+  const campsParEnfant: Record<string, unknown[]> = {}
+  for (const enfant of enfants) {
+    campsParEnfant[enfant.id] = campsAVenir
+      .filter((c) => !c.brancheType || c.brancheType === enfant.brancheType)
+      .map((c) => {
+        const confirmee = (type: string) =>
+          c.autorisationsCamp.some((a) => a.scoutId === enfant.id && a.type === type && a.confirmeLe !== null)
+        return {
+          id: c.id, titre: c.titre, dateDebut: c.dateDebut, lieu: c.lieu,
+          ficheMedicale: confirmee('FICHE_MEDICALE'),
+          autorisationParentale: confirmee('AUTORISATION_PARENTALE'),
+        }
+      })
+  }
+
   const responsables = await prisma.posteBranche.findMany({
     where: {
       paroisseId: session.user.paroisseId ?? undefined,
@@ -79,5 +113,5 @@ export async function GET() {
     select: { id: true, titre: true, dateHeure: true, dateReportee: true, lieu: true, brancheType: true },
   })
 
-  return NextResponse.json({ enfants, prochaines, prochinesReunions, responsables })
+  return NextResponse.json({ enfants, prochaines, prochinesReunions, responsables, campsParEnfant })
 }
