@@ -23,6 +23,15 @@ const CSP = [
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  // Sur l'hébergement mutualisé o2switch (CloudLinux/CageFS), le build échoue
+  // avec "spawn EAGAIN" / "kill EPERM" : l'environnement interdit à Next.js de
+  // fork() des processus enfants pour paralléliser la génération des pages.
+  // workerThreads bascule sur des threads (même process, pas de fork), et
+  // cpus:1 évite d'en créer plusieurs en parallèle.
+  experimental: {
+    workerThreads: true,
+    cpus: 1,
+  },
   // Aucune image externe n'est utilisée par l'application (logos/photos sont
   // téléversés localement) : on n'autorise donc aucun hôte distant pour éviter
   // que l'optimiseur d'images ne serve de proxy SSRF vers une URL arbitraire.
