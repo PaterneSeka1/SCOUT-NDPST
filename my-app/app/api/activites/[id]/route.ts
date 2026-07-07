@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { ROLES_TOUT_STAFF } from '@/lib/roles'
+import { ROLES_TOUT_STAFF, ROLES_BRANCHE } from '@/lib/roles'
+import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { TypeActiviteSchema, BrancheTypeSchema } from '@/lib/validation'
 
 export async function GET(
@@ -19,8 +20,19 @@ export async function GET(
 
   const { id } = await params
 
+  let brancheRequise: string | undefined
+  if (ROLES_BRANCHE.includes(session.user.role)) {
+    const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+    if (!bt) return NextResponse.json({ error: 'Activité introuvable' }, { status: 404 })
+    brancheRequise = bt
+  }
+
   const activite = await prisma.activite.findFirst({
-    where: { id, paroisseId: session.user.paroisseId },
+    where: {
+      id,
+      paroisseId: session.user.paroisseId,
+      ...(brancheRequise ? { OR: [{ brancheType: brancheRequise as never }, { brancheType: null }] } : {}),
+    },
     include: {
       _count: { select: { presences: true } },
     },
@@ -47,8 +59,22 @@ export async function PUT(
 
   const { id } = await params
 
+  // Un responsable de branche ne peut modifier que les activités de sa propre
+  // branche (ou inter-branches), et ne peut pas déplacer une activité vers
+  // une autre branche.
+  let brancheUtilisateur: string | undefined
+  if (ROLES_BRANCHE.includes(session.user.role)) {
+    const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+    if (!bt) return NextResponse.json({ error: 'Activité introuvable' }, { status: 404 })
+    brancheUtilisateur = bt
+  }
+
   const existante = await prisma.activite.findFirst({
-    where: { id, paroisseId: session.user.paroisseId },
+    where: {
+      id,
+      paroisseId: session.user.paroisseId,
+      ...(brancheUtilisateur ? { OR: [{ brancheType: brancheUtilisateur as never }, { brancheType: null }] } : {}),
+    },
   })
 
   if (!existante) {
@@ -63,6 +89,9 @@ export async function PUT(
   }
   if (brancheType != null && brancheType !== '' && !BrancheTypeSchema.safeParse(brancheType).success) {
     return NextResponse.json({ error: 'Branche invalide' }, { status: 400 })
+  }
+  if (brancheUtilisateur && brancheType !== undefined && (brancheType || null) !== existante.brancheType) {
+    return NextResponse.json({ error: 'Le changement de branche est réservé au groupe' }, { status: 403 })
   }
 
   const activite = await prisma.activite.update({

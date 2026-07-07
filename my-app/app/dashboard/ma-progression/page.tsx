@@ -2,11 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
-
-const LABELS_TYPE: Record<string, string> = {
-  REUNION: 'Réunion', SORTIE: 'Sortie', CAMP: 'Camp', MESSE: 'Messe',
-  CEREMONIE: 'Cérémonie', FORMATION: 'Formation', AUTRE: 'Autre',
-}
+import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
 
 interface Badge { id: string; nom: string; description: string | null; brancheType: string; ordre: number }
 interface Progression {
@@ -92,40 +88,48 @@ export default function PageMaProgression() {
       </div>
 
       {/* Parcours badges */}
-      {badgesBranche.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-semibold text-gray-800">Parcours de badges</h2>
-            <span className="text-xs text-gray-400">{badgesObtenus.size} / {badgesBranche.length}</span>
+      <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
+        {badgesBranche.length === 0 ? (
+          <div className="text-center py-6">
+            <p className="text-3xl mb-2">🏅</p>
+            <p className="text-sm text-gray-500">Aucun badge configuré pour ta branche pour le moment.</p>
+            <p className="text-xs text-gray-400 mt-1">Demande à ton responsable de branche.</p>
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-2 mb-4">
-            <div className="bg-[#1a4731] h-2 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
-          </div>
-          <div className="space-y-2">
-            {badgesBranche.map((badge) => {
-              const obtenu = badgesObtenus.has(badge.id)
-              const prog = scout.progressions.find((p) => p.badge.id === badge.id)
-              return (
-                <div key={badge.id} className={`flex items-start gap-3 p-3 rounded-lg ${obtenu ? 'bg-green-50 border border-green-100' : 'bg-gray-50 border border-gray-100'}`}>
-                  <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs mt-0.5 ${obtenu ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
-                    {obtenu ? '✓' : badge.ordre}
+        ) : (
+          <>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-sm font-semibold text-gray-800">Parcours de badges</h2>
+              <span className="text-xs text-gray-400">{badgesObtenus.size} / {badgesBranche.length}</span>
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-2 mb-4">
+              <div className="bg-[#1a4731] h-2 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+            </div>
+            <div className="space-y-2">
+              {badgesBranche.map((badge) => {
+                const obtenu = badgesObtenus.has(badge.id)
+                const prog = scout.progressions.find((p) => p.badge.id === badge.id)
+                return (
+                  <div key={badge.id} className={`flex items-start gap-3 p-3 rounded-lg ${obtenu ? 'bg-green-50 border border-green-100' : 'bg-gray-50 border border-gray-100'}`}>
+                    <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs mt-0.5 ${obtenu ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                      {obtenu ? '✓' : badge.ordre}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-medium ${obtenu ? 'text-green-800' : 'text-gray-600'}`}>{badge.nom}</p>
+                      {badge.description && <p className="text-xs text-gray-400 mt-0.5">{badge.description}</p>}
+                      {obtenu && prog && (
+                        <p className="text-xs text-green-600 mt-1">
+                          Obtenu le {new Date(prog.dateValidation).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          {prog.validePar ? ` par ${prog.validePar.prenom} ${prog.validePar.nom}` : ''}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium ${obtenu ? 'text-green-800' : 'text-gray-600'}`}>{badge.nom}</p>
-                    {badge.description && <p className="text-xs text-gray-400 mt-0.5">{badge.description}</p>}
-                    {obtenu && prog && (
-                      <p className="text-xs text-green-600 mt-1">
-                        Obtenu le {new Date(prog.dateValidation).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                        {prog.validePar ? ` par ${prog.validePar.prenom} ${prog.validePar.nom}` : ''}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
+                )
+              })}
+            </div>
+          </>
+        )}
+      </div>
 
       {/* Dernières participations */}
       {scout.presences.length > 0 && (
@@ -139,7 +143,7 @@ export default function PageMaProgression() {
                 <span className="text-xs text-gray-400 flex-shrink-0">
                   {new Date(p.activite.dateDebut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </span>
-                <span className="text-xs text-gray-400">{LABELS_TYPE[p.activite.type] ?? p.activite.type}</span>
+                <span className="text-xs text-gray-400">{LABELS_TYPE_ACTIVITE[p.activite.type] ?? p.activite.type}</span>
               </div>
             ))}
           </div>

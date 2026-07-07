@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { ROLES_TOUT_STAFF } from '@/lib/roles'
+import { ROLES_TOUT_STAFF, ROLES_BRANCHE } from '@/lib/roles'
+import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { TypeActiviteSchema, BrancheTypeSchema } from '@/lib/validation'
 
 export async function GET(request: NextRequest) {
@@ -26,14 +27,36 @@ export async function GET(request: NextRequest) {
     paroisseId: session.user.paroisseId,
   }
 
+  // Les responsables de branche ne voient que leur branche + les activités
+  // inter-branches (brancheType null) — toute valeur "brancheType" fournie
+  // par le client est ignorée pour ce groupe de rôles.
+  if (ROLES_BRANCHE.includes(session.user.role)) {
+    const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+    // Compte mal configuré (rôle de branche sans PosteBranche assigné) :
+    // aucun résultat plutôt que la paroisse entière par défaut.
+    if (!bt) {
+      return NextResponse.json({ activites: [], pagination: { page, limite, total: 0, totalPages: 0 } })
+    }
+    where.OR = [{ brancheType: bt }, { brancheType: null }]
+  } else if (brancheType) {
+    where.brancheType = brancheType
+  }
+
   if (recherche) {
-    where.OR = [
+    // `where.OR` peut déjà être occupé par le scoping de branche ci-dessus —
+    // on combine les deux conditions avec AND plutôt que d'écraser l'une des deux.
+    const rechercheOr = [
       { titre: { contains: recherche, mode: 'insensitive' } },
       { lieu: { contains: recherche, mode: 'insensitive' } },
     ]
+    if (where.OR) {
+      where.AND = [{ OR: where.OR }, { OR: rechercheOr }]
+      delete where.OR
+    } else {
+      where.OR = rechercheOr
+    }
   }
   if (type) where.type = type
-  if (brancheType) where.brancheType = brancheType
 
   const [activites, total] = await Promise.all([
     prisma.activite.findMany({
@@ -82,6 +105,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Branche invalide' }, { status: 400 })
   }
 
+  // Un responsable de branche ne peut créer une activité que pour sa propre
+  // branche — décider d'une activité inter-branches (brancheType null) reste
+  // une décision du groupe.
+  let brancheEffective = brancheType ?? null
+  if (ROLES_BRANCHE.includes(session.user.role)) {
+    const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+    if (!bt) return NextResponse.json({ error: 'Aucune branche assignée' }, { status: 403 })
+    brancheEffective = bt
+  }
+
   const activite = await prisma.activite.create({
     data: {
       titre,
@@ -90,7 +123,7 @@ export async function POST(request: NextRequest) {
       dateFin: dateFin ? new Date(dateFin) : null,
       lieu: lieu ?? null,
       type: type ?? 'REUNION',
-      brancheType: brancheType ?? null,
+      brancheType: brancheEffective,
       paroisseId: session.user.paroisseId,
       creePar: session.user.id,
     },

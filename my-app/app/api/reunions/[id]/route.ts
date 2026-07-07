@@ -3,19 +3,11 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_BRANCHE, ROLES_GESTION as ROLES_CREATION, ROLES_TOUT_STAFF as ROLES_LECTURE } from '@/lib/roles'
+import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { StatutReunionSchema, BrancheTypeSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 
 type RouteParams = { params: Promise<{ id: string }> }
-
-async function getBrancheUtilisateur(userId: string, paroisseId: string): Promise<string | null> {
-  const poste = await prisma.posteBranche.findFirst({
-    where: { utilisateurId: userId, paroisseId },
-    select: { brancheType: true },
-    orderBy: { createdAt: 'asc' },
-  })
-  return poste?.brancheType ?? null
-}
 
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   try {
@@ -25,8 +17,19 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
     const { id } = await params
 
+    let brancheRequise: string | undefined
+    if (ROLES_BRANCHE.includes(session.user.role)) {
+      const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+      if (!bt) return NextResponse.json({ erreur: 'Réunion introuvable' }, { status: 404 })
+      brancheRequise = bt
+    }
+
     const reunion = await prisma.jourReunion.findFirst({
-      where: { id, paroisseId: session.user.paroisseId },
+      where: {
+        id,
+        paroisseId: session.user.paroisseId,
+        ...(brancheRequise ? { brancheType: brancheRequise as never } : {}),
+      },
       include: {
         creeParUtilisateur: { select: { prenom: true, nom: true } },
         _count: { select: { presences: true } },

@@ -3,14 +3,10 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
+import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
-
-const LABELS_TYPE: Record<string, string> = {
-  REUNION: 'Réunion', SORTIE: 'Sortie', CAMP: 'Camp', MESSE: 'Messe',
-  CEREMONIE: 'Cérémonie', FORMATION: 'Formation', AUTRE: 'Autre',
-}
 
 interface Paroisse {
   id: string; nom: string; ville: string; diocese: string
@@ -142,7 +138,7 @@ export default function PageParoisse() {
 
       {/* Statistiques */}
       {!estParent && (
-        <div className={`grid gap-3 ${voitStatsDetaillees ? 'grid-cols-3' : 'grid-cols-1'}`}>
+        <div className={`grid gap-3 ${voitStatsDetaillees ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1'}`}>
           {voitStatsDetaillees && (
             <>
               <div className="bg-[#1a4731] text-white rounded-xl p-4 text-center">
@@ -317,7 +313,7 @@ export default function PageParoisse() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{a.titre}</p>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {LABELS_TYPE[a.type] ?? a.type}
+                      {LABELS_TYPE_ACTIVITE[a.type] ?? a.type}
                       {a.lieu ? ` · ${a.lieu}` : ''}
                     </p>
                   </div>

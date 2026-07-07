@@ -52,6 +52,16 @@ export interface DocumentScout {
   scoutId: string
 }
 
+export interface CotisationScout {
+  id: string
+  type: string
+  libelle: string | null
+  montant: number
+  anneeScolaire: string
+  statut: string
+  datePaiement: string | null
+}
+
 export interface Scout {
   id: string
   nom: string
@@ -71,6 +81,7 @@ export interface Scout {
   contactsUrgence: ContactUrgence[]
   liensParents: ParentLie[]
   documents: DocumentScout[]
+  cotisations: CotisationScout[]
   utilisateur?: UtilisateurLie | null
   createdAt: string
   _count?: { contactsUrgence: number }

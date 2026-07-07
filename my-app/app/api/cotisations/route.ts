@@ -4,18 +4,10 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { TypeCotisation, StatutCotisation } from '@/app/generated/prisma/client'
 import { ROLES_TOUT_STAFF, ROLES_GROUPE, ROLES_BRANCHE } from '@/lib/roles'
+import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { anneeScolaireCourante } from '@/lib/cotisations'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
-
-async function getBrancheUtilisateur(userId: string, paroisseId: string) {
-  const poste = await prisma.posteBranche.findFirst({
-    where: { utilisateurId: userId, paroisseId },
-    select: { brancheType: true },
-    orderBy: { createdAt: 'asc' },
-  })
-  return poste?.brancheType ?? null
-}
 
 // GET — liste des cotisations de la paroisse (staff uniquement). Les
 // responsables de branche ne voient que les scouts de leur branche.
@@ -32,10 +24,15 @@ export async function GET(req: NextRequest) {
     const statut = searchParams.get('statut') ?? undefined
     const brancheParam = searchParams.get('branche') ?? undefined
 
+    // Les responsables de branche ne voient QUE leur branche — toute valeur
+    // "branche" fournie par le client est ignorée pour ce groupe de rôles.
     let filtreBranche = brancheParam
-    if (ROLES_BRANCHE.includes(session.user.role) && !brancheParam) {
+    if (ROLES_BRANCHE.includes(session.user.role)) {
       const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
-      if (bt) filtreBranche = bt
+      // Compte mal configuré (rôle de branche sans PosteBranche assigné) :
+      // aucun résultat plutôt que la paroisse entière par défaut.
+      if (!bt) return NextResponse.json({ cotisations: [] })
+      filtreBranche = bt
     }
 
     if (statut !== undefined && !(statut in StatutCotisation)) {

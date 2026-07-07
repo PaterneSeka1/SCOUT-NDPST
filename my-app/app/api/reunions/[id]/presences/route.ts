@@ -2,11 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { ROLES_TOUT_STAFF as ROLES_PRESENCES } from '@/lib/roles'
+import { ROLES_TOUT_STAFF as ROLES_PRESENCES, ROLES_BRANCHE } from '@/lib/roles'
+import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { StatutPresenceReunionSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 
 type RouteParams = { params: Promise<{ id: string }> }
+
+async function verifierAccesBranche(role: string, userId: string, paroisseId: string, brancheReunion: string | null): Promise<boolean> {
+  if (!ROLES_BRANCHE.includes(role)) return true
+  const bt = await getBrancheUtilisateur(userId, paroisseId)
+  return !!bt && bt === brancheReunion
+}
 
 // GET — feuille de présences : réunion + scouts de la branche + statuts existants
 export async function GET(_req: NextRequest, { params }: RouteParams) {
@@ -21,6 +28,10 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
       where: { id, paroisseId: session.user.paroisseId },
     })
     if (!reunion) return NextResponse.json({ erreur: 'Réunion introuvable' }, { status: 404 })
+
+    if (!(await verifierAccesBranche(session.user.role, session.user.id, session.user.paroisseId, reunion.brancheType))) {
+      return NextResponse.json({ erreur: 'Accès refusé à cette réunion' }, { status: 403 })
+    }
 
     // Scouts de la branche concernée (ou tous si inter-branches)
     const scouts = await prisma.scout.findMany({
@@ -61,6 +72,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       where: { id, paroisseId: session.user.paroisseId },
     })
     if (!reunion) return NextResponse.json({ erreur: 'Réunion introuvable' }, { status: 404 })
+
+    if (!(await verifierAccesBranche(session.user.role, session.user.id, session.user.paroisseId, reunion.brancheType))) {
+      return NextResponse.json({ erreur: 'Accès refusé à cette réunion' }, { status: 403 })
+    }
 
     const body = await req.json()
     const { presences } = body as {

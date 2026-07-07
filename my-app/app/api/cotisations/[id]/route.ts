@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { StatutCotisation } from '@/app/generated/prisma/client'
-import { ROLES_GESTION, ROLES_GROUPE } from '@/lib/roles'
+import { ROLES_GESTION, ROLES_GROUPE, ROLES_BRANCHE } from '@/lib/roles'
+import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 
@@ -22,8 +23,21 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
 
     const { id } = await params
 
+    // Un responsable de branche ne peut enregistrer un paiement que pour un
+    // scout de sa propre branche.
+    let brancheRequise: string | undefined
+    if (ROLES_BRANCHE.includes(session.user.role)) {
+      const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+      if (!bt) return NextResponse.json({ erreur: 'Cotisation introuvable' }, { status: 404 })
+      brancheRequise = bt
+    }
+
     const existante = await prisma.cotisation.findFirst({
-      where: { id, paroisseId: session.user.paroisseId },
+      where: {
+        id,
+        paroisseId: session.user.paroisseId,
+        ...(brancheRequise ? { scout: { brancheType: brancheRequise as never } } : {}),
+      },
     })
     if (!existante) return NextResponse.json({ erreur: 'Cotisation introuvable' }, { status: 404 })
 

@@ -83,16 +83,22 @@ export default function DashboardPage() {
 
   const [data, setData] = useState<KpisData | null>(null)
   const [chargement, setChargement] = useState(true)
+  const [erreur, setErreur] = useState('')
 
   useEffect(() => {
     if (!session?.user) return
+    setErreur('')
     fetch('/api/dashboard/kpis')
       .then((r) => r.json())
-      .then((d: KpisData) => setData(d))
+      .then((d) => {
+        if (!d?.kpis) { setErreur("Impossible de charger le tableau de bord."); return }
+        setData(d)
+      })
+      .catch(() => setErreur('Impossible de charger le tableau de bord. Vérifiez votre connexion.'))
       .finally(() => setChargement(false))
   }, [session])
 
-  const entrees = data ? Object.entries(data.kpis) : []
+  const entrees = data?.kpis ? Object.entries(data.kpis) : []
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -105,6 +111,10 @@ export default function DashboardPage() {
           Profil : <span className="font-medium text-[#27ae60]">{libelleRole(role)}</span>
         </p>
       </div>
+
+      {erreur && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreur}</div>
+      )}
 
       {/* KPIs */}
       <div className="flex flex-wrap gap-3">

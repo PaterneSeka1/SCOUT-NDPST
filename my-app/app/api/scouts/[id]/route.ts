@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { BrancheType, Sexe } from '@/app/generated/prisma/client'
-import { ROLES_TOUT_STAFF as ROLES_AUTORISES } from '@/lib/roles'
+import { ROLES_TOUT_STAFF as ROLES_AUTORISES, ROLES_BRANCHE } from '@/lib/roles'
+import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { estCheminLocalValide } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
@@ -24,8 +25,20 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
     const { id } = await params
 
+    // Un responsable de branche ne peut consulter que les scouts de sa propre branche.
+    let brancheRequise: string | undefined
+    if (ROLES_BRANCHE.includes(session.user.role)) {
+      const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+      if (!bt) return NextResponse.json({ error: 'Scout introuvable' }, { status: 404 })
+      brancheRequise = bt
+    }
+
     const scout = await prisma.scout.findFirst({
-      where: { id, paroisseId: session.user.paroisseId },
+      where: {
+        id,
+        paroisseId: session.user.paroisseId,
+        ...(brancheRequise ? { brancheType: brancheRequise as BrancheType } : {}),
+      },
       include: {
         contactsUrgence: {
           orderBy: [{ principal: 'desc' }, { nom: 'asc' }],
@@ -56,6 +69,10 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
             actif: true,
           },
         },
+        cotisations: {
+          orderBy: [{ statut: 'asc' }, { anneeScolaire: 'desc' }],
+          select: { id: true, type: true, libelle: true, montant: true, anneeScolaire: true, statut: true, datePaiement: true },
+        },
       },
     })
 
@@ -84,9 +101,21 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const { id } = await params
 
+    // Un responsable de branche ne peut modifier que les scouts de sa propre branche.
+    let brancheUtilisateur: string | undefined
+    if (ROLES_BRANCHE.includes(session.user.role)) {
+      const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+      if (!bt) return NextResponse.json({ error: 'Scout introuvable' }, { status: 404 })
+      brancheUtilisateur = bt
+    }
+
     const existant = await prisma.scout.findFirst({
-      where: { id, paroisseId: session.user.paroisseId },
-      select: { id: true },
+      where: {
+        id,
+        paroisseId: session.user.paroisseId,
+        ...(brancheUtilisateur ? { brancheType: brancheUtilisateur as BrancheType } : {}),
+      },
+      select: { id: true, brancheType: true },
     })
 
     if (!existant) {
@@ -112,6 +141,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
     if (brancheType !== undefined && !(brancheType in BrancheType)) {
       return NextResponse.json({ error: 'Branche invalide' }, { status: 400 })
+    }
+    // Le changement de branche est réservé au groupe (fonctionnalité dédiée
+    // "passage de branche") — un responsable de branche ne peut pas déplacer
+    // un scout vers une autre branche via cette route.
+    if (brancheUtilisateur && brancheType !== undefined && brancheType !== existant.brancheType) {
+      return NextResponse.json({ error: 'Le changement de branche est réservé au groupe' }, { status: 403 })
     }
     if (photo != null && photo !== '' && !estCheminLocalValide(photo)) {
       return NextResponse.json({ error: 'photo doit être un chemin local (ex : /api/fichiers/…)' }, { status: 400 })

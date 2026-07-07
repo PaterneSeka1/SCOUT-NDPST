@@ -34,8 +34,7 @@ export async function GET() {
           },
           _count: { select: { presences: true, presencesReunion: true } },
           cotisations: {
-            orderBy: { anneeScolaire: 'desc' },
-            take: 3,
+            orderBy: [{ statut: 'asc' }, { anneeScolaire: 'desc' }],
             select: { id: true, type: true, libelle: true, montant: true, anneeScolaire: true, statut: true, datePaiement: true },
           },
         },

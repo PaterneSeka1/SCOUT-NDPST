@@ -4,11 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
-
-const LABELS_TYPE: Record<string, string> = {
-  REUNION: 'Réunion', SORTIE: 'Sortie', CAMP: 'Camp', MESSE: 'Messe',
-  CEREMONIE: 'Cérémonie', FORMATION: 'Formation', AUTRE: 'Autre',
-}
+import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
 
 interface Activite {
   id: string; titre: string; dateDebut: string; type: string; brancheType: string | null
@@ -159,7 +155,7 @@ export default function PageRapports() {
                     <p className="text-sm font-medium text-gray-900 truncate">{a.titre}</p>
                     <p className="text-xs text-gray-400">
                       {new Date(a.dateDebut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                      {' · '}{LABELS_TYPE[a.type] ?? a.type}
+                      {' · '}{LABELS_TYPE_ACTIVITE[a.type] ?? a.type}
                       {a.brancheType ? ` · ${LABELS_BRANCHES[a.brancheType] ?? a.brancheType}` : ''}
                     </p>
                   </div>

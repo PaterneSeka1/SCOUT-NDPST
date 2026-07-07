@@ -3,16 +3,8 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_TOUT_STAFF, ROLES_BRANCHE } from '@/lib/roles'
+import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { logger } from '@/lib/logger'
-
-async function getBrancheUtilisateur(userId: string, paroisseId: string) {
-  const poste = await prisma.posteBranche.findFirst({
-    where: { utilisateurId: userId, paroisseId },
-    select: { brancheType: true },
-    orderBy: { createdAt: 'asc' },
-  })
-  return poste?.brancheType ?? null
-}
 
 // GET — événements (activités + réunions) du mois demandé, pour la vue calendrier du dashboard.
 export async function GET(req: NextRequest) {
@@ -36,6 +28,9 @@ export async function GET(req: NextRequest) {
     let filtreBranche: string | null = null
     if (ROLES_BRANCHE.includes(session.user.role)) {
       filtreBranche = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+      // Compte mal configuré (rôle de branche sans PosteBranche assigné) :
+      // aucun résultat plutôt que la paroisse entière par défaut.
+      if (!filtreBranche) return NextResponse.json({ evenements: [] })
     }
 
     const [activites, reunions] = await Promise.all([

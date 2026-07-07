@@ -3,17 +3,9 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_GROUPE, ROLES_BRANCHE, ROLES_TOUT_STAFF as ROLES_LECTURE } from '@/lib/roles'
+import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { BrancheTypeSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
-
-async function getBrancheUtilisateur(userId: string, paroisseId: string) {
-  const poste = await prisma.posteBranche.findFirst({
-    where: { utilisateurId: userId, paroisseId },
-    select: { brancheType: true },
-    orderBy: { createdAt: 'asc' },
-  })
-  return poste?.brancheType ?? null
-}
 
 export async function GET(req: NextRequest) {
   try {
@@ -25,11 +17,17 @@ export async function GET(req: NextRequest) {
     const branche = searchParams.get('branche') ?? undefined
     const statut = searchParams.get('statut') ?? undefined
 
-    // Les chefs de branche ne voient que leur branche
+    // Les responsables de branche ne voient QUE leur branche — on ignore
+    // délibérément toute valeur de "branche" fournie par le client pour ce
+    // groupe de rôles, sinon un simple `?branche=AUTRE` dans l'URL suffirait
+    // à contourner la restriction.
     let filtreBranche = branche
-    if (ROLES_BRANCHE.includes(session.user.role) && !branche) {
+    if (ROLES_BRANCHE.includes(session.user.role)) {
       const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
-      if (bt) filtreBranche = bt
+      // Compte mal configuré (rôle de branche sans PosteBranche assigné) :
+      // aucun résultat plutôt que la paroisse entière par défaut.
+      if (!bt) return NextResponse.json([])
+      filtreBranche = bt
     }
 
     const reunions = await prisma.jourReunion.findMany({

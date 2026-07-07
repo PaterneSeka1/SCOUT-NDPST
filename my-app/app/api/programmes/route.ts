@@ -4,17 +4,9 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { BrancheType } from '@/app/generated/prisma/client'
 import { ROLES_GROUPE, ROLES_BRANCHE, ROLES_TOUT_STAFF as ROLES_LECTURE } from '@/lib/roles'
+import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { BrancheTypeSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
-
-async function getBrancheUtilisateur(userId: string, paroisseId: string) {
-  const poste = await prisma.posteBranche.findFirst({
-    where: { utilisateurId: userId, paroisseId },
-    select: { brancheType: true },
-    orderBy: { createdAt: 'asc' },
-  })
-  return poste?.brancheType ?? null
-}
 
 export async function GET(req: NextRequest) {
   try {
@@ -25,17 +17,24 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const branche = searchParams.get('branche') ?? undefined
 
-    // Les responsables de branche ne voient que leur branche par défaut
+    // Les responsables de branche ne voient QUE leur branche (+ les programmes
+    // du groupe, brancheType null, qu'ils doivent aussi pouvoir consulter) —
+    // toute valeur "branche" fournie par le client est ignorée pour ce rôle.
     let filtreBranche = branche
-    if (ROLES_BRANCHE.includes(session.user.role) && !branche) {
+    if (ROLES_BRANCHE.includes(session.user.role)) {
       const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
-      if (bt) filtreBranche = bt
+      // Compte mal configuré (rôle de branche sans PosteBranche assigné) :
+      // aucun résultat plutôt que la paroisse entière par défaut.
+      if (!bt) return NextResponse.json([])
+      filtreBranche = bt
     }
 
     const programmes = await prisma.programme.findMany({
       where: {
         paroisseId: session.user.paroisseId,
-        ...(filtreBranche ? { brancheType: filtreBranche as BrancheType } : {}),
+        ...(filtreBranche
+          ? { OR: [{ brancheType: filtreBranche as BrancheType }, { brancheType: null }] }
+          : {}),
       },
       include: {
         _count: { select: { lignes: true } },

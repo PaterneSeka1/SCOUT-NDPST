@@ -77,6 +77,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (session.user.role === 'CHEF_GROUPE' && role === 'ADMIN_PAROISSE')
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
 
+    // Personne ne peut changer son propre rôle ou se désactiver soi-même —
+    // sans quoi un compte connaissant son propre id pourrait s'auto-promouvoir
+    // ou verrouiller son propre accès.
+    if (id === session.user.id && ((role !== undefined && role !== existant.role) || actif === false)) {
+      return NextResponse.json({ error: 'Vous ne pouvez pas modifier votre propre rôle ou vous désactiver' }, { status: 403 })
+    }
+
     if (email !== undefined && email !== null && email !== '') {
       const doublon = await prisma.utilisateur.findFirst({
         where: { email: { equals: email, mode: 'insensitive' }, NOT: { id } },
@@ -138,6 +145,10 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 
     if (!(await cibleAutorisee(session, id)))
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+
+    if (id === session.user.id) {
+      return NextResponse.json({ error: 'Vous ne pouvez pas vous désactiver vous-même' }, { status: 403 })
+    }
 
     const existant = await prisma.utilisateur.findFirst({
       where: { id, paroisseId: session.user.paroisseId },

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import {
@@ -217,67 +218,120 @@ export default function PageCotisations() {
             <p className="text-sm text-gray-500">Aucune cotisation pour cette période.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs text-gray-500 border-b border-gray-100">
-                  <th className="py-2 pr-4 font-medium">Scout</th>
-                  <th className="py-2 pr-4 font-medium">Branche</th>
-                  <th className="py-2 pr-4 font-medium">Type</th>
-                  <th className="py-2 pr-4 font-medium">Montant</th>
-                  <th className="py-2 pr-4 font-medium">Statut</th>
-                  <th className="py-2 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cotisations.map((c) => (
-                  <tr key={c.id} className="border-b border-gray-50 last:border-0">
-                    <td className="py-2.5 pr-4 text-gray-900 font-medium whitespace-nowrap">
-                      {c.scout.prenom} {c.scout.nom}
-                    </td>
-                    <td className="py-2.5 pr-4 text-gray-500 whitespace-nowrap">{LABELS_BRANCHES[c.scout.brancheType] ?? c.scout.brancheType}</td>
-                    <td className="py-2.5 pr-4 text-gray-500 whitespace-nowrap">
-                      {LABELS_TYPE_COTISATION[c.type] ?? c.type}{c.libelle ? ` — ${c.libelle}` : ''}
-                    </td>
-                    <td className="py-2.5 pr-4 text-gray-700 whitespace-nowrap">{formatMontantFCFA(c.montant)}</td>
-                    <td className="py-2.5 pr-4 whitespace-nowrap">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${COULEURS_STATUT_COTISATION[c.statut]}`}>
-                        {LABELS_STATUT_COTISATION[c.statut] ?? c.statut}
-                      </span>
-                    </td>
-                    <td className="py-2.5 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        {c.statut !== 'PAYEE' && (
-                          <button disabled={enCours === c.id} onClick={() => changerStatut(c.id, 'PAYEE')}
-                            className="text-xs text-green-700 border border-green-200 px-2.5 py-1 rounded-lg hover:bg-green-50 disabled:opacity-50">
-                            Marquer payée
-                          </button>
-                        )}
-                        {c.statut !== 'EXONEREE' && (
-                          <button disabled={enCours === c.id} onClick={() => changerStatut(c.id, 'EXONEREE')}
-                            className="text-xs text-gray-600 border border-gray-200 px-2.5 py-1 rounded-lg hover:bg-gray-50 disabled:opacity-50">
-                            Exonérer
-                          </button>
-                        )}
-                        {c.statut !== 'EN_ATTENTE' && (
-                          <button disabled={enCours === c.id} onClick={() => changerStatut(c.id, 'EN_ATTENTE')}
-                            className="text-xs text-amber-700 border border-amber-200 px-2.5 py-1 rounded-lg hover:bg-amber-50 disabled:opacity-50">
-                            Annuler
-                          </button>
-                        )}
-                        {estGroupe && (
-                          <button disabled={enCours === c.id} onClick={() => supprimer(c.id)}
-                            className="text-xs text-red-600 hover:underline disabled:opacity-50">
-                            Supprimer
-                          </button>
-                        )}
-                      </div>
-                    </td>
+          <>
+            {/* Vue mobile : cartes */}
+            <div className="sm:hidden space-y-3">
+              {cotisations.map((c) => (
+                <div key={c.id} className="border border-gray-100 rounded-lg p-3 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <Link href={`/dashboard/scouts/${c.scout.id}`} className="text-sm font-medium text-[#1a4731] hover:underline truncate block">
+                        {c.scout.prenom} {c.scout.nom}
+                      </Link>
+                      <p className="text-xs text-gray-500 mt-0.5">{LABELS_BRANCHES[c.scout.brancheType] ?? c.scout.brancheType}</p>
+                    </div>
+                    <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full ${COULEURS_STATUT_COTISATION[c.statut]}`}>
+                      {LABELS_STATUT_COTISATION[c.statut] ?? c.statut}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    {LABELS_TYPE_COTISATION[c.type] ?? c.type}{c.libelle ? ` — ${c.libelle}` : ''} · {formatMontantFCFA(c.montant)}
+                  </p>
+                  <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-gray-50">
+                    {c.statut !== 'PAYEE' && (
+                      <button disabled={enCours === c.id} onClick={() => changerStatut(c.id, 'PAYEE')}
+                        className="text-xs text-green-700 border border-green-200 px-2.5 py-1 rounded-lg hover:bg-green-50 disabled:opacity-50">
+                        Marquer payée
+                      </button>
+                    )}
+                    {c.statut !== 'EXONEREE' && (
+                      <button disabled={enCours === c.id} onClick={() => changerStatut(c.id, 'EXONEREE')}
+                        className="text-xs text-gray-600 border border-gray-200 px-2.5 py-1 rounded-lg hover:bg-gray-50 disabled:opacity-50">
+                        Exonérer
+                      </button>
+                    )}
+                    {c.statut !== 'EN_ATTENTE' && (
+                      <button disabled={enCours === c.id} onClick={() => changerStatut(c.id, 'EN_ATTENTE')}
+                        className="text-xs text-amber-700 border border-amber-200 px-2.5 py-1 rounded-lg hover:bg-amber-50 disabled:opacity-50">
+                        Annuler
+                      </button>
+                    )}
+                    {estGroupe && (
+                      <button disabled={enCours === c.id} onClick={() => supprimer(c.id)}
+                        className="text-xs text-red-600 hover:underline disabled:opacity-50">
+                        Supprimer
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Vue desktop : tableau */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-gray-500 border-b border-gray-100">
+                    <th className="py-2 pr-4 font-medium">Scout</th>
+                    <th className="py-2 pr-4 font-medium">Branche</th>
+                    <th className="py-2 pr-4 font-medium">Type</th>
+                    <th className="py-2 pr-4 font-medium">Montant</th>
+                    <th className="py-2 pr-4 font-medium">Statut</th>
+                    <th className="py-2 font-medium">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {cotisations.map((c) => (
+                    <tr key={c.id} className="border-b border-gray-50 last:border-0">
+                      <td className="py-2.5 pr-4 whitespace-nowrap">
+                        <Link href={`/dashboard/scouts/${c.scout.id}`} className="text-gray-900 font-medium hover:text-[#1a4731] hover:underline">
+                          {c.scout.prenom} {c.scout.nom}
+                        </Link>
+                      </td>
+                      <td className="py-2.5 pr-4 text-gray-500 whitespace-nowrap">{LABELS_BRANCHES[c.scout.brancheType] ?? c.scout.brancheType}</td>
+                      <td className="py-2.5 pr-4 text-gray-500 whitespace-nowrap">
+                        {LABELS_TYPE_COTISATION[c.type] ?? c.type}{c.libelle ? ` — ${c.libelle}` : ''}
+                      </td>
+                      <td className="py-2.5 pr-4 text-gray-700 whitespace-nowrap">{formatMontantFCFA(c.montant)}</td>
+                      <td className="py-2.5 pr-4 whitespace-nowrap">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${COULEURS_STATUT_COTISATION[c.statut]}`}>
+                          {LABELS_STATUT_COTISATION[c.statut] ?? c.statut}
+                        </span>
+                      </td>
+                      <td className="py-2.5 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          {c.statut !== 'PAYEE' && (
+                            <button disabled={enCours === c.id} onClick={() => changerStatut(c.id, 'PAYEE')}
+                              className="text-xs text-green-700 border border-green-200 px-2.5 py-1 rounded-lg hover:bg-green-50 disabled:opacity-50">
+                              Marquer payée
+                            </button>
+                          )}
+                          {c.statut !== 'EXONEREE' && (
+                            <button disabled={enCours === c.id} onClick={() => changerStatut(c.id, 'EXONEREE')}
+                              className="text-xs text-gray-600 border border-gray-200 px-2.5 py-1 rounded-lg hover:bg-gray-50 disabled:opacity-50">
+                              Exonérer
+                            </button>
+                          )}
+                          {c.statut !== 'EN_ATTENTE' && (
+                            <button disabled={enCours === c.id} onClick={() => changerStatut(c.id, 'EN_ATTENTE')}
+                              className="text-xs text-amber-700 border border-amber-200 px-2.5 py-1 rounded-lg hover:bg-amber-50 disabled:opacity-50">
+                              Annuler
+                            </button>
+                          )}
+                          {estGroupe && (
+                            <button disabled={enCours === c.id} onClick={() => supprimer(c.id)}
+                              className="text-xs text-red-600 hover:underline disabled:opacity-50">
+                              Supprimer
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

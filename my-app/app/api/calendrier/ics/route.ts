@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { genererICS } from '@/lib/calendrier'
 import { limiterTaux } from '@/lib/rateLimit'
 import { ROLES_BRANCHE } from '@/lib/roles'
+import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { logger } from '@/lib/logger'
 
 const FENETRE_PASSEE_JOURS = 30
@@ -35,12 +36,19 @@ export async function GET(req: NextRequest) {
 
     let filtreBranche: string | null = null
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
-      const poste = await prisma.posteBranche.findFirst({
-        where: { utilisateurId: utilisateur.id, paroisseId: utilisateur.paroisseId },
-        select: { brancheType: true },
-        orderBy: { createdAt: 'asc' },
-      })
-      filtreBranche = poste?.brancheType ?? null
+      filtreBranche = await getBrancheUtilisateur(utilisateur.id, utilisateur.paroisseId)
+      // Compte mal configuré (rôle de branche sans PosteBranche assigné) :
+      // flux vide plutôt que toute la paroisse par défaut.
+      if (!filtreBranche) {
+        return new NextResponse(genererICS(`SCOUT ASCCI — ${utilisateur.prenom} ${utilisateur.nom}`, []), {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/calendar; charset=utf-8',
+            'Content-Disposition': 'inline; filename="scout-ascci.ics"',
+            'Cache-Control': 'private, max-age=1800',
+          },
+        })
+      }
     }
 
     const maintenant = new Date()

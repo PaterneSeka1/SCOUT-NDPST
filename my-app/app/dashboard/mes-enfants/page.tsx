@@ -1,14 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
+import { toast } from 'sonner'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
-import { LABELS_TYPE_COTISATION, LABELS_STATUT_COTISATION, COULEURS_STATUT_COTISATION } from '@/lib/cotisations'
-
-const LABELS_TYPE: Record<string, string> = {
-  REUNION: 'Réunion', SORTIE: 'Sortie', CAMP: 'Camp', MESSE: 'Messe',
-  CEREMONIE: 'Cérémonie', FORMATION: 'Formation', AUTRE: 'Autre',
-}
+import { LABELS_TYPE_COTISATION, LABELS_STATUT_COTISATION, COULEURS_STATUT_COTISATION, formatMontantFCFA } from '@/lib/cotisations'
+import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
 
 const LABELS_STATUT_REUNION: Record<string, { label: string; cls: string; dot: string }> = {
   PRESENT: { label: 'Présent', cls: 'text-green-700 bg-green-50', dot: 'bg-green-500' },
@@ -99,7 +95,8 @@ export default function PageMesEnfants() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ consentement: nouvelleValeur }),
       })
-      if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.erreur ?? 'Erreur serveur'); return }
+      if (!res.ok) { const d = await res.json().catch(() => ({})); toast.error(d.erreur ?? 'Erreur serveur'); return }
+      toast.success(nouvelleValeur ? 'Droit à l\'image autorisé' : 'Droit à l\'image révoqué')
       charger()
     } finally {
       setEnCours(null)
@@ -115,7 +112,8 @@ export default function PageMesEnfants() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scoutId, type, mode: 'CONFIRMATION' }),
       })
-      if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.erreur ?? 'Erreur serveur'); return }
+      if (!res.ok) { const d = await res.json().catch(() => ({})); toast.error(d.erreur ?? 'Erreur serveur'); return }
+      toast.success('Autorisation confirmée')
       charger()
     } finally {
       setEnCours(null)
@@ -130,14 +128,15 @@ export default function PageMesEnfants() {
       fd.append('fichier', fichier)
       const uploadRes = await fetch('/api/upload', { method: 'POST', body: fd })
       const uploadData = await uploadRes.json()
-      if (!uploadRes.ok) { alert(uploadData.erreur ?? 'Erreur upload'); return }
+      if (!uploadRes.ok) { toast.error(uploadData.erreur ?? 'Erreur upload'); return }
 
       const res = await fetch(`/api/activites/${activiteId}/autorisations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scoutId, type, mode: 'DOCUMENT', documentUrl: uploadData.url, documentNomFichier: fichier.name }),
       })
-      if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.erreur ?? 'Erreur serveur'); return }
+      if (!res.ok) { const d = await res.json().catch(() => ({})); toast.error(d.erreur ?? 'Erreur serveur'); return }
+      toast.success('Document envoyé')
       charger()
     } finally {
       setEnCours(null)
@@ -194,10 +193,6 @@ export default function PageMesEnfants() {
                         </span>
                       </div>
                     </div>
-                    <Link href={`/dashboard/scouts/${scout.id}`}
-                      className="flex-shrink-0 text-xs text-[#1a4731] border border-[#1a4731]/30 px-3 py-1.5 rounded-lg hover:bg-[#1a4731]/5 transition-colors">
-                      Fiche
-                    </Link>
                   </div>
                 </div>
 
@@ -206,6 +201,9 @@ export default function PageMesEnfants() {
                   <div className="min-w-0">
                     <p className="text-xs font-medium text-gray-700">Droit à l&apos;image</p>
                     <p className="text-xs text-gray-400">
+                      Autorise l&apos;utilisation de la photo de {scout.prenom} dans l&apos;application et les publications de la paroisse (réseaux sociaux, affichages).
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
                       {scout.consentementImage
                         ? `Autorisé le ${scout.consentementImageDate ? new Date(scout.consentementImageDate).toLocaleDateString('fr-FR') : ''}`
                         : "Photo non autorisée pour l'instant"}
@@ -227,12 +225,21 @@ export default function PageMesEnfants() {
                 {/* Cotisations */}
                 {scout.cotisations.length > 0 && (
                   <div className="border-t border-gray-100 px-5 py-3">
-                    <p className="text-xs font-medium text-gray-700 mb-2">Cotisations</p>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-medium text-gray-700">Cotisations</p>
+                      {scout.cotisations.some((c) => c.statut === 'EN_ATTENTE') && (
+                        <p className="text-xs font-semibold text-amber-700">
+                          Total dû : {formatMontantFCFA(
+                            scout.cotisations.filter((c) => c.statut === 'EN_ATTENTE').reduce((s, c) => s + c.montant, 0),
+                          )}
+                        </p>
+                      )}
+                    </div>
                     <div className="space-y-1.5">
                       {scout.cotisations.map((c) => (
                         <div key={c.id} className="flex items-center justify-between gap-3">
                           <span className="text-xs text-gray-500 truncate">
-                            {LABELS_TYPE_COTISATION[c.type] ?? c.type}{c.libelle ? ` — ${c.libelle}` : ''} ({c.anneeScolaire})
+                            {LABELS_TYPE_COTISATION[c.type] ?? c.type}{c.libelle ? ` — ${c.libelle}` : ''} ({c.anneeScolaire}) · {formatMontantFCFA(c.montant)}
                           </span>
                           <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full ${COULEURS_STATUT_COTISATION[c.statut]}`}>
                             {LABELS_STATUT_COTISATION[c.statut] ?? c.statut}
@@ -455,7 +462,7 @@ export default function PageMesEnfants() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">{a.titre}</p>
                   <p className="text-xs text-gray-400">
-                    {LABELS_TYPE[a.type] ?? a.type}
+                    {LABELS_TYPE_ACTIVITE[a.type] ?? a.type}
                     {a.brancheType ? ` · ${LABELS_BRANCHES[a.brancheType] ?? a.brancheType}` : ''}
                     {a.lieu ? ` · ${a.lieu}` : ''}
                   </p>

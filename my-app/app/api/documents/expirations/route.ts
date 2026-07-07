@@ -4,16 +4,8 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 import { ROLES_TOUT_STAFF, ROLES_BRANCHE } from '@/lib/roles'
+import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { BrancheType } from '@/app/generated/prisma/client'
-
-async function getBrancheUtilisateur(userId: string, paroisseId: string): Promise<string | null> {
-  const poste = await prisma.posteBranche.findFirst({
-    where: { utilisateurId: userId, paroisseId },
-    select: { brancheType: true },
-    orderBy: { createdAt: 'asc' },
-  })
-  return poste?.brancheType ?? null
-}
 
 // GET — documents déjà expirés ou arrivant à expiration dans les N prochains
 // jours (30 par défaut), pour les scouts actifs de la paroisse. Un responsable
@@ -35,6 +27,9 @@ export async function GET(request: NextRequest) {
     let brancheType: string | null = null
     if (ROLES_BRANCHE.includes(session.user.role)) {
       brancheType = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+      // Compte mal configuré (rôle de branche sans PosteBranche assigné) :
+      // aucun résultat plutôt que la paroisse entière par défaut.
+      if (!brancheType) return NextResponse.json({ documents: [] })
     }
 
     const documents = await prisma.document.findMany({

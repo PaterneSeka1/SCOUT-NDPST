@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { BrancheType, Prisma, Sexe } from '@/app/generated/prisma/client'
-import { ROLES_TOUT_STAFF as ROLES_AUTORISES } from '@/lib/roles'
+import { ROLES_TOUT_STAFF as ROLES_AUTORISES, ROLES_BRANCHE } from '@/lib/roles'
+import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { estCheminLocalValide } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
@@ -23,11 +24,22 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
     const limite = Math.max(1, parseInt(searchParams.get('limite') ?? '20', 10))
-    const branche = searchParams.get('branche') ?? undefined
     const recherche = searchParams.get('recherche') ?? undefined
     const actif = searchParams.get('actif')
 
     const paroisseId = session.user.paroisseId
+
+    // Les responsables de branche ne voient QUE leur branche — toute valeur
+    // "branche" fournie par le client est ignorée pour ce groupe de rôles,
+    // sinon un simple `?branche=AUTRE` dans l'URL suffirait à voir toute la paroisse.
+    let branche = searchParams.get('branche') ?? undefined
+    if (ROLES_BRANCHE.includes(session.user.role)) {
+      const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
+      // Compte mal configuré (rôle de branche sans PosteBranche assigné) :
+      // aucun résultat plutôt que la paroisse entière par défaut.
+      if (!bt) return NextResponse.json({ scouts: [], total: 0, page, totalPages: 0 })
+      branche = bt
+    }
 
     const where: Prisma.ScoutWhereInput = {
       paroisseId,
@@ -129,6 +141,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'photo doit être un chemin local (ex : /api/fichiers/…)' }, { status: 400 })
     }
 
+    // Un responsable de branche ne peut inscrire un scout que dans sa propre branche.
+    let brancheEffective = brancheType
+    if (ROLES_BRANCHE.includes(session.user.role)) {
+      const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+      if (!bt) return NextResponse.json({ error: 'Aucune branche assignée' }, { status: 403 })
+      brancheEffective = bt
+    }
+
     // Validation des contacts d'urgence
     if (!Array.isArray(contactsUrgence) || contactsUrgence.length === 0) {
       return NextResponse.json(
@@ -162,7 +182,7 @@ export async function POST(request: NextRequest) {
           prenom: prenom.trim(),
           dateNaissance: new Date(dateNaissance),
           sexe: sexe as Sexe,
-          brancheType: brancheType as BrancheType,
+          brancheType: brancheEffective as BrancheType,
           photo: photo?.trim() || null,
           allergies: allergies?.trim() || null,
           traitementsMedicaux: traitementsMedicaux?.trim() || null,

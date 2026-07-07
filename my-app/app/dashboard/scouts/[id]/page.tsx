@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useScout, useAttribuerMatricule, useAjouterContact, useSupprimerContact, useCreerCompteScout, useAjouterDocument, useSupprimerDocument } from '@/hooks/useScouts'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
 import { LABELS_TYPE_DOCUMENT, ICONES_TYPE_DOCUMENT } from '@/lib/documents'
+import { LABELS_TYPE_COTISATION, LABELS_STATUT_COTISATION, COULEURS_STATUT_COTISATION, formatMontantFCFA } from '@/lib/cotisations'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { REGLE_MOT_DE_PASSE } from '@/lib/password'
 
@@ -376,6 +377,33 @@ export default function FicheScoutPage() {
               <button type="button" onClick={() => setAfficherFormulaireContact(false)} className="text-sm text-gray-500 px-2">Annuler</button>
             </div>
           </form>
+        )}
+      </div>
+
+      {/* Cotisations */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-base font-semibold text-gray-900">Cotisations</h2>
+          <Link href="/dashboard/cotisations" className="text-xs text-[#1a4731] hover:underline">Gérer les cotisations →</Link>
+        </div>
+        {scout.cotisations.length === 0 ? (
+          <p className="text-sm text-gray-500">Aucune cotisation enregistrée.</p>
+        ) : (
+          <ul className="space-y-2">
+            {scout.cotisations.map((c) => (
+              <li key={c.id} className="flex items-center justify-between border border-gray-100 rounded-md p-3">
+                <div className="min-w-0">
+                  <p className="text-sm text-gray-900">
+                    {LABELS_TYPE_COTISATION[c.type] ?? c.type}{c.libelle ? ` — ${c.libelle}` : ''}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">{c.anneeScolaire} · {formatMontantFCFA(c.montant)}</p>
+                </div>
+                <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full ${COULEURS_STATUT_COTISATION[c.statut]}`}>
+                  {LABELS_STATUT_COTISATION[c.statut] ?? c.statut}
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
 

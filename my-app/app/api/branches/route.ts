@@ -2,10 +2,14 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { ROLES_TOUT_STAFF } from '@/lib/roles'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session?.user) return NextResponse.json({ erreur: 'Non autorisé' }, { status: 401 })
+  if (!ROLES_TOUT_STAFF.includes(session.user.role)) {
+    return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
+  }
 
   const paroisseId = session.user.paroisseId
   if (!paroisseId) return NextResponse.json({ erreur: 'Aucune paroisse' }, { status: 400 })

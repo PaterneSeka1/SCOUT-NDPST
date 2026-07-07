@@ -3,11 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { LABELS_BRANCHES } from '@/lib/branches'
-
-const LABELS_TYPE: Record<string, string> = {
-  REUNION: 'Réunion', SORTIE: 'Sortie', CAMP: 'Camp', MESSE: 'Messe',
-  CEREMONIE: 'Cérémonie', FORMATION: 'Formation', AUTRE: 'Autre',
-}
+import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
 
 interface Activite {
   id: string; titre: string; dateDebut: string; dateFin: string | null
@@ -79,7 +75,7 @@ export default function PagePresences() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-900 truncate">{a.titre}</p>
                   <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                    <span className="text-xs text-gray-500">{LABELS_TYPE[a.type] ?? a.type}</span>
+                    <span className="text-xs text-gray-500">{LABELS_TYPE_ACTIVITE[a.type] ?? a.type}</span>
                     {a.brancheType && (
                       <>
                         <span className="text-gray-300">·</span>

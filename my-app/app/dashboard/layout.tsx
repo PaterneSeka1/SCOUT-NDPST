@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react'
 import { ParoisseLogoImage } from '@/app/components/ParoisseLogoImage'
 import { useSiteInfo } from '@/app/components/useSiteInfo'
 import { RechercheGlobale } from '@/app/components/RechercheGlobale'
+import { ROLES_TOUT_STAFF } from '@/lib/roles'
 
 type MenuItem = {
   label: string
@@ -188,6 +189,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { data: session } = useSession()
   const pathname = usePathname()
   const [sidebarOuverte, setSidebarOuverte] = useState(false)
+  const [rechercheMobileOuverte, setRechercheMobileOuverte] = useState(false)
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1024px)')
@@ -246,35 +248,65 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Header */}
         <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between flex-shrink-0 gap-3 print:hidden">
-          <div className="flex items-center gap-3 min-w-0">
-            <button
-              className="lg:hidden flex items-center justify-center w-9 h-9 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
-              onClick={() => setSidebarOuverte(true)}
-              aria-label="Ouvrir le menu"
-            >
-              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            <h2 className="text-gray-800 font-semibold text-sm truncate">{titrePage}</h2>
-          </div>
-
-          <div className="hidden md:block flex-1 max-w-xs">
-            <RechercheGlobale />
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            <div className="hidden sm:block text-right">
-              <p className="text-sm font-medium text-gray-800 leading-tight">{nomComplet}</p>
-              <p className="text-xs text-gray-500">{libelleRole(role)}</p>
+          {rechercheMobileOuverte ? (
+            <div className="flex-1 flex items-center gap-2 md:hidden">
+              <div className="flex-1">
+                <RechercheGlobale />
+              </div>
+              <button
+                className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
+                onClick={() => setRechercheMobileOuverte(false)}
+                aria-label="Fermer la recherche"
+              >
+                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-            <div
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-              style={{ backgroundColor: 'var(--cp)' }}
-            >
-              {initiale}
-            </div>
-          </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-3 min-w-0">
+                <button
+                  className="lg:hidden flex items-center justify-center w-9 h-9 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
+                  onClick={() => setSidebarOuverte(true)}
+                  aria-label="Ouvrir le menu"
+                >
+                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+                <h2 className="text-gray-800 font-semibold text-sm truncate">{titrePage}</h2>
+              </div>
+
+              <div className="hidden md:block flex-1 max-w-xs">
+                <RechercheGlobale />
+              </div>
+
+              <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                {ROLES_TOUT_STAFF.includes(role) && (
+                  <button
+                    className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
+                    onClick={() => setRechercheMobileOuverte(true)}
+                    aria-label="Rechercher"
+                  >
+                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
+                    </svg>
+                  </button>
+                )}
+                <div className="hidden sm:block text-right">
+                  <p className="text-sm font-medium text-gray-800 leading-tight">{nomComplet}</p>
+                  <p className="text-xs text-gray-500">{libelleRole(role)}</p>
+                </div>
+                <div
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                  style={{ backgroundColor: 'var(--cp)' }}
+                >
+                  {initiale}
+                </div>
+              </div>
+            </>
+          )}
         </header>
 
         {/* Contenu */}
