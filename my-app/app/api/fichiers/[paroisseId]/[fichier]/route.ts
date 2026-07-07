@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { readFile } from 'fs/promises'
 import path from 'path'
+import { lireFichierPrive } from '@/lib/storage'
 
 const TYPES_MIME: Record<string, string> = {
   '.png': 'image/png',
@@ -35,10 +35,8 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ erreur: 'Fichier invalide' }, { status: 400 })
   }
 
-  const cheminFichier = path.join(process.cwd(), 'uploads-prives', paroisseId, nomFichier)
-
   try {
-    const buffer = await readFile(cheminFichier)
+    const buffer = await lireFichierPrive(paroisseId, nomFichier)
     const ext = path.extname(nomFichier).toLowerCase()
     return new NextResponse(new Uint8Array(buffer), {
       headers: {

@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile, mkdir } from 'fs/promises'
-import path from 'path'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { ROLES_GROUPE as ROLES_PUBLICATION } from '@/lib/roles'
+import { sauvegarderFichierPublic, sauvegarderFichierPrive } from '@/lib/storage'
 
 const TAILLE_MAX = 5 * 1024 * 1024 // 5 Mo
 const TYPES_AUTORISES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf']
@@ -35,17 +34,13 @@ export async function POST(req: NextRequest) {
   if (visibilite === 'publique') {
     // Fichiers de branding (logo, image d'accueil) : visibles sans authentification,
     // affichés notamment sur la page de connexion.
-    const dossier = path.join(process.cwd(), 'public', 'uploads')
-    await mkdir(dossier, { recursive: true })
-    await writeFile(path.join(dossier, nomFichier), buffer)
-    return NextResponse.json({ url: `/uploads/${nomFichier}` })
+    const url = await sauvegarderFichierPublic(nomFichier, buffer, fichier.type)
+    return NextResponse.json({ url })
   }
 
-  // Fichier privé (photo de scout, document, autorisation de camp…) : stocké hors du
-  // dossier `public/` — jamais servi directement par Next.js — et cloisonné par
-  // paroisse. Accessible uniquement via /api/fichiers, qui vérifie la session.
-  const dossier = path.join(process.cwd(), 'uploads-prives', session.user.paroisseId)
-  await mkdir(dossier, { recursive: true })
-  await writeFile(path.join(dossier, nomFichier), buffer)
-  return NextResponse.json({ url: `/api/fichiers/${session.user.paroisseId}/${nomFichier}` })
+  // Fichier privé (photo de scout, document, autorisation de camp…) : jamais
+  // servi directement, cloisonné par paroisse, accessible uniquement via
+  // /api/fichiers, qui vérifie la session.
+  const url = await sauvegarderFichierPrive(session.user.paroisseId, nomFichier, buffer, fichier.type)
+  return NextResponse.json({ url })
 }

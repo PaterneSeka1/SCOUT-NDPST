@@ -4,7 +4,8 @@ import path from 'path'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { ROLES_GROUPE as ROLES_AUTORISES } from '@/lib/roles'
-import { estCheminLocalValide } from '@/lib/validation'
+import { estUrlFichierValide } from '@/lib/validation'
+import { urlPubliqueBase } from '@/lib/storage'
 
 const CONFIG_PATH = path.join(process.cwd(), 'config', 'site.json')
 
@@ -45,14 +46,16 @@ export async function PUT(req: NextRequest) {
 
   const data = body as Record<string, unknown>
 
-  if ('logoSite' in data && data.logoSite && !estCheminLocalValide(data.logoSite)) {
-    return NextResponse.json({ erreur: 'logoSite doit être un chemin local (ex : /uploads/…)' }, { status: 400 })
+  const origineStockage = urlPubliqueBase()
+
+  if ('logoSite' in data && data.logoSite && !estUrlFichierValide(data.logoSite, origineStockage)) {
+    return NextResponse.json({ erreur: 'logoSite doit être un chemin local (ex : /uploads/…) ou une URL de stockage autorisée' }, { status: 400 })
   }
 
   if ('hero' in data && typeof data.hero === 'object' && data.hero !== null) {
     const hero = data.hero as Record<string, unknown>
-    if ('imageUrl' in hero && hero.imageUrl && !estCheminLocalValide(hero.imageUrl)) {
-      return NextResponse.json({ erreur: 'hero.imageUrl doit être un chemin local (ex : /uploads/…)' }, { status: 400 })
+    if ('imageUrl' in hero && hero.imageUrl && !estUrlFichierValide(hero.imageUrl, origineStockage)) {
+      return NextResponse.json({ erreur: 'hero.imageUrl doit être un chemin local (ex : /uploads/…) ou une URL de stockage autorisée' }, { status: 400 })
     }
   }
 

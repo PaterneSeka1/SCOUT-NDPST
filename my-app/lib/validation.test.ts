@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   estCheminLocalValide,
+  estUrlFichierValide,
   BrancheTypeSchema,
   TypeActiviteSchema,
   StatutReunionSchema,
@@ -31,6 +32,33 @@ describe('estCheminLocalValide', () => {
     expect(estCheminLocalValide(undefined)).toBe(false)
     expect(estCheminLocalValide(null)).toBe(false)
     expect(estCheminLocalValide(42)).toBe(false)
+  })
+})
+
+describe('estUrlFichierValide', () => {
+  it('accepte toujours ce que estCheminLocalValide accepte, sans origine autorisée', () => {
+    expect(estUrlFichierValide('/uploads/x.png', null)).toBe(true)
+    expect(estUrlFichierValide('/uploads/x.png')).toBe(true)
+  })
+
+  it('refuse une URL absolue quand aucune origine externe n\'est autorisée', () => {
+    expect(estUrlFichierValide('https://mon-bucket.s3.amazonaws.com/public/x.png', null)).toBe(false)
+  })
+
+  it('accepte une URL absolue dont l\'origine correspond exactement à celle autorisée', () => {
+    const origine = 'https://mon-bucket.s3.amazonaws.com'
+    expect(estUrlFichierValide('https://mon-bucket.s3.amazonaws.com/public/x.png', origine)).toBe(true)
+  })
+
+  it('refuse une URL absolue dont l\'origine diffère de celle autorisée', () => {
+    const origine = 'https://mon-bucket.s3.amazonaws.com'
+    expect(estUrlFichierValide('https://evil.example.com/public/x.png', origine)).toBe(false)
+  })
+
+  it('refuse les valeurs non-string même avec une origine autorisée', () => {
+    const origine = 'https://mon-bucket.s3.amazonaws.com'
+    expect(estUrlFichierValide(undefined, origine)).toBe(false)
+    expect(estUrlFichierValide(42, origine)).toBe(false)
   })
 })
 

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { estCheminLocalValide } from '@/lib/validation'
+import { estUrlFichierValide } from '@/lib/validation'
+import { urlPubliqueBase } from '@/lib/storage'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -40,8 +41,8 @@ export async function PATCH(req: NextRequest) {
     adresse?: string; telephone?: string; email?: string; logo?: string
   }
 
-  if (logo != null && logo.trim() !== '' && !estCheminLocalValide(logo.trim())) {
-    return NextResponse.json({ erreur: 'logo doit être un chemin local (ex : /uploads/…)' }, { status: 400 })
+  if (logo != null && logo.trim() !== '' && !estUrlFichierValide(logo.trim(), urlPubliqueBase())) {
+    return NextResponse.json({ erreur: 'logo doit être un chemin local (ex : /uploads/…) ou une URL de stockage autorisée' }, { status: 400 })
   }
 
   const paroisse = await prisma.paroisse.update({

@@ -42,3 +42,20 @@ export function estCheminLocalValide(valeur: unknown): valeur is string {
     return false
   }
 }
+
+// Comme estCheminLocalValide, mais accepte en plus une URL absolue dont
+// l'origine correspond exactement à `origineExterneAutorisee` — utile pour les
+// fichiers publics (logo, image d'accueil) quand ils sont servis depuis un
+// stockage S3 externe plutôt que depuis /public. Ne jamais appeler avec une
+// valeur venant de l'utilisateur : `origineExterneAutorisee` doit toujours
+// provenir de la configuration serveur (ex : lib/storage.ts urlPubliqueBase()),
+// jamais du corps de la requête.
+export function estUrlFichierValide(valeur: unknown, origineExterneAutorisee?: string | null): valeur is string {
+  if (estCheminLocalValide(valeur)) return true
+  if (typeof valeur !== 'string' || !origineExterneAutorisee) return false
+  try {
+    return new URL(valeur).origin === new URL(origineExterneAutorisee).origin
+  } catch {
+    return false
+  }
+}
