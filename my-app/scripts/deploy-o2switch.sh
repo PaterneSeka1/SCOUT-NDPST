@@ -19,7 +19,11 @@
 set -euo pipefail
 
 echo "→ Installation des dépendances (y compris devDependencies, pour le CLI Prisma)"
-npm ci
+# --include=dev est indispensable ici : l'Application mode "Production" de
+# cPanel exporte NODE_ENV=production dans l'environnement, et npm ci en tient
+# compte pour omettre les devDependencies par défaut — or le build (Tailwind,
+# postcss) et prisma generate en ont besoin.
+npm ci --include=dev
 
 echo "→ Génération du client Prisma"
 npx prisma generate
