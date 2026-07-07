@@ -30,7 +30,7 @@ services:
     environment:
       DATABASE_URL: "postgresql://scout:${POSTGRES_PASSWORD}@db:5432/scout_db"
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      NEXTAUTH_URL: "https://${DOMAIN}"
+      NEXTAUTH_URL: "${PUBLIC_URL}"
       CRON_SECRET: ${CRON_SECRET}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
@@ -54,11 +54,13 @@ services:
     restart: unless-stopped
     depends_on:
       - app
+    # Le nginx système du VPS gère les ports 80/443 pour tous les sites (voir
+    # /etc/nginx/sites-enabled) : Caddy ne sert que du HTTP en interne, sur un
+    # port lié à localhost, et nginx + Certbot (déjà en place pour
+    # decryptage.veilleurdesmedias.org) font le TLS + la terminaison publique
+    # en proxy_pass vers ce port.
     ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      DOMAIN: ${DOMAIN}
+      - "127.0.0.1:8080:80"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

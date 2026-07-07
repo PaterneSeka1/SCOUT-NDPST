@@ -87,9 +87,9 @@ fi
 ok "Base de données initialisée"
 
 # --- Seed ---
-info "Insertion des données de test..."
+info "Création du compte admin..."
 npx prisma db seed
-ok "Données de test insérées"
+ok "Compte admin créé"
 
 cd "$SCRIPT_DIR"
 
@@ -98,10 +98,8 @@ echo "=================================================="
 echo -e "${VERT}  Installation terminée avec succès !${RESET}"
 echo "=================================================="
 echo ""
-echo "  Comptes de test :"
-echo "    Admin    → matricule: ADMIN001A  / mot de passe: Admin1234!"
-echo "    Chef     → matricule: 0545247O   / mot de passe: Chef1234!"
-echo "    Parent   → téléphone: 0712345678 / mot de passe: Parent1234!"
+echo "  Compte admin → matricule: ADMIN001A  / mot de passe: Admin1234!"
+echo "  (personnalisable via ADMIN_* dans my-app/.env — voir .env.example)"
 echo ""
 echo "  Pour lancer l'application : ./start.sh"
 echo ""

@@ -29,7 +29,9 @@ echo "→ Génération du client Prisma"
 npx prisma generate
 
 echo "→ Build de production (mode standalone)"
-npm run build
+# O2SWITCH_BUILD active le mode workerThreads/cpus:1 dans next.config.ts,
+# nécessaire ici (fork() interdit par CageFS) mais à éviter ailleurs (Docker).
+O2SWITCH_BUILD=1 npm run build
 
 echo "→ Copie des fichiers statiques dans le build standalone"
 # Next.js ne les inclut pas automatiquement dans .next/standalone/ — sans

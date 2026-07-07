@@ -58,16 +58,14 @@ until "${COMPOSE[@]}" --env-file .env.prod -f docker-compose.prod.yml exec -T ap
 done
 ok "Application démarrée (les migrations Prisma sont appliquées automatiquement au démarrage du conteneur)"
 
-DOMAIN=$(grep -E "^DOMAIN=" .env.prod | cut -d'=' -f2-)
+PUBLIC_URL=$(grep -E "^PUBLIC_URL=" .env.prod | cut -d'=' -f2-)
 
 echo ""
 echo "=================================================="
 echo -e "${VERT}  Déploiement terminé !${RESET}"
 echo "=================================================="
 echo ""
-echo "  Application → https://${DOMAIN}"
-echo "  (le certificat HTTPS est généré automatiquement par Caddy au premier accès —"
-echo "   vérifie au préalable que le DNS de ce sous-domaine pointe bien vers ce VPS)"
+echo "  Application → ${PUBLIC_URL}"
 echo ""
 echo "  Logs        → ${COMPOSE[*]} -f docker-compose.prod.yml logs -f app"
 echo "  Arrêt       → ${COMPOSE[*]} -f docker-compose.prod.yml down"
