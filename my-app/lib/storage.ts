@@ -21,6 +21,17 @@ function bucketS3(): string | undefined {
   return process.env.STORAGE_S3_BUCKET || undefined
 }
 
+// Bucket dédié aux fichiers publics (logo, image héro...), distinct du bucket
+// privé. Nécessaire pour les fournisseurs qui ne gèrent la visibilité qu'au
+// niveau du bucket entier (Supabase Storage, Cloudflare R2 — pas d'ACL par
+// objet) : un seul bucket "public" exposerait aussi les documents privés
+// (certificats médicaux, autorisations parentales) à quiconque devine leur
+// clé. Par défaut (non défini), retombe sur le bucket privé — comportement
+// historique, valide pour un vrai AWS S3 où l'ACL par objet fonctionne.
+function bucketS3Public(): string | undefined {
+  return process.env.STORAGE_S3_BUCKET_PUBLIC || bucketS3()
+}
+
 function utiliseS3(): boolean {
   return !!bucketS3()
 }
@@ -71,7 +82,7 @@ export async function sauvegarderFichierPublic(
   const cle = cleFichierPublic(nomFichier)
 
   if (utiliseS3()) {
-    const bucket = bucketS3()
+    const bucket = bucketS3Public()
     await getClientS3().send(
       new PutObjectCommand({ Bucket: bucket, Key: cle, Body: buffer, ContentType: contentType, ACL: 'public-read' }),
     )

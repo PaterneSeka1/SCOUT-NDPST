@@ -14,69 +14,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    # Pas de port publié vers l'hôte : accessible uniquement depuis les autres
-    # conteneurs du même réseau Docker (le service "app"), jamais depuis
-    # l'extérieur — contrairement au docker-compose.yml de développement.
-
-  app:
-    build:
-      context: ./my-app
-      dockerfile: Dockerfile
-    container_name: scout_app
-    restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      DATABASE_URL: "postgresql://scout:${POSTGRES_PASSWORD}@db:5432/scout_db"
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      NEXTAUTH_URL: "${PUBLIC_URL}"
-      CRON_SECRET: ${CRON_SECRET}
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_SECURE: ${SMTP_SECURE:-false}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASS: ${SMTP_PASS:-}
-      SMTP_FROM: ${SMTP_FROM:-}
-    volumes:
-      # Fichiers privés/publics sur des volumes nommés (pas un bind-mount du
-      # code source comme en dev) : survivent à une reconstruction de l'image
-      # ou à un redéploiement, tant que le volume Docker lui-même n'est pas
-      # supprimé explicitement (`docker compose down -v`).
-      - uploads_prives:/app/uploads-prives
-      - uploads_publics:/app/public/uploads
-      - site_config:/app/config
-    # Pas de port publié directement : tout le trafic passe par Caddy, qui
-    # fait le lien HTTPS public → app:3000 en interne au réseau Docker.
-
-  caddy:
-    image: caddy:2-alpine
-    container_name: scout_caddy
-    restart: unless-stopped
-    depends_on:
-      - app
-    # Le nginx système du VPS gère les ports 80/443 pour tous les sites (voir
-    # /etc/nginx/sites-enabled) : Caddy ne sert que du HTTP en interne, sur un
-    # port lié à localhost, et nginx + Certbot (déjà en place pour
-    # decryptage.veilleurdesmedias.org) font le TLS + la terminaison publique
-    # en proxy_pass vers ce port.
+    # Publié sur localhost uniquement : l'app tourne directement sur l'hôte
+    # (pm2, pas de conteneur), et s'y connecte via 127.0.0.1:5434 — jamais
+    # exposé à l'extérieur du VPS.
     ports:
-      - "127.0.0.1:8080:80"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
+      - "127.0.0.1:5434:5432"
 
 volumes:
   postgres_data:
-    driver: local
-  uploads_prives:
-    driver: local
-  uploads_publics:
-    driver: local
-  site_config:
-    driver: local
-  caddy_data:
-    driver: local
-  caddy_config:
     driver: local

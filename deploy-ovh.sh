@@ -2,6 +2,12 @@
 # =============================================================================
 # SCOUT ASCCI — Déploiement production sur un VPS OVH
 # À lancer sur le VPS (via SSH), depuis la racine du dépôt.
+#
+# Architecture : seule la base de données tourne dans Docker
+# (docker-compose.prod.yml, publiée sur 127.0.0.1:5434). L'application
+# elle-même tourne directement sur l'hôte, gérée par pm2 (process "scout-ndpst"),
+# et nginx (déjà en place sur ce VPS pour les autres sites) fait office de
+# reverse proxy HTTPS vers le port de l'app — voir my-app/.env pour la config.
 # =============================================================================
 
 set -e
@@ -22,6 +28,7 @@ echo "=================================================="
 echo ""
 
 command -v docker >/dev/null 2>&1 || err "Docker n'est pas installé sur ce serveur."
+command -v pm2 >/dev/null 2>&1 || err "pm2 n'est pas installé (npm install -g pm2)."
 
 if docker compose version >/dev/null 2>&1; then
   COMPOSE=(docker compose)
@@ -34,31 +41,58 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# --- Fichier .env.prod ---
+# --- Fichier .env.prod (uniquement le mot de passe Postgres) ---
 if [ ! -f ".env.prod" ]; then
-  err ".env.prod introuvable. Copie .env.prod.example vers .env.prod et remplis-le (DOMAIN, mots de passe…) avant de relancer."
+  err ".env.prod introuvable. Copie .env.prod.example vers .env.prod et remplis-le (POSTGRES_PASSWORD) avant de relancer."
 fi
 ok ".env.prod présent"
 
-# --- Build et démarrage ---
-info "Construction de l'image de l'application (peut prendre quelques minutes la première fois)..."
-"${COMPOSE[@]}" --env-file .env.prod -f docker-compose.prod.yml build app
+# --- Base de données (Docker) ---
+info "Démarrage de la base de données..."
+"${COMPOSE[@]}" --env-file .env.prod -f docker-compose.prod.yml up -d db
 
-info "Démarrage des conteneurs (db, app, caddy)..."
-"${COMPOSE[@]}" --env-file .env.prod -f docker-compose.prod.yml up -d
-
-info "Attente que l'application réponde..."
 TENTATIVES=0
-until "${COMPOSE[@]}" --env-file .env.prod -f docker-compose.prod.yml exec -T app node -e "process.exit(0)" >/dev/null 2>&1; do
+until "${COMPOSE[@]}" --env-file .env.prod -f docker-compose.prod.yml exec -T db pg_isready -U scout -d scout_db >/dev/null 2>&1; do
   TENTATIVES=$((TENTATIVES + 1))
   if [ $TENTATIVES -gt 30 ]; then
-    err "L'application ne répond pas après 30 secondes. Vérifie les logs : ${COMPOSE[*]} -f docker-compose.prod.yml logs app"
+    err "PostgreSQL ne répond pas après 30 secondes."
   fi
-  sleep 2
+  sleep 1
 done
-ok "Application démarrée (les migrations Prisma sont appliquées automatiquement au démarrage du conteneur)"
+ok "Base de données prête (127.0.0.1:5434)"
 
-PUBLIC_URL=$(grep -E "^PUBLIC_URL=" .env.prod | cut -d'=' -f2-)
+# --- Application (hôte, pm2) ---
+cd my-app
+
+if [ ! -f ".env" ]; then
+  err "my-app/.env introuvable. Copie my-app/.env.example vers my-app/.env et remplis-le (DATABASE_URL vers 127.0.0.1:5434, NEXTAUTH_SECRET, NEXTAUTH_URL, CRON_SECRET…) avant de relancer."
+fi
+ok "my-app/.env présent"
+
+info "Installation des dépendances (y compris devDependencies, pour le build)..."
+npm ci --include=dev
+
+info "Génération du client Prisma"
+npx prisma generate
+
+info "Application des migrations Prisma"
+npx prisma migrate deploy
+
+info "Build de production"
+npm run build
+
+info "Démarrage / redémarrage de l'application via pm2..."
+mkdir -p uploads-prives public/uploads
+if pm2 describe scout-ndpst >/dev/null 2>&1; then
+  pm2 restart scout-ndpst
+else
+  pm2 start npm --name scout-ndpst --cwd "$PWD" -- run start -- -p 3002
+fi
+pm2 save
+
+cd "$SCRIPT_DIR"
+
+PUBLIC_URL=$(grep -E "^NEXTAUTH_URL=" my-app/.env | cut -d'=' -f2- | tr -d '"')
 
 echo ""
 echo "=================================================="
@@ -67,6 +101,7 @@ echo "=================================================="
 echo ""
 echo "  Application → ${PUBLIC_URL}"
 echo ""
-echo "  Logs        → ${COMPOSE[*]} -f docker-compose.prod.yml logs -f app"
-echo "  Arrêt       → ${COMPOSE[*]} -f docker-compose.prod.yml down"
+echo "  Logs        → pm2 logs scout-ndpst"
+echo "  Statut      → pm2 list"
+echo "  Arrêt       → pm2 stop scout-ndpst"
 echo ""
