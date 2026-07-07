@@ -37,6 +37,15 @@ mkdir -p .next/standalone/.next
 rm -rf .next/standalone/.next/static
 cp -r .next/static .next/standalone/.next/static
 
+# Si les variables d'environnement sont configurées dans l'interface "Setup
+# Node.js App" de cPanel, cette copie est inutile (elles sont déjà dans
+# process.env). Utile seulement si tu préfères piloter la config par fichier :
+# vérifié manuellement que .next/standalone/server.js charge bien un .env
+# placé à côté de lui.
+if [ -f .env ]; then
+  cp .env .next/standalone/.env
+fi
+
 echo "→ Application des migrations Prisma (nécessite DATABASE_URL dans l'environnement)"
 npx prisma migrate deploy
 
