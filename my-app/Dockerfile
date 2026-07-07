@@ -34,6 +34,12 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
+# config/site.json est modifié à l'exécution par l'écran d'administration
+# "Apparence du site" (route API PUT) : sans ce chown, il reste appartenant à
+# root (propriétaire par défaut des COPY ci-dessus) alors que le conteneur
+# tourne en tant que "nextjs", et l'écriture échoue avec EACCES.
+RUN chown -R nextjs /app/config
+
 # CLI Prisma (et ses dépendances transitives, ex. @prisma/engines, effect…) :
 # non tracé par le build standalone (qui bundle le client généré directement
 # dans les chunks serveur), mais nécessaire pour appliquer les migrations en

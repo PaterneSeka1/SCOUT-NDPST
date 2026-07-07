@@ -45,6 +45,7 @@ services:
       # supprimé explicitement (`docker compose down -v`).
       - uploads_prives:/app/uploads-prives
       - uploads_publics:/app/public/uploads
+      - site_config:/app/config
     # Pas de port publié directement : tout le trafic passe par Caddy, qui
     # fait le lien HTTPS public → app:3000 en interne au réseau Docker.
 
@@ -72,6 +73,8 @@ volumes:
   uploads_prives:
     driver: local
   uploads_publics:
+    driver: local
+  site_config:
     driver: local
   caddy_data:
     driver: local
