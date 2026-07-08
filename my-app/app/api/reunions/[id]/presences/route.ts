@@ -6,6 +6,7 @@ import { ROLES_TOUT_STAFF as ROLES_PRESENCES, ROLES_BRANCHE } from '@/lib/roles'
 import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { StatutPresenceReunionSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
+import { paroisseIdRequise } from '@/lib/session'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -21,22 +22,23 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     const session = await getServerSession(authOptions)
     if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
     if (!ROLES_PRESENCES.includes(session.user.role)) return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
+    const paroisseId = paroisseIdRequise(session)
 
     const { id } = await params
 
     const reunion = await prisma.jourReunion.findFirst({
-      where: { id, paroisseId: session.user.paroisseId },
+      where: { id, paroisseId },
     })
     if (!reunion) return NextResponse.json({ erreur: 'Réunion introuvable' }, { status: 404 })
 
-    if (!(await verifierAccesBranche(session.user.role, session.user.id, session.user.paroisseId, reunion.brancheType))) {
+    if (!(await verifierAccesBranche(session.user.role, session.user.id, paroisseId, reunion.brancheType))) {
       return NextResponse.json({ erreur: 'Accès refusé à cette réunion' }, { status: 403 })
     }
 
     // Scouts de la branche concernée (ou tous si inter-branches)
     const scouts = await prisma.scout.findMany({
       where: {
-        paroisseId: session.user.paroisseId,
+        paroisseId,
         actif: true,
         ...(reunion.brancheType ? { brancheType: reunion.brancheType } : {}),
       },
@@ -65,15 +67,16 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     const session = await getServerSession(authOptions)
     if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
     if (!ROLES_PRESENCES.includes(session.user.role)) return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
+    const paroisseId = paroisseIdRequise(session)
 
     const { id } = await params
 
     const reunion = await prisma.jourReunion.findFirst({
-      where: { id, paroisseId: session.user.paroisseId },
+      where: { id, paroisseId },
     })
     if (!reunion) return NextResponse.json({ erreur: 'Réunion introuvable' }, { status: 404 })
 
-    if (!(await verifierAccesBranche(session.user.role, session.user.id, session.user.paroisseId, reunion.brancheType))) {
+    if (!(await verifierAccesBranche(session.user.role, session.user.id, paroisseId, reunion.brancheType))) {
       return NextResponse.json({ erreur: 'Accès refusé à cette réunion' }, { status: 403 })
     }
 

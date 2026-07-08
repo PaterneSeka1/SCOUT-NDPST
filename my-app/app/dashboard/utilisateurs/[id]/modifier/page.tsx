@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { LABELS_ROLES } from '@/lib/roles'
+import { LABELS_ROLES, ROLES_ASSIGNABLES_PAROISSE } from '@/lib/roles'
 import { useUtilisateur, useModifierUtilisateur, useResetPassword } from '@/hooks/useUtilisateurs'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
@@ -14,7 +14,7 @@ const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm t
 const CLS_SELECT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
-const ROLES_LISTE = Object.keys(LABELS_ROLES)
+const ROLES_LISTE = ROLES_ASSIGNABLES_PAROISSE
 
 interface FormInfos { nom: string; prenom: string; email: string; role: string; actif: boolean }
 interface FormInfosErrors { nom?: string; prenom?: string; role?: string }

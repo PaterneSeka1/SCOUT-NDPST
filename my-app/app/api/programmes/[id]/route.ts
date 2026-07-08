@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_BRANCHE, ROLES_GESTION, ROLES_TOUT_STAFF as ROLES_LECTURE } from '@/lib/roles'
 import { logger } from '@/lib/logger'
+import { paroisseIdRequise } from '@/lib/session'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -21,11 +22,12 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     const session = await getServerSession(authOptions)
     if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
     if (!ROLES_LECTURE.includes(session.user.role)) return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
+    const paroisseId = paroisseIdRequise(session)
 
     const { id } = await params
 
     const programme = await prisma.programme.findFirst({
-      where: { id, paroisseId: session.user.paroisseId },
+      where: { id, paroisseId },
       include: {
         creeParUtilisateur: { select: { prenom: true, nom: true } },
         lignes: {
@@ -48,6 +50,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     const session = await getServerSession(authOptions)
     if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
     if (!ROLES_GESTION.includes(session.user.role)) return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
+    const paroisseId = paroisseIdRequise(session)
 
     const { id } = await params
     const body = await req.json()
@@ -59,13 +62,13 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     }
 
     const existant = await prisma.programme.findFirst({
-      where: { id, paroisseId: session.user.paroisseId },
+      where: { id, paroisseId },
     })
     if (!existant) return NextResponse.json({ erreur: 'Programme introuvable' }, { status: 404 })
 
     // Un responsable de branche ne peut modifier que le programme de sa propre branche
     if (ROLES_BRANCHE.includes(session.user.role)) {
-      const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+      const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
       if (!bt || existant.brancheType !== bt) {
         return NextResponse.json({ erreur: 'Accès refusé à ce programme' }, { status: 403 })
       }
@@ -99,15 +102,16 @@ export async function DELETE(_req: NextRequest, { params }: RouteParams) {
     const session = await getServerSession(authOptions)
     if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
     if (!ROLES_GESTION.includes(session.user.role)) return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
+    const paroisseId = paroisseIdRequise(session)
 
     const { id } = await params
     const existant = await prisma.programme.findFirst({
-      where: { id, paroisseId: session.user.paroisseId },
+      where: { id, paroisseId },
     })
     if (!existant) return NextResponse.json({ erreur: 'Programme introuvable' }, { status: 404 })
 
     if (ROLES_BRANCHE.includes(session.user.role)) {
-      const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+      const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
       if (!bt || existant.brancheType !== bt) {
         return NextResponse.json({ erreur: 'Accès refusé à ce programme' }, { status: 403 })
       }

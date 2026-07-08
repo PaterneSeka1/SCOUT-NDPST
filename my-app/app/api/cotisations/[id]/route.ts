@@ -7,6 +7,7 @@ import { ROLES_GESTION, ROLES_GROUPE, ROLES_BRANCHE } from '@/lib/roles'
 import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
+import { paroisseIdRequise } from '@/lib/session'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -20,6 +21,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     if (!ROLES_GESTION.includes(session.user.role)) {
       return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
     }
+    const paroisseId = paroisseIdRequise(session)
 
     const { id } = await params
 
@@ -27,7 +29,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     // scout de sa propre branche.
     let brancheRequise: string | undefined
     if (ROLES_BRANCHE.includes(session.user.role)) {
-      const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+      const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
       if (!bt) return NextResponse.json({ erreur: 'Cotisation introuvable' }, { status: 404 })
       brancheRequise = bt
     }
@@ -35,7 +37,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     const existante = await prisma.cotisation.findFirst({
       where: {
         id,
-        paroisseId: session.user.paroisseId,
+        paroisseId,
         ...(brancheRequise ? { scout: { brancheType: brancheRequise as never } } : {}),
       },
     })
@@ -73,7 +75,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
 
     if (statut !== undefined && statut !== existante.statut) {
       await enregistrerAudit({
-        paroisseId: session.user.paroisseId,
+        paroisseId,
         acteurId: session.user.id,
         action: 'COTISATION_STATUT_MODIFIE',
         entite: 'Cotisation',
@@ -98,18 +100,19 @@ export async function DELETE(_req: NextRequest, { params }: RouteParams) {
     if (!ROLES_GROUPE.includes(session.user.role)) {
       return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
     }
+    const paroisseId = paroisseIdRequise(session)
 
     const { id } = await params
 
     const existante = await prisma.cotisation.findFirst({
-      where: { id, paroisseId: session.user.paroisseId },
+      where: { id, paroisseId },
     })
     if (!existante) return NextResponse.json({ erreur: 'Cotisation introuvable' }, { status: 404 })
 
     await prisma.cotisation.delete({ where: { id } })
 
     await enregistrerAudit({
-      paroisseId: session.user.paroisseId,
+      paroisseId,
       acteurId: session.user.id,
       action: 'COTISATION_SUPPRIMEE',
       entite: 'Cotisation',

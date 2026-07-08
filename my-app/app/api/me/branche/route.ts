@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
+import { paroisseIdRequise } from '@/lib/session'
 
 export async function GET() {
   try {
@@ -14,7 +15,7 @@ export async function GET() {
     // on retombe toujours sur le même (le plus ancien) plutôt qu'un résultat
     // arbitraire selon l'ordre de retour de Postgres.
     const poste = await prisma.posteBranche.findFirst({
-      where: { utilisateurId: session.user.id, paroisseId: session.user.paroisseId },
+      where: { utilisateurId: session.user.id, paroisseId: paroisseIdRequise(session) },
       select: { brancheType: true, role: true },
       orderBy: { createdAt: 'asc' },
     })

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { ROLES_GROUPE, ROLES_BRANCHE } from '@/lib/roles'
 
 const BRANCHES_ORDRE = ['OISILLONS', 'LOUVETEAUX', 'ECLAIREURS', 'CHEMINOTS', 'COMPAGNONS']
 const BRANCHES: Record<string, string> = {
@@ -48,9 +49,6 @@ interface Config {
   lieu: string | null
 }
 
-const ROLES_CREATION = ['ADMIN_PAROISSE', 'CHEF_GROUPE']
-const ROLES_BRANCHE = ['RESPONSABLE_BRANCHE', 'ADJOINT_BRANCHE', 'ASSISTANT_BRANCHE']
-
 function dateEffective(r: Reunion) {
   return new Date(r.dateReportee ?? r.dateHeure)
 }
@@ -65,7 +63,7 @@ function formatHeure(d: Date) {
 export default function PageReunions() {
   const { data: session } = useSession()
   const role = session?.user?.role ?? ''
-  const estGroupe = ROLES_CREATION.includes(role)
+  const estGroupe = ROLES_GROUPE.includes(role)
   const estBranche = ROLES_BRANCHE.includes(role)
   const peutCreer = estGroupe || estBranche
 

@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import { Providers } from './providers'
-import { readFile } from 'fs/promises'
-import path from 'path'
+import { prisma } from '@/lib/prisma'
+import { THEME_DEFAUT, couleurSure, hexToRgb, type Theme } from '@/lib/theme'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -15,65 +15,21 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 })
 
-type Theme = {
-  couleurPrimaire: string
-  couleurAccent: string
-  couleurFond: string
-  couleurHover: string
-}
-
-type SiteConfig = {
-  logoSite?: string | null
-  nomSite?: string
-  theme?: Partial<Theme>
-}
-
-const THEME_DEFAUT: Theme = {
-  couleurPrimaire: '#1a4731',
-  couleurAccent: '#27ae60',
-  couleurFond: '#0f2418',
-  couleurHover: '#27ae60',
-}
-
-// Ces valeurs sont injectées telles quelles dans une balise <style> (voir plus
-// bas, dangerouslySetInnerHTML) : on revalide strictement le format hexadécimal
-// ici aussi, en défense en profondeur de la validation faite à l'écriture par
-// /api/admin/site-config, pour empêcher toute injection HTML/JS via le thème.
-const COULEUR_HEX_REGEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
-function couleurSure(valeur: string | undefined, defaut: string): string {
-  return valeur && COULEUR_HEX_REGEX.test(valeur) ? valeur : defaut
-}
-
-function hexToRgb(hex: string): string {
-  const h = hex.replace('#', '')
-  if (h.length !== 6) return '39, 174, 96'
-  const r = parseInt(h.slice(0, 2), 16)
-  const g = parseInt(h.slice(2, 4), 16)
-  const b = parseInt(h.slice(4, 6), 16)
-  return `${r}, ${g}, ${b}`
-}
-
+// Identité de la PLATEFORME (commune à toutes les paroisses, pas celle d'une
+// paroisse en particulier) : appliquée à toutes les pages, y compris avant
+// connexion. L'identité propre à chaque paroisse (logo + couleurs) est
+// appliquée en surcharge dans le tableau de bord une fois connecté.
 async function getTheme(): Promise<{ theme: Theme; nomSite: string; logoSite: string | null }> {
-  try {
-    const raw = await readFile(
-      path.join(process.cwd(), 'config', 'site.json'),
-      'utf-8',
-    )
-    const config: SiteConfig = JSON.parse(raw)
-    const theme: Theme = {
-      couleurPrimaire: couleurSure(config.theme?.couleurPrimaire, THEME_DEFAUT.couleurPrimaire),
-      couleurAccent: couleurSure(config.theme?.couleurAccent, THEME_DEFAUT.couleurAccent),
-      couleurFond: couleurSure(config.theme?.couleurFond, THEME_DEFAUT.couleurFond),
-      couleurHover: couleurSure(config.theme?.couleurHover, THEME_DEFAUT.couleurHover),
-    }
-    return {
-      theme,
-      nomSite: config.nomSite ?? 'SCOUT ASCCI',
-      logoSite: config.logoSite || null,
-    }
-  } catch {
-    return { theme: THEME_DEFAUT, nomSite: 'SCOUT ASCCI', logoSite: null }
+  const cfg = await prisma.configurationPlateforme.findUnique({ where: { id: 'platform' } })
+  if (!cfg) return { theme: THEME_DEFAUT, nomSite: 'SCOUT ASCCI', logoSite: null }
+
+  const theme: Theme = {
+    couleurPrimaire: couleurSure(cfg.couleurPrimaire, THEME_DEFAUT.couleurPrimaire),
+    couleurAccent: couleurSure(cfg.couleurAccent, THEME_DEFAUT.couleurAccent),
+    couleurFond: couleurSure(cfg.couleurFond, THEME_DEFAUT.couleurFond),
+    couleurHover: couleurSure(cfg.couleurHover, THEME_DEFAUT.couleurHover),
   }
+  return { theme, nomSite: cfg.nomSite, logoSite: cfg.logoUrl }
 }
 
 export async function generateMetadata(): Promise<Metadata> {

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_BRANCHE, ROLES_GESTION } from '@/lib/roles'
 import { logger } from '@/lib/logger'
+import { paroisseIdRequise } from '@/lib/session'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -21,15 +22,16 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     const session = await getServerSession(authOptions)
     if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
     if (!ROLES_GESTION.includes(session.user.role)) return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
+    const paroisseId = paroisseIdRequise(session)
 
     const { id: programmeId } = await params
     const programme = await prisma.programme.findFirst({
-      where: { id: programmeId, paroisseId: session.user.paroisseId },
+      where: { id: programmeId, paroisseId },
     })
     if (!programme) return NextResponse.json({ erreur: 'Programme introuvable' }, { status: 404 })
 
     if (ROLES_BRANCHE.includes(session.user.role)) {
-      const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+      const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
       if (!bt || programme.brancheType !== bt) {
         return NextResponse.json({ erreur: 'Accès refusé à ce programme' }, { status: 403 })
       }

@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { estUrlFichierValide } from '@/lib/validation'
 import { urlPubliqueBase } from '@/lib/storage'
+import { ROLES_GROUPE } from '@/lib/roles'
+import { estCouleurHexValide } from '@/lib/theme'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -28,21 +30,30 @@ export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return NextResponse.json({ erreur: 'Non autorisé' }, { status: 401 })
 
-  const ROLES_AUTORISES = ['ADMIN_PAROISSE']
-  if (!ROLES_AUTORISES.includes(session.user.role))
+  if (!ROLES_GROUPE.includes(session.user.role))
     return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
 
   const paroisseId = session.user.paroisseId
   if (!paroisseId) return NextResponse.json({ erreur: 'Aucune paroisse associée' }, { status: 400 })
 
   const body = await req.json()
-  const { nom, ville, diocese, ocean, doyenne, adresse, telephone, email, logo } = body as {
+  const {
+    nom, ville, diocese, ocean, doyenne, adresse, telephone, email, logo,
+    couleurPrimaire, couleurAccent, couleurFond, couleurHover,
+  } = body as {
     nom?: string; ville?: string; diocese?: string; ocean?: string; doyenne?: string
     adresse?: string; telephone?: string; email?: string; logo?: string
+    couleurPrimaire?: string; couleurAccent?: string; couleurFond?: string; couleurHover?: string
   }
 
   if (logo != null && logo.trim() !== '' && !estUrlFichierValide(logo.trim(), urlPubliqueBase())) {
     return NextResponse.json({ erreur: 'logo doit être un chemin local (ex : /uploads/…) ou une URL de stockage autorisée' }, { status: 400 })
+  }
+
+  for (const [champ, valeur] of Object.entries({ couleurPrimaire, couleurAccent, couleurFond, couleurHover })) {
+    if (valeur != null && valeur.trim() !== '' && !estCouleurHexValide(valeur)) {
+      return NextResponse.json({ erreur: `${champ} doit être une couleur hexadécimale valide (ex : #1a4731)` }, { status: 400 })
+    }
   }
 
   const paroisse = await prisma.paroisse.update({
@@ -57,6 +68,10 @@ export async function PATCH(req: NextRequest) {
       ...(telephone !== undefined ? { telephone: telephone.trim() || null } : {}),
       ...(email !== undefined ? { email: email.trim() || null } : {}),
       ...(logo !== undefined ? { logo: logo.trim() || null } : {}),
+      ...(couleurPrimaire !== undefined ? { couleurPrimaire: couleurPrimaire.trim() || null } : {}),
+      ...(couleurAccent !== undefined ? { couleurAccent: couleurAccent.trim() || null } : {}),
+      ...(couleurFond !== undefined ? { couleurFond: couleurFond.trim() || null } : {}),
+      ...(couleurHover !== undefined ? { couleurHover: couleurHover.trim() || null } : {}),
     },
   })
 

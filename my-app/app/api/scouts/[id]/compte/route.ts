@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { ROLES_GROUPE_ETENDU as ROLES_AUTORISES } from '@/lib/roles'
 import { logger } from '@/lib/logger'
+import { paroisseIdRequise } from '@/lib/session'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -23,8 +24,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const { id } = await params
 
+    const paroisseId = paroisseIdRequise(session)
+
     const scout = await prisma.scout.findFirst({
-      where: { id, paroisseId: session.user.paroisseId },
+      where: { id, paroisseId },
       select: { id: true, nom: true, prenom: true, matricule: true, utilisateurId: true },
     })
 
@@ -76,7 +79,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           telephone: telephone?.trim() || null,
           role: 'SCOUT',
           password: passwordHache,
-          paroisseId: session.user.paroisseId,
+          paroisseId,
         },
         select: {
           id: true,

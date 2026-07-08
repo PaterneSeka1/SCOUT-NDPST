@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { ROLES_TOUT_STAFF, ROLES_BRANCHE } from '@/lib/roles'
 import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { TypeActiviteSchema, BrancheTypeSchema } from '@/lib/validation'
+import { paroisseIdRequise } from '@/lib/session'
 
 export async function GET(
   request: NextRequest,
@@ -18,11 +19,12 @@ export async function GET(
     return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
   }
 
+  const paroisseId = paroisseIdRequise(session)
   const { id } = await params
 
   let brancheRequise: string | undefined
   if (ROLES_BRANCHE.includes(session.user.role)) {
-    const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+    const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
     if (!bt) return NextResponse.json({ error: 'Activité introuvable' }, { status: 404 })
     brancheRequise = bt
   }
@@ -30,7 +32,7 @@ export async function GET(
   const activite = await prisma.activite.findFirst({
     where: {
       id,
-      paroisseId: session.user.paroisseId,
+      paroisseId,
       ...(brancheRequise ? { OR: [{ brancheType: brancheRequise as never }, { brancheType: null }] } : {}),
     },
     include: {
@@ -57,6 +59,7 @@ export async function PUT(
     return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
   }
 
+  const paroisseId = paroisseIdRequise(session)
   const { id } = await params
 
   // Un responsable de branche ne peut modifier que les activités de sa propre
@@ -64,7 +67,7 @@ export async function PUT(
   // une autre branche.
   let brancheUtilisateur: string | undefined
   if (ROLES_BRANCHE.includes(session.user.role)) {
-    const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+    const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
     if (!bt) return NextResponse.json({ error: 'Activité introuvable' }, { status: 404 })
     brancheUtilisateur = bt
   }
@@ -72,7 +75,7 @@ export async function PUT(
   const existante = await prisma.activite.findFirst({
     where: {
       id,
-      paroisseId: session.user.paroisseId,
+      paroisseId,
       ...(brancheUtilisateur ? { OR: [{ brancheType: brancheUtilisateur as never }, { brancheType: null }] } : {}),
     },
   })
@@ -125,10 +128,11 @@ export async function DELETE(
     return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
   }
 
+  const paroisseId = paroisseIdRequise(session)
   const { id } = await params
 
   const existante = await prisma.activite.findFirst({
-    where: { id, paroisseId: session.user.paroisseId },
+    where: { id, paroisseId },
   })
 
   if (!existante) {
@@ -136,7 +140,7 @@ export async function DELETE(
   }
 
   const peutSupprimer =
-    existante.creePar === session.user.id || session.user.role === 'ADMIN_PAROISSE'
+    existante.creePar === session.user.id || session.user.role === 'CHEF_GROUPE'
 
   if (!peutSupprimer) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })

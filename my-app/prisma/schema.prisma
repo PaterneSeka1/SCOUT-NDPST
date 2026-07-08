@@ -23,7 +23,8 @@ enum BrancheType {
 }
 
 enum RoleUtilisateur {
-  ADMIN_PAROISSE
+  ADMIN_PLATEFORME // Rôle global, transverse à toutes les paroisses (paroisseId = null)
+  ADMIN_PAROISSE // Déprécié — conservé uniquement pour compatibilité avec les données existantes, ne plus jamais assigner
   CHEF_GROUPE
   ADJOINT_GROUPE
   ASSISTANT_GROUPE
@@ -108,6 +109,15 @@ model Paroisse {
   telephone String?
   email     String?  @unique
   logo      String? // URL ou chemin vers le logo
+  actif     Boolean  @default(true) // Paroisse désactivée = accès bloqué pour ses utilisateurs
+
+  // Identité visuelle propre à la paroisse, visible par ses utilisateurs connectés.
+  // Null = pas personnalisée, on retombe sur les valeurs de ConfigurationPlateforme.
+  couleurPrimaire String?
+  couleurAccent   String?
+  couleurFond     String?
+  couleurHover    String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -128,6 +138,31 @@ model Paroisse {
 }
 
 // ---------------------------------------------------------------------------
+// Configuration plateforme — identité visuelle commune à toutes les paroisses
+// (page d'accueil et de connexion, avant qu'on sache à quelle paroisse un
+// visiteur appartient). Ligne unique (id fixe "platform"), gérée exclusivement
+// par ADMIN_PLATEFORME. Remplace l'ancien fichier config/site.json.
+// ---------------------------------------------------------------------------
+
+model ConfigurationPlateforme {
+  id              String   @id @default("platform")
+  nomSite         String   @default("SCOUT ASCCI")
+  sousTitreSite   String   @default("Côte d'Ivoire")
+  logoUrl         String?
+  couleurPrimaire String   @default("#1a4731")
+  couleurAccent   String   @default("#27ae60")
+  couleurFond     String   @default("#0f2418")
+  couleurHover    String   @default("#27ae60")
+  heroBadge       String?
+  heroTitre       String?
+  heroSousTitre   String?
+  heroImageUrl    String?
+  heroImageAlt    String?
+  stats           Json?
+  updatedAt       DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
 // Utilisateur
 // ---------------------------------------------------------------------------
 
@@ -145,9 +180,11 @@ model Utilisateur {
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
 
-  // Clé étrangère
-  paroisseId String
-  paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
+  // Clé étrangère — nulle uniquement pour ADMIN_PLATEFORME (rôle transverse, non
+  // rattaché à une paroisse). Contrainte CHECK ajoutée en migration pour garantir
+  // cette cohérence au niveau base (voir migration correspondante).
+  paroisseId String?
+  paroisse   Paroisse? @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
 
   // Relations
   posteGroupe                 PosteGroupe?
@@ -646,8 +683,10 @@ model JournalAudit {
   details   Json?
   createdAt DateTime @default(now())
 
-  paroisseId String
-  paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Cascade)
+  // Nulle pour les actions de portée plateforme (gestion des paroisses, branding
+  // commun...) qui n'ont pas de paroisse naturelle à qui être rattachées.
+  paroisseId String?
+  paroisse   Paroisse? @relation(fields: [paroisseId], references: [id], onDelete: Cascade)
 
   acteurId String?
   acteur   Utilisateur? @relation(fields: [acteurId], references: [id], onDelete: SetNull)

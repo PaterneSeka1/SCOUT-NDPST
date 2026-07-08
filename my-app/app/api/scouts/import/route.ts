@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { BrancheType, Sexe } from '@/app/generated/prisma/client'
 import { ROLES_TOUT_STAFF as ROLES_AUTORISES } from '@/lib/roles'
 import { logger } from '@/lib/logger'
+import { paroisseIdRequise } from '@/lib/session'
 
 const MAX_LIGNES = 500
 
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Maximum ${MAX_LIGNES} lignes par import` }, { status: 400 })
     }
 
-    const paroisseId = session.user.paroisseId
+    const paroisseId = paroisseIdRequise(session)
     const matriculesVus = new Set<string>()
     const resultats: ResultatLigne[] = []
 

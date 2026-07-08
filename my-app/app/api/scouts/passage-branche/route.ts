@@ -7,6 +7,7 @@ import { ROLES_GROUPE } from '@/lib/roles'
 import { BrancheTypeSchema } from '@/lib/validation'
 import { calculerAge, brancheSelonAge } from '@/lib/branches'
 import { BrancheType } from '@/app/generated/prisma/client'
+import { paroisseIdRequise } from '@/lib/session'
 
 // GET — calcule, pour chaque scout actif, la branche correspondant à son âge
 // à la date de référence, et propose un changement si elle diffère de la
@@ -26,8 +27,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ erreur: 'Date de référence invalide' }, { status: 400 })
     }
 
+    const paroisseId = paroisseIdRequise(session)
+
     const scouts = await prisma.scout.findMany({
-      where: { paroisseId: session.user.paroisseId, actif: true },
+      where: { paroisseId, actif: true },
       select: { id: true, nom: true, prenom: true, matricule: true, dateNaissance: true, brancheType: true },
       orderBy: [{ brancheType: 'asc' }, { nom: 'asc' }],
     })
@@ -94,10 +97,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const paroisseId = paroisseIdRequise(session)
+
     // Vérifie que tous les scouts appartiennent bien à la paroisse de l'appelant.
     const scoutIds = passages.map((p) => p.scoutId!)
     const scoutsAutorises = await prisma.scout.count({
-      where: { id: { in: scoutIds }, paroisseId: session.user.paroisseId },
+      where: { id: { in: scoutIds }, paroisseId },
     })
     if (scoutsAutorises !== scoutIds.length) {
       return NextResponse.json({ erreur: 'Un ou plusieurs scouts sont introuvables' }, { status: 404 })

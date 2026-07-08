@@ -1,35 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { readFile, writeFile } from 'fs/promises'
-import path from 'path'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { ROLES_GROUPE as ROLES_AUTORISES } from '@/lib/roles'
+import { prisma } from '@/lib/prisma'
+import { ROLES_PLATEFORME } from '@/lib/roles'
 import { estUrlFichierValide } from '@/lib/validation'
+import { estCouleurHexValide } from '@/lib/theme'
 import { urlPubliqueBase } from '@/lib/storage'
 
-const CONFIG_PATH = path.join(process.cwd(), 'config', 'site.json')
+// Identité visuelle commune à toutes les paroisses (page d'accueil, page de
+// connexion — avant qu'on sache à quelle paroisse un visiteur appartient).
+// Stockée en base (ConfigurationPlateforme, ligne unique id="platform") plutôt
+// que dans un fichier : gérée exclusivement par ADMIN_PLATEFORME.
 
-// Les couleurs du thème sont injectées telles quelles dans une balise <style>
-// côté layout (dangerouslySetInnerHTML) : sans ce contrôle strict, une valeur
-// comme "#fff} </style><script>…</script>" permettrait une injection HTML/JS
-// stockée, visible par tous les visiteurs du site.
-const COULEUR_HEX_REGEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
-function estCouleurHexValide(valeur: unknown): valeur is string {
-  return typeof valeur === 'string' && COULEUR_HEX_REGEX.test(valeur)
+type SiteConfigJSON = {
+  logoSite: string
+  nomSite: string
+  sousTitreSite: string
+  theme: { couleurPrimaire: string; couleurAccent: string; couleurFond: string; couleurHover: string }
+  hero: { imageUrl: string; imageAlt: string; badge: string; titre: string; sousTitre: string }
+  stats: { value: string; label: string }[]
+}
+
+async function chargerConfig() {
+  return prisma.configurationPlateforme.upsert({
+    where: { id: 'platform' },
+    create: { id: 'platform' },
+    update: {},
+  })
+}
+
+function versJSON(cfg: Awaited<ReturnType<typeof chargerConfig>>): SiteConfigJSON {
+  return {
+    logoSite: cfg.logoUrl ?? '',
+    nomSite: cfg.nomSite,
+    sousTitreSite: cfg.sousTitreSite,
+    theme: {
+      couleurPrimaire: cfg.couleurPrimaire,
+      couleurAccent: cfg.couleurAccent,
+      couleurFond: cfg.couleurFond,
+      couleurHover: cfg.couleurHover,
+    },
+    hero: {
+      imageUrl: cfg.heroImageUrl ?? '',
+      imageAlt: cfg.heroImageAlt ?? '',
+      badge: cfg.heroBadge ?? '',
+      titre: cfg.heroTitre ?? '',
+      sousTitre: cfg.heroSousTitre ?? '',
+    },
+    stats: (cfg.stats as SiteConfigJSON['stats'] | null) ?? [],
+  }
 }
 
 export async function GET() {
-  try {
-    const raw = await readFile(CONFIG_PATH, 'utf-8')
-    return NextResponse.json(JSON.parse(raw))
-  } catch {
-    return NextResponse.json({ erreur: 'Configuration introuvable' }, { status: 404 })
-  }
+  const cfg = await chargerConfig()
+  return NextResponse.json(versJSON(cfg))
 }
 
 export async function PUT(req: NextRequest) {
   const session = await getServerSession(authOptions)
-  if (!session || !ROLES_AUTORISES.includes(session.user.role)) {
+  if (!session || !ROLES_PLATEFORME.includes(session.user.role)) {
     return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
   }
 
@@ -44,42 +73,46 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ erreur: 'Données invalides' }, { status: 400 })
   }
 
-  const data = body as Record<string, unknown>
-
+  const data = body as Partial<SiteConfigJSON>
   const origineStockage = urlPubliqueBase()
 
-  if ('logoSite' in data && data.logoSite && !estUrlFichierValide(data.logoSite, origineStockage)) {
+  if (data.logoSite && !estUrlFichierValide(data.logoSite, origineStockage)) {
     return NextResponse.json({ erreur: 'logoSite doit être un chemin local (ex : /uploads/…) ou une URL de stockage autorisée' }, { status: 400 })
   }
 
-  if ('hero' in data && typeof data.hero === 'object' && data.hero !== null) {
-    const hero = data.hero as Record<string, unknown>
-    if ('imageUrl' in hero && hero.imageUrl && !estUrlFichierValide(hero.imageUrl, origineStockage)) {
-      return NextResponse.json({ erreur: 'hero.imageUrl doit être un chemin local (ex : /uploads/…) ou une URL de stockage autorisée' }, { status: 400 })
-    }
+  if (data.hero?.imageUrl && !estUrlFichierValide(data.hero.imageUrl, origineStockage)) {
+    return NextResponse.json({ erreur: 'hero.imageUrl doit être un chemin local (ex : /uploads/…) ou une URL de stockage autorisée' }, { status: 400 })
   }
 
-  if ('theme' in data && typeof data.theme === 'object' && data.theme !== null) {
-    const theme = data.theme as Record<string, unknown>
-    const CHAMPS_COULEUR = ['couleurPrimaire', 'couleurAccent', 'couleurFond', 'couleurHover']
-    for (const champ of CHAMPS_COULEUR) {
-      if (champ in theme && !estCouleurHexValide(theme[champ])) {
+  if (data.theme) {
+    for (const [champ, valeur] of Object.entries(data.theme)) {
+      if (!estCouleurHexValide(valeur)) {
         return NextResponse.json({ erreur: `${champ} doit être une couleur hexadécimale valide (ex : #1a4731)` }, { status: 400 })
       }
     }
   }
 
-  // Lecture config existante pour ne modifier que ce qui est transmis
-  let existing: Record<string, unknown> = {}
-  try {
-    const raw = await readFile(CONFIG_PATH, 'utf-8')
-    existing = JSON.parse(raw)
-  } catch {
-    // Si absent, on repart de zéro
+  const champs = {
+    ...(data.nomSite !== undefined ? { nomSite: data.nomSite } : {}),
+    ...(data.sousTitreSite !== undefined ? { sousTitreSite: data.sousTitreSite } : {}),
+    ...(data.logoSite !== undefined ? { logoUrl: data.logoSite || null } : {}),
+    ...(data.theme?.couleurPrimaire !== undefined ? { couleurPrimaire: data.theme.couleurPrimaire } : {}),
+    ...(data.theme?.couleurAccent !== undefined ? { couleurAccent: data.theme.couleurAccent } : {}),
+    ...(data.theme?.couleurFond !== undefined ? { couleurFond: data.theme.couleurFond } : {}),
+    ...(data.theme?.couleurHover !== undefined ? { couleurHover: data.theme.couleurHover } : {}),
+    ...(data.hero?.badge !== undefined ? { heroBadge: data.hero.badge || null } : {}),
+    ...(data.hero?.titre !== undefined ? { heroTitre: data.hero.titre || null } : {}),
+    ...(data.hero?.sousTitre !== undefined ? { heroSousTitre: data.hero.sousTitre || null } : {}),
+    ...(data.hero?.imageUrl !== undefined ? { heroImageUrl: data.hero.imageUrl || null } : {}),
+    ...(data.hero?.imageAlt !== undefined ? { heroImageAlt: data.hero.imageAlt || null } : {}),
+    ...(data.stats !== undefined ? { stats: data.stats } : {}),
   }
 
-  const updated = { ...existing, ...data }
+  const updated = await prisma.configurationPlateforme.upsert({
+    where: { id: 'platform' },
+    create: { id: 'platform', ...champs },
+    update: champs,
+  })
 
-  await writeFile(CONFIG_PATH, JSON.stringify(updated, null, 2), 'utf-8')
-  return NextResponse.json(updated)
+  return NextResponse.json(versJSON(updated))
 }

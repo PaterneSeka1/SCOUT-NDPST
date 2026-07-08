@@ -6,7 +6,7 @@ declare module 'next-auth' {
       id: string
       matricule: string | null
       role: string
-      paroisseId: string
+      paroisseId: string | null
       nom: string
       prenom: string
     } & DefaultSession['user']
@@ -16,7 +16,7 @@ declare module 'next-auth' {
     id: string
     matricule: string | null
     role: string
-    paroisseId: string
+    paroisseId: string | null
     nom: string
     prenom: string
   }
@@ -27,7 +27,7 @@ declare module 'next-auth/jwt' {
     id: string
     matricule: string | null
     role: string
-    paroisseId: string
+    paroisseId: string | null
     nom: string
     prenom: string
   }

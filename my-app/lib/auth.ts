@@ -61,10 +61,17 @@ export const authOptions: NextAuthOptions = {
             paroisseId: true,
             password: true,
             actif: true,
+            paroisse: { select: { actif: true } },
           },
         })
 
         if (!utilisateur || !utilisateur.actif) {
+          return null
+        }
+
+        // Une paroisse désactivée bloque la connexion de tout son personnel
+        // (sans affecter ADMIN_PLATEFORME, qui n'a pas de paroisse).
+        if (utilisateur.paroisse && !utilisateur.paroisse.actif) {
           return null
         }
 

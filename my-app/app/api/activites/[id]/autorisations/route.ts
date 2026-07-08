@@ -6,6 +6,7 @@ import { TypeAutorisationCamp } from '@/app/generated/prisma/client'
 import { ROLES_TOUT_STAFF as ROLES_STAFF } from '@/lib/roles'
 import { estCheminLocalValide } from '@/lib/validation'
 import { logger } from '@/lib/logger'
+import { paroisseIdRequise } from '@/lib/session'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -29,11 +30,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
+    const paroisseId = paroisseIdRequise(session)
 
     const { id: activiteId } = await params
 
     const activite = await prisma.activite.findFirst({
-      where: { id: activiteId, paroisseId: session.user.paroisseId },
+      where: { id: activiteId, paroisseId },
     })
     if (!activite) return NextResponse.json({ erreur: 'Activité introuvable' }, { status: 404 })
     if (activite.type !== 'CAMP') {
@@ -60,11 +62,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     const scout = await prisma.scout.findFirst({
-      where: { id: scoutId, paroisseId: session.user.paroisseId },
+      where: { id: scoutId, paroisseId },
     })
     if (!scout) return NextResponse.json({ erreur: 'Scout introuvable' }, { status: 404 })
 
-    if (!(await peutAgirSurScout(session.user.role, session.user.id, session.user.paroisseId, scoutId))) {
+    if (!(await peutAgirSurScout(session.user.role, session.user.id, paroisseId, scoutId))) {
       return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
     }
 
@@ -98,11 +100,12 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
+    const paroisseId = paroisseIdRequise(session)
 
     const { id: activiteId } = await params
 
     const activite = await prisma.activite.findFirst({
-      where: { id: activiteId, paroisseId: session.user.paroisseId },
+      where: { id: activiteId, paroisseId },
     })
     if (!activite) return NextResponse.json({ erreur: 'Activité introuvable' }, { status: 404 })
 

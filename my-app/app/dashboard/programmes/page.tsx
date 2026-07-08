@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { ROLES_GROUPE, ROLES_BRANCHE } from '@/lib/roles'
 
 const BRANCHES: Record<string, string> = {
   OISILLONS: 'Oisillons', LOUVETEAUX: 'Louveteaux', ECLAIREURS: 'Éclaireurs',
@@ -16,9 +17,6 @@ const COULEURS_BRANCHE: Record<string, string> = {
   CHEMINOTS: 'bg-orange-100 text-orange-800',
   COMPAGNONS: 'bg-purple-100 text-purple-800',
 }
-
-const ROLES_GROUPE = ['ADMIN_PAROISSE', 'CHEF_GROUPE']
-const ROLES_BRANCHE = ['RESPONSABLE_BRANCHE', 'ADJOINT_BRANCHE', 'ASSISTANT_BRANCHE']
 
 interface Programme {
   id: string

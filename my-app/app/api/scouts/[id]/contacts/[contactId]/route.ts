@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_TOUT_STAFF as ROLES_AUTORISES } from '@/lib/roles'
 import { logger } from '@/lib/logger'
+import { paroisseIdRequise } from '@/lib/session'
 
 type RouteParams = { params: Promise<{ id: string; contactId: string }> }
 
@@ -21,9 +22,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const { id, contactId } = await params
 
+    const paroisseId = paroisseIdRequise(session)
+
     // Vérifier que le scout appartient à la paroisse
     const scout = await prisma.scout.findFirst({
-      where: { id, paroisseId: session.user.paroisseId },
+      where: { id, paroisseId },
       select: { id: true },
     })
 
@@ -88,9 +91,11 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 
     const { id, contactId } = await params
 
+    const paroisseId = paroisseIdRequise(session)
+
     // Vérifier que le scout appartient à la paroisse
     const scout = await prisma.scout.findFirst({
-      where: { id, paroisseId: session.user.paroisseId },
+      where: { id, paroisseId },
       select: { id: true },
     })
 

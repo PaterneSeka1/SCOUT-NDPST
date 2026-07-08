@@ -11,6 +11,7 @@ import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 import { envoyerEmailBienvenue } from '@/lib/notifications'
 import { LABELS_ROLES } from '@/lib/roles'
+import { paroisseIdRequise } from '@/lib/session'
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,15 +32,11 @@ export async function GET(request: NextRequest) {
     const role = roleParam && RoleUtilisateurSchema.safeParse(roleParam).success ? roleParam : undefined
     const recherche = searchParams.get('recherche') ?? undefined
 
-    const paroisseId = session.user.paroisseId
-
-    // Exclure l'utilisateur connecté et les admins si on est chef de groupe
-    const exclusions: Prisma.UtilisateurWhereInput[] = [{ id: session.user.id }]
-    if (session.user.role === 'CHEF_GROUPE') exclusions.push({ role: 'ADMIN_PAROISSE' })
+    const paroisseId = paroisseIdRequise(session)
 
     const where: Prisma.UtilisateurWhereInput = {
       paroisseId,
-      NOT: exclusions.length === 1 ? exclusions[0] : { OR: exclusions },
+      NOT: { id: session.user.id },
       ...(role ? { role: role as RoleUtilisateur } : {}),
       ...(recherche
         ? {
@@ -89,7 +86,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
-    if (session.user.role !== 'ADMIN_PAROISSE') {
+    if (!ROLES_AUTORISES.includes(session.user.role)) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 
@@ -119,6 +116,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Rôle invalide' }, { status: 400 })
     }
 
+    // Un admin plateforme (transverse, sans paroisse) ne se crée jamais via
+    // cette route — uniquement via la bascule de compte ou un accès base directe.
+    if (role === 'ADMIN_PLATEFORME' || role === 'ADMIN_PAROISSE') {
+      return NextResponse.json({ error: 'Rôle invalide' }, { status: 400 })
+    }
+
     const estParent = role === 'PARENT'
 
     if (estParent && !telephone?.trim()) {
@@ -135,7 +138,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const paroisseId = session.user.paroisseId
+    const paroisseId = paroisseIdRequise(session)
 
     if (matricule?.trim()) {
       const existingByMatricule = await prisma.utilisateur.findUnique({

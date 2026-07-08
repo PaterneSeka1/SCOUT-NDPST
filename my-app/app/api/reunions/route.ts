@@ -6,12 +6,14 @@ import { ROLES_GROUPE, ROLES_BRANCHE, ROLES_TOUT_STAFF as ROLES_LECTURE } from '
 import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { BrancheTypeSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
+import { paroisseIdRequise } from '@/lib/session'
 
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
     if (!ROLES_LECTURE.includes(session.user.role)) return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
+    const paroisseId = paroisseIdRequise(session)
 
     const { searchParams } = new URL(req.url)
     const branche = searchParams.get('branche') ?? undefined
@@ -23,7 +25,7 @@ export async function GET(req: NextRequest) {
     // à contourner la restriction.
     let filtreBranche = branche
     if (ROLES_BRANCHE.includes(session.user.role)) {
-      const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+      const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
       // Compte mal configuré (rôle de branche sans PosteBranche assigné) :
       // aucun résultat plutôt que la paroisse entière par défaut.
       if (!bt) return NextResponse.json([])
@@ -32,7 +34,7 @@ export async function GET(req: NextRequest) {
 
     const reunions = await prisma.jourReunion.findMany({
       where: {
-        paroisseId: session.user.paroisseId,
+        paroisseId,
         ...(filtreBranche ? { brancheType: filtreBranche as any } : {}),
         ...(statut ? { statut: statut as any } : {}),
       },
@@ -58,6 +60,7 @@ export async function POST(req: NextRequest) {
     const estGroupe = ROLES_GROUPE.includes(session.user.role)
     const estBranche = ROLES_BRANCHE.includes(session.user.role)
     if (!estGroupe && !estBranche) return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
+    const paroisseId = paroisseIdRequise(session)
 
     const body = await req.json()
     const { dates, brancheType, titre, lieu, dureeMinutes, notes } = body as {
@@ -78,7 +81,7 @@ export async function POST(req: NextRequest) {
     // Un chef de branche ne peut créer que pour sa propre branche
     let brancheEffective: string | null = brancheType ?? null
     if (estBranche) {
-      const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+      const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
       if (!bt) return NextResponse.json({ erreur: 'Aucune branche assignée' }, { status: 403 })
       brancheEffective = bt
     }
@@ -87,7 +90,7 @@ export async function POST(req: NextRequest) {
       dates.map((d) =>
         prisma.jourReunion.create({
           data: {
-            paroisseId: session.user.paroisseId,
+            paroisseId,
             creePar: session.user.id,
             dateHeure: new Date(d),
             brancheType: brancheEffective as any ?? null,

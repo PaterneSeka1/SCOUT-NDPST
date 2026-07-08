@@ -1,7 +1,5 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { readFile } from 'fs/promises'
-import path from 'path'
 import { prisma } from '@/lib/prisma'
 import { ParoisseLogoImage } from '@/app/components/ParoisseLogoImage'
 
@@ -37,29 +35,25 @@ const DEFAULT_CONFIG: SiteConfig = {
   ],
 }
 
-async function getSiteConfig(): Promise<SiteConfig> {
-  try {
-    const configPath = path.join(process.cwd(), 'config', 'site.json')
-    const raw = await readFile(configPath, 'utf-8')
-    return JSON.parse(raw) as SiteConfig
-  } catch {
-    return DEFAULT_CONFIG
-  }
-}
+// Identité de la PLATEFORME (pas d'une paroisse en particulier) : un visiteur
+// non connecté n'a aucun moyen d'indiquer à quelle paroisse il appartient.
+async function getSiteConfig(): Promise<SiteConfig & { logoUrl: string | null }> {
+  const cfg = await prisma.configurationPlateforme.findUnique({ where: { id: 'platform' } })
+  if (!cfg) return { ...DEFAULT_CONFIG, logoUrl: null }
 
-async function getParoisseLogo(): Promise<string | null> {
-  // Priorité 1 : logo paroisse depuis la BDD
-  try {
-    const p = await prisma.paroisse.findFirst({ select: { logo: true }, orderBy: { createdAt: 'asc' } })
-    if (p?.logo) return p.logo
-  } catch { }
-  // Priorité 2 : logoSite depuis la config
-  try {
-    const raw = await readFile(path.join(process.cwd(), 'config', 'site.json'), 'utf-8')
-    const cfg = JSON.parse(raw)
-    return cfg.logoSite || null
-  } catch { }
-  return null
+  return {
+    nomSite: cfg.nomSite,
+    sousTitreSite: cfg.sousTitreSite,
+    logoUrl: cfg.logoUrl,
+    hero: {
+      imageUrl: cfg.heroImageUrl || DEFAULT_CONFIG.hero.imageUrl,
+      imageAlt: cfg.heroImageAlt || DEFAULT_CONFIG.hero.imageAlt,
+      badge: cfg.heroBadge || DEFAULT_CONFIG.hero.badge,
+      titre: cfg.heroTitre || DEFAULT_CONFIG.hero.titre,
+      sousTitre: cfg.heroSousTitre || DEFAULT_CONFIG.hero.sousTitre,
+    },
+    stats: (cfg.stats as SiteConfig['stats'] | null) ?? DEFAULT_CONFIG.stats,
+  }
 }
 
 const modules = [
@@ -99,8 +93,8 @@ const steps = [
 ]
 
 export default async function Home() {
-  const [config, logoUrl] = await Promise.all([getSiteConfig(), getParoisseLogo()])
-  const { hero, stats } = config
+  const config = await getSiteConfig()
+  const { hero, stats, logoUrl } = config
   const nomSite = config.nomSite ?? 'SCOUT ASCCI'
   const sousTitreSite = config.sousTitreSite ?? "Côte d'Ivoire"
   const isSvg = hero.imageUrl.endsWith('.svg')

@@ -1,16 +1,25 @@
 'use client'
 
 import { useParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useScout } from '@/hooks/useScouts'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { QRCodeScout } from '@/app/components/QRCodeScout'
-import { useSiteInfo } from '@/app/components/useSiteInfo'
 
 export default function CarteScoutPage() {
   const { id } = useParams<{ id: string }>()
   const { data: scout, isLoading } = useScout(id)
-  const { nomSite } = useSiteInfo()
+  // Nom de la PAROISSE (pas de la plateforme) : une carte de membre porte
+  // l'identité de qui la délivre.
+  const [nomParoisse, setNomParoisse] = useState('')
+
+  useEffect(() => {
+    fetch('/api/paroisse')
+      .then((r) => r.json())
+      .then((data) => { if (data.nom) setNomParoisse(data.nom) })
+      .catch(() => {})
+  }, [])
 
   if (isLoading) return (
     <div className="flex items-center justify-center h-48">
@@ -36,7 +45,7 @@ export default function CarteScoutPage() {
 
       <div className="flex justify-center">
         <div className="w-80 bg-white border-2 border-[#1a4731] rounded-2xl p-6 text-center space-y-3 shadow-sm">
-          <p className="text-xs font-semibold text-[#1a4731] uppercase tracking-wide">{nomSite}</p>
+          <p className="text-xs font-semibold text-[#1a4731] uppercase tracking-wide">{nomParoisse}</p>
           <div className="w-20 h-20 mx-auto rounded-full bg-[#1a4731]/10 flex items-center justify-center overflow-hidden">
             {scout.photo ? (
               <img src={scout.photo} alt="" className="w-full h-full object-cover" />

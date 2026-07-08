@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_BRANCHE, ROLES_GESTION } from '@/lib/roles'
 import { logger } from '@/lib/logger'
+import { paroisseIdRequise } from '@/lib/session'
 
 type RouteParams = { params: Promise<{ id: string; ligneId: string }> }
 
@@ -44,9 +45,10 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     const session = await getServerSession(authOptions)
     if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
     if (!ROLES_GESTION.includes(session.user.role)) return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
+    const paroisseId = paroisseIdRequise(session)
 
     const { id: programmeId, ligneId } = await params
-    const verif = await chargerLigneAutorisee(programmeId, ligneId, session.user.role, session.user.id, session.user.paroisseId)
+    const verif = await chargerLigneAutorisee(programmeId, ligneId, session.user.role, session.user.id, paroisseId)
     if ('erreur' in verif) return NextResponse.json({ erreur: verif.erreur }, { status: verif.statut })
 
     const body = await req.json()
@@ -60,7 +62,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
     if (activiteId) {
       const activite = await prisma.activite.findFirst({
-        where: { id: activiteId, paroisseId: session.user.paroisseId },
+        where: { id: activiteId, paroisseId },
       })
       if (!activite) return NextResponse.json({ erreur: 'Activité introuvable' }, { status: 400 })
     }
@@ -89,9 +91,10 @@ export async function DELETE(_req: NextRequest, { params }: RouteParams) {
     const session = await getServerSession(authOptions)
     if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
     if (!ROLES_GESTION.includes(session.user.role)) return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
+    const paroisseId = paroisseIdRequise(session)
 
     const { id: programmeId, ligneId } = await params
-    const verif = await chargerLigneAutorisee(programmeId, ligneId, session.user.role, session.user.id, session.user.paroisseId)
+    const verif = await chargerLigneAutorisee(programmeId, ligneId, session.user.role, session.user.id, paroisseId)
     if ('erreur' in verif) return NextResponse.json({ erreur: verif.erreur }, { status: verif.statut })
 
     await prisma.ligneProgramme.delete({ where: { id: ligneId } })

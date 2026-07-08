@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_TOUT_STAFF } from '@/lib/roles'
+import { paroisseIdRequise } from '@/lib/session'
 
 export async function GET(
   request: NextRequest,
@@ -15,11 +16,12 @@ export async function GET(
   if (!ROLES_TOUT_STAFF.includes(session.user.role)) {
     return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
   }
+  const paroisseId = paroisseIdRequise(session)
 
   const { id } = await params
 
   const activite = await prisma.activite.findFirst({
-    where: { id, paroisseId: session.user.paroisseId },
+    where: { id, paroisseId },
   })
 
   if (!activite) {
@@ -60,7 +62,7 @@ export async function GET(
 
   // Si aucune présence n'existe encore, retourner tous les scouts de la branche concernée
   if (presences.length === 0) {
-    const whereScout: Record<string, unknown> = { paroisseId: session.user.paroisseId, actif: true }
+    const whereScout: Record<string, unknown> = { paroisseId, actif: true }
     if (activite.brancheType) {
       whereScout.brancheType = activite.brancheType
     }
@@ -92,11 +94,12 @@ export async function POST(
   if (!ROLES_TOUT_STAFF.includes(session.user.role)) {
     return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
   }
+  const paroisseId = paroisseIdRequise(session)
 
   const { id } = await params
 
   const activite = await prisma.activite.findFirst({
-    where: { id, paroisseId: session.user.paroisseId },
+    where: { id, paroisseId },
   })
 
   if (!activite) {

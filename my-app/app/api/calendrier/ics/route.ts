@@ -5,6 +5,7 @@ import { limiterTaux } from '@/lib/rateLimit'
 import { ROLES_BRANCHE } from '@/lib/roles'
 import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { logger } from '@/lib/logger'
+import { paroisseIdRequise } from '@/lib/session'
 
 const FENETRE_PASSEE_JOURS = 30
 const FENETRE_FUTURE_JOURS = 180
@@ -33,10 +34,11 @@ export async function GET(req: NextRequest) {
     if (!utilisateur || !utilisateur.actif) {
       return NextResponse.json({ erreur: 'Jeton invalide' }, { status: 404 })
     }
+    const paroisseId = paroisseIdRequise({ user: utilisateur })
 
     let filtreBranche: string | null = null
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
-      filtreBranche = await getBrancheUtilisateur(utilisateur.id, utilisateur.paroisseId)
+      filtreBranche = await getBrancheUtilisateur(utilisateur.id, paroisseId)
       // Compte mal configuré (rôle de branche sans PosteBranche assigné) :
       // flux vide plutôt que toute la paroisse par défaut.
       if (!filtreBranche) {
@@ -58,7 +60,7 @@ export async function GET(req: NextRequest) {
     const [activites, reunions] = await Promise.all([
       prisma.activite.findMany({
         where: {
-          paroisseId: utilisateur.paroisseId,
+          paroisseId,
           dateDebut: { gte: debut, lt: fin },
           ...(filtreBranche ? { OR: [{ brancheType: filtreBranche as never }, { brancheType: null }] } : {}),
         },
@@ -66,7 +68,7 @@ export async function GET(req: NextRequest) {
       }),
       prisma.jourReunion.findMany({
         where: {
-          paroisseId: utilisateur.paroisseId,
+          paroisseId,
           dateHeure: { gte: debut, lt: fin },
           ...(filtreBranche ? { OR: [{ brancheType: filtreBranche as never }, { brancheType: null }] } : {}),
         },

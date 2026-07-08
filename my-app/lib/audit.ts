@@ -5,7 +5,9 @@ import type { Prisma } from '@/app/generated/prisma/client'
 export { LABELS_ACTIONS_AUDIT } from './audit-labels'
 
 interface EntreeAudit {
-  paroisseId: string
+  // Null pour les actions de portée plateforme (gestion des paroisses,
+  // branding commun...) qui n'ont pas de paroisse naturelle à qui être rattachées.
+  paroisseId: string | null
   acteurId?: string | null
   action: string
   entite: string

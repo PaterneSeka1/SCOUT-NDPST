@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { ROLES_GROUPE, ROLES_BRANCHE } from '@/lib/roles'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_LABEL = 'block text-xs font-medium text-gray-600 mb-1'
@@ -20,9 +21,6 @@ const COULEURS_BRANCHE: Record<string, string> = {
   CHEMINOTS: 'bg-orange-100 text-orange-800',
   COMPAGNONS: 'bg-purple-100 text-purple-800',
 }
-
-const ROLES_GROUPE = ['ADMIN_PAROISSE', 'CHEF_GROUPE']
-const ROLES_BRANCHE = ['RESPONSABLE_BRANCHE', 'ADJOINT_BRANCHE', 'ASSISTANT_BRANCHE']
 
 interface Ligne {
   id: string

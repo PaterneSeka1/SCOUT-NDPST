@@ -8,6 +8,7 @@ import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { estCheminLocalValide } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
+import { paroisseIdRequise } from '@/lib/session'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -25,10 +26,12 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
     const { id } = await params
 
+    const paroisseId = paroisseIdRequise(session)
+
     // Un responsable de branche ne peut consulter que les scouts de sa propre branche.
     let brancheRequise: string | undefined
     if (ROLES_BRANCHE.includes(session.user.role)) {
-      const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+      const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
       if (!bt) return NextResponse.json({ error: 'Scout introuvable' }, { status: 404 })
       brancheRequise = bt
     }
@@ -36,7 +39,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     const scout = await prisma.scout.findFirst({
       where: {
         id,
-        paroisseId: session.user.paroisseId,
+        paroisseId,
         ...(brancheRequise ? { brancheType: brancheRequise as BrancheType } : {}),
       },
       include: {
@@ -101,10 +104,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const { id } = await params
 
+    const paroisseId = paroisseIdRequise(session)
+
     // Un responsable de branche ne peut modifier que les scouts de sa propre branche.
     let brancheUtilisateur: string | undefined
     if (ROLES_BRANCHE.includes(session.user.role)) {
-      const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+      const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
       if (!bt) return NextResponse.json({ error: 'Scout introuvable' }, { status: 404 })
       brancheUtilisateur = bt
     }
@@ -112,7 +117,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const existant = await prisma.scout.findFirst({
       where: {
         id,
-        paroisseId: session.user.paroisseId,
+        paroisseId,
         ...(brancheUtilisateur ? { brancheType: brancheUtilisateur as BrancheType } : {}),
       },
       select: { id: true, brancheType: true },
@@ -179,7 +184,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     if (consentementImage !== undefined) {
       await enregistrerAudit({
-        paroisseId: session.user.paroisseId,
+        paroisseId,
         acteurId: session.user.id,
         action: 'SCOUT_CONSENTEMENT_IMAGE_MODIFIE',
         entite: 'Scout',

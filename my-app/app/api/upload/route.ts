@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { ROLES_GROUPE as ROLES_PUBLICATION } from '@/lib/roles'
 import { sauvegarderFichierPublic, sauvegarderFichierPrive } from '@/lib/storage'
+import { paroisseIdRequise } from '@/lib/session'
 
 const TAILLE_MAX = 5 * 1024 * 1024 // 5 Mo
 const TYPES_AUTORISES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf']
@@ -41,6 +42,6 @@ export async function POST(req: NextRequest) {
   // Fichier privé (photo de scout, document, autorisation de camp…) : jamais
   // servi directement, cloisonné par paroisse, accessible uniquement via
   // /api/fichiers, qui vérifie la session.
-  const url = await sauvegarderFichierPrive(session.user.paroisseId, nomFichier, buffer, fichier.type)
+  const url = await sauvegarderFichierPrive(paroisseIdRequise(session), nomFichier, buffer, fichier.type)
   return NextResponse.json({ url })
 }

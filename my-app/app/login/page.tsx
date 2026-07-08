@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { signIn } from 'next-auth/react'
+import { signIn, getSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { ParoisseLogoImageAuto } from '@/app/components/ParoisseLogoImage'
@@ -34,7 +34,8 @@ export default function LoginPage() {
           : result.error,
       )
     } else {
-      router.push('/dashboard')
+      const session = await getSession()
+      router.push(session?.user?.role === 'ADMIN_PLATEFORME' ? '/admin' : '/dashboard')
     }
   }
 

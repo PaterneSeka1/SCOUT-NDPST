@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { LABELS_ROLES } from '@/lib/roles'
+import { LABELS_ROLES, ROLES_ASSIGNABLES_PAROISSE } from '@/lib/roles'
 import { useCreerUtilisateur } from '@/hooks/useUtilisateurs'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
@@ -36,7 +36,7 @@ interface FormErrors {
   confirmation?: string
 }
 
-const ROLES_LISTE = Object.keys(LABELS_ROLES)
+const ROLES_LISTE = ROLES_ASSIGNABLES_PAROISSE
 
 export default function NouvelUtilisateurPage() {
   const router = useRouter()

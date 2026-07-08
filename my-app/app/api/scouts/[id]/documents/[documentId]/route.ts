@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { ROLES_TOUT_STAFF as ROLES_AUTORISES } from '@/lib/roles'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
+import { paroisseIdRequise } from '@/lib/session'
 
 type RouteParams = { params: Promise<{ id: string; documentId: string }> }
 
@@ -22,8 +23,10 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 
     const { id, documentId } = await params
 
+    const paroisseId = paroisseIdRequise(session)
+
     const scout = await prisma.scout.findFirst({
-      where: { id, paroisseId: session.user.paroisseId },
+      where: { id, paroisseId },
       select: { id: true },
     })
 
@@ -42,7 +45,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     await prisma.document.delete({ where: { id: documentId } })
 
     await enregistrerAudit({
-      paroisseId: session.user.paroisseId,
+      paroisseId,
       acteurId: session.user.id,
       action: 'DOCUMENT_SUPPRIME',
       entite: 'Document',

@@ -20,6 +20,13 @@ export async function GET() {
   const { id: userId, role, paroisseId } = session.user
   const debut = debutDuMois()
 
+  // ADMIN_PLATEFORME (transverse, sans paroisse) n'atteint jamais ce tableau de
+  // bord en pratique (redirigé vers /admin), mais on retourne des KPI vides
+  // plutôt que de planter si la route était appelée directement.
+  if (!paroisseId) {
+    return NextResponse.json({ kpis: {}, activitesRecentes: [] })
+  }
+
   try {
     let kpis: Record<string, number | string> = {}
     let activitesRecentes: unknown[] = []
@@ -40,7 +47,7 @@ export async function GET() {
       },
     })
 
-    if (role === 'ADMIN_PAROISSE') {
+    if (role === 'CHEF_GROUPE') {
       const [scoutsActifs, activitesMois, branches, totalPresences, presencesPositives] = await Promise.all([
         prisma.scout.count({ where: { paroisseId, actif: true } }),
         prisma.activite.count({ where: { paroisseId, dateDebut: { gte: debut } } }),
@@ -60,7 +67,7 @@ export async function GET() {
         'Taux de présence': `${taux} %`,
         'Branches actives': branches.length,
       }
-    } else if (['CHEF_GROUPE', 'ADJOINT_GROUPE', 'ASSISTANT_GROUPE'].includes(role)) {
+    } else if (['ADJOINT_GROUPE', 'ASSISTANT_GROUPE'].includes(role)) {
       const [scoutsActifs, activitesMois, branches] = await Promise.all([
         prisma.scout.count({ where: { paroisseId, actif: true } }),
         prisma.activite.count({ where: { paroisseId, dateDebut: { gte: debut } } }),

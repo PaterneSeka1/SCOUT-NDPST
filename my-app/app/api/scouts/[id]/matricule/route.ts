@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { ROLES_GROUPE_ETENDU as ROLES_AUTORISES } from '@/lib/roles'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
+import { paroisseIdRequise } from '@/lib/session'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -22,8 +23,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const { id } = await params
 
+    const paroisseId = paroisseIdRequise(session)
+
     const existant = await prisma.scout.findFirst({
-      where: { id, paroisseId: session.user.paroisseId },
+      where: { id, paroisseId },
       select: { id: true, matricule: true },
     })
 
@@ -64,7 +67,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     })
 
     await enregistrerAudit({
-      paroisseId: session.user.paroisseId,
+      paroisseId,
       acteurId: session.user.id,
       action: 'SCOUT_MATRICULE_ATTRIBUE',
       entite: 'Scout',

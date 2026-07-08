@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_GROUPE } from '@/lib/roles'
 import { logger } from '@/lib/logger'
+import { paroisseIdRequise } from '@/lib/session'
 
 // GET — journal d'audit de la paroisse. Réservé à la direction du groupe :
 // c'est un registre des actions sensibles (comptes, scouts, documents…), pas
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
     const entite = searchParams.get('entite') ?? undefined
 
     const where = {
-      paroisseId: session.user.paroisseId,
+      paroisseId: paroisseIdRequise(session),
       ...(action ? { action } : {}),
       ...(entite ? { entite } : {}),
     }

@@ -8,6 +8,7 @@ import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { estCheminLocalValide } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
+import { paroisseIdRequise } from '@/lib/session'
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
     const recherche = searchParams.get('recherche') ?? undefined
     const actif = searchParams.get('actif')
 
-    const paroisseId = session.user.paroisseId
+    const paroisseId = paroisseIdRequise(session)
 
     // Les responsables de branche ne voient QUE leur branche — toute valeur
     // "branche" fournie par le client est ignorée pour ce groupe de rôles,
@@ -102,6 +103,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 
+    const paroisseId = paroisseIdRequise(session)
+
     const body = await request.json()
     const { nom, prenom, dateNaissance, sexe, brancheType, photo, allergies, traitementsMedicaux, contactsUrgence } = body as {
       nom?: string
@@ -144,7 +147,7 @@ export async function POST(request: NextRequest) {
     // Un responsable de branche ne peut inscrire un scout que dans sa propre branche.
     let brancheEffective = brancheType
     if (ROLES_BRANCHE.includes(session.user.role)) {
-      const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+      const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
       if (!bt) return NextResponse.json({ error: 'Aucune branche assignée' }, { status: 403 })
       brancheEffective = bt
     }
@@ -171,8 +174,6 @@ export async function POST(request: NextRequest) {
         )
       }
     }
-
-    const paroisseId = session.user.paroisseId
 
     // Créer le scout et ses contacts en transaction
     const scout = await prisma.$transaction(async (tx) => {

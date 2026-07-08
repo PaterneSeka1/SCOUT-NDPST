@@ -6,19 +6,9 @@ import { RoleUtilisateur } from '@/app/generated/prisma/client'
 import { ROLES_GROUPE as ROLES_AUTORISES } from '@/lib/roles'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
+import { paroisseIdRequise } from '@/lib/session'
 
 type RouteParams = { params: Promise<{ id: string }> }
-
-// Vérifie que l'utilisateur ciblé n'est pas admin (protection pour CHEF_GROUPE)
-async function cibleAutorisee(session: any, id: string): Promise<boolean> {
-  if (session.user.role === 'ADMIN_PAROISSE') return true
-  const cible = await prisma.utilisateur.findFirst({
-    where: { id, paroisseId: session.user.paroisseId },
-    select: { role: true },
-  })
-  if (!cible) return false
-  return cible.role !== 'ADMIN_PAROISSE'
-}
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   try {
@@ -26,13 +16,11 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     if (!session?.user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     if (!ROLES_AUTORISES.includes(session.user.role)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
 
+    const paroisseId = paroisseIdRequise(session)
     const { id } = await params
 
-    if (!(await cibleAutorisee(session, id)))
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
-
     const utilisateur = await prisma.utilisateur.findFirst({
-      where: { id, paroisseId: session.user.paroisseId },
+      where: { id, paroisseId },
       select: {
         id: true, nom: true, prenom: true, matricule: true,
         email: true, role: true, actif: true, paroisseId: true,
@@ -54,13 +42,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (!session?.user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     if (!ROLES_AUTORISES.includes(session.user.role)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
 
+    const paroisseId = paroisseIdRequise(session)
     const { id } = await params
 
-    if (!(await cibleAutorisee(session, id)))
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
-
     const existant = await prisma.utilisateur.findFirst({
-      where: { id, paroisseId: session.user.paroisseId },
+      where: { id, paroisseId },
       select: { id: true, role: true, actif: true },
     })
     if (!existant) return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 })
@@ -73,9 +59,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (role !== undefined && !(role in RoleUtilisateur))
       return NextResponse.json({ error: 'Rôle invalide' }, { status: 400 })
 
-    // CHEF_GROUPE ne peut pas attribuer le rôle ADMIN_PAROISSE
-    if (session.user.role === 'CHEF_GROUPE' && role === 'ADMIN_PAROISSE')
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+    // Un admin plateforme (transverse, sans paroisse) ne se promeut jamais
+    // depuis cette route, quel que soit qui l'appelle.
+    if (role === 'ADMIN_PLATEFORME' || role === 'ADMIN_PAROISSE')
+      return NextResponse.json({ error: 'Rôle invalide' }, { status: 400 })
 
     // Personne ne peut changer son propre rôle ou se désactiver soi-même —
     // sans quoi un compte connaissant son propre id pourrait s'auto-promouvoir
@@ -110,7 +97,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     if (role !== undefined && role !== existant.role) {
       await enregistrerAudit({
-        paroisseId: session.user.paroisseId,
+        paroisseId,
         acteurId: session.user.id,
         action: 'UTILISATEUR_ROLE_MODIFIE',
         entite: 'Utilisateur',
@@ -120,7 +107,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
     if (actif !== undefined && actif !== existant.actif) {
       await enregistrerAudit({
-        paroisseId: session.user.paroisseId,
+        paroisseId,
         acteurId: session.user.id,
         action: actif ? 'UTILISATEUR_REACTIVE' : 'UTILISATEUR_DESACTIVE',
         entite: 'Utilisateur',
@@ -141,17 +128,15 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     if (!session?.user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     if (!ROLES_AUTORISES.includes(session.user.role)) return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
 
+    const paroisseId = paroisseIdRequise(session)
     const { id } = await params
-
-    if (!(await cibleAutorisee(session, id)))
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
 
     if (id === session.user.id) {
       return NextResponse.json({ error: 'Vous ne pouvez pas vous désactiver vous-même' }, { status: 403 })
     }
 
     const existant = await prisma.utilisateur.findFirst({
-      where: { id, paroisseId: session.user.paroisseId },
+      where: { id, paroisseId },
       select: { id: true },
     })
     if (!existant) return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 })
@@ -167,7 +152,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     })
 
     await enregistrerAudit({
-      paroisseId: session.user.paroisseId,
+      paroisseId,
       acteurId: session.user.id,
       action: 'UTILISATEUR_DESACTIVE',
       entite: 'Utilisateur',

@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 import { ROLES_TOUT_STAFF, ROLES_BRANCHE } from '@/lib/roles'
 import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
+import { paroisseIdRequise } from '@/lib/session'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -21,12 +22,13 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     const session = await getServerSession(authOptions)
     if (!session?.user) return new NextResponse('Non authentifié', { status: 401 })
     if (!ROLES_TOUT_STAFF.includes(session.user.role)) return new NextResponse('Accès refusé', { status: 403 })
+    const paroisseId = paroisseIdRequise(session)
 
     const { id } = await params
 
     let brancheRequise: string | undefined
     if (ROLES_BRANCHE.includes(session.user.role)) {
-      const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+      const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
       if (!bt) return new NextResponse('Réunion introuvable', { status: 404 })
       brancheRequise = bt
     }
@@ -34,7 +36,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     const reunion = await prisma.jourReunion.findFirst({
       where: {
         id,
-        paroisseId: session.user.paroisseId,
+        paroisseId,
         ...(brancheRequise ? { brancheType: brancheRequise as never } : {}),
       },
     })
@@ -42,7 +44,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
     const scouts = await prisma.scout.findMany({
       where: {
-        paroisseId: session.user.paroisseId,
+        paroisseId,
         actif: true,
         ...(reunion.brancheType ? { brancheType: reunion.brancheType } : {}),
       },

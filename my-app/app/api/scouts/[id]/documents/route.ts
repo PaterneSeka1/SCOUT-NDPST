@@ -6,6 +6,7 @@ import { TypeDocument } from '@/app/generated/prisma/client'
 import { ROLES_TOUT_STAFF as ROLES_AUTORISES } from '@/lib/roles'
 import { estCheminLocalValide } from '@/lib/validation'
 import { logger } from '@/lib/logger'
+import { paroisseIdRequise } from '@/lib/session'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -23,8 +24,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const { id } = await params
 
+    const paroisseId = paroisseIdRequise(session)
+
     const scout = await prisma.scout.findFirst({
-      where: { id, paroisseId: session.user.paroisseId },
+      where: { id, paroisseId },
       select: { id: true },
     })
 

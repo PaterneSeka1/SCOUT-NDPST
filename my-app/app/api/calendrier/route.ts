@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { ROLES_TOUT_STAFF, ROLES_BRANCHE } from '@/lib/roles'
 import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { logger } from '@/lib/logger'
+import { paroisseIdRequise } from '@/lib/session'
 
 // GET — événements (activités + réunions) du mois demandé, pour la vue calendrier du dashboard.
 export async function GET(req: NextRequest) {
@@ -14,6 +15,7 @@ export async function GET(req: NextRequest) {
     if (!ROLES_TOUT_STAFF.includes(session.user.role)) {
       return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
     }
+    const paroisseId = paroisseIdRequise(session)
 
     const { searchParams } = new URL(req.url)
     const moisParam = searchParams.get('mois') // format "YYYY-MM"
@@ -27,7 +29,7 @@ export async function GET(req: NextRequest) {
 
     let filtreBranche: string | null = null
     if (ROLES_BRANCHE.includes(session.user.role)) {
-      filtreBranche = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+      filtreBranche = await getBrancheUtilisateur(session.user.id, paroisseId)
       // Compte mal configuré (rôle de branche sans PosteBranche assigné) :
       // aucun résultat plutôt que la paroisse entière par défaut.
       if (!filtreBranche) return NextResponse.json({ evenements: [] })
@@ -36,7 +38,7 @@ export async function GET(req: NextRequest) {
     const [activites, reunions] = await Promise.all([
       prisma.activite.findMany({
         where: {
-          paroisseId: session.user.paroisseId,
+          paroisseId,
           dateDebut: { gte: debutMois, lt: finMois },
           ...(filtreBranche ? { OR: [{ brancheType: filtreBranche as never }, { brancheType: null }] } : {}),
         },
@@ -45,7 +47,7 @@ export async function GET(req: NextRequest) {
       }),
       prisma.jourReunion.findMany({
         where: {
-          paroisseId: session.user.paroisseId,
+          paroisseId,
           dateHeure: { gte: debutMois, lt: finMois },
           ...(filtreBranche ? { OR: [{ brancheType: filtreBranche as never }, { brancheType: null }] } : {}),
         },

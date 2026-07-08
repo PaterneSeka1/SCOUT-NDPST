@@ -6,6 +6,7 @@ import { logger } from '@/lib/logger'
 import { ROLES_TOUT_STAFF, ROLES_BRANCHE } from '@/lib/roles'
 import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { BrancheType } from '@/app/generated/prisma/client'
+import { paroisseIdRequise } from '@/lib/session'
 
 // GET — documents déjà expirés ou arrivant à expiration dans les N prochains
 // jours (30 par défaut), pour les scouts actifs de la paroisse. Un responsable
@@ -24,9 +25,11 @@ export async function GET(request: NextRequest) {
     seuil.setDate(seuil.getDate() + joursAvant)
     seuil.setHours(23, 59, 59, 999)
 
+    const paroisseId = paroisseIdRequise(session)
+
     let brancheType: string | null = null
     if (ROLES_BRANCHE.includes(session.user.role)) {
-      brancheType = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+      brancheType = await getBrancheUtilisateur(session.user.id, paroisseId)
       // Compte mal configuré (rôle de branche sans PosteBranche assigné) :
       // aucun résultat plutôt que la paroisse entière par défaut.
       if (!brancheType) return NextResponse.json({ documents: [] })
@@ -36,7 +39,7 @@ export async function GET(request: NextRequest) {
       where: {
         dateExpiration: { lte: seuil },
         scout: {
-          paroisseId: session.user.paroisseId,
+          paroisseId,
           actif: true,
           ...(brancheType ? { brancheType: brancheType as BrancheType } : {}),
         },

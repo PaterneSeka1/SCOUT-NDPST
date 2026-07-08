@@ -8,6 +8,7 @@ import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { anneeScolaireCourante } from '@/lib/cotisations'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
+import { paroisseIdRequise } from '@/lib/session'
 
 // GET — liste des cotisations de la paroisse (staff uniquement). Les
 // responsables de branche ne voient que les scouts de leur branche.
@@ -18,6 +19,7 @@ export async function GET(req: NextRequest) {
     if (!ROLES_TOUT_STAFF.includes(session.user.role)) {
       return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
     }
+    const paroisseId = paroisseIdRequise(session)
 
     const { searchParams } = new URL(req.url)
     const anneeScolaire = searchParams.get('anneeScolaire') ?? anneeScolaireCourante()
@@ -28,7 +30,7 @@ export async function GET(req: NextRequest) {
     // "branche" fournie par le client est ignorée pour ce groupe de rôles.
     let filtreBranche = brancheParam
     if (ROLES_BRANCHE.includes(session.user.role)) {
-      const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+      const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
       // Compte mal configuré (rôle de branche sans PosteBranche assigné) :
       // aucun résultat plutôt que la paroisse entière par défaut.
       if (!bt) return NextResponse.json({ cotisations: [] })
@@ -41,7 +43,7 @@ export async function GET(req: NextRequest) {
 
     const cotisations = await prisma.cotisation.findMany({
       where: {
-        paroisseId: session.user.paroisseId,
+        paroisseId,
         anneeScolaire,
         ...(statut ? { statut: statut as StatutCotisation } : {}),
         ...(filtreBranche ? { scout: { brancheType: filtreBranche as never } } : {}),
@@ -72,6 +74,7 @@ export async function POST(req: NextRequest) {
     if (!ROLES_GROUPE.includes(session.user.role)) {
       return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
     }
+    const paroisseId = paroisseIdRequise(session)
 
     const body = await req.json()
     const { scoutId, scoutIds, type, libelle, montant, anneeScolaire } = body as {
@@ -96,7 +99,7 @@ export async function POST(req: NextRequest) {
     const annee = anneeScolaire?.trim() || anneeScolaireCourante()
 
     const scouts = await prisma.scout.findMany({
-      where: { id: { in: cibles }, paroisseId: session.user.paroisseId },
+      where: { id: { in: cibles }, paroisseId },
       select: { id: true },
     })
     if (scouts.length !== cibles.length) {
@@ -108,7 +111,7 @@ export async function POST(req: NextRequest) {
         prisma.cotisation.create({
           data: {
             scoutId: s.id,
-            paroisseId: session.user.paroisseId,
+            paroisseId,
             type: type as TypeCotisation,
             libelle: libelle?.trim() || null,
             montant,
@@ -121,7 +124,7 @@ export async function POST(req: NextRequest) {
     await Promise.all(
       cotisations.map((c) =>
         enregistrerAudit({
-          paroisseId: session.user.paroisseId,
+          paroisseId,
           acteurId: session.user.id,
           action: 'COTISATION_CREEE',
           entite: 'Cotisation',

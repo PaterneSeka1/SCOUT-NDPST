@@ -7,6 +7,7 @@ import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { ROLES_GROUPE } from '@/lib/roles'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
+import { paroisseIdRequise } from '@/lib/session'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -22,15 +23,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 
+    const paroisseId = paroisseIdRequise(session)
     const { id } = await params
 
     const existant = await prisma.utilisateur.findFirst({
-      where: {
-        id,
-        paroisseId: session.user.paroisseId,
-        // CHEF_GROUPE ne peut pas réinitialiser le mot de passe d'un admin
-        ...(session.user.role === 'CHEF_GROUPE' ? { NOT: { role: 'ADMIN_PAROISSE' } } : {}),
-      },
+      where: { id, paroisseId },
       select: { id: true },
     })
 
@@ -53,7 +50,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     })
 
     await enregistrerAudit({
-      paroisseId: session.user.paroisseId,
+      paroisseId,
       acteurId: session.user.id,
       action: 'UTILISATEUR_MOT_DE_PASSE_REINITIALISE',
       entite: 'Utilisateur',

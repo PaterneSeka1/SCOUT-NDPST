@@ -6,6 +6,7 @@ import { ROLES_BRANCHE, ROLES_GESTION as ROLES_CREATION, ROLES_TOUT_STAFF as ROL
 import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { StatutReunionSchema, BrancheTypeSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
+import { paroisseIdRequise } from '@/lib/session'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -14,12 +15,13 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     const session = await getServerSession(authOptions)
     if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
     if (!ROLES_LECTURE.includes(session.user.role)) return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
+    const paroisseId = paroisseIdRequise(session)
 
     const { id } = await params
 
     let brancheRequise: string | undefined
     if (ROLES_BRANCHE.includes(session.user.role)) {
-      const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+      const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
       if (!bt) return NextResponse.json({ erreur: 'Réunion introuvable' }, { status: 404 })
       brancheRequise = bt
     }
@@ -27,7 +29,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     const reunion = await prisma.jourReunion.findFirst({
       where: {
         id,
-        paroisseId: session.user.paroisseId,
+        paroisseId,
         ...(brancheRequise ? { brancheType: brancheRequise as never } : {}),
       },
       include: {
@@ -52,6 +54,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     const session = await getServerSession(authOptions)
     if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
     if (!ROLES_CREATION.includes(session.user.role)) return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
+    const paroisseId = paroisseIdRequise(session)
 
     const { id } = await params
     const body = await req.json()
@@ -67,13 +70,13 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     }
 
     const existant = await prisma.jourReunion.findFirst({
-      where: { id, paroisseId: session.user.paroisseId },
+      where: { id, paroisseId },
     })
     if (!existant) return NextResponse.json({ erreur: 'Réunion introuvable' }, { status: 404 })
 
     // Un chef de branche ne peut modifier que les réunions de sa propre branche
     if (ROLES_BRANCHE.includes(session.user.role)) {
-      const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+      const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
       if (!bt || existant.brancheType !== bt) {
         return NextResponse.json({ erreur: 'Accès refusé à cette réunion' }, { status: 403 })
       }
@@ -116,10 +119,11 @@ export async function DELETE(_req: NextRequest, { params }: RouteParams) {
     const session = await getServerSession(authOptions)
     if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
     if (!ROLES_CREATION.includes(session.user.role)) return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
+    const paroisseId = paroisseIdRequise(session)
 
     const { id } = await params
     const existant = await prisma.jourReunion.findFirst({
-      where: { id, paroisseId: session.user.paroisseId },
+      where: { id, paroisseId },
     })
     if (!existant) return NextResponse.json({ erreur: 'Réunion introuvable' }, { status: 404 })
 

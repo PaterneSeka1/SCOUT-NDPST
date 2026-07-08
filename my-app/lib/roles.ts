@@ -1,5 +1,5 @@
 export const LABELS_ROLES: Record<string, string> = {
-  ADMIN_PAROISSE: 'Administrateur',
+  ADMIN_PLATEFORME: 'Administrateur plateforme',
   CHEF_GROUPE: 'Chef de Groupe',
   ADJOINT_GROUPE: 'Adjoint de Groupe',
   ASSISTANT_GROUPE: 'Assistant de Groupe',
@@ -11,7 +11,7 @@ export const LABELS_ROLES: Record<string, string> = {
 }
 
 export const COULEURS_ROLES: Record<string, string> = {
-  ADMIN_PAROISSE: 'bg-red-100 text-red-800',
+  ADMIN_PLATEFORME: 'bg-slate-800 text-white',
   CHEF_GROUPE: 'bg-green-100 text-green-800',
   ADJOINT_GROUPE: 'bg-green-50 text-green-700',
   ASSISTANT_GROUPE: 'bg-emerald-50 text-emerald-700',
@@ -29,14 +29,19 @@ export const COULEURS_ROLES: Record<string, string> = {
 // gardent leur propre variable locale (ex: `ROLES_AUTORISES`) qui pointe vers
 // l'une de ces constantes — cela ne change aucun comportement, seulement la
 // source de vérité.
+//
+// ADMIN_PLATEFORME (rôle global, transverse à toutes les paroisses) n'est
+// JAMAIS mélangé à ces groupes : ils ne décrivent que la hiérarchie *à
+// l'intérieur d'une paroisse*. ADMIN_PLATEFORME a sa propre surface (zone
+// /admin) et sa propre constante ROLES_PLATEFORME, plus bas.
 // ---------------------------------------------------------------------------
 
 // Types larges (string[], pas de tuple littéral) : `session.user.role` est typé
 // `string` côté NextAuth, donc un tableau de littéraux ferait échouer `.includes()`
 // à la compilation.
 
-/** Direction du groupe : administrateur + chef de groupe. */
-export const ROLES_GROUPE: string[] = ['ADMIN_PAROISSE', 'CHEF_GROUPE']
+/** Direction d'une paroisse : le Chef de Groupe, administrateur local complet. */
+export const ROLES_GROUPE: string[] = ['CHEF_GROUPE']
 
 /** Toute l'équipe de groupe (direction + adjoint/assistants de groupe). */
 export const ROLES_GROUPE_ETENDU: string[] = [...ROLES_GROUPE, 'ADJOINT_GROUPE', 'ASSISTANT_GROUPE']
@@ -49,3 +54,9 @@ export const ROLES_TOUT_STAFF: string[] = [...ROLES_GROUPE_ETENDU, ...ROLES_BRAN
 
 /** Direction du groupe + encadrement de branche (sans les adjoints/assistants de groupe). */
 export const ROLES_GESTION: string[] = [...ROLES_GROUPE, ...ROLES_BRANCHE]
+
+/** Administrateur plateforme : gère les paroisses, le branding commun, les rapports consolidés. Jamais combiné aux groupes ci-dessus. */
+export const ROLES_PLATEFORME: string[] = ['ADMIN_PLATEFORME']
+
+/** Rôles assignables à un utilisateur d'une paroisse (tous sauf ADMIN_PLATEFORME, réservé à la zone /admin). */
+export const ROLES_ASSIGNABLES_PAROISSE: string[] = Object.keys(LABELS_ROLES).filter((r) => r !== 'ADMIN_PLATEFORME')

@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { ROLES_TOUT_STAFF, ROLES_BRANCHE } from '@/lib/roles'
 import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { TypeActiviteSchema, BrancheTypeSchema } from '@/lib/validation'
+import { paroisseIdRequise } from '@/lib/session'
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -14,6 +15,7 @@ export async function GET(request: NextRequest) {
   if (!ROLES_TOUT_STAFF.includes(session.user.role)) {
     return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
   }
+  const paroisseId = paroisseIdRequise(session)
 
   const { searchParams } = new URL(request.url)
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
@@ -24,14 +26,14 @@ export async function GET(request: NextRequest) {
   const brancheType = searchParams.get('brancheType') ?? ''
 
   const where: Record<string, unknown> = {
-    paroisseId: session.user.paroisseId,
+    paroisseId,
   }
 
   // Les responsables de branche ne voient que leur branche + les activités
   // inter-branches (brancheType null) — toute valeur "brancheType" fournie
   // par le client est ignorée pour ce groupe de rôles.
   if (ROLES_BRANCHE.includes(session.user.role)) {
-    const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+    const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
     // Compte mal configuré (rôle de branche sans PosteBranche assigné) :
     // aucun résultat plutôt que la paroisse entière par défaut.
     if (!bt) {
@@ -90,6 +92,7 @@ export async function POST(request: NextRequest) {
   if (!ROLES_TOUT_STAFF.includes(session.user.role)) {
     return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
   }
+  const paroisseId = paroisseIdRequise(session)
 
   const corps = await request.json()
   const { titre, description, dateDebut, dateFin, lieu, type, brancheType } = corps
@@ -110,7 +113,7 @@ export async function POST(request: NextRequest) {
   // une décision du groupe.
   let brancheEffective = brancheType ?? null
   if (ROLES_BRANCHE.includes(session.user.role)) {
-    const bt = await getBrancheUtilisateur(session.user.id, session.user.paroisseId)
+    const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
     if (!bt) return NextResponse.json({ error: 'Aucune branche assignée' }, { status: 403 })
     brancheEffective = bt
   }
@@ -124,7 +127,7 @@ export async function POST(request: NextRequest) {
       lieu: lieu ?? null,
       type: type ?? 'REUNION',
       brancheType: brancheEffective,
-      paroisseId: session.user.paroisseId,
+      paroisseId,
       creePar: session.user.id,
     },
     include: {

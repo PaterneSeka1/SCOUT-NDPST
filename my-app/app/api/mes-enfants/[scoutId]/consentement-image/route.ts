@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
+import { paroisseIdRequise } from '@/lib/session'
 
 type RouteParams = { params: Promise<{ scoutId: string }> }
 
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     })
 
     await enregistrerAudit({
-      paroisseId: session.user.paroisseId,
+      paroisseId: paroisseIdRequise(session),
       acteurId: session.user.id,
       action: 'SCOUT_CONSENTEMENT_IMAGE_MODIFIE',
       entite: 'Scout',

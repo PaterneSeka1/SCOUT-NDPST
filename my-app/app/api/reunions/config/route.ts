@@ -5,14 +5,16 @@ import { prisma } from '@/lib/prisma'
 import { ROLES_GROUPE as ROLES_CREATION } from '@/lib/roles'
 import { BrancheTypeSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
+import { paroisseIdRequise } from '@/lib/session'
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
+    const paroisseId = paroisseIdRequise(session)
 
     const configs = await prisma.configReunionBranche.findMany({
-      where: { paroisseId: session.user.paroisseId },
+      where: { paroisseId },
       orderBy: { brancheType: 'asc' },
     })
 
@@ -28,6 +30,7 @@ export async function PUT(req: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
     if (!ROLES_CREATION.includes(session.user.role)) return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
+    const paroisseId = paroisseIdRequise(session)
 
     const body = await req.json()
     const { brancheType, jourSemaine, heureDebut, dureeMinutes, lieu } = body as {
@@ -49,9 +52,9 @@ export async function PUT(req: NextRequest) {
     }
 
     const config = await prisma.configReunionBranche.upsert({
-      where: { paroisseId_brancheType: { paroisseId: session.user.paroisseId, brancheType: brancheType as any } },
+      where: { paroisseId_brancheType: { paroisseId, brancheType: brancheType as any } },
       create: {
-        paroisseId: session.user.paroisseId,
+        paroisseId,
         brancheType: brancheType as any,
         jourSemaine,
         heureDebut,

@@ -59,7 +59,6 @@ const LIBELLES_BRANCHE: Record<string, string> = {
 
 function libelleRole(role: string): string {
   const libelles: Record<string, string> = {
-    ADMIN_PAROISSE: 'Administrateur de paroisse',
     CHEF_GROUPE: 'Chef de groupe',
     ADJOINT_GROUPE: 'Adjoint de groupe',
     ASSISTANT_GROUPE: 'Assistant de groupe',

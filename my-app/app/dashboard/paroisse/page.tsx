@@ -12,6 +12,7 @@ interface Paroisse {
   id: string; nom: string; ville: string; diocese: string
   ocean: string | null; doyenne: string | null
   adresse: string | null; telephone: string | null; email: string | null; logo: string | null
+  couleurPrimaire: string | null; couleurAccent: string | null; couleurFond: string | null; couleurHover: string | null
   _count: { scouts: number; utilisateurs: number; activites: number }
 }
 
@@ -24,15 +25,23 @@ interface FormParoisse {
   nom: string; ville: string; diocese: string
   ocean: string; doyenne: string
   adresse: string; telephone: string; email: string
+  couleurPrimaire: string; couleurAccent: string; couleurFond: string; couleurHover: string
 }
+
+type CouleurKey = 'couleurPrimaire' | 'couleurAccent' | 'couleurFond' | 'couleurHover'
+const COULEURS_PAROISSE: { key: CouleurKey; label: string; defaut: string }[] = [
+  { key: 'couleurPrimaire', label: 'Couleur primaire', defaut: '#1a4731' },
+  { key: 'couleurHover', label: 'Couleur des hovers', defaut: '#27ae60' },
+  { key: 'couleurAccent', label: "Couleur d'accentuation", defaut: '#27ae60' },
+  { key: 'couleurFond', label: 'Couleur de fond', defaut: '#0f2418' },
+]
 
 export default function PageParoisse() {
   const { data: session } = useSession()
   const role = session?.user?.role
-  const estAdmin = role === 'ADMIN_PAROISSE'
   const estChefGroupe = role === 'CHEF_GROUPE'
   const estParent = role === 'PARENT'
-  const voitStatsDetaillees = estAdmin || estChefGroupe
+  const voitStatsDetaillees = estChefGroupe
 
   const [paroisse, setParoisse] = useState<Paroisse | null>(null)
   const [activitesAVenir, setActivitesAVenir] = useState<Activite[]>([])
@@ -40,7 +49,7 @@ export default function PageParoisse() {
   const [chargementErreur, setChargementErreur] = useState(false)
 
   const [modeEdition, setModeEdition] = useState(false)
-  const [form, setForm] = useState<FormParoisse>({ nom: '', ville: '', diocese: '', ocean: '', doyenne: '', adresse: '', telephone: '', email: '' })
+  const [form, setForm] = useState<FormParoisse>({ nom: '', ville: '', diocese: '', ocean: '', doyenne: '', adresse: '', telephone: '', email: '', couleurPrimaire: '', couleurAccent: '', couleurFond: '', couleurHover: '' })
   const [soumission, setSoumission] = useState(false)
 
   const [logoPreview, setLogoPreview] = useState('')
@@ -53,7 +62,13 @@ export default function PageParoisse() {
     ]).then(([paroisseData, activitesData]) => {
       if (paroisseData.erreur) { toast.error(paroisseData.erreur); setChargementErreur(true); return }
       setParoisse(paroisseData)
-      setForm({ nom: paroisseData.nom, ville: paroisseData.ville, diocese: paroisseData.diocese, ocean: paroisseData.ocean ?? '', doyenne: paroisseData.doyenne ?? '', adresse: paroisseData.adresse ?? '', telephone: paroisseData.telephone ?? '', email: paroisseData.email ?? '' })
+      setForm({
+        nom: paroisseData.nom, ville: paroisseData.ville, diocese: paroisseData.diocese,
+        ocean: paroisseData.ocean ?? '', doyenne: paroisseData.doyenne ?? '',
+        adresse: paroisseData.adresse ?? '', telephone: paroisseData.telephone ?? '', email: paroisseData.email ?? '',
+        couleurPrimaire: paroisseData.couleurPrimaire ?? '', couleurAccent: paroisseData.couleurAccent ?? '',
+        couleurFond: paroisseData.couleurFond ?? '', couleurHover: paroisseData.couleurHover ?? '',
+      })
       if (paroisseData.logo) setLogoPreview(paroisseData.logo)
 
       const maintenant = new Date()
@@ -125,7 +140,7 @@ export default function PageParoisse() {
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Ma paroisse</h1>
           <p className="text-sm text-gray-500 mt-0.5">Informations du groupe scout</p>
         </div>
-        {estAdmin && !modeEdition && (
+        {estChefGroupe && !modeEdition && (
           <button onClick={() => setModeEdition(true)}
             className="flex-shrink-0 flex items-center gap-1.5 border border-gray-300 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -169,7 +184,7 @@ export default function PageParoisse() {
                 ) : (
                   <span className="text-4xl">⛪</span>
                 )}
-                {estAdmin && (
+                {estChefGroupe && (
                   <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-xl">
                     <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -274,6 +289,38 @@ export default function PageParoisse() {
                 <label className={CLS_LABEL}>Email <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
                 <input type="email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
                   placeholder="contact@paroisse.ci" className={CLS_INPUT} />
+              </div>
+            </div>
+
+            <div className="border-t border-gray-100 pt-4">
+              <h3 className="text-sm font-semibold text-gray-800 mb-1">Couleurs de la paroisse</h3>
+              <p className="text-xs text-gray-400 mb-3">
+                Visibles uniquement par les membres de votre paroisse une fois connectés. Laissez vide pour garder les couleurs par défaut de la plateforme.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {COULEURS_PAROISSE.map(({ key, label, defaut }) => (
+                  <div key={key}>
+                    <label className="text-xs font-medium text-gray-600 mb-1 block">{label}</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={form[key] || defaut}
+                        onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
+                        className="h-9 w-10 cursor-pointer rounded-lg border border-gray-300 p-0.5 flex-shrink-0"
+                      />
+                      {form[key] && (
+                        <button
+                          type="button"
+                          onClick={() => setForm((p) => ({ ...p, [key]: '' }))}
+                          className="text-xs text-gray-400 hover:text-red-500"
+                          title="Revenir à la couleur par défaut"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
