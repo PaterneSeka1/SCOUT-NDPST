@@ -71,9 +71,15 @@ export default function PagePassageBranche() {
     setSelection((prev) => (prev.size === propositions.length ? new Set() : new Set(propositions.map((p) => p.scoutId))))
   }
 
-  const confirmer = async () => {
+  const soumettrePassage = async () => {
     if (selection.size === 0) return
-    if (!confirm(`Confirmer le passage de branche pour ${selection.size} scout${selection.size > 1 ? 's' : ''} ?`)) return
+    const ok = await confirmer({
+      titre: `Confirmer le passage de branche pour ${selection.size} scout${selection.size > 1 ? 's' : ''} ?`,
+      description: 'Chaque scout sélectionné sera transféré vers la branche proposée à l\'écran. Vous pourrez toujours corriger la branche d\'un scout manuellement par la suite si besoin.',
+      labelConfirmer: 'Confirmer le passage',
+      danger: false,
+    })
+    if (!ok) return
 
     setSoumission(true)
     try {
@@ -157,7 +163,7 @@ export default function PagePassageBranche() {
                 Tout sélectionner ({propositions.length})
               </label>
               <button
-                onClick={confirmer}
+                onClick={soumettrePassage}
                 disabled={soumission || selection.size === 0}
                 className="bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60"
               >
