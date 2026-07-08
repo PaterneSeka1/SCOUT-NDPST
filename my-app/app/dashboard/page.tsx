@@ -2,6 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 
 type ActiviteRecente = {
   id: string
@@ -115,6 +116,33 @@ export default function DashboardPage() {
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreur}</div>
       )}
 
+      {/* Actions rapides */}
+      {role === 'CHEF_GROUPE' && (
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <h2 className="text-sm font-semibold text-gray-700 mb-4">Actions rapides</h2>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/dashboard/utilisateurs/nouveau"
+              className="inline-flex items-center justify-center bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium"
+            >
+              + Nouvel utilisateur
+            </Link>
+            <Link
+              href="/dashboard/paroisse"
+              className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+            >
+              Personnaliser ma paroisse
+            </Link>
+            <Link
+              href="/dashboard/rapports"
+              className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+            >
+              Voir les rapports
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* KPIs */}
       <div className="flex flex-wrap gap-3">
         {chargement
@@ -146,7 +174,9 @@ export default function DashboardPage() {
 
       {/* Activités récentes */}
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-        <h2 className="text-sm font-semibold text-gray-700 mb-4">Activités récentes</h2>
+        <h2 className="text-sm font-semibold text-gray-700 mb-4">
+          {role === 'PARENT' ? 'Prochaines activités' : 'Activités récentes'}
+        </h2>
 
         {chargement ? (
           <div className="space-y-3">

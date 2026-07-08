@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
 interface LigneParoisse {
   id: string; nom: string; ville: string; actif: boolean
@@ -18,8 +19,12 @@ export default function RapportsPlateforme() {
 
   useEffect(() => {
     fetch('/api/admin/rapports')
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error('Erreur serveur')
+        return r.json()
+      })
       .then((data) => { setTotaux(data.totaux); setParoisses(data.paroisses) })
+      .catch(() => toast.error('Impossible de charger les rapports.'))
       .finally(() => setChargement(false))
   }, [])
 
@@ -88,6 +93,11 @@ export default function RapportsPlateforme() {
                   </td>
                 </tr>
               ))}
+              {paroisses.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400">Aucune paroisse enregistrée</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

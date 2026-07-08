@@ -97,9 +97,10 @@ export default function NouvelleParoissePage() {
           <button
             type="submit"
             disabled={soumission}
-            className="rounded-lg px-6 py-2.5 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50 transition"
+            className="rounded-lg px-6 py-2.5 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50 transition flex items-center gap-2"
             style={{ backgroundColor: 'var(--cp)' }}
           >
+            {soumission && <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />}
             {soumission ? 'Création…' : 'Créer la paroisse'}
           </button>
         </div>

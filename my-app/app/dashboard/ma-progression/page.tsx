@@ -1,14 +1,28 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
+
+const LABELS_STATUT_REUNION: Record<string, { label: string; cls: string; dot: string }> = {
+  PRESENT: { label: 'Présent', cls: 'text-green-700 bg-green-50', dot: 'bg-green-500' },
+  ABSENT: { label: 'Absent', cls: 'text-red-700 bg-red-50', dot: 'bg-red-400' },
+  EXCUSE: { label: 'Excusé', cls: 'text-orange-700 bg-orange-50', dot: 'bg-orange-400' },
+}
 
 interface Badge { id: string; nom: string; description: string | null; brancheType: string; ordre: number }
 interface Progression {
   id: string; dateValidation: string; commentaire: string | null
   badge: Badge
   validePar: { nom: string; prenom: string } | null
+}
+interface ProchaineActivite {
+  id: string; titre: string; dateDebut: string; lieu: string | null; type: string; brancheType: string | null
+}
+interface DerniereReunion {
+  statut: string
+  jourReunion: { id: string; titre: string | null; dateHeure: string; dateReportee: string | null; brancheType: string | null }
 }
 interface Scout {
   id: string; nom: string; prenom: string; brancheType: string; photo: string | null; matricule: string | null; actif: boolean
@@ -20,6 +34,8 @@ interface Scout {
 export default function PageMaProgression() {
   const [scout, setScout] = useState<Scout | null>(null)
   const [badgesBranche, setBadgesBranche] = useState<Badge[]>([])
+  const [prochainesActivites, setProchainesActivites] = useState<ProchaineActivite[]>([])
+  const [dernieresReunions, setDernieresReunions] = useState<DerniereReunion[]>([])
   const [chargement, setChargement] = useState(true)
   const [erreur, setErreur] = useState('')
 
@@ -30,6 +46,8 @@ export default function PageMaProgression() {
         if (data.erreur) { setErreur(data.erreur); return }
         setScout(data.scout)
         setBadgesBranche(data.badgesBranche ?? [])
+        setProchainesActivites(data.prochainesActivites ?? [])
+        setDernieresReunions(data.dernieresReunions ?? [])
       })
       .catch(() => setErreur('Impossible de charger votre progression'))
       .finally(() => setChargement(false))
@@ -68,6 +86,10 @@ export default function PageMaProgression() {
               </span>
             </div>
           </div>
+          <Link href={`/dashboard/scouts/${scout.id}/carte`}
+            className="flex-shrink-0 border border-gray-300 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+            Ma carte
+          </Link>
         </div>
       </div>
 
@@ -131,10 +153,33 @@ export default function PageMaProgression() {
         )}
       </div>
 
-      {/* Dernières participations */}
-      {scout.presences.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
-          <h2 className="text-sm font-semibold text-gray-800 mb-4">Mes dernières participations</h2>
+      {/* Prochaines activités */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
+        <h2 className="text-sm font-semibold text-gray-800 mb-4">Prochaines activités</h2>
+        {prochainesActivites.length === 0 ? (
+          <p className="text-sm text-gray-400 italic text-center py-4">Aucune activité à venir pour le moment.</p>
+        ) : (
+          <div className="space-y-2">
+            {prochainesActivites.map((a) => (
+              <div key={a.id} className="flex items-center gap-3 py-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#f39c12] flex-shrink-0" />
+                <span className="flex-1 text-sm text-gray-700 truncate">{a.titre}</span>
+                <span className="text-xs text-gray-400 flex-shrink-0">
+                  {new Date(a.dateDebut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
+                {a.lieu && <span className="text-xs text-gray-400">· {a.lieu}</span>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Dernières participations (activités) */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
+        <h2 className="text-sm font-semibold text-gray-800 mb-4">Mes dernières participations</h2>
+        {scout.presences.length === 0 ? (
+          <p className="text-sm text-gray-400 italic text-center py-4">Aucune participation enregistrée.</p>
+        ) : (
           <div className="space-y-2">
             {scout.presences.map((p, i) => (
               <div key={i} className="flex items-center gap-3 py-1">
@@ -147,8 +192,35 @@ export default function PageMaProgression() {
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
+
+      {/* Dernières réunions */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
+        <h2 className="text-sm font-semibold text-gray-800 mb-4">Mes dernières réunions</h2>
+        {dernieresReunions.length === 0 ? (
+          <p className="text-sm text-gray-400 italic text-center py-4">Aucune participation enregistrée.</p>
+        ) : (
+          <div className="space-y-2">
+            {dernieresReunions.map((r, i) => {
+              const date = new Date(r.jourReunion.dateReportee ?? r.jourReunion.dateHeure)
+              const cfg = LABELS_STATUT_REUNION[r.statut] ?? LABELS_STATUT_REUNION.ABSENT
+              return (
+                <div key={i} className="flex items-center gap-3 py-1">
+                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot}`} />
+                  <span className="flex-1 text-sm text-gray-700 truncate">
+                    {r.jourReunion.titre || `Réunion ${r.jourReunion.brancheType ? (LABELS_BRANCHES[r.jourReunion.brancheType] ?? r.jourReunion.brancheType) : ''}`}
+                  </span>
+                  <span className="text-xs text-gray-400 flex-shrink-0">
+                    {date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cfg.cls}`}>{cfg.label}</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
 
@@ -56,9 +57,13 @@ export default function PageParoisse() {
   const [uploadLogo, setUploadLogo] = useState(false)
 
   useEffect(() => {
+    if (!session?.user) return
+    // PARENT et SCOUT n'ont pas accès à /api/activites (réservée au staff) : on
+    // évite l'appel pour eux et on affiche un renvoi vers leur propre page.
+    const inclureActivites = role !== 'PARENT' && role !== 'SCOUT'
     Promise.all([
       fetch('/api/paroisse').then((r) => r.json()),
-      fetch('/api/activites?page=1&limite=50').then((r) => r.json()),
+      inclureActivites ? fetch('/api/activites?page=1&limite=50').then((r) => r.json()) : Promise.resolve(null),
     ]).then(([paroisseData, activitesData]) => {
       if (paroisseData.erreur) { toast.error(paroisseData.erreur); setChargementErreur(true); return }
       setParoisse(paroisseData)
@@ -71,15 +76,17 @@ export default function PageParoisse() {
       })
       if (paroisseData.logo) setLogoPreview(paroisseData.logo)
 
-      const maintenant = new Date()
-      const aVenir = (activitesData.activites ?? []).filter((a: Activite) => {
-        const fin = a.dateFin ? new Date(a.dateFin) : new Date(a.dateDebut)
-        return fin >= maintenant
-      })
-      setActivitesAVenir(aVenir)
+      if (inclureActivites) {
+        const maintenant = new Date()
+        const aVenir = (activitesData.activites ?? []).filter((a: Activite) => {
+          const fin = a.dateFin ? new Date(a.dateFin) : new Date(a.dateDebut)
+          return fin >= maintenant
+        })
+        setActivitesAVenir(aVenir)
+      }
     }).catch(() => { toast.error('Impossible de charger les informations'); setChargementErreur(true) })
       .finally(() => setChargement(false))
-  }, [])
+  }, [session, role])
 
   const handleChangeLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fichier = e.target.files?.[0]
@@ -341,7 +348,17 @@ export default function PageParoisse() {
       {/* Activités à venir — visible pour tous les rôles */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
         <h2 className="text-sm font-semibold text-gray-800 mb-4">Prochaines activités</h2>
-        {activitesAVenir.length === 0 ? (
+        {estParent ? (
+          <p className="text-sm text-gray-500 text-center py-4">
+            Consultez les prochaines activités de vos enfants depuis{' '}
+            <Link href="/dashboard/mes-enfants" className="text-[#1a4731] hover:underline font-medium">Mes enfants</Link>.
+          </p>
+        ) : role === 'SCOUT' ? (
+          <p className="text-sm text-gray-500 text-center py-4">
+            Consultez vos prochaines activités depuis{' '}
+            <Link href="/dashboard/ma-progression" className="text-[#1a4731] hover:underline font-medium">Ma progression</Link>.
+          </p>
+        ) : activitesAVenir.length === 0 ? (
           <p className="text-sm text-gray-400 italic text-center py-4">Aucune activité à venir pour le moment</p>
         ) : (
           <div className="space-y-3">

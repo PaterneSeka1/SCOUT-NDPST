@@ -2,11 +2,11 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { LABELS_ROLES, COULEURS_ROLES } from '@/lib/roles'
+import { LABELS_ROLES, COULEURS_ROLES, ROLES_ASSIGNABLES_PAROISSE } from '@/lib/roles'
 import { useUtilisateurs, useModifierUtilisateur } from '@/hooks/useUtilisateurs'
 import type { Utilisateur } from '@/hooks/useUtilisateurs'
 
-const ROLES_FILTRE = Object.keys(LABELS_ROLES)
+const ROLES_FILTRE = ROLES_ASSIGNABLES_PAROISSE
 
 function SkeletonCard() {
   return (
@@ -162,7 +162,10 @@ export default function UtilisateursPage() {
     <div className="space-y-4 sm:space-y-6">
       {/* En-tête */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Utilisateurs</h1>
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Utilisateurs</h1>
+          <p className="text-sm text-gray-500">{total} utilisateur{total !== 1 ? 's' : ''} dans votre paroisse</p>
+        </div>
         <Link
           href="/dashboard/utilisateurs/nouveau"
           className="inline-flex items-center justify-center bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium"

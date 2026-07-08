@@ -20,11 +20,26 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
-    if (!ROLES_AUTORISES.includes(session.user.role)) {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
-    }
-
     const { id } = await params
+
+    if (!ROLES_AUTORISES.includes(session.user.role)) {
+      // Un scout ne peut consulter que sa propre fiche (ex. carte de membre),
+      // jamais celle d'un autre — jamais via un id fourni par le client seul.
+      if (session.user.role !== 'SCOUT') {
+        return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+      }
+
+      const scoutPropre = await prisma.scout.findFirst({
+        where: { id, utilisateurId: session.user.id },
+        select: { id: true, nom: true, prenom: true, photo: true, brancheType: true, matricule: true },
+      })
+
+      if (!scoutPropre) {
+        return NextResponse.json({ error: 'Scout introuvable' }, { status: 404 })
+      }
+
+      return NextResponse.json(scoutPropre)
+    }
 
     const paroisseId = paroisseIdRequise(session)
 

@@ -44,10 +44,15 @@ export default function FicheParoissePage() {
   const [formChef, setFormChef] = useState<FormChefGroupe>(CHEF_VIDE)
   const [soumissionChef, setSoumissionChef] = useState(false)
   const [afficherFormChef, setAfficherFormChef] = useState(false)
+  const [erreurChargement, setErreurChargement] = useState(false)
 
   const charger = useCallback(() => {
+    setErreurChargement(false)
     fetch(`/api/admin/paroisses/${id}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error('Erreur serveur')
+        return r.json()
+      })
       .then((data: Paroisse) => {
         setParoisse(data)
         setForm({
@@ -55,6 +60,10 @@ export default function FicheParoissePage() {
           ocean: data.ocean ?? '', doyenne: data.doyenne ?? '',
           adresse: data.adresse ?? '', telephone: data.telephone ?? '', email: data.email ?? '',
         })
+      })
+      .catch(() => {
+        setErreurChargement(true)
+        toast.error('Impossible de charger cette paroisse.')
       })
       .finally(() => setChargement(false))
   }, [id])
@@ -85,6 +94,7 @@ export default function FicheParoissePage() {
 
   const basculerActif = async () => {
     if (!paroisse) return
+    if (paroisse.actif && !confirm('Désactiver cette paroisse bloquera immédiatement la connexion de tous ses utilisateurs, sans supprimer aucune donnée. Continuer ?')) return
     try {
       const res = await fetch(`/api/admin/paroisses/${id}`, {
         method: 'PATCH',
@@ -141,7 +151,14 @@ export default function FicheParoissePage() {
     )
   }
 
-  if (!paroisse || !form) return null
+  if (erreurChargement || !paroisse || !form) {
+    return (
+      <div className="max-w-3xl mx-auto space-y-4">
+        <p className="text-sm text-gray-600">Impossible de charger cette paroisse.</p>
+        <Link href="/admin/paroisses" className="text-sm text-gray-500 hover:text-gray-800">← Retour aux paroisses</Link>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -183,7 +200,12 @@ export default function FicheParoissePage() {
         </div>
 
         {paroisse.chefsGroupe.length === 0 && !afficherFormChef && (
-          <p className="text-sm text-orange-600">Aucun Chef de Groupe désigné pour cette paroisse.</p>
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
+            <p className="text-sm font-medium text-orange-700">Aucun Chef de Groupe désigné pour cette paroisse.</p>
+            <p className="text-sm text-orange-600 mt-0.5">
+              Cette paroisse n&apos;a pas encore de Chef de Groupe — désignez-en un ci-dessous pour qu&apos;elle puisse être utilisée.
+            </p>
+          </div>
         )}
 
         <ul className="space-y-2">
@@ -233,9 +255,10 @@ export default function FicheParoissePage() {
               <button
                 type="submit"
                 disabled={soumissionChef}
-                className="rounded-lg px-5 py-2 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50 transition"
+                className="rounded-lg px-5 py-2 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50 transition flex items-center gap-2"
                 style={{ backgroundColor: 'var(--cp)' }}
               >
+                {soumissionChef && <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />}
                 {soumissionChef ? 'Création…' : 'Créer le compte'}
               </button>
             </div>
@@ -270,7 +293,8 @@ export default function FicheParoissePage() {
               <button type="button" onClick={() => setModeEdition(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
                 Annuler
               </button>
-              <button type="submit" disabled={soumission} className="rounded-lg px-5 py-2 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50 transition" style={{ backgroundColor: 'var(--cp)' }}>
+              <button type="submit" disabled={soumission} className="rounded-lg px-5 py-2 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50 transition flex items-center gap-2" style={{ backgroundColor: 'var(--cp)' }}>
+                {soumission && <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />}
                 {soumission ? 'Sauvegarde…' : 'Sauvegarder'}
               </button>
             </div>

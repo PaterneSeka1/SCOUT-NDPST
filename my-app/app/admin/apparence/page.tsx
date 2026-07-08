@@ -83,18 +83,29 @@ export default function SiteConfigPage() {
 
   useEffect(() => {
     fetch('/api/admin/site-config')
-      .then((r) => r.json())
-      .then((data: Partial<SiteConfig>) => {
-        setConfig({
-          ...DEFAULT_CONFIG,
-          ...data,
-          theme: { ...DEFAULT_CONFIG.theme, ...(data.theme ?? {}) },
-          hero: { ...DEFAULT_CONFIG.hero, ...(data.hero ?? {}) },
-          stats: data.stats ?? DEFAULT_CONFIG.stats,
-        })
+      .then((r) => {
+        if (!r.ok) {
+          toast.error('Impossible de charger la configuration actuelle — les valeurs affichées sont des valeurs par défaut, vérifiez avant de sauvegarder.')
+          return null
+        }
+        return r.json()
+      })
+      .then((data: Partial<SiteConfig> | null) => {
+        if (data) {
+          setConfig({
+            ...DEFAULT_CONFIG,
+            ...data,
+            theme: { ...DEFAULT_CONFIG.theme, ...(data.theme ?? {}) },
+            hero: { ...DEFAULT_CONFIG.hero, ...(data.hero ?? {}) },
+            stats: data.stats ?? DEFAULT_CONFIG.stats,
+          })
+        }
         setChargement(false)
       })
-      .catch(() => setChargement(false))
+      .catch(() => {
+        toast.error('Impossible de charger la configuration actuelle — les valeurs affichées sont des valeurs par défaut, vérifiez avant de sauvegarder.')
+        setChargement(false)
+      })
   }, [])
 
   // Prévisualisation live des couleurs sur toute la page admin

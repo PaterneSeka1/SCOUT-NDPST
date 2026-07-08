@@ -48,7 +48,7 @@ export async function GET() {
     })
 
     if (role === 'CHEF_GROUPE') {
-      const [scoutsActifs, activitesMois, branches, totalPresences, presencesPositives] = await Promise.all([
+      const [scoutsActifs, activitesMois, branches, totalPresences, presencesPositives, comptesActifs] = await Promise.all([
         prisma.scout.count({ where: { paroisseId, actif: true } }),
         prisma.activite.count({ where: { paroisseId, dateDebut: { gte: debut } } }),
         prisma.scout.groupBy({ by: ['brancheType'], where: { paroisseId, actif: true } }),
@@ -58,6 +58,7 @@ export async function GET() {
         prisma.presence.count({
           where: { present: true, activite: { paroisseId, dateDebut: { gte: debut } } },
         }),
+        prisma.utilisateur.count({ where: { paroisseId, actif: true } }),
       ])
       const taux = totalPresences > 0 ? Math.round((presencesPositives / totalPresences) * 100) : 0
 
@@ -66,6 +67,7 @@ export async function GET() {
         'Activités ce mois': activitesMois,
         'Taux de présence': `${taux} %`,
         'Branches actives': branches.length,
+        'Comptes actifs': comptesActifs,
       }
     } else if (['ADJOINT_GROUPE', 'ASSISTANT_GROUPE'].includes(role)) {
       const [scoutsActifs, activitesMois, branches] = await Promise.all([

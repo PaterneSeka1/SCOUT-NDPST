@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 
 interface Totaux {
   paroisses: number
@@ -17,8 +18,12 @@ export default function AdminAccueil() {
 
   useEffect(() => {
     fetch('/api/admin/rapports')
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error('Erreur serveur')
+        return r.json()
+      })
       .then((data) => setTotaux(data.totaux))
+      .catch(() => toast.error('Impossible de charger le tableau de bord.'))
       .finally(() => setChargement(false))
   }, [])
 

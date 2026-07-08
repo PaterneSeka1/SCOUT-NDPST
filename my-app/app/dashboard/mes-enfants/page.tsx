@@ -165,7 +165,7 @@ export default function PageMesEnfants() {
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
           <p className="text-4xl mb-3">👨‍👧‍👦</p>
           <p className="text-sm text-gray-500">Aucun enfant lié à votre compte</p>
-          <p className="text-xs text-gray-400 mt-1">Contactez un administrateur pour associer vos enfants</p>
+          <p className="text-xs text-gray-400 mt-1">Contactez le Chef de Groupe de votre paroisse pour associer vos enfants.</p>
         </div>
       ) : (
         <div className="space-y-4">

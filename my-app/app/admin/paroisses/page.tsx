@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 
 interface Paroisse {
   id: string
@@ -16,13 +17,27 @@ interface Paroisse {
 export default function ListeParoisses() {
   const [paroisses, setParoisses] = useState<Paroisse[]>([])
   const [chargement, setChargement] = useState(true)
+  const [recherche, setRecherche] = useState('')
 
   useEffect(() => {
     fetch('/api/admin/paroisses')
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error('Erreur serveur')
+        return r.json()
+      })
       .then(setParoisses)
+      .catch(() => toast.error('Impossible de charger les paroisses.'))
       .finally(() => setChargement(false))
   }, [])
+
+  const rechercheNorm = recherche.trim().toLowerCase()
+  const paroissesFiltrees = rechercheNorm
+    ? paroisses.filter((p) =>
+        p.nom.toLowerCase().includes(rechercheNorm) ||
+        p.ville.toLowerCase().includes(rechercheNorm) ||
+        p.diocese.toLowerCase().includes(rechercheNorm)
+      )
+    : paroisses
 
   if (chargement) {
     return (
@@ -48,6 +63,14 @@ export default function ListeParoisses() {
         </Link>
       </div>
 
+      <input
+        type="text"
+        placeholder="Rechercher…"
+        value={recherche}
+        onChange={(e) => setRecherche(e.target.value)}
+        className="w-full sm:max-w-xs border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1a4731] bg-white"
+      />
+
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -61,7 +84,7 @@ export default function ListeParoisses() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {paroisses.map((p) => (
+              {paroissesFiltrees.map((p) => (
                 <tr key={p.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => (window.location.href = `/admin/paroisses/${p.id}`)}>
                   <td className="px-4 py-3">
                     <p className="font-medium text-gray-900">{p.nom}</p>
@@ -86,6 +109,11 @@ export default function ListeParoisses() {
               {paroisses.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-4 py-8 text-center text-gray-400">Aucune paroisse enregistrée</td>
+                </tr>
+              )}
+              {paroisses.length > 0 && paroissesFiltrees.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-gray-400">Aucune paroisse ne correspond à votre recherche.</td>
                 </tr>
               )}
             </tbody>

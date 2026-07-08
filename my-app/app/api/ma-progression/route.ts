@@ -35,5 +35,29 @@ export async function GET() {
     orderBy: { ordre: 'asc' },
   })
 
-  return NextResponse.json({ scout, badgesBranche })
+  // Prochaines activités concernant la branche du scout ou toute la paroisse
+  const prochainesActivites = await prisma.activite.findMany({
+    where: {
+      paroisseId: scout.paroisseId,
+      dateDebut: { gte: new Date() },
+      OR: [{ brancheType: null }, { brancheType: scout.brancheType }],
+    },
+    orderBy: { dateDebut: 'asc' },
+    take: 5,
+    select: { id: true, titre: true, dateDebut: true, lieu: true, type: true, brancheType: true },
+  })
+
+  // Dernières réunions (présences)
+  const dernieresReunions = await prisma.presenceReunion.findMany({
+    where: { scoutId: scout.id },
+    include: {
+      jourReunion: {
+        select: { id: true, titre: true, dateHeure: true, dateReportee: true, brancheType: true },
+      },
+    },
+    orderBy: { jourReunion: { dateHeure: 'desc' } },
+    take: 10,
+  })
+
+  return NextResponse.json({ scout, badgesBranche, prochainesActivites, dernieresReunions })
 }
