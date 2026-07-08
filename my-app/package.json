@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "seed": "prisma db seed",
     "deploy:o2switch": "bash scripts/deploy-o2switch.sh"
   },
   "dependencies": {

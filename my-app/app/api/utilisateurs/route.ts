@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
 
     // Un admin plateforme (transverse, sans paroisse) ne se crée jamais via
     // cette route — uniquement via la bascule de compte ou un accès base directe.
-    if (role === 'ADMIN_PLATEFORME' || role === 'ADMIN_PAROISSE') {
+    if (role === 'ADMIN_PLATEFORME') {
       return NextResponse.json({ error: 'Rôle invalide' }, { status: 400 })
     }
 

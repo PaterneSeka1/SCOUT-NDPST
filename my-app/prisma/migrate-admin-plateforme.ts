@@ -18,6 +18,12 @@
 // Étape suivante, volontairement NON automatisée ici (décision humaine) :
 // désigner le Chef de Groupe de la paroisse depuis /admin/paroisses une fois
 // connecté avec ce compte.
+//
+// IMPORTANT — ORDRE DES MIGRATIONS : ce script doit tourner APRÈS la
+// migration "multi_paroisse_fondations" mais AVANT la migration
+// "retrait_role_admin_paroisse" (qui supprime la valeur ADMIN_PAROISSE de
+// l'enum). Appliquer cette dernière avant d'avoir converti tous les comptes
+// ADMIN_PAROISSE existants fait échouer la migration (garde-fou volontaire).
 
 import 'dotenv/config'
 import { Client } from 'pg'

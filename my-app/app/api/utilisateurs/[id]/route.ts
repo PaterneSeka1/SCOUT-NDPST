@@ -61,7 +61,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // Un admin plateforme (transverse, sans paroisse) ne se promeut jamais
     // depuis cette route, quel que soit qui l'appelle.
-    if (role === 'ADMIN_PLATEFORME' || role === 'ADMIN_PAROISSE')
+    if (role === 'ADMIN_PLATEFORME')
       return NextResponse.json({ error: 'Rôle invalide' }, { status: 400 })
 
     // Personne ne peut changer son propre rôle ou se désactiver soi-même —

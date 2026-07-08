@@ -24,7 +24,6 @@ enum BrancheType {
 
 enum RoleUtilisateur {
   ADMIN_PLATEFORME // Rôle global, transverse à toutes les paroisses (paroisseId = null)
-  ADMIN_PAROISSE // Déprécié — conservé uniquement pour compatibilité avec les données existantes, ne plus jamais assigner
   CHEF_GROUPE
   ADJOINT_GROUPE
   ASSISTANT_GROUPE
