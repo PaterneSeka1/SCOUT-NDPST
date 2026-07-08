@@ -80,7 +80,7 @@ export default function PageMotDePasseOublie() {
                   required
                   autoFocus
                   placeholder="votre@email.com"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#27ae60] focus:border-transparent transition"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#27ae60] focus:border-transparent transition text-gray-700 placeholder-gray-400"
                 />
               </div>
 
