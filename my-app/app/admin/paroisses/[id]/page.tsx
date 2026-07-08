@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { PasswordInput } from '@/app/components/PasswordInput'
+import { confirmer } from '@/app/components/ConfirmDialog'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
@@ -94,7 +95,15 @@ export default function FicheParoissePage() {
 
   const basculerActif = async () => {
     if (!paroisse) return
-    if (paroisse.actif && !confirm('Désactiver cette paroisse bloquera immédiatement la connexion de tous ses utilisateurs, sans supprimer aucune donnée. Continuer ?')) return
+    if (paroisse.actif) {
+      const ok = await confirmer({
+        titre: 'Désactiver cette paroisse ?',
+        description: `Tous les utilisateurs de "${paroisse.nom}" perdront immédiatement l'accès à leur compte. Aucune donnée (scouts, activités, historique) ne sera supprimée — vous pourrez réactiver la paroisse à tout moment.`,
+        labelConfirmer: 'Désactiver',
+        danger: true,
+      })
+      if (!ok) return
+    }
     try {
       const res = await fetch(`/api/admin/paroisses/${id}`, {
         method: 'PATCH',

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { confirmer } from '@/app/components/ConfirmDialog'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import {
   LABELS_TYPE_COTISATION,
@@ -101,7 +102,16 @@ export default function PageCotisations() {
   }
 
   const supprimer = async (id: string) => {
-    if (!confirm('Supprimer cette cotisation ?')) return
+    const cotisation = cotisations.find((c) => c.id === id)
+    const ok = await confirmer({
+      titre: 'Supprimer cette cotisation ?',
+      description: cotisation
+        ? `La cotisation de ${formatMontantFCFA(cotisation.montant)} (${cotisation.anneeScolaire}) pour ${cotisation.scout.prenom} ${cotisation.scout.nom} sera définitivement supprimée. Cette action est irréversible.`
+        : 'Cette cotisation sera définitivement supprimée. Cette action est irréversible.',
+      labelConfirmer: 'Supprimer',
+      danger: true,
+    })
+    if (!ok) return
     setEnCours(id)
     try {
       const res = await fetch(`/api/cotisations/${id}`, { method: 'DELETE' })

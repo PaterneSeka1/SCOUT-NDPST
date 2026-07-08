@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { confirmer } from '@/app/components/ConfirmDialog'
 import { ROLES_GROUPE, ROLES_BRANCHE } from '@/lib/roles'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -85,7 +86,13 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
 
   async function handleSupprimerProgramme() {
     if (!programme) return
-    if (!confirm(`Supprimer le programme "${programme.titre}" ? Cette action est irréversible.`)) return
+    const ok = await confirmer({
+      titre: `Supprimer le programme "${programme.titre}" ?`,
+      description: 'Ce programme et toutes ses lignes (thèmes planifiés) seront définitivement supprimés. Cette action est irréversible.',
+      labelConfirmer: 'Supprimer',
+      danger: true,
+    })
+    if (!ok) return
     const res = await fetch(`/api/programmes/${id}`, { method: 'DELETE' })
     if (!res.ok) { const d = await res.json().catch(() => ({})); toast.error(d.erreur ?? 'Erreur serveur'); return }
     router.push('/dashboard/programmes')
@@ -126,7 +133,16 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
   }
 
   async function handleSupprimerLigne(ligneId: string) {
-    if (!confirm('Supprimer ce thème du programme ?')) return
+    const ligne = programme?.lignes.find((l) => l.id === ligneId)
+    const ok = await confirmer({
+      titre: 'Supprimer ce thème ?',
+      description: ligne
+        ? `Le thème "${ligne.theme}" sera définitivement supprimé du programme. Cette action est irréversible.`
+        : 'Ce thème sera définitivement supprimé du programme. Cette action est irréversible.',
+      labelConfirmer: 'Supprimer',
+      danger: true,
+    })
+    if (!ok) return
     const res = await fetch(`/api/programmes/${id}/lignes/${ligneId}`, { method: 'DELETE' })
     if (!res.ok) { const d = await res.json().catch(() => ({})); toast.error(d.erreur ?? 'Erreur serveur'); return }
     charger()

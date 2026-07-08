@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { confirmer } from '@/app/components/ConfirmDialog'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
 
 interface Proposition {
@@ -145,7 +146,7 @@ export default function PagePassageBranche() {
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-100 pb-3">
               <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
                 <input
                   type="checkbox"
@@ -168,19 +169,21 @@ export default function PagePassageBranche() {
               {propositions.map((p) => (
                 <label
                   key={p.scoutId}
-                  className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 cursor-pointer"
+                  className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 cursor-pointer"
                 >
-                  <input
-                    type="checkbox"
-                    checked={selection.has(p.scoutId)}
-                    onChange={() => basculer(p.scoutId)}
-                    className="w-4 h-4 accent-[#1a4731] rounded flex-shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{p.prenom} {p.nom}</p>
-                    <p className="text-xs text-gray-500">{p.matricule ?? 'Sans matricule'} · {p.age} ans</p>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <input
+                      type="checkbox"
+                      checked={selection.has(p.scoutId)}
+                      onChange={() => basculer(p.scoutId)}
+                      className="w-4 h-4 accent-[#1a4731] rounded flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{p.prenom} {p.nom}</p>
+                      <p className="text-xs text-gray-500">{p.matricule ?? 'Sans matricule'} · {p.age} ans</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-wrap pl-7 sm:pl-0 sm:flex-shrink-0">
                     {badgeBranche(p.brancheActuelle)}
                     <span className="text-gray-300">→</span>
                     {badgeBranche(p.brancheProposee)}

@@ -3,9 +3,11 @@
 import { use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { useActivite, useSupprimerActivite } from '@/hooks/useActivites'
 import { LABELS_TYPE_ACTIVITE, COULEURS_TYPE_ACTIVITE } from '@/lib/activites'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
+import { confirmer } from '@/app/components/ConfirmDialog'
 
 export default function PageDetailActivite({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -26,12 +28,18 @@ export default function PageDetailActivite({ params }: { params: Promise<{ id: s
 
   async function handleSupprimer() {
     if (!activite) return
-    if (!confirm(`Supprimer l'activité "${activite.titre}" ? Cette action est irréversible.`)) return
+    const ok = await confirmer({
+      titre: `Supprimer l'activité "${activite.titre}" ?`,
+      description: 'Cette activité et toutes les présences qui y sont enregistrées seront définitivement supprimées. Cette action est irréversible.',
+      labelConfirmer: 'Supprimer',
+      danger: true,
+    })
+    if (!ok) return
     try {
       await supprimerActivite.mutateAsync(id)
       router.push('/dashboard/activites')
     } catch (err) {
-      alert((err as Error).message)
+      toast.error((err as Error).message)
     }
   }
 

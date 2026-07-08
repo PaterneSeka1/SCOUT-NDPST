@@ -3,12 +3,14 @@
 import { useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { useScout, useAttribuerMatricule, useAjouterContact, useSupprimerContact, useCreerCompteScout, useAjouterDocument, useSupprimerDocument } from '@/hooks/useScouts'
+import { toast } from 'sonner'
+import { useScout, useAttribuerMatricule, useAjouterContact, useSupprimerContact, useCreerCompteScout, useAjouterDocument, useSupprimerDocument, type DocumentScout } from '@/hooks/useScouts'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
 import { LABELS_TYPE_DOCUMENT, ICONES_TYPE_DOCUMENT } from '@/lib/documents'
 import { LABELS_TYPE_COTISATION, LABELS_STATUT_COTISATION, COULEURS_STATUT_COTISATION, formatMontantFCFA } from '@/lib/cotisations'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { REGLE_MOT_DE_PASSE } from '@/lib/password'
+import { confirmer } from '@/app/components/ConfirmDialog'
 
 export default function FicheScoutPage() {
   const { id } = useParams<{ id: string }>()
@@ -115,12 +117,18 @@ export default function FicheScoutPage() {
     }
   }
 
-  const handleSupprimerDocument = async (documentId: string) => {
-    if (!confirm('Supprimer ce document ?')) return
+  const handleSupprimerDocument = async (doc: DocumentScout) => {
+    const ok = await confirmer({
+      titre: 'Supprimer ce document ?',
+      description: `Le document "${LABELS_TYPE_DOCUMENT[doc.type] ?? doc.type}" (${doc.nomFichier}) sera définitivement supprimé de la fiche de ${scout.prenom} ${scout.nom}. Cette action est irréversible.`,
+      labelConfirmer: 'Supprimer',
+      danger: true,
+    })
+    if (!ok) return
     try {
-      await supprimerDocument(documentId)
+      await supprimerDocument(doc.id)
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erreur')
+      toast.error(err instanceof Error ? err.message : 'Erreur')
     }
   }
 
@@ -433,7 +441,7 @@ export default function FicheScoutPage() {
                     )}
                   </span>
                 </a>
-                <button onClick={() => handleSupprimerDocument(doc.id)} className="text-xs text-red-500 hover:text-red-700 ml-2 flex-shrink-0">
+                <button onClick={() => handleSupprimerDocument(doc)} className="text-xs text-red-500 hover:text-red-700 ml-2 flex-shrink-0">
                   Supprimer
                 </button>
               </li>

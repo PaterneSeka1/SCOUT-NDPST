@@ -2,9 +2,11 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { useActivites, useSupprimerActivite } from '@/hooks/useActivites'
 import { LABELS_TYPE_ACTIVITE, COULEURS_TYPE_ACTIVITE } from '@/lib/activites'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
+import { confirmer } from '@/app/components/ConfirmDialog'
 
 type Activite = {
   id: string
@@ -93,8 +95,14 @@ export default function PageActivites() {
   const pagination = data?.pagination
 
   async function handleSupprimer(id: string, titre: string) {
-    if (!confirm(`Supprimer "${titre}" ? Cette action est irréversible.`)) return
-    try { await supprimerActivite.mutateAsync(id) } catch (err) { alert((err as Error).message) }
+    const ok = await confirmer({
+      titre: `Supprimer "${titre}" ?`,
+      description: 'Cette activité et toutes les présences qui y sont enregistrées seront définitivement supprimées. Cette action est irréversible.',
+      labelConfirmer: 'Supprimer',
+      danger: true,
+    })
+    if (!ok) return
+    try { await supprimerActivite.mutateAsync(id) } catch (err) { toast.error((err as Error).message) }
   }
 
   return (

@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { ROLES_GROUPE, ROLES_BRANCHE } from '@/lib/roles'
+import { confirmer } from '@/app/components/ConfirmDialog'
 
 const BRANCHES_ORDRE = ['OISILLONS', 'LOUVETEAUX', 'ECLAIREURS', 'CHEMINOTS', 'COMPAGNONS']
 const BRANCHES: Record<string, string> = {
@@ -93,7 +94,17 @@ export default function PageReunions() {
   }, [estGroupe, estBranche])
 
   const handleAnnuler = async (id: string) => {
-    if (!confirm('Annuler cette réunion ?')) return
+    const cible = reunions.find((r) => r.id === id)
+    const nomReunion = cible
+      ? (cible.titre || `du ${formatDate(dateEffective(cible))}`) + (cible.brancheType ? ` (${BRANCHES[cible.brancheType]})` : '')
+      : 'cette réunion'
+    const ok = await confirmer({
+      titre: 'Annuler cette réunion ?',
+      description: `La réunion "${nomReunion}" sera marquée comme annulée. Les présences déjà enregistrées seront conservées, mais cette réunion ne pourra plus être remise à l'état planifié depuis cette page.`,
+      labelConfirmer: 'Annuler la réunion',
+      danger: true,
+    })
+    if (!ok) return
     const res = await fetch(`/api/reunions/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },

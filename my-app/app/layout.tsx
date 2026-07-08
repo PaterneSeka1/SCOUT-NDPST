@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import { Providers } from './providers'
+import { ConfirmDialogHost } from '@/app/components/ConfirmDialog'
 import { prisma } from '@/lib/prisma'
 import { THEME_DEFAUT, couleurSure, hexToRgb, type Theme } from '@/lib/theme'
 
@@ -90,6 +91,7 @@ export default async function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <Providers>{children}</Providers>
+        <ConfirmDialogHost />
       </body>
     </html>
   )
