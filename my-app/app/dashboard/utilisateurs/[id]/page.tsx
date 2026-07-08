@@ -40,7 +40,7 @@ export default function FicheUtilisateurPage() {
       setErreur('')
       try {
         const res = await fetch(`/api/utilisateurs/${id}`)
-        if (res.status === 404) throw new Error('Utilisateur introuvable')
+        if (res.status === 404) throw new Error('Membre introuvable')
         if (!res.ok) throw new Error('Erreur lors du chargement')
         const data: Utilisateur = await res.json()
         setUtilisateur(data)
@@ -65,7 +65,7 @@ export default function FicheUtilisateurPage() {
         </Link>
       </div>
 
-      <h1 className="text-2xl font-bold text-gray-900">Fiche utilisateur</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Fiche membre</h1>
 
       {chargement && (
         <div className="flex items-center justify-center py-16">

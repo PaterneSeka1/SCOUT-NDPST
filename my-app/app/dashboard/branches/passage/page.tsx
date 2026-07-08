@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { confirmer } from '@/app/components/ConfirmDialog'
-import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
+import { LABELS_BRANCHES, COULEURS_BRANCHES, TRANCHES_AGE_BRANCHES, ORDRE_BRANCHES } from '@/lib/branches'
 
 interface Proposition {
   scoutId: string
@@ -22,7 +22,22 @@ function badgeBranche(branche: string | null) {
     return <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">Sortie du mouvement</span>
   }
   const couleur = COULEURS_BRANCHES[branche] ?? 'bg-gray-100 text-gray-700'
-  return <span className={`text-xs px-2 py-0.5 rounded-full ${couleur}`}>{LABELS_BRANCHES[branche] ?? branche}</span>
+  const tranche = TRANCHES_AGE_BRANCHES[branche]
+  return (
+    <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${couleur}`}>
+      {LABELS_BRANCHES[branche] ?? branche}
+      {tranche ? ` · ${tranche.min}-${tranche.max} ans` : ''}
+    </span>
+  )
+}
+
+// La branche proposée est parfois antérieure à l'actuelle (ex. Éclaireurs →
+// Louveteaux) : ce n'est pas un recul normal, mais le signe probable d'une
+// date de naissance ou d'une branche mal saisie à l'origine — à vérifier
+// avant de confirmer, contrairement à un passage classique en fin d'année.
+function estCorrection(p: Proposition): boolean {
+  if (!p.brancheProposee) return false
+  return ORDRE_BRANCHES.indexOf(p.brancheProposee) < ORDRE_BRANCHES.indexOf(p.brancheActuelle)
 }
 
 function dateAujourdhui(): string {
@@ -113,9 +128,16 @@ export default function PagePassageBranche() {
       <div>
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Passage de branche</h1>
         <p className="text-sm text-gray-500 mt-0.5">
-          Propose un changement de branche pour chaque scout dont l&apos;âge ne correspond plus à sa branche actuelle.
-          Rien n&apos;est modifié tant que vous ne confirmez pas.
+          Propose un changement de branche pour chaque scout dont l&apos;âge ne correspond plus à sa branche actuelle,
+          selon les tranches d&apos;âge ci-dessous. Rien n&apos;est modifié tant que vous ne confirmez pas.
         </p>
+        <div className="flex flex-wrap gap-1.5 mt-3">
+          {ORDRE_BRANCHES.map((branche) => (
+            <span key={branche} className={`text-xs px-2 py-1 rounded-lg ${COULEURS_BRANCHES[branche]}`}>
+              {LABELS_BRANCHES[branche]} · {TRANCHES_AGE_BRANCHES[branche].min}-{TRANCHES_AGE_BRANCHES[branche].max} ans
+            </span>
+          ))}
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">
@@ -193,6 +215,14 @@ export default function PagePassageBranche() {
                     {badgeBranche(p.brancheActuelle)}
                     <span className="text-gray-300">→</span>
                     {badgeBranche(p.brancheProposee)}
+                    {estCorrection(p) && (
+                      <span
+                        className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full whitespace-nowrap"
+                        title="La branche proposée est antérieure à la branche actuelle : vérifiez la date de naissance de ce scout avant de confirmer."
+                      >
+                        ⚠️ à vérifier
+                      </span>
+                    )}
                   </div>
                 </label>
               ))}

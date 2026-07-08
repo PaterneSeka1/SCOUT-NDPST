@@ -88,7 +88,7 @@ async function fetchUtilisateurs(
   const res = await fetch(`/api/utilisateurs?${params.toString()}`)
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
-    throw new Error(data.error ?? 'Erreur lors du chargement des utilisateurs')
+    throw new Error(data.error ?? 'Erreur lors du chargement des membres')
   }
   return res.json()
 }
@@ -97,7 +97,7 @@ async function fetchUtilisateur(id: string): Promise<Utilisateur> {
   const res = await fetch(`/api/utilisateurs/${id}`)
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
-    throw new Error(data.error ?? 'Utilisateur introuvable')
+    throw new Error(data.error ?? 'Membre introuvable')
   }
   return res.json()
 }
@@ -141,7 +141,7 @@ export function useCreerUtilisateur() {
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error ?? "Erreur lors de la création de l'utilisateur")
+        throw new Error(data.error ?? 'Erreur lors de la création du membre')
       }
       return res.json()
     },
@@ -166,7 +166,7 @@ export function useModifierUtilisateur(id: string) {
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error ?? "Erreur lors de la modification de l'utilisateur")
+        throw new Error(data.error ?? 'Erreur lors de la modification du membre')
       }
       return res.json()
     },
@@ -190,7 +190,7 @@ export function useDesactiverUtilisateur() {
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error ?? "Erreur lors de la désactivation de l'utilisateur")
+        throw new Error(data.error ?? 'Erreur lors de la désactivation du membre')
       }
       return res.json()
     },

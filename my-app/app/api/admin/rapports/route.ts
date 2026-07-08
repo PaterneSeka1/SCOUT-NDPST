@@ -11,9 +11,21 @@ export async function GET() {
     return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
   }
 
+  // Une activité pas encore passée ne doit pas compter dans un rapport
+  // (rétrospectif par nature) — seul le décompte des activités est concerné
+  // ici, scouts/utilisateurs/cotisations n'ont pas de notion de date future.
+  const maintenant = new Date()
+
   const paroisses = await prisma.paroisse.findMany({
     include: {
-      _count: { select: { scouts: true, utilisateurs: true, activites: true, cotisations: true } },
+      _count: {
+        select: {
+          scouts: true,
+          utilisateurs: true,
+          activites: { where: { dateDebut: { lte: maintenant } } },
+          cotisations: true,
+        },
+      },
     },
     orderBy: { nom: 'asc' },
   })

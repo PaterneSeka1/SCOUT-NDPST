@@ -19,6 +19,10 @@ export async function GET() {
   debutMois.setHours(0, 0, 0, 0)
 
   const il6mois = new Date(Date.now() - 180 * 86400000)
+  // Un rapport est par nature rétrospectif : une activité ou réunion pas
+  // encore passée ne doit jamais compter dans les statistiques (elle
+  // n'a encore aucune présence à comptabiliser et fausserait les taux).
+  const maintenant = new Date()
 
   const [
     scoutsParBranche,
@@ -35,9 +39,9 @@ export async function GET() {
     prisma.scout.groupBy({ by: ['brancheType'], where: { paroisseId }, _count: { id: true } }),
     prisma.scout.count({ where: { paroisseId, actif: true } }),
     prisma.scout.count({ where: { paroisseId, actif: false } }),
-    prisma.activite.count({ where: { paroisseId, dateDebut: { gte: debutMois } } }),
+    prisma.activite.count({ where: { paroisseId, dateDebut: { gte: debutMois, lte: maintenant } } }),
     prisma.activite.findMany({
-      where: { paroisseId, dateDebut: { gte: il6mois } },
+      where: { paroisseId, dateDebut: { gte: il6mois, lte: maintenant } },
       select: {
         id: true, titre: true, dateDebut: true, type: true, brancheType: true,
         _count: { select: { presences: true } },
@@ -48,16 +52,16 @@ export async function GET() {
     // Nombre réel d'activités sur 6 mois (non plafonné) : sert de dénominateur
     // au taux de présence, contrairement à `activites6mois` limité à 10 lignes
     // pour l'affichage.
-    prisma.activite.count({ where: { paroisseId, dateDebut: { gte: il6mois } } }),
+    prisma.activite.count({ where: { paroisseId, dateDebut: { gte: il6mois, lte: maintenant } } }),
     prisma.presence.count({
-      where: { present: true, activite: { paroisseId, dateDebut: { gte: il6mois } } },
+      where: { present: true, activite: { paroisseId, dateDebut: { gte: il6mois, lte: maintenant } } },
     }),
     prisma.scout.count({ where: { paroisseId, actif: true } }),
     prisma.jourReunion.count({
-      where: { paroisseId, dateHeure: { gte: debutMois } },
+      where: { paroisseId, dateHeure: { gte: debutMois, lte: maintenant } },
     }),
     prisma.jourReunion.findMany({
-      where: { paroisseId, statut: 'TERMINEE', dateHeure: { gte: il6mois } },
+      where: { paroisseId, statut: 'TERMINEE', dateHeure: { gte: il6mois, lte: maintenant } },
       include: {
         _count: { select: { presences: true } },
         presences: { where: { statut: 'PRESENT' }, select: { id: true } },

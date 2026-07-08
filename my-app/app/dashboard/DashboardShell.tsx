@@ -20,7 +20,7 @@ function getMenuItems(role: string): MenuItem[] {
       return [
         { label: 'Tableau de bord', href: '/dashboard', icone: '📊' },
         { label: 'Paroisse', href: '/dashboard/paroisse', icone: '⛪' },
-        { label: 'Utilisateurs', href: '/dashboard/utilisateurs', icone: '👥' },
+        { label: 'Membres', href: '/dashboard/utilisateurs', icone: '👥' },
         { label: 'Branches', href: '/dashboard/branches', icone: '🌿' },
         { label: 'Scouts', href: '/dashboard/scouts', icone: '⚜️' },
         { label: 'Documents', href: '/dashboard/documents', icone: '📄' },

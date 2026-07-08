@@ -163,14 +163,14 @@ export default function UtilisateursPage() {
       {/* En-tête */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Utilisateurs</h1>
-          <p className="text-sm text-gray-500">{total} utilisateur{total !== 1 ? 's' : ''} dans votre paroisse</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Membres</h1>
+          <p className="text-sm text-gray-500">{total} membre{total !== 1 ? 's' : ''} dans votre paroisse</p>
         </div>
         <Link
           href="/dashboard/utilisateurs/nouveau"
           className="inline-flex items-center justify-center bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium"
         >
-          + Nouvel utilisateur
+          + Nouveau membre
         </Link>
       </div>
 
@@ -207,7 +207,7 @@ export default function UtilisateursPage() {
         {isLoading ? (
           Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
         ) : utilisateurs.length === 0 ? (
-          <p className="text-center text-gray-400 text-sm py-12">Aucun utilisateur trouvé.</p>
+          <p className="text-center text-gray-400 text-sm py-12">Aucun membre trouvé.</p>
         ) : (
           utilisateurs.map((u) => <CarteUtilisateur key={u.id} utilisateur={u} />)
         )}
@@ -232,7 +232,7 @@ export default function UtilisateursPage() {
               ) : utilisateurs.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="text-center py-16 text-gray-400 text-sm">
-                    Aucun utilisateur trouvé.
+                    Aucun membre trouvé.
                   </td>
                 </tr>
               ) : (
@@ -247,7 +247,7 @@ export default function UtilisateursPage() {
       {!isLoading && totalPages > 1 && (
         <div className="flex items-center justify-between gap-4">
           <p className="text-xs sm:text-sm text-gray-500">
-            {total} utilisateur{total !== 1 ? 's' : ''} — p. {page}/{totalPages}
+            {total} membre{total !== 1 ? 's' : ''} — p. {page}/{totalPages}
           </p>
           <div className="flex gap-2">
             <button

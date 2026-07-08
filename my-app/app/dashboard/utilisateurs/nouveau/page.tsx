@@ -98,7 +98,7 @@ export default function NouvelUtilisateurPage() {
         ← Retour à la liste
       </Link>
 
-      <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Nouvel utilisateur</h1>
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Nouveau membre</h1>
 
       <form onSubmit={handleSubmit} noValidate>
         <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">
@@ -182,7 +182,7 @@ export default function NouvelUtilisateurPage() {
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={isPending}
               className="sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
-              {isPending ? 'Enregistrement…' : "Créer l'utilisateur"}
+              {isPending ? 'Enregistrement…' : 'Créer le membre'}
             </button>
             <Link href="/dashboard/utilisateurs"
               className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm">

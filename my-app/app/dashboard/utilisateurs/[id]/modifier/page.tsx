@@ -114,7 +114,7 @@ export default function ModifierUtilisateurPage() {
   if (isError || !utilisateur) return (
     <div className="space-y-4">
       <Link href="/dashboard/utilisateurs" className="text-sm text-gray-500 hover:text-gray-700">← Retour</Link>
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">Utilisateur introuvable.</div>
+      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">Membre introuvable.</div>
     </div>
   )
 
@@ -125,7 +125,7 @@ export default function ModifierUtilisateurPage() {
       </Link>
 
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Modifier l&apos;utilisateur</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Modifier le membre</h1>
         <p className="text-sm text-gray-500 mt-0.5">{utilisateur.prenom} {utilisateur.nom}</p>
       </div>
 
