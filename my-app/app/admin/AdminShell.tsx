@@ -8,6 +8,7 @@ import { useState } from 'react'
 const MENU = [
   { label: 'Tableau de bord', href: '/admin', icone: '📊' },
   { label: 'Paroisses', href: '/admin/paroisses', icone: '⛪' },
+  { label: 'Utilisateurs', href: '/admin/utilisateurs', icone: '👥' },
   { label: 'Rapports', href: '/admin/rapports', icone: '📈' },
   { label: 'Apparence', href: '/admin/apparence', icone: '🎨' },
 ]
