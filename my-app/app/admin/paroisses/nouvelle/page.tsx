@@ -90,14 +90,14 @@ export default function NouvelleParoissePage() {
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 pt-2">
-          <Link href="/admin/paroisses" className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition">
+        <div className="flex flex-col sm:flex-row sm:justify-end gap-3 pt-2">
+          <Link href="/admin/paroisses" className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition">
             Annuler
           </Link>
           <button
             type="submit"
             disabled={soumission}
-            className="rounded-lg px-6 py-2.5 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50 transition flex items-center gap-2"
+            className="rounded-lg px-6 py-2.5 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50 transition flex items-center justify-center gap-2"
             style={{ backgroundColor: 'var(--cp)' }}
           >
             {soumission && <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />}

@@ -154,7 +154,7 @@ export default function FicheUtilisateurPage() {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Link
               href={`/dashboard/utilisateurs/${utilisateur.id}/modifier`}
               className="bg-[#1a4731] text-white px-4 py-2 rounded-md hover:bg-[#163d29] transition-colors text-sm font-medium"

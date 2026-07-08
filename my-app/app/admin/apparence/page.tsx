@@ -219,7 +219,7 @@ export default function SiteConfigPage() {
             Utilisé comme favicon (onglet navigateur) et image de partage (Open Graph). Privilégiez un carré PNG/SVG sur fond transparent.
           </p>
 
-          <div className="flex items-start gap-5">
+          <div className="flex flex-col sm:flex-row items-start gap-5">
             {/* Aperçu logo */}
             <div className="flex-shrink-0 w-20 h-20 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50">
               {config.logoSite ? (
@@ -247,7 +247,7 @@ export default function SiteConfigPage() {
                   placeholder="/uploads/logo.png"
                 />
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <input
                   ref={logoRef}
                   type="file"
@@ -335,7 +335,7 @@ export default function SiteConfigPage() {
 
         {/* ── Couleurs ── */}
         <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
             <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500">
               Couleurs du thème
             </h2>
@@ -385,9 +385,9 @@ export default function SiteConfigPage() {
           </div>
 
           {/* Aperçu sidebar */}
-          <div className="mt-6 rounded-lg overflow-hidden border border-gray-200 flex h-24">
+          <div className="mt-6 rounded-lg overflow-hidden border border-gray-200 flex flex-col sm:flex-row sm:h-24">
             <div
-              className="w-36 flex-shrink-0 flex flex-col justify-center px-3 gap-1.5"
+              className="w-full sm:w-36 flex-shrink-0 flex flex-col justify-center px-3 py-3 sm:py-0 gap-1.5"
               style={{ backgroundColor: config.theme.couleurPrimaire }}
             >
               <div className="h-1.5 w-16 rounded-full bg-white/30" />
@@ -401,10 +401,10 @@ export default function SiteConfigPage() {
               <div className="h-1.5 w-14 rounded-full bg-white/20" />
               <div className="h-1.5 w-18 rounded-full bg-white/20" />
             </div>
-            <div className="flex-1 flex items-center px-5 bg-white">
+            <div className="flex-1 min-w-0 flex items-center px-5 py-3 sm:py-0 bg-white">
               <div className="space-y-2">
-                <div className="h-2.5 w-36 rounded bg-gray-200" />
-                <div className="h-2 w-24 rounded bg-gray-100" />
+                <div className="h-2.5 w-36 max-w-full rounded bg-gray-200" />
+                <div className="h-2 w-24 max-w-full rounded bg-gray-100" />
               </div>
             </div>
           </div>
@@ -450,7 +450,7 @@ export default function SiteConfigPage() {
                 placeholder="/uploads/ma-photo.jpg"
               />
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <input ref={heroRef} type="file" accept="image/*" onChange={(e) => handleUpload(e, 'hero')} className="hidden" />
               <button
                 type="button"
@@ -541,19 +541,19 @@ export default function SiteConfigPage() {
         </section>
 
         {/* ── Actions ── */}
-        <div className="flex justify-end gap-3 pb-4">
+        <div className="flex flex-col sm:flex-row sm:justify-end gap-3 pb-4">
           <a
             href="/"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+            className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
           >
             Voir la page d&apos;accueil ↗
           </a>
           <button
             type="submit"
             disabled={sauvegarde}
-            className="rounded-lg px-6 py-2.5 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50 transition flex items-center gap-2"
+            className="rounded-lg px-6 py-2.5 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50 transition flex items-center justify-center gap-2"
             style={{ backgroundColor: 'var(--cp)' }}
           >
             {sauvegarde && <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />}

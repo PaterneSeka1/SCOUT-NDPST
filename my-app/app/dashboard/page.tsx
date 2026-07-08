@@ -144,12 +144,12 @@ export default function DashboardPage() {
       )}
 
       {/* KPIs */}
-      <div className="flex flex-wrap gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {chargement
           ? Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
-                className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 animate-pulse flex-1 min-w-0"
+                className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 animate-pulse"
               >
                 <div className="w-10 h-10 bg-gray-200 rounded-lg mb-4" />
                 <div className="h-7 bg-gray-200 rounded w-16 mb-2" />
@@ -159,7 +159,7 @@ export default function DashboardPage() {
           : entrees.map(([titre, valeur], i) => (
               <div
                 key={titre}
-                className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 flex-1 min-w-0"
+                className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100"
               >
                 <div
                   className={`w-10 h-10 sm:w-12 sm:h-12 ${COULEURS_KPI[i % COULEURS_KPI.length]} rounded-xl flex items-center justify-center text-xl sm:text-2xl mb-4`}

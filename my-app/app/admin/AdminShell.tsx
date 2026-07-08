@@ -44,6 +44,14 @@ function SidebarContent({ pathname, nomComplet, onNavigate }: { pathname: string
       <div className="px-4 py-4 border-t border-white/15 flex-shrink-0">
         <p className="text-white/60 text-xs truncate mb-0.5">{nomComplet}</p>
         <p className="text-[#f39c12] text-xs font-medium mb-3">Administrateur plateforme</p>
+        <Link
+          href="/admin/profil"
+          onClick={onNavigate}
+          className="w-full text-xs text-white/60 hover:text-white hover:bg-white/10 px-3 py-2 rounded-lg transition-colors flex items-center gap-2 mb-1"
+        >
+          <span>👤</span>
+          Mon profil
+        </Link>
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}
           className="w-full text-xs text-white/60 hover:text-white hover:bg-red-700/40 px-3 py-2 rounded-lg transition-colors flex items-center gap-2"

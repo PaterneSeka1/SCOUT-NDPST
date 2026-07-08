@@ -8,6 +8,7 @@ export const LABELS_ACTIONS_AUDIT: Record<string, string> = {
   UTILISATEUR_DESACTIVE: 'Désactivation utilisateur',
   UTILISATEUR_REACTIVE: 'Réactivation utilisateur',
   UTILISATEUR_MOT_DE_PASSE_REINITIALISE: 'Mot de passe réinitialisé (admin)',
+  UTILISATEUR_MOT_DE_PASSE_MODIFIE: "Mot de passe modifié (par l'utilisateur)",
   SCOUT_CREE: 'Création scout',
   SCOUT_MODIFIE: 'Modification scout',
   SCOUT_MATRICULE_ATTRIBUE: 'Attribution matricule',

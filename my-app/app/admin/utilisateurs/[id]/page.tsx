@@ -80,7 +80,7 @@ export default function FicheUtilisateurPlateformePage() {
 
       <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-5">
         {/* Identifiant */}
-        <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-gray-100">
           <p className="text-3xl font-mono font-bold tracking-wider" style={{ color: 'var(--cp)' }}>
             {utilisateur.matricule ?? utilisateur.telephone ?? '—'}
           </p>
@@ -165,23 +165,23 @@ export default function FicheUtilisateurPlateformePage() {
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         <Link
           href={`/admin/utilisateurs/${utilisateur.id}/modifier`}
-          className="rounded-lg px-4 py-2 text-sm font-bold text-white hover:brightness-110 transition"
+          className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-bold text-white hover:brightness-110 transition"
           style={{ backgroundColor: 'var(--cp)' }}
         >
           Modifier
         </Link>
         <Link
           href={`/admin/utilisateurs/${utilisateur.id}/modifier`}
-          className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+          className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
         >
           Réinitialiser le mot de passe
         </Link>
         <Link
           href="/admin/utilisateurs"
-          className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+          className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm"
         >
           Retour
         </Link>

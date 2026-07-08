@@ -173,7 +173,7 @@ export default function FicheParoissePage() {
         </span>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div className="bg-[#1a4731] text-white rounded-xl p-4 text-center">
           <p className="text-2xl font-bold">{paroisse.counts.scouts}</p>
           <p className="text-xs opacity-90 mt-0.5">Scouts</p>
@@ -182,7 +182,7 @@ export default function FicheParoissePage() {
           <p className="text-2xl font-bold">{paroisse.counts.utilisateurs}</p>
           <p className="text-xs opacity-90 mt-0.5">Utilisateurs</p>
         </div>
-        <div className="bg-[#f39c12] text-white rounded-xl p-4 text-center">
+        <div className="col-span-2 sm:col-span-1 bg-[#f39c12] text-white rounded-xl p-4 text-center">
           <p className="text-2xl font-bold">{paroisse.counts.activites}</p>
           <p className="text-xs opacity-90 mt-0.5">Activités</p>
         </div>
@@ -190,7 +190,7 @@ export default function FicheParoissePage() {
 
       {/* Chef(s) de Groupe */}
       <section className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500">Chef de Groupe</h2>
           {!afficherFormChef && (
             <button onClick={() => setAfficherFormChef(true)} className="text-sm font-medium hover:underline" style={{ color: 'var(--cp)' }}>
@@ -248,14 +248,14 @@ export default function FicheParoissePage() {
                 <PasswordInput className={CLS_INPUT} value={formChef.motDePasse} onChange={(e) => setFormChef({ ...formChef, motDePasse: e.target.value })} />
               </div>
             </div>
-            <div className="flex justify-end gap-3">
+            <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
               <button type="button" onClick={() => setAfficherFormChef(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
                 Annuler
               </button>
               <button
                 type="submit"
                 disabled={soumissionChef}
-                className="rounded-lg px-5 py-2 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50 transition flex items-center gap-2"
+                className="rounded-lg px-5 py-2 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50 transition flex items-center justify-center gap-2"
                 style={{ backgroundColor: 'var(--cp)' }}
               >
                 {soumissionChef && <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />}
@@ -289,11 +289,11 @@ export default function FicheParoissePage() {
               <div><label className={CLS_LABEL}>E-mail</label><input type="email" className={CLS_INPUT} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
               <div className="sm:col-span-2"><label className={CLS_LABEL}>Adresse</label><input className={CLS_INPUT} value={form.adresse} onChange={(e) => setForm({ ...form, adresse: e.target.value })} /></div>
             </div>
-            <div className="flex justify-end gap-3">
+            <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
               <button type="button" onClick={() => setModeEdition(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
                 Annuler
               </button>
-              <button type="submit" disabled={soumission} className="rounded-lg px-5 py-2 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50 transition flex items-center gap-2" style={{ backgroundColor: 'var(--cp)' }}>
+              <button type="submit" disabled={soumission} className="rounded-lg px-5 py-2 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50 transition flex items-center justify-center gap-2" style={{ backgroundColor: 'var(--cp)' }}>
                 {soumission && <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />}
                 {soumission ? 'Sauvegarde…' : 'Sauvegarder'}
               </button>
@@ -313,7 +313,7 @@ export default function FicheParoissePage() {
       {/* Zone sensible */}
       <section className="bg-white rounded-xl border border-red-100 p-5 sm:p-6">
         <h2 className="text-sm font-bold uppercase tracking-widest text-red-500 mb-3">Zone sensible</h2>
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <p className="text-sm text-gray-600">
             {paroisse.actif
               ? 'Désactiver bloque la connexion de tous les utilisateurs de cette paroisse, sans supprimer aucune donnée.'
@@ -321,7 +321,7 @@ export default function FicheParoissePage() {
           </p>
           <button
             onClick={basculerActif}
-            className={`flex-shrink-0 rounded-lg px-4 py-2 text-sm font-semibold transition ${paroisse.actif ? 'border border-red-300 text-red-600 hover:bg-red-50' : 'border border-green-300 text-green-700 hover:bg-green-50'}`}
+            className={`sm:flex-shrink-0 rounded-lg px-4 py-2 text-sm font-semibold transition ${paroisse.actif ? 'border border-red-300 text-red-600 hover:bg-red-50' : 'border border-green-300 text-green-700 hover:bg-green-50'}`}
           >
             {paroisse.actif ? 'Désactiver' : 'Réactiver'}
           </button>
