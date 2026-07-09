@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { RoleUtilisateur } from '@/app/generated/prisma/client'
-import { ROLES_GROUPE as ROLES_AUTORISES } from '@/lib/roles'
+import { ROLES_GROUPE as ROLES_AUTORISES, ROLES_DISTRICT_ETENDU } from '@/lib/roles'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 import { paroisseIdRequise } from '@/lib/session'
@@ -19,8 +19,11 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     const paroisseId = paroisseIdRequise(session)
     const { id } = await params
 
+    // Exclut systématiquement les rôles de district : un membre de l'équipe
+    // district ancré sur cette paroisse n'apparaît jamais dans cette surface
+    // paroissiale, gérée par le Chef de Groupe (voir /district/equipe).
     const utilisateur = await prisma.utilisateur.findFirst({
-      where: { id, paroisseId },
+      where: { id, paroisseId, role: { notIn: ROLES_DISTRICT_ETENDU as RoleUtilisateur[] } },
       select: {
         id: true, nom: true, prenom: true, matricule: true, telephone: true,
         email: true, role: true, actif: true, paroisseId: true,
@@ -54,8 +57,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const paroisseId = paroisseIdRequise(session)
     const { id } = await params
 
+    // Exclut les rôles de district : un Chef de Groupe ne peut ni voir ni
+    // modifier un compte de l'équipe district ancré sur sa paroisse.
     const existant = await prisma.utilisateur.findFirst({
-      where: { id, paroisseId },
+      where: { id, paroisseId, role: { notIn: ROLES_DISTRICT_ETENDU as RoleUtilisateur[] } },
       select: { id: true, role: true, actif: true },
     })
     if (!existant) return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 })
@@ -69,8 +74,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Rôle invalide' }, { status: 400 })
 
     // Un admin plateforme (transverse, sans paroisse) ne se promeut jamais
-    // depuis cette route, quel que soit qui l'appelle.
-    if (role === 'ADMIN_PLATEFORME')
+    // depuis cette route, quel que soit qui l'appelle. Les rôles de district
+    // ne sont pas non plus assignables ici : gérés par ADMIN_PLATEFORME (création)
+    // puis par le Commissaire de District lui-même via /district/equipe.
+    if (role === 'ADMIN_PLATEFORME' || (role !== undefined && ROLES_DISTRICT_ETENDU.includes(role)))
       return NextResponse.json({ error: 'Rôle invalide' }, { status: 400 })
 
     // Personne ne peut changer son propre rôle ou se désactiver soi-même —
@@ -145,7 +152,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     }
 
     const existant = await prisma.utilisateur.findFirst({
-      where: { id, paroisseId },
+      where: { id, paroisseId, role: { notIn: ROLES_DISTRICT_ETENDU as RoleUtilisateur[] } },
       select: { id: true },
     })
     if (!existant) return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 })

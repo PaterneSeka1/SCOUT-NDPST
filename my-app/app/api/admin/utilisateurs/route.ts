@@ -5,8 +5,9 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { Prisma, RoleUtilisateur } from '@/app/generated/prisma/client'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
-import { ROLES_PLATEFORME, ROLES_ASSIGNABLES_PAROISSE, LABELS_ROLES } from '@/lib/roles'
+import { ROLES_PLATEFORME, ROLES_ASSIGNABLES_PAROISSE, ROLES_DISTRICT_ETENDU, LABELS_ROLES } from '@/lib/roles'
 import { RoleUtilisateurSchema } from '@/lib/validation'
+import { normaliserDoyenne } from '@/lib/district'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 import { envoyerEmailBienvenue } from '@/lib/notifications'
@@ -108,13 +109,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ erreur: REGLE_MOT_DE_PASSE }, { status: 400 })
     }
 
-    const paroisse = await prisma.paroisse.findUnique({ where: { id: paroisseId }, select: { id: true } })
+    const paroisse = await prisma.paroisse.findUnique({ where: { id: paroisseId }, select: { id: true, doyenne: true } })
     if (!paroisse) return NextResponse.json({ erreur: 'Paroisse introuvable' }, { status: 404 })
 
     // Un admin plateforme (transverse, sans paroisse) ne se crée jamais via cette
     // route — ROLES_ASSIGNABLES_PAROISSE exclut déjà ADMIN_PLATEFORME.
     if (!ROLES_ASSIGNABLES_PAROISSE.includes(role)) {
       return NextResponse.json({ erreur: 'Rôle invalide' }, { status: 400 })
+    }
+
+    // Un rôle de district n'a de sens que si le périmètre du district (dérivé du
+    // doyenne de la paroisse d'ancrage) est résoluble — voir lib/district.ts.
+    if (ROLES_DISTRICT_ETENDU.includes(role) && !normaliserDoyenne(paroisse.doyenne)) {
+      return NextResponse.json(
+        { erreur: "Cette paroisse n'a pas de doyenné renseigné — renseignez-le avant d'y rattacher un rôle de district" },
+        { status: 400 },
+      )
     }
 
     const estParent = role === 'PARENT'

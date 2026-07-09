@@ -6,6 +6,9 @@ export const LABELS_ROLES: Record<string, string> = {
   RESPONSABLE_BRANCHE: 'Responsable de Branche',
   ADJOINT_BRANCHE: 'Adjoint de Branche',
   ASSISTANT_BRANCHE: 'Assistant de Branche',
+  COMMISSAIRE_DISTRICT: 'Commissaire de District',
+  ADJOINT_DISTRICT: 'Commissaire de District Adjoint',
+  ASSISTANT_DISTRICT: 'Assistant au Commissaire de District',
   PARENT: 'Parent',
   SCOUT: 'Scout',
 }
@@ -18,8 +21,17 @@ export const COULEURS_ROLES: Record<string, string> = {
   RESPONSABLE_BRANCHE: 'bg-blue-100 text-blue-800',
   ADJOINT_BRANCHE: 'bg-blue-50 text-blue-700',
   ASSISTANT_BRANCHE: 'bg-indigo-50 text-indigo-700',
+  COMMISSAIRE_DISTRICT: 'bg-amber-100 text-amber-900',
+  ADJOINT_DISTRICT: 'bg-amber-50 text-amber-800',
+  ASSISTANT_DISTRICT: 'bg-yellow-50 text-yellow-700',
   PARENT: 'bg-purple-100 text-purple-800',
   SCOUT: 'bg-orange-100 text-orange-800',
+}
+
+/** "Assistant au Commissaire de District — Branche Route" si fonction renseignée, sinon le libellé seul. */
+export function libelleRoleAvecFonction(role: string, fonction?: string | null): string {
+  const base = LABELS_ROLES[role] ?? role
+  return fonction?.trim() ? `${base} — ${fonction.trim()}` : base
 }
 
 // ---------------------------------------------------------------------------
@@ -58,8 +70,33 @@ export const ROLES_GESTION: string[] = [...ROLES_GROUPE, ...ROLES_BRANCHE]
 /** Administrateur plateforme : gère les paroisses, le branding commun, les rapports consolidés. Jamais combiné aux groupes ci-dessus. */
 export const ROLES_PLATEFORME: string[] = ['ADMIN_PLATEFORME']
 
+/**
+ * Direction du district : au-dessus des Chefs de Groupe de plusieurs paroisses
+ * partageant le même Paroisse.doyenne. Rattaché à une paroisse d'ancrage précise
+ * (voir lib/district.ts pour la résolution du périmètre réel). Comme
+ * ROLES_PLATEFORME, JAMAIS mélangé à ROLES_TOUT_STAFF/ROLES_GESTION et consorts :
+ * ces rôles opèrent au-dessus du périmètre d'une seule paroisse et n'ont pas accès
+ * aux routes opérationnelles paroissiales (scouts, activités, cotisations...).
+ * Voir la zone applicative /district.
+ */
+export const ROLES_DISTRICT: string[] = ['COMMISSAIRE_DISTRICT']
+
+/** Toute l'équipe de district (direction + adjoint/assistants). */
+export const ROLES_DISTRICT_ETENDU: string[] = [...ROLES_DISTRICT, 'ADJOINT_DISTRICT', 'ASSISTANT_DISTRICT']
+
+/** Rôles assignables par un Commissaire de District à sa propre équipe, via /district/equipe. */
+export const ROLES_ASSIGNABLES_DISTRICT: string[] = ['ADJOINT_DISTRICT', 'ASSISTANT_DISTRICT']
+
 /** Rôles assignables à un utilisateur d'une paroisse (tous sauf ADMIN_PLATEFORME, réservé à la zone /admin). */
 export const ROLES_ASSIGNABLES_PAROISSE: string[] = Object.keys(LABELS_ROLES).filter((r) => r !== 'ADMIN_PLATEFORME')
 
-/** Rôles d'équipe (page "Membres") — exclut PARENT, qui a sa propre page dédiée. */
-export const ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT: string[] = ROLES_ASSIGNABLES_PAROISSE.filter((r) => r !== 'PARENT')
+/**
+ * Rôles d'équipe (page "Membres", pilotée par le Chef de Groupe) — exclut PARENT
+ * (page dédiée) et les rôles de district : un Chef de Groupe ne doit jamais
+ * pouvoir créer/promouvoir un membre de sa paroisse en Commissaire de District —
+ * rôle géré exclusivement par ADMIN_PLATEFORME (création) puis par le Commissaire
+ * de District lui-même via /district/equipe.
+ */
+export const ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT: string[] = ROLES_ASSIGNABLES_PAROISSE.filter(
+  (r) => r !== 'PARENT' && !ROLES_DISTRICT_ETENDU.includes(r),
+)

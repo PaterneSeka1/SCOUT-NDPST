@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { THEME_DEFAUT, couleurSure, hexToRgb } from '@/lib/theme'
+import { ROLES_DISTRICT_ETENDU } from '@/lib/roles'
 import { DashboardShell } from './DashboardShell'
 
 // Identité propre à la paroisse de l'utilisateur connecté (logo + couleurs),
@@ -13,6 +14,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const session = await getServerSession(authOptions)
   if (!session?.user) redirect('/login')
   if (session.user.role === 'ADMIN_PLATEFORME') redirect('/admin')
+  if (ROLES_DISTRICT_ETENDU.includes(session.user.role)) redirect('/district')
 
   const [paroisse, plateforme] = await Promise.all([
     session.user.paroisseId

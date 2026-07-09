@@ -46,6 +46,16 @@ export default function FicheParoissePage() {
   const [soumissionChef, setSoumissionChef] = useState(false)
   const [afficherFormChef, setAfficherFormChef] = useState(false)
   const [erreurChargement, setErreurChargement] = useState(false)
+  const [doyennesExistantes, setDoyennesExistantes] = useState<string[]>([])
+
+  useEffect(() => {
+    fetch('/api/admin/districts')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { districts?: { doyenne: string }[] } | null) => {
+        if (data?.districts) setDoyennesExistantes(data.districts.map((d) => d.doyenne))
+      })
+      .catch(() => {})
+  }, [])
 
   const charger = useCallback(() => {
     setErreurChargement(false)
@@ -197,6 +207,21 @@ export default function FicheParoissePage() {
         </div>
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        <a
+          href={`/api/admin/paroisses/${id}/export/scouts`}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+        >
+          ⬇ Exporter les scouts (CSV)
+        </a>
+        <a
+          href={`/api/admin/paroisses/${id}/export/utilisateurs`}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+        >
+          ⬇ Exporter les utilisateurs (CSV)
+        </a>
+      </div>
+
       {/* Chef(s) de Groupe */}
       <section className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
@@ -292,7 +317,13 @@ export default function FicheParoissePage() {
               <div><label className={CLS_LABEL}>Nom *</label><input className={CLS_INPUT} value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} required /></div>
               <div><label className={CLS_LABEL}>Ville *</label><input className={CLS_INPUT} value={form.ville} onChange={(e) => setForm({ ...form, ville: e.target.value })} required /></div>
               <div><label className={CLS_LABEL}>Diocèse *</label><input className={CLS_INPUT} value={form.diocese} onChange={(e) => setForm({ ...form, diocese: e.target.value })} required /></div>
-              <div><label className={CLS_LABEL}>Doyenné</label><input className={CLS_INPUT} value={form.doyenne} onChange={(e) => setForm({ ...form, doyenne: e.target.value })} /></div>
+              <div>
+                <label className={CLS_LABEL}>Doyenné</label>
+                <input className={CLS_INPUT} value={form.doyenne} onChange={(e) => setForm({ ...form, doyenne: e.target.value })} list="doyennes-existantes" />
+                <datalist id="doyennes-existantes">
+                  {doyennesExistantes.map((d) => <option key={d} value={d} />)}
+                </datalist>
+              </div>
               <div><label className={CLS_LABEL}>Océan / secteur</label><input className={CLS_INPUT} value={form.ocean} onChange={(e) => setForm({ ...form, ocean: e.target.value })} /></div>
               <div><label className={CLS_LABEL}>Téléphone</label><input className={CLS_INPUT} value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} /></div>
               <div><label className={CLS_LABEL}>E-mail</label><input type="email" className={CLS_INPUT} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>

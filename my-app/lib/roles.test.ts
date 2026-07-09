@@ -6,8 +6,13 @@ import {
   ROLES_TOUT_STAFF,
   ROLES_GESTION,
   ROLES_PLATEFORME,
+  ROLES_DISTRICT,
+  ROLES_DISTRICT_ETENDU,
+  ROLES_ASSIGNABLES_DISTRICT,
   ROLES_ASSIGNABLES_PAROISSE,
+  ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT,
   LABELS_ROLES,
+  libelleRoleAvecFonction,
 } from './roles'
 
 // Ces constantes pilotent le contrôle d'accès d'une vingtaine de routes API
@@ -61,5 +66,53 @@ describe('groupes de rôles RBAC', () => {
     for (const role of ROLES_TOUT_STAFF) {
       expect(LABELS_ROLES[role]).toBeTruthy()
     }
+  })
+
+  it('ROLES_DISTRICT contient exactement la direction du district (Commissaire de District)', () => {
+    expect([...ROLES_DISTRICT].sort()).toEqual(['COMMISSAIRE_DISTRICT'])
+  })
+
+  it('ROLES_DISTRICT_ETENDU ajoute l\'adjoint et les assistants de district', () => {
+    expect([...ROLES_DISTRICT_ETENDU].sort()).toEqual(
+      ['ADJOINT_DISTRICT', 'ASSISTANT_DISTRICT', 'COMMISSAIRE_DISTRICT'],
+    )
+  })
+
+  it('ROLES_ASSIGNABLES_DISTRICT ne contient jamais COMMISSAIRE_DISTRICT (créé uniquement par ADMIN_PLATEFORME)', () => {
+    expect([...ROLES_ASSIGNABLES_DISTRICT].sort()).toEqual(['ADJOINT_DISTRICT', 'ASSISTANT_DISTRICT'])
+  })
+
+  it('ROLES_DISTRICT_ETENDU (rôles transverses à plusieurs paroisses) n\'est jamais mélangé aux rôles paroissiaux', () => {
+    for (const roles of [ROLES_GROUPE, ROLES_GROUPE_ETENDU, ROLES_BRANCHE, ROLES_TOUT_STAFF, ROLES_GESTION]) {
+      for (const roleDistrict of ROLES_DISTRICT_ETENDU) {
+        expect(roles).not.toContain(roleDistrict)
+      }
+    }
+  })
+
+  it('ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT exclut PARENT et tous les rôles de district', () => {
+    expect(ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT).not.toContain('PARENT')
+    for (const roleDistrict of ROLES_DISTRICT_ETENDU) {
+      expect(ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT).not.toContain(roleDistrict)
+    }
+  })
+
+  it('ROLES_ASSIGNABLES_PAROISSE contient tout de même les rôles de district (créés par ADMIN_PLATEFORME)', () => {
+    for (const roleDistrict of ROLES_DISTRICT_ETENDU) {
+      expect(ROLES_ASSIGNABLES_PAROISSE).toContain(roleDistrict)
+    }
+  })
+
+  it('chaque rôle de district a un libellé défini', () => {
+    for (const role of ROLES_DISTRICT_ETENDU) {
+      expect(LABELS_ROLES[role]).toBeTruthy()
+    }
+  })
+
+  it('libelleRoleAvecFonction ajoute la fonction seulement si renseignée', () => {
+    expect(libelleRoleAvecFonction('ASSISTANT_DISTRICT', 'Branche Route')).toBe('Assistant au Commissaire de District — Branche Route')
+    expect(libelleRoleAvecFonction('ASSISTANT_DISTRICT', null)).toBe('Assistant au Commissaire de District')
+    expect(libelleRoleAvecFonction('ASSISTANT_DISTRICT', '  ')).toBe('Assistant au Commissaire de District')
+    expect(libelleRoleAvecFonction('COMMISSAIRE_DISTRICT')).toBe('Commissaire de District')
   })
 })

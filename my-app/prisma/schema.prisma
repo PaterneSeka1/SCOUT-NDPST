@@ -31,6 +31,12 @@ enum RoleUtilisateur {
   RESPONSABLE_BRANCHE
   ADJOINT_BRANCHE
   ASSISTANT_BRANCHE
+  COMMISSAIRE_DISTRICT // Direction du district — au-dessus des Chefs de Groupe de plusieurs
+  // paroisses partageant le même Paroisse.doyenne. Rattaché à une paroisse d'ancrage
+  // précise (paroisseId obligatoire, comme tout rôle ci-dessus) ; le périmètre réel
+  // se calcule via lib/district.ts à partir du doyenne de cette paroisse.
+  ADJOINT_DISTRICT
+  ASSISTANT_DISTRICT // Le champ Utilisateur.fonction précise la charge : "Branche Route", "Spiritualité"...
   PARENT
   SCOUT
 }
@@ -135,6 +141,7 @@ model Paroisse {
 
   @@index([ville])
   @@index([diocese])
+  @@index([doyenne])
 }
 
 // ---------------------------------------------------------------------------
@@ -175,6 +182,8 @@ model Utilisateur {
   email     String?         @unique
   password  String
   role      RoleUtilisateur
+  fonction  String?         // Champ libre, utilisé aujourd'hui uniquement pour ASSISTANT_DISTRICT
+                             // (ex. "Branche Route", "Spiritualité")
   actif     Boolean         @default(true)
   tokenCalendrier String?   @unique // Jeton d'abonnement au flux iCal personnel (généré à la demande)
   createdAt DateTime        @default(now())

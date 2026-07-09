@@ -266,9 +266,9 @@ export default function PageParoisse() {
                   placeholder="Ex. Océan Atlantique Nord" className={CLS_INPUT} />
               </div>
               <div>
-                <label className={CLS_LABEL}>Doyenné <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
-                <input type="text" value={form.doyenne} onChange={(e) => setForm((p) => ({ ...p, doyenne: e.target.value }))}
-                  placeholder="Ex. Doyenné de Cocody" className={CLS_INPUT} />
+                <label className={CLS_LABEL}>Doyenné</label>
+                <p className={`${CLS_INPUT} bg-gray-50 text-gray-500`}>{form.doyenne || '—'}</p>
+                <p className="text-xs text-gray-400 mt-1">Modifiable uniquement par l&apos;administrateur plateforme (ce champ détermine le rattachement à un district).</p>
               </div>
               <div className="sm:col-span-2">
                 <label className={CLS_LABEL}>Adresse <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -19,6 +19,16 @@ export default function NouvelleParoissePage() {
   const router = useRouter()
   const [form, setForm] = useState<FormParoisse>(VIDE)
   const [soumission, setSoumission] = useState(false)
+  const [doyennesExistantes, setDoyennesExistantes] = useState<string[]>([])
+
+  useEffect(() => {
+    fetch('/api/admin/districts')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { districts?: { doyenne: string }[] } | null) => {
+        if (data?.districts) setDoyennesExistantes(data.districts.map((d) => d.doyenne))
+      })
+      .catch(() => {})
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -70,7 +80,17 @@ export default function NouvelleParoissePage() {
           </div>
           <div>
             <label className={CLS_LABEL}>Doyenné</label>
-            <input className={CLS_INPUT} value={form.doyenne} onChange={(e) => setForm({ ...form, doyenne: e.target.value })} />
+            <input
+              className={CLS_INPUT}
+              value={form.doyenne}
+              onChange={(e) => setForm({ ...form, doyenne: e.target.value })}
+              list="doyennes-existantes"
+              placeholder="Ex. Doyenné de Cocody"
+            />
+            <datalist id="doyennes-existantes">
+              {doyennesExistantes.map((d) => <option key={d} value={d} />)}
+            </datalist>
+            <p className="mt-1 text-xs text-gray-400">Détermine le district — reprenez exactement l&apos;orthographe d&apos;un doyenné existant si cette paroisse en fait partie.</p>
           </div>
           <div>
             <label className={CLS_LABEL}>Océan / secteur</label>

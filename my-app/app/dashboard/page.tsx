@@ -105,43 +105,43 @@ export default function DashboardPage() {
     <div className="space-y-4 sm:space-y-6">
       {/* En-tête */}
       <div className="bg-white rounded-xl px-4 py-4 sm:p-6 shadow-sm border border-gray-100">
-        <h1 className="text-base sm:text-xl font-bold text-[#1a4731] leading-snug">
-          Bienvenue, {session?.user?.prenom} {session?.user?.nom} 👋
-        </h1>
-        <p className="text-gray-500 mt-0.5 text-xs sm:text-sm">
-          Profil : <span className="font-medium text-[#27ae60]">{libelleRole(role)}</span>
-        </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="text-base sm:text-xl font-bold text-[#1a4731] leading-snug">
+              Bienvenue, {session?.user?.prenom} {session?.user?.nom} 👋
+            </h1>
+            <p className="text-gray-500 mt-0.5 text-xs sm:text-sm">
+              Profil : <span className="font-medium text-[#27ae60]">{libelleRole(role)}</span>
+            </p>
+          </div>
+
+          {role === 'CHEF_GROUPE' && (
+            <div className="flex flex-wrap gap-2 flex-shrink-0">
+              <Link
+                href="/dashboard/utilisateurs/nouveau"
+                className="inline-flex items-center justify-center bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium"
+              >
+                + Nouveau membre
+              </Link>
+              <Link
+                href="/dashboard/paroisse"
+                className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+              >
+                Personnaliser ma paroisse
+              </Link>
+              <Link
+                href="/dashboard/rapports"
+                className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+              >
+                Voir les rapports
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
 
       {erreur && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreur}</div>
-      )}
-
-      {/* Actions rapides */}
-      {role === 'CHEF_GROUPE' && (
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <h2 className="text-sm font-semibold text-gray-700 mb-4">Actions rapides</h2>
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/dashboard/utilisateurs/nouveau"
-              className="inline-flex items-center justify-center bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium"
-            >
-              + Nouveau membre
-            </Link>
-            <Link
-              href="/dashboard/paroisse"
-              className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
-            >
-              Personnaliser ma paroisse
-            </Link>
-            <Link
-              href="/dashboard/rapports"
-              className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
-            >
-              Voir les rapports
-            </Link>
-          </div>
-        </div>
       )}
 
       {/* KPIs */}

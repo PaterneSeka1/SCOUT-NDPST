@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { ROLES_PLATEFORME } from '@/lib/roles'
+import { ROLES_PLATEFORME, ROLES_TOUT_STAFF } from '@/lib/roles'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -15,20 +15,30 @@ export async function GET() {
   // (rétrospectif par nature) — seul le décompte des activités est concerné
   // ici, scouts/utilisateurs/cotisations n'ont pas de notion de date future.
   const maintenant = new Date()
+  const debutMois = new Date(maintenant.getFullYear(), maintenant.getMonth(), 1)
+  const finMois = new Date(maintenant.getFullYear(), maintenant.getMonth() + 1, 0, 23, 59, 59)
 
-  const paroisses = await prisma.paroisse.findMany({
-    include: {
-      _count: {
-        select: {
-          scouts: true,
-          utilisateurs: true,
-          activites: { where: { dateDebut: { lte: maintenant } } },
-          cotisations: true,
+  const [paroisses, activitesMois, totalPresences, presencesPositives, cotisationsParStatut, utilisateursParRole] =
+    await Promise.all([
+      prisma.paroisse.findMany({
+        include: {
+          _count: {
+            select: {
+              scouts: true,
+              utilisateurs: true,
+              activites: { where: { dateDebut: { lte: maintenant } } },
+              cotisations: true,
+            },
+          },
         },
-      },
-    },
-    orderBy: { nom: 'asc' },
-  })
+        orderBy: { nom: 'asc' },
+      }),
+      prisma.activite.count({ where: { dateDebut: { gte: debutMois, lte: finMois } } }),
+      prisma.presence.count(),
+      prisma.presence.count({ where: { present: true } }),
+      prisma.cotisation.groupBy({ by: ['statut'], _sum: { montant: true } }),
+      prisma.utilisateur.groupBy({ by: ['role'], where: { paroisseId: { not: null } }, _count: { _all: true } }),
+    ])
 
   const totaux = paroisses.reduce(
     (acc, p) => ({
@@ -41,8 +51,26 @@ export async function GET() {
     { paroisses: 0, paroissesActives: 0, scouts: 0, utilisateurs: 0, activites: 0 },
   )
 
+  const tauxPresence = totalPresences > 0 ? Math.round((presencesPositives / totalPresences) * 100) : 0
+
+  const montantParStatut = (statut: string) =>
+    cotisationsParStatut.find((c) => c.statut === statut)?._sum.montant ?? 0
+
+  const staff = utilisateursParRole
+    .filter((u) => ROLES_TOUT_STAFF.includes(u.role))
+    .reduce((somme, u) => somme + u._count._all, 0)
+  const parents = utilisateursParRole.find((u) => u.role === 'PARENT')?._count._all ?? 0
+  const comptesScouts = utilisateursParRole.find((u) => u.role === 'SCOUT')?._count._all ?? 0
+
   return NextResponse.json({
     totaux,
+    kpis: {
+      activitesMois,
+      tauxPresence,
+      cotisationsPayees: montantParStatut('PAYEE'),
+      cotisationsEnAttente: montantParStatut('EN_ATTENTE'),
+      utilisateursParCategorie: { staff, parents, comptesScouts },
+    },
     paroisses: paroisses.map((p) => ({
       id: p.id,
       nom: p.nom,

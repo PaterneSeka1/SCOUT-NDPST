@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { Prisma, RoleUtilisateur } from '@/app/generated/prisma/client'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
-import { ROLES_GROUPE as ROLES_AUTORISES } from '@/lib/roles'
+import { ROLES_GROUPE as ROLES_AUTORISES, ROLES_DISTRICT_ETENDU } from '@/lib/roles'
 import { RoleUtilisateurSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
@@ -32,10 +32,14 @@ export async function GET(request: NextRequest) {
     // ("ADJOINT_GROUPE,ASSISTANT_GROUPE,...") — utilisé par la page "Membres"
     // pour exclure les parents sans avoir besoin d'un paramètre dédié.
     const rolesParam = searchParams.get('role')
+    // Exclut systématiquement les rôles de district, y compris si demandés
+    // explicitement via ?role= : un membre de l'équipe district ancré sur cette
+    // paroisse n'apparaît jamais dans la page "Membres" du Chef de Groupe
+    // (voir /district/equipe).
     const roles = (rolesParam ?? '')
       .split(',')
       .map((r) => r.trim())
-      .filter((r) => RoleUtilisateurSchema.safeParse(r).success)
+      .filter((r) => RoleUtilisateurSchema.safeParse(r).success && !ROLES_DISTRICT_ETENDU.includes(r))
     const recherche = searchParams.get('recherche') ?? undefined
 
     const paroisseId = paroisseIdRequise(session)
@@ -43,6 +47,7 @@ export async function GET(request: NextRequest) {
     const where: Prisma.UtilisateurWhereInput = {
       paroisseId,
       NOT: { id: session.user.id },
+      role: { notIn: ROLES_DISTRICT_ETENDU as RoleUtilisateur[] },
       ...(roles.length === 1 ? { role: roles[0] as RoleUtilisateur } : {}),
       ...(roles.length > 1 ? { role: { in: roles as RoleUtilisateur[] } } : {}),
       ...(recherche
@@ -127,7 +132,9 @@ export async function POST(request: NextRequest) {
 
     // Un admin plateforme (transverse, sans paroisse) ne se crée jamais via
     // cette route — uniquement via la bascule de compte ou un accès base directe.
-    if (role === 'ADMIN_PLATEFORME') {
+    // Les rôles de district non plus : gérés par ADMIN_PLATEFORME (création du
+    // Commissaire de District) puis par lui-même via /district/equipe.
+    if (role === 'ADMIN_PLATEFORME' || ROLES_DISTRICT_ETENDU.includes(role)) {
       return NextResponse.json({ error: 'Rôle invalide' }, { status: 400 })
     }
 

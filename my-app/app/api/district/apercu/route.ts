@@ -1,0 +1,86 @@
+import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { RoleUtilisateur } from '@/app/generated/prisma/client'
+import { ROLES_DISTRICT_ETENDU } from '@/lib/roles'
+import { paroisseIdRequise } from '@/lib/session'
+import { getParoissesDuDistrict, DistrictInvalideError } from '@/lib/district'
+
+export async function GET() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
+  if (!ROLES_DISTRICT_ETENDU.includes(session.user.role)) {
+    return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
+  }
+
+  const paroisseId = paroisseIdRequise(session)
+
+  let doyenne: string
+  let idsParoisses: string[]
+  try {
+    const district = await getParoissesDuDistrict(paroisseId)
+    doyenne = district.doyenne
+    idsParoisses = district.paroisses.map((p) => p.id)
+  } catch (error) {
+    if (error instanceof DistrictInvalideError) {
+      return NextResponse.json({ erreur: error.message }, { status: 400 })
+    }
+    throw error
+  }
+
+  const maintenant = new Date()
+  const debutMois = new Date(maintenant.getFullYear(), maintenant.getMonth(), 1)
+
+  const [paroisses, activitesMois] = await Promise.all([
+    prisma.paroisse.findMany({
+      where: { id: { in: idsParoisses } },
+      select: {
+        id: true,
+        nom: true,
+        ville: true,
+        actif: true,
+        _count: {
+          select: {
+            scouts: true,
+            utilisateurs: { where: { role: { notIn: ROLES_DISTRICT_ETENDU as RoleUtilisateur[] } } },
+          },
+        },
+        utilisateurs: {
+          where: { role: 'CHEF_GROUPE' },
+          select: { nom: true, prenom: true },
+          take: 1,
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+      orderBy: { nom: 'asc' },
+    }),
+    prisma.activite.count({
+      where: { paroisseId: { in: idsParoisses }, dateDebut: { gte: debutMois, lte: maintenant } },
+    }),
+  ])
+
+  const totaux = paroisses.reduce(
+    (acc, p) => ({
+      paroisses: acc.paroisses + 1,
+      paroissesActives: acc.paroissesActives + (p.actif ? 1 : 0),
+      scouts: acc.scouts + p._count.scouts,
+      utilisateurs: acc.utilisateurs + p._count.utilisateurs,
+    }),
+    { paroisses: 0, paroissesActives: 0, scouts: 0, utilisateurs: 0 },
+  )
+
+  return NextResponse.json({
+    doyenne,
+    totaux: { ...totaux, activitesMois },
+    paroisses: paroisses.map((p) => ({
+      id: p.id,
+      nom: p.nom,
+      ville: p.ville,
+      actif: p.actif,
+      scouts: p._count.scouts,
+      utilisateurs: p._count.utilisateurs,
+      chefGroupe: p.utilisateurs[0] ?? null,
+    })),
+  })
+}
