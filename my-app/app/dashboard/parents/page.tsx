@@ -50,6 +50,13 @@ function CarteParent({ parent }: { parent: Utilisateur }) {
 
       <div className="flex items-center gap-3 pt-1 border-t border-gray-50">
         <Link
+          href={`/dashboard/parents/${parent.id}`}
+          className="text-[#1a4731] font-medium text-xs hover:underline"
+        >
+          Voir
+        </Link>
+        <span className="text-gray-200">|</span>
+        <Link
           href={`/dashboard/parents/${parent.id}/modifier`}
           className="text-[#1a4731] font-medium text-xs hover:underline"
         >
@@ -89,6 +96,13 @@ function LigneParent({ parent }: { parent: Utilisateur }) {
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
+          <Link
+            href={`/dashboard/parents/${parent.id}`}
+            className="text-[#1a4731] hover:underline text-xs font-medium"
+          >
+            Voir
+          </Link>
+          <span className="text-gray-300">|</span>
           <Link
             href={`/dashboard/parents/${parent.id}/modifier`}
             className="text-[#1a4731] hover:underline text-xs font-medium"

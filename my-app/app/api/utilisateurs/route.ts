@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
           nom: true,
           prenom: true,
           matricule: true,
+          telephone: true,
           email: true,
           role: true,
           actif: true,

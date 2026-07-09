@@ -54,18 +54,36 @@ export default function FicheUtilisateurPage() {
   }, [id])
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      {/* Navigation */}
-      <div className="flex items-center gap-4">
-        <Link
-          href="/dashboard/utilisateurs"
-          className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
-        >
-          ← Retour à la liste
-        </Link>
-      </div>
+    <div className="space-y-6 max-w-2xl mx-auto">
+      {/* En-tête */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Link
+            href="/dashboard/utilisateurs"
+            className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            ← Retour
+          </Link>
+          <h1 className="text-2xl font-bold text-gray-900">Fiche membre</h1>
+        </div>
 
-      <h1 className="text-2xl font-bold text-gray-900">Fiche membre</h1>
+        {utilisateur && (
+          <div className="flex flex-wrap gap-2 flex-shrink-0">
+            <Link
+              href={`/dashboard/utilisateurs/${utilisateur.id}/modifier`}
+              className="bg-[#1a4731] text-white px-4 py-2 rounded-md hover:bg-[#163d29] transition-colors text-sm font-medium"
+            >
+              Modifier
+            </Link>
+            <Link
+              href={`/dashboard/utilisateurs/${utilisateur.id}/modifier`}
+              className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50 transition-colors text-sm font-medium"
+            >
+              Réinitialiser le mot de passe
+            </Link>
+          </div>
+        )}
+      </div>
 
       {chargement && (
         <div className="flex items-center justify-center py-16">
@@ -151,28 +169,6 @@ export default function FicheUtilisateurPage() {
                 </dd>
               </div>
             </dl>
-          </div>
-
-          {/* Actions */}
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href={`/dashboard/utilisateurs/${utilisateur.id}/modifier`}
-              className="bg-[#1a4731] text-white px-4 py-2 rounded-md hover:bg-[#163d29] transition-colors text-sm font-medium"
-            >
-              Modifier
-            </Link>
-            <Link
-              href={`/dashboard/utilisateurs/${utilisateur.id}/modifier`}
-              className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50 transition-colors text-sm font-medium"
-            >
-              Réinitialiser le mot de passe
-            </Link>
-            <Link
-              href="/dashboard/utilisateurs"
-              className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50 transition-colors text-sm"
-            >
-              Retour
-            </Link>
           </div>
         </>
       )}

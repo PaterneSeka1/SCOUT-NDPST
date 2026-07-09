@@ -1,18 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-
-interface Parent {
-  id: string
-  telephone: string | null
-  nom: string
-  prenom: string
-  email: string | null
-  actif: boolean
-  createdAt: string
-}
+import { useUtilisateur } from '@/hooks/useUtilisateurs'
+import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
 
 function formaterDateFrancaise(dateStr: string): string {
   const date = new Date(dateStr)
@@ -27,43 +18,40 @@ export default function FicheParentPage() {
   const params = useParams()
   const id = params.id as string
 
-  const [parent, setParent] = useState<Parent | null>(null)
-  const [chargement, setChargement] = useState(true)
-  const [erreur, setErreur] = useState('')
-
-  useEffect(() => {
-    if (!id) return
-    const charger = async () => {
-      setChargement(true)
-      setErreur('')
-      try {
-        const res = await fetch(`/api/utilisateurs/${id}`)
-        if (res.status === 404) throw new Error('Parent introuvable')
-        if (!res.ok) throw new Error('Erreur lors du chargement')
-        const data: Parent = await res.json()
-        setParent(data)
-      } catch (err) {
-        setErreur(err instanceof Error ? err.message : 'Une erreur est survenue')
-      } finally {
-        setChargement(false)
-      }
-    }
-    charger()
-  }, [id])
+  const { data: parent, isLoading: chargement, isError, error } = useUtilisateur(id)
+  const enfants = parent?.enfants ?? []
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      {/* Navigation */}
-      <div className="flex items-center gap-4">
-        <Link
-          href="/dashboard/parents"
-          className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
-        >
-          ← Retour à la liste
-        </Link>
-      </div>
+    <div className="space-y-6 max-w-2xl mx-auto">
+      {/* En-tête */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Link
+            href="/dashboard/parents"
+            className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            ← Retour
+          </Link>
+          <h1 className="text-2xl font-bold text-gray-900">Fiche parent</h1>
+        </div>
 
-      <h1 className="text-2xl font-bold text-gray-900">Fiche parent</h1>
+        {parent && (
+          <div className="flex flex-wrap gap-2 flex-shrink-0">
+            <Link
+              href={`/dashboard/parents/${parent.id}/modifier`}
+              className="bg-[#1a4731] text-white px-4 py-2 rounded-md hover:bg-[#163d29] transition-colors text-sm font-medium"
+            >
+              Modifier
+            </Link>
+            <Link
+              href={`/dashboard/parents/${parent.id}/modifier`}
+              className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50 transition-colors text-sm font-medium"
+            >
+              Réinitialiser le mot de passe
+            </Link>
+          </div>
+        )}
+      </div>
 
       {chargement && (
         <div className="flex items-center justify-center py-16">
@@ -71,9 +59,9 @@ export default function FicheParentPage() {
         </div>
       )}
 
-      {erreur && (
+      {isError && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
-          {erreur}
+          {error instanceof Error ? error.message : 'Une erreur est survenue'}
         </div>
       )}
 
@@ -138,26 +126,44 @@ export default function FicheParentPage() {
             </dl>
           </div>
 
-          {/* Actions */}
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href={`/dashboard/parents/${parent.id}/modifier`}
-              className="bg-[#1a4731] text-white px-4 py-2 rounded-md hover:bg-[#163d29] transition-colors text-sm font-medium"
-            >
-              Modifier
-            </Link>
-            <Link
-              href={`/dashboard/parents/${parent.id}/modifier`}
-              className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50 transition-colors text-sm font-medium"
-            >
-              Réinitialiser le mot de passe
-            </Link>
-            <Link
-              href="/dashboard/parents"
-              className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50 transition-colors text-sm"
-            >
-              Retour
-            </Link>
+          {/* Enfants rattachés */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-gray-800">Enfants rattachés</h2>
+              <span className="text-xs text-gray-400">
+                {enfants.length} enfant{enfants.length > 1 ? 's' : ''}
+              </span>
+            </div>
+
+            {enfants.length === 0 ? (
+              <p className="text-sm text-gray-400 italic">Aucun enfant rattaché à ce compte.</p>
+            ) : (
+              <ul className="divide-y divide-gray-100">
+                {enfants.map((enfant) => (
+                  <li key={enfant.id} className="py-3 first:pt-0 last:pb-0">
+                    <Link
+                      href={`/dashboard/scouts/${enfant.id}`}
+                      className="flex items-center justify-between gap-3 hover:bg-gray-50 -mx-2 px-2 py-1 rounded-md transition-colors"
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium text-gray-900 truncate">
+                          {enfant.prenom} {enfant.nom}
+                        </span>
+                        <span className="block text-xs text-gray-500 truncate">
+                          {enfant.matricule ?? 'Sans matricule'}
+                          {!enfant.actif && ' · Inactif'}
+                        </span>
+                      </span>
+                      <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${
+                        COULEURS_BRANCHES[enfant.brancheType] ?? 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {LABELS_BRANCHES[enfant.brancheType] ?? enfant.brancheType}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </>
       )}

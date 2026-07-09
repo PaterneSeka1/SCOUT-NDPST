@@ -22,14 +22,23 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     const utilisateur = await prisma.utilisateur.findFirst({
       where: { id, paroisseId },
       select: {
-        id: true, nom: true, prenom: true, matricule: true,
+        id: true, nom: true, prenom: true, matricule: true, telephone: true,
         email: true, role: true, actif: true, paroisseId: true,
         createdAt: true, updatedAt: true,
+        liensParent: {
+          select: {
+            scout: {
+              select: { id: true, nom: true, prenom: true, brancheType: true, matricule: true, actif: true },
+            },
+          },
+        },
       },
     })
 
     if (!utilisateur) return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 })
-    return NextResponse.json(utilisateur)
+
+    const { liensParent, ...reste } = utilisateur
+    return NextResponse.json({ ...reste, enfants: liensParent.map((lien) => lien.scout) })
   } catch (error) {
     logger.error('GET /api/utilisateurs/[id]', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
@@ -89,7 +98,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         ...(actif !== undefined ? { actif } : {}),
       },
       select: {
-        id: true, nom: true, prenom: true, matricule: true,
+        id: true, nom: true, prenom: true, matricule: true, telephone: true,
         email: true, role: true, actif: true, paroisseId: true,
         createdAt: true, updatedAt: true,
       },
@@ -145,7 +154,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
       where: { id },
       data: { actif: false },
       select: {
-        id: true, nom: true, prenom: true, matricule: true,
+        id: true, nom: true, prenom: true, matricule: true, telephone: true,
         email: true, role: true, actif: true, paroisseId: true,
         createdAt: true, updatedAt: true,
       },

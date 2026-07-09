@@ -9,6 +9,15 @@ import {
 
 // ---- Types ----------------------------------------------------------------
 
+export interface EnfantLie {
+  id: string
+  nom: string
+  prenom: string
+  brancheType: string
+  matricule: string | null
+  actif: boolean
+}
+
 export interface Utilisateur {
   id: string
   matricule: string | null
@@ -21,6 +30,7 @@ export interface Utilisateur {
   paroisseId?: string
   createdAt: string
   updatedAt?: string
+  enfants?: EnfantLie[]
 }
 
 export interface PaginationMeta {
