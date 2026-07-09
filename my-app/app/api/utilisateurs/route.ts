@@ -28,8 +28,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
     const limite = Math.max(1, parseInt(searchParams.get('limite') ?? '20', 10))
-    const roleParam = searchParams.get('role')
-    const role = roleParam && RoleUtilisateurSchema.safeParse(roleParam).success ? roleParam : undefined
+    // Accepte un rôle unique ("PARENT") ou une liste séparée par des virgules
+    // ("ADJOINT_GROUPE,ASSISTANT_GROUPE,...") — utilisé par la page "Membres"
+    // pour exclure les parents sans avoir besoin d'un paramètre dédié.
+    const rolesParam = searchParams.get('role')
+    const roles = (rolesParam ?? '')
+      .split(',')
+      .map((r) => r.trim())
+      .filter((r) => RoleUtilisateurSchema.safeParse(r).success)
     const recherche = searchParams.get('recherche') ?? undefined
 
     const paroisseId = paroisseIdRequise(session)
@@ -37,7 +43,8 @@ export async function GET(request: NextRequest) {
     const where: Prisma.UtilisateurWhereInput = {
       paroisseId,
       NOT: { id: session.user.id },
-      ...(role ? { role: role as RoleUtilisateur } : {}),
+      ...(roles.length === 1 ? { role: roles[0] as RoleUtilisateur } : {}),
+      ...(roles.length > 1 ? { role: { in: roles as RoleUtilisateur[] } } : {}),
       ...(recherche
         ? {
             OR: [

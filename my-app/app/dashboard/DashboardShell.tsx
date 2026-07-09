@@ -21,6 +21,7 @@ function getMenuItems(role: string): MenuItem[] {
         { label: 'Tableau de bord', href: '/dashboard', icone: '📊' },
         { label: 'Paroisse', href: '/dashboard/paroisse', icone: '⛪' },
         { label: 'Membres', href: '/dashboard/utilisateurs', icone: '👥' },
+        { label: 'Parents', href: '/dashboard/parents', icone: '👨‍👩‍👧' },
         { label: 'Branches', href: '/dashboard/branches', icone: '🌿' },
         { label: 'Scouts', href: '/dashboard/scouts', icone: '⚜️' },
         { label: 'Documents', href: '/dashboard/documents', icone: '📄' },

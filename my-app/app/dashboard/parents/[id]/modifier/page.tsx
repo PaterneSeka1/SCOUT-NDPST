@@ -3,33 +3,28 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { LABELS_ROLES, ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT } from '@/lib/roles'
 import { useUtilisateur, useModifierUtilisateur, useResetPassword } from '@/hooks/useUtilisateurs'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
-const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
-const CLS_SELECT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
-const ROLES_LISTE = ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT
-
-interface FormInfos { nom: string; prenom: string; email: string; role: string; actif: boolean }
-interface FormInfosErrors { nom?: string; prenom?: string; role?: string }
+interface FormInfos { nom: string; prenom: string; email: string; actif: boolean }
+interface FormInfosErrors { nom?: string; prenom?: string }
 interface FormMdp { motDePasse: string; confirmation: string }
 interface FormMdpErrors { motDePasse?: string; confirmation?: string }
 
-export default function ModifierUtilisateurPage() {
+export default function ModifierParentPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
 
-  const { data: utilisateur, isLoading, isError } = useUtilisateur(id)
+  const { data: parent, isLoading, isError } = useUtilisateur(id)
   const { mutateAsync: modifier, isPending: soumissionInfos } = useModifierUtilisateur(id)
   const { mutateAsync: resetPassword, isPending: soumissionMdp } = useResetPassword(id)
 
-  const [formInfos, setFormInfos] = useState<FormInfos>({ nom: '', prenom: '', email: '', role: '', actif: true })
+  const [formInfos, setFormInfos] = useState<FormInfos>({ nom: '', prenom: '', email: '', actif: true })
   const [erreursInfos, setErreursInfos] = useState<FormInfosErrors>({})
   const [erreurServeurInfos, setErreurServeurInfos] = useState('')
   const [succesInfos, setSuccesInfos] = useState(false)
@@ -40,12 +35,12 @@ export default function ModifierUtilisateurPage() {
   const [succesMdp, setSuccesMdp] = useState(false)
 
   useEffect(() => {
-    if (utilisateur) {
-      setFormInfos({ nom: utilisateur.nom, prenom: utilisateur.prenom, email: utilisateur.email ?? '', role: utilisateur.role, actif: utilisateur.actif })
+    if (parent) {
+      setFormInfos({ nom: parent.nom, prenom: parent.prenom, email: parent.email ?? '', actif: parent.actif })
     }
-  }, [utilisateur])
+  }, [parent])
 
-  const handleInfosChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInfosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target
     const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     setFormInfos((p) => ({ ...p, [name]: val }))
@@ -56,7 +51,6 @@ export default function ModifierUtilisateurPage() {
     const e: FormInfosErrors = {}
     if (!formInfos.nom.trim()) e.nom = 'Le nom est requis'
     if (!formInfos.prenom.trim()) e.prenom = 'Le prénom est requis'
-    if (!formInfos.role) e.role = 'Le rôle est requis'
     setErreursInfos(e)
     return Object.keys(e).length === 0
   }
@@ -67,9 +61,9 @@ export default function ModifierUtilisateurPage() {
     setSuccesInfos(false)
     if (!validerInfos()) return
     try {
-      await modifier({ nom: formInfos.nom.trim(), prenom: formInfos.prenom.trim(), email: formInfos.email.trim() || null, role: formInfos.role, actif: formInfos.actif })
+      await modifier({ nom: formInfos.nom.trim(), prenom: formInfos.prenom.trim(), email: formInfos.email.trim() || null, actif: formInfos.actif })
       setSuccesInfos(true)
-      setTimeout(() => router.push('/dashboard/utilisateurs'), 1500)
+      setTimeout(() => router.push('/dashboard/parents'), 1500)
     } catch (err) {
       setErreurServeurInfos(err instanceof Error ? err.message : 'Une erreur est survenue')
     }
@@ -111,22 +105,22 @@ export default function ModifierUtilisateurPage() {
     </div>
   )
 
-  if (isError || !utilisateur) return (
+  if (isError || !parent) return (
     <div className="space-y-4">
-      <Link href="/dashboard/utilisateurs" className="text-sm text-gray-500 hover:text-gray-700">← Retour</Link>
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">Membre introuvable.</div>
+      <Link href="/dashboard/parents" className="text-sm text-gray-500 hover:text-gray-700">← Retour</Link>
+      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">Parent introuvable.</div>
     </div>
   )
 
   return (
     <div className="space-y-6">
-      <Link href="/dashboard/utilisateurs" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+      <Link href="/dashboard/parents" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
         ← Retour à la liste
       </Link>
 
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Modifier le membre</h1>
-        <p className="text-sm text-gray-500 mt-0.5">{utilisateur.prenom} {utilisateur.nom}</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Modifier le parent</h1>
+        <p className="text-sm text-gray-500 mt-0.5">{parent.prenom} {parent.nom}</p>
       </div>
 
       {/* Section 1 — Informations générales */}
@@ -156,16 +150,6 @@ export default function ModifierUtilisateurPage() {
             <label className={CLS_LABEL}>Email <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
             <input id="email" name="email" type="email" value={formInfos.email} onChange={handleInfosChange}
               placeholder="exemple@email.com" className={CLS_INPUT} />
-          </div>
-
-          <div>
-            <label className={CLS_LABEL}>Rôle <span className="text-red-500">*</span></label>
-            <select id="role" name="role" value={formInfos.role} onChange={handleInfosChange}
-              className={erreursInfos.role ? CLS_SELECT_ERR : CLS_SELECT}>
-              <option value="">Sélectionner un rôle</option>
-              {ROLES_LISTE.map((r) => <option key={r} value={r}>{LABELS_ROLES[r]}</option>)}
-            </select>
-            {erreursInfos.role && <p className="mt-1 text-xs text-red-600">{erreursInfos.role}</p>}
           </div>
 
           <label className="flex items-center gap-2.5 cursor-pointer">

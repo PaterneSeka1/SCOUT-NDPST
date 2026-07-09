@@ -2,16 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { LABELS_ROLES, COULEURS_ROLES, ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT } from '@/lib/roles'
 import { useUtilisateurs, useModifierUtilisateur } from '@/hooks/useUtilisateurs'
 import type { Utilisateur } from '@/hooks/useUtilisateurs'
-
-// Page "Membres" = équipe d'encadrement, jamais les parents (page dédiée
-// /dashboard/parents). Sans filtre de rôle actif, on demande explicitement
-// tous les rôles hors PARENT plutôt que de laisser le paramètre vide, sans
-// quoi l'API renverrait aussi les parents.
-const ROLES_FILTRE = ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT
-const ROLES_PAR_DEFAUT = ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT.join(',')
 
 function SkeletonCard() {
   return (
@@ -21,10 +13,6 @@ function SkeletonCard() {
         <div className="h-5 bg-gray-100 rounded-full w-12" />
       </div>
       <div className="h-3 bg-gray-100 rounded w-24" />
-      <div className="flex gap-3 pt-1">
-        <div className="h-3 bg-gray-100 rounded w-14" />
-        <div className="h-3 bg-gray-100 rounded w-16" />
-      </div>
     </div>
   )
 }
@@ -32,7 +20,7 @@ function SkeletonCard() {
 function SkeletonRow() {
   return (
     <tr>
-      {Array.from({ length: 5 }).map((_, i) => (
+      {Array.from({ length: 4 }).map((_, i) => (
         <td key={i} className="px-4 py-3">
           <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
         </td>
@@ -41,37 +29,28 @@ function SkeletonRow() {
   )
 }
 
-function CarteUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
-  const { mutateAsync, isPending } = useModifierUtilisateur(utilisateur.id)
-  const handleToggle = async () => { await mutateAsync({ actif: !utilisateur.actif }) }
+function CarteParent({ parent }: { parent: Utilisateur }) {
+  const { mutateAsync, isPending } = useModifierUtilisateur(parent.id)
+  const handleToggle = async () => { await mutateAsync({ actif: !parent.actif }) }
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2.5">
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-semibold text-gray-900 leading-tight">
-          {utilisateur.nom} {utilisateur.prenom}
+          {parent.nom} {parent.prenom}
         </p>
         <span className={`flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-          utilisateur.actif ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+          parent.actif ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
         }`}>
-          {utilisateur.actif ? 'Actif' : 'Inactif'}
+          {parent.actif ? 'Actif' : 'Inactif'}
         </span>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-          COULEURS_ROLES[utilisateur.role] ?? 'bg-gray-100 text-gray-700'
-        }`}>
-          {LABELS_ROLES[utilisateur.role] ?? utilisateur.role}
-        </span>
-        {utilisateur.matricule && (
-          <span className="font-mono text-xs text-gray-500">{utilisateur.matricule}</span>
-        )}
-      </div>
+      <p className="text-xs text-gray-500 font-mono">{parent.telephone ?? '—'}</p>
 
       <div className="flex items-center gap-3 pt-1 border-t border-gray-50">
         <Link
-          href={`/dashboard/utilisateurs/${utilisateur.id}/modifier`}
+          href={`/dashboard/parents/${parent.id}/modifier`}
           className="text-[#1a4731] font-medium text-xs hover:underline"
         >
           Modifier
@@ -81,44 +60,37 @@ function CarteUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
           onClick={handleToggle}
           disabled={isPending}
           className={`text-xs font-medium disabled:opacity-50 ${
-            utilisateur.actif ? 'text-red-600' : 'text-green-600'
+            parent.actif ? 'text-red-600' : 'text-green-600'
           }`}
         >
-          {isPending ? '…' : utilisateur.actif ? 'Désactiver' : 'Activer'}
+          {isPending ? '…' : parent.actif ? 'Désactiver' : 'Activer'}
         </button>
       </div>
     </div>
   )
 }
 
-function LigneUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
-  const { mutateAsync, isPending } = useModifierUtilisateur(utilisateur.id)
-  const handleToggle = async () => { await mutateAsync({ actif: !utilisateur.actif }) }
+function LigneParent({ parent }: { parent: Utilisateur }) {
+  const { mutateAsync, isPending } = useModifierUtilisateur(parent.id)
+  const handleToggle = async () => { await mutateAsync({ actif: !parent.actif }) }
 
   return (
     <tr className="hover:bg-gray-50 transition-colors">
-      <td className="px-4 py-3 font-mono text-gray-700 text-sm">{utilisateur.matricule ?? '—'}</td>
       <td className="px-4 py-3 text-gray-800 font-medium text-sm">
-        {utilisateur.nom} {utilisateur.prenom}
+        {parent.nom} {parent.prenom}
       </td>
+      <td className="px-4 py-3 font-mono text-gray-700 text-sm">{parent.telephone ?? '—'}</td>
       <td className="px-4 py-3">
         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-          COULEURS_ROLES[utilisateur.role] ?? 'bg-gray-100 text-gray-700'
+          parent.actif ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
         }`}>
-          {LABELS_ROLES[utilisateur.role] ?? utilisateur.role}
-        </span>
-      </td>
-      <td className="px-4 py-3">
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-          utilisateur.actif ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-        }`}>
-          {utilisateur.actif ? 'Actif' : 'Inactif'}
+          {parent.actif ? 'Actif' : 'Inactif'}
         </span>
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           <Link
-            href={`/dashboard/utilisateurs/${utilisateur.id}/modifier`}
+            href={`/dashboard/parents/${parent.id}/modifier`}
             className="text-[#1a4731] hover:underline text-xs font-medium"
           >
             Modifier
@@ -128,10 +100,10 @@ function LigneUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
             onClick={handleToggle}
             disabled={isPending}
             className={`text-xs font-medium disabled:opacity-50 ${
-              utilisateur.actif ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'
+              parent.actif ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'
             }`}
           >
-            {isPending ? '…' : utilisateur.actif ? 'Désactiver' : 'Activer'}
+            {isPending ? '…' : parent.actif ? 'Désactiver' : 'Activer'}
           </button>
         </div>
       </td>
@@ -139,10 +111,9 @@ function LigneUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
   )
 }
 
-export default function UtilisateursPage() {
+export default function ParentsPage() {
   const [recherche, setRecherche] = useState('')
   const [rechercheDebounce, setRechercheDebounce] = useState('')
-  const [roleFiltre, setRoleFiltre] = useState('')
   const [page, setPage] = useState(1)
   const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
 
@@ -156,10 +127,10 @@ export default function UtilisateursPage() {
   const { data, isLoading, isError, error } = useUtilisateurs({
     page,
     recherche: rechercheDebounce || undefined,
-    role: roleFiltre || ROLES_PAR_DEFAUT,
+    role: 'PARENT',
   })
 
-  const utilisateurs = data?.utilisateurs ?? []
+  const parents = data?.utilisateurs ?? []
   const totalPages = data?.totalPages ?? 1
   const total = data?.total ?? 0
 
@@ -168,18 +139,18 @@ export default function UtilisateursPage() {
       {/* En-tête */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Membres</h1>
-          <p className="text-sm text-gray-500">{total} membre{total !== 1 ? 's' : ''} dans votre paroisse</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Parents</h1>
+          <p className="text-sm text-gray-500">{total} parent{total !== 1 ? 's' : ''} dans votre paroisse</p>
         </div>
         <Link
-          href="/dashboard/utilisateurs/nouveau"
+          href="/dashboard/parents/nouveau"
           className="inline-flex items-center justify-center bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium"
         >
-          + Nouveau membre
+          + Nouveau parent
         </Link>
       </div>
 
-      {/* Filtres */}
+      {/* Recherche */}
       <div className="flex flex-col sm:flex-row gap-2">
         <input
           type="text"
@@ -188,16 +159,6 @@ export default function UtilisateursPage() {
           onChange={(e) => handleRechercheChange(e.target.value)}
           className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1a4731] bg-white"
         />
-        <select
-          value={roleFiltre}
-          onChange={(e) => { setRoleFiltre(e.target.value); setPage(1) }}
-          className="sm:w-48 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a4731] bg-white"
-        >
-          <option value="">Tous les rôles</option>
-          {ROLES_FILTRE.map((role) => (
-            <option key={role} value={role}>{LABELS_ROLES[role]}</option>
-          ))}
-        </select>
       </div>
 
       {/* Erreur */}
@@ -211,10 +172,10 @@ export default function UtilisateursPage() {
       <div className="sm:hidden space-y-2">
         {isLoading ? (
           Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
-        ) : utilisateurs.length === 0 ? (
-          <p className="text-center text-gray-400 text-sm py-12">Aucun membre trouvé.</p>
+        ) : parents.length === 0 ? (
+          <p className="text-center text-gray-400 text-sm py-12">Aucun parent trouvé.</p>
         ) : (
-          utilisateurs.map((u) => <CarteUtilisateur key={u.id} utilisateur={u} />)
+          parents.map((p) => <CarteParent key={p.id} parent={p} />)
         )}
       </div>
 
@@ -224,7 +185,7 @@ export default function UtilisateursPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
-                {['Matricule', 'Nom Prénom', 'Rôle', 'Statut', 'Actions'].map((h) => (
+                {['Nom Prénom', 'Téléphone', 'Statut', 'Actions'].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     {h}
                   </th>
@@ -234,14 +195,14 @@ export default function UtilisateursPage() {
             <tbody className="divide-y divide-gray-100">
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
-              ) : utilisateurs.length === 0 ? (
+              ) : parents.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-16 text-gray-400 text-sm">
-                    Aucun membre trouvé.
+                  <td colSpan={4} className="text-center py-16 text-gray-400 text-sm">
+                    Aucun parent trouvé.
                   </td>
                 </tr>
               ) : (
-                utilisateurs.map((u) => <LigneUtilisateur key={u.id} utilisateur={u} />)
+                parents.map((p) => <LigneParent key={p.id} parent={p} />)
               )}
             </tbody>
           </table>
@@ -252,7 +213,7 @@ export default function UtilisateursPage() {
       {!isLoading && totalPages > 1 && (
         <div className="flex items-center justify-between gap-4">
           <p className="text-xs sm:text-sm text-gray-500">
-            {total} membre{total !== 1 ? 's' : ''} — p. {page}/{totalPages}
+            {total} parent{total !== 1 ? 's' : ''} — p. {page}/{totalPages}
           </p>
           <div className="flex gap-2">
             <button

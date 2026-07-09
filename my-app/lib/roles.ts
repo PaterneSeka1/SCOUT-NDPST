@@ -60,3 +60,6 @@ export const ROLES_PLATEFORME: string[] = ['ADMIN_PLATEFORME']
 
 /** Rôles assignables à un utilisateur d'une paroisse (tous sauf ADMIN_PLATEFORME, réservé à la zone /admin). */
 export const ROLES_ASSIGNABLES_PAROISSE: string[] = Object.keys(LABELS_ROLES).filter((r) => r !== 'ADMIN_PLATEFORME')
+
+/** Rôles d'équipe (page "Membres") — exclut PARENT, qui a sa propre page dédiée. */
+export const ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT: string[] = ROLES_ASSIGNABLES_PAROISSE.filter((r) => r !== 'PARENT')

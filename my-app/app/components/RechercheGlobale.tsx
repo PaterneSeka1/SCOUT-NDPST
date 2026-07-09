@@ -92,7 +92,7 @@ export function RechercheGlobale() {
           onChange={(e) => { setRequete(e.target.value); setOuvert(true) }}
           onFocus={() => setOuvert(true)}
           onKeyDown={(e) => { if (e.key === 'Escape') setOuvert(false) }}
-          placeholder="Rechercher un scout, un utilisateur…"
+          placeholder="Rechercher un scout, un membre…"
           className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent focus:bg-white transition-colors"
         />
       </div>
@@ -128,11 +128,11 @@ export function RechercheGlobale() {
 
           {utilisateurs.length > 0 && (
             <div className="py-1.5 border-t border-gray-100">
-              <p className="px-4 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Utilisateurs</p>
+              <p className="px-4 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Membres</p>
               {utilisateurs.map((u) => (
                 <button
                   key={u.id}
-                  onClick={() => allerA(`/dashboard/utilisateurs/${u.id}`)}
+                  onClick={() => allerA(u.role === 'PARENT' ? `/dashboard/parents/${u.id}` : `/dashboard/utilisateurs/${u.id}`)}
                   className="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors flex items-center justify-between gap-2"
                 >
                   <span className="text-sm text-gray-800 truncate">{u.prenom} {u.nom}</span>
