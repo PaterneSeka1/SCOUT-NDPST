@@ -13,7 +13,6 @@ interface Paroisse {
   id: string; nom: string; ville: string; diocese: string
   ocean: string | null; doyenne: string | null
   adresse: string | null; telephone: string | null; email: string | null; logo: string | null
-  couleurPrimaire: string | null; couleurAccent: string | null; couleurFond: string | null; couleurHover: string | null
   _count: { scouts: number; utilisateurs: number; activites: number }
 }
 
@@ -26,16 +25,7 @@ interface FormParoisse {
   nom: string; ville: string; diocese: string
   ocean: string; doyenne: string
   adresse: string; telephone: string; email: string
-  couleurPrimaire: string; couleurAccent: string; couleurFond: string; couleurHover: string
 }
-
-type CouleurKey = 'couleurPrimaire' | 'couleurAccent' | 'couleurFond' | 'couleurHover'
-const COULEURS_PAROISSE: { key: CouleurKey; label: string; defaut: string }[] = [
-  { key: 'couleurPrimaire', label: 'Couleur primaire', defaut: '#1a4731' },
-  { key: 'couleurHover', label: 'Couleur des hovers', defaut: '#27ae60' },
-  { key: 'couleurAccent', label: "Couleur d'accentuation", defaut: '#27ae60' },
-  { key: 'couleurFond', label: 'Couleur de fond', defaut: '#0f2418' },
-]
 
 export default function PageParoisse() {
   const { data: session } = useSession()
@@ -50,7 +40,7 @@ export default function PageParoisse() {
   const [chargementErreur, setChargementErreur] = useState(false)
 
   const [modeEdition, setModeEdition] = useState(false)
-  const [form, setForm] = useState<FormParoisse>({ nom: '', ville: '', diocese: '', ocean: '', doyenne: '', adresse: '', telephone: '', email: '', couleurPrimaire: '', couleurAccent: '', couleurFond: '', couleurHover: '' })
+  const [form, setForm] = useState<FormParoisse>({ nom: '', ville: '', diocese: '', ocean: '', doyenne: '', adresse: '', telephone: '', email: '' })
   const [soumission, setSoumission] = useState(false)
 
   const [logoPreview, setLogoPreview] = useState('')
@@ -71,8 +61,6 @@ export default function PageParoisse() {
         nom: paroisseData.nom, ville: paroisseData.ville, diocese: paroisseData.diocese,
         ocean: paroisseData.ocean ?? '', doyenne: paroisseData.doyenne ?? '',
         adresse: paroisseData.adresse ?? '', telephone: paroisseData.telephone ?? '', email: paroisseData.email ?? '',
-        couleurPrimaire: paroisseData.couleurPrimaire ?? '', couleurAccent: paroisseData.couleurAccent ?? '',
-        couleurFond: paroisseData.couleurFond ?? '', couleurHover: paroisseData.couleurHover ?? '',
       })
       if (paroisseData.logo) setLogoPreview(paroisseData.logo)
 
@@ -296,38 +284,6 @@ export default function PageParoisse() {
                 <label className={CLS_LABEL}>Email <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
                 <input type="email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
                   placeholder="contact@paroisse.ci" className={CLS_INPUT} />
-              </div>
-            </div>
-
-            <div className="border-t border-gray-100 pt-4">
-              <h3 className="text-sm font-semibold text-gray-800 mb-1">Couleurs de la paroisse</h3>
-              <p className="text-xs text-gray-400 mb-3">
-                Visibles uniquement par les membres de votre paroisse une fois connectés. Laissez vide pour garder les couleurs par défaut de la plateforme.
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {COULEURS_PAROISSE.map(({ key, label, defaut }) => (
-                  <div key={key}>
-                    <label className="text-xs font-medium text-gray-600 mb-1 block">{label}</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={form[key] || defaut}
-                        onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
-                        className="h-9 w-10 cursor-pointer rounded-lg border border-gray-300 p-0.5 flex-shrink-0"
-                      />
-                      {form[key] && (
-                        <button
-                          type="button"
-                          onClick={() => setForm((p) => ({ ...p, [key]: '' }))}
-                          className="text-xs text-gray-400 hover:text-red-500"
-                          title="Revenir à la couleur par défaut"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
 
