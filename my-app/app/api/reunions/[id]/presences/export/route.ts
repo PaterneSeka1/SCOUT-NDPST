@@ -6,13 +6,10 @@ import { logger } from '@/lib/logger'
 import { ROLES_TOUT_STAFF, ROLES_BRANCHE } from '@/lib/roles'
 import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { paroisseIdRequise } from '@/lib/session'
+import { LABELS_BRANCHES as LABELS_BRANCHE } from '@/lib/branches'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
-const LABELS_BRANCHE: Record<string, string> = {
-  OISILLONS: 'Oisillons', LOUVETEAUX: 'Louveteaux', ECLAIREURS: 'Éclaireurs',
-  CHEMINOTS: 'Cheminots', COMPAGNONS: 'Compagnons',
-}
 const LABELS_STATUT: Record<string, string> = {
   PRESENT: 'Présent', ABSENT: 'Absent', EXCUSE: 'Excusé',
 }

@@ -20,6 +20,7 @@ enum BrancheType {
   ECLAIREURS
   CHEMINOTS
   COMPAGNONS
+  RESSOURCES_ADULTES // Adultes de 21 ans et plus se préparant à devenir chefs/responsables
 }
 
 enum RoleUtilisateur {

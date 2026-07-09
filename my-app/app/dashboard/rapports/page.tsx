@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
+import { LABELS_BRANCHES, COULEURS_BRANCHES, ORDRE_BRANCHES } from '@/lib/branches'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
 
 interface Activite {
@@ -126,7 +126,7 @@ export default function PageRapports() {
           <h2 className="text-sm font-semibold text-gray-800 mb-1">Scouts par branche</h2>
           <p className="text-xs text-gray-400 mb-4">{totalScouts} scouts au total</p>
           <div className="space-y-3">
-            {['OISILLONS', 'LOUVETEAUX', 'ECLAIREURS', 'CHEMINOTS', 'COMPAGNONS'].map((branche) => {
+            {ORDRE_BRANCHES.map((branche) => {
               const entree = rapport.scoutsParBranche.find((b) => b.brancheType === branche)
               const nb = entree?._count.id ?? 0
               const [bgCls] = (COULEURS_BRANCHES[branche] ?? 'bg-gray-200 text-gray-700').split(' ')

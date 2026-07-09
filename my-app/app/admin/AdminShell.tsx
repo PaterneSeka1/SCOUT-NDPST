@@ -3,7 +3,7 @@
 import { signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 const MENU = [
   { label: 'Tableau de bord', href: '/admin', icone: '📊' },
@@ -69,9 +69,19 @@ export function AdminShell({ children, nomComplet }: { children: React.ReactNode
   const [sidebarOuverte, setSidebarOuverte] = useState(false)
   const sidebarStyle = { backgroundColor: 'var(--cp)' }
   const titrePage = MENU.find((m) => (m.href === '/admin' ? pathname === '/admin' : pathname.startsWith(m.href)))?.label ?? 'Administration'
+  const initiale = nomComplet?.trim()?.[0]?.toUpperCase() ?? 'A'
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)')
+    const fermerSiDesktop = (event: MediaQueryListEvent) => {
+      if (event.matches) setSidebarOuverte(false)
+    }
+    mq.addEventListener('change', fermerSiDesktop)
+    return () => mq.removeEventListener('change', fermerSiDesktop)
+  }, [])
 
   return (
-    <div className="flex h-screen bg-gray-100 overflow-hidden">
+    <div className="flex h-dvh bg-gray-100 overflow-hidden">
       {sidebarOuverte && (
         <div className="fixed inset-0 z-20 bg-black/50 lg:hidden" onClick={() => setSidebarOuverte(false)} />
       )}
@@ -99,11 +109,31 @@ export function AdminShell({ children, nomComplet }: { children: React.ReactNode
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <h2 className="text-gray-800 font-semibold text-sm truncate">{titrePage}</h2>
+            <div className="min-w-0">
+              <h2 className="text-gray-900 font-semibold text-sm sm:text-base truncate">{titrePage}</h2>
+              <p className="hidden sm:block text-xs text-gray-500 truncate">Administration plateforme</p>
+            </div>
           </div>
+
+          <Link
+            href="/admin/profil"
+            className="flex items-center gap-2 rounded-full p-1.5 pl-2 hover:bg-gray-100 transition-colors flex-shrink-0"
+            aria-label="Ouvrir mon profil"
+          >
+            <div className="hidden sm:block text-right leading-tight">
+              <p className="text-sm font-medium text-gray-800 truncate max-w-40">{nomComplet}</p>
+              <p className="text-xs text-gray-500">Admin plateforme</p>
+            </div>
+            <div
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-white text-sm font-bold"
+              style={{ backgroundColor: 'var(--cp)' }}
+            >
+              {initiale}
+            </div>
+          </Link>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-6">{children}</main>
       </div>
     </div>
   )

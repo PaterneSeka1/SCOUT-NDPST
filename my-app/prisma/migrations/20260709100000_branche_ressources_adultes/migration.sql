@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "BrancheType" ADD VALUE 'RESSOURCES_ADULTES';

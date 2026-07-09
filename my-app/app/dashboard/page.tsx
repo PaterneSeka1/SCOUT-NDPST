@@ -56,6 +56,7 @@ const LIBELLES_BRANCHE: Record<string, string> = {
   ECLAIREURS: 'Éclaireurs',
   CHEMINOTS: 'Cheminots',
   COMPAGNONS: 'Compagnons',
+  RESSOURCES_ADULTES: 'Ressources Adultes',
 }
 
 function libelleRole(role: string): string {

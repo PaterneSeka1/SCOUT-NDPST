@@ -63,8 +63,8 @@ describe('estUrlFichierValide', () => {
 })
 
 describe('schémas enum (doivent rester synchronisés avec prisma/schema.prisma)', () => {
-  it('BrancheTypeSchema accepte les 5 branches et rejette le reste', () => {
-    for (const v of ['OISILLONS', 'LOUVETEAUX', 'ECLAIREURS', 'CHEMINOTS', 'COMPAGNONS']) {
+  it('BrancheTypeSchema accepte les 6 branches et rejette le reste', () => {
+    for (const v of ['OISILLONS', 'LOUVETEAUX', 'ECLAIREURS', 'CHEMINOTS', 'COMPAGNONS', 'RESSOURCES_ADULTES']) {
       expect(BrancheTypeSchema.safeParse(v).success).toBe(true)
     }
     expect(BrancheTypeSchema.safeParse('AUTRE_CHOSE').success).toBe(false)

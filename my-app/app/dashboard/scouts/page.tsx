@@ -2,17 +2,13 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
+import { LABELS_BRANCHES, COULEURS_BRANCHES, ORDRE_BRANCHES } from '@/lib/branches'
 import { useScouts, useModifierScout } from '@/hooks/useScouts'
 import type { Scout } from '@/hooks/useScouts'
 
 const BRANCHES_OPTIONS = [
   { valeur: '', label: 'Toutes les branches' },
-  { valeur: 'OISILLONS', label: 'Oisillons' },
-  { valeur: 'LOUVETEAUX', label: 'Louveteaux' },
-  { valeur: 'ECLAIREURS', label: 'Éclaireurs' },
-  { valeur: 'CHEMINOTS', label: 'Cheminots' },
-  { valeur: 'COMPAGNONS', label: 'Compagnons' },
+  ...ORDRE_BRANCHES.map((branche) => ({ valeur: branche, label: LABELS_BRANCHES[branche] })),
 ]
 
 function SkeletonCard() {

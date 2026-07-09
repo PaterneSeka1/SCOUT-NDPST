@@ -5,7 +5,7 @@ import { z } from 'zod'
 // Prisma : sans ce contrôle, une valeur invalide provoque une erreur 500 non
 // maîtrisée au lieu d'un rejet propre en 400.
 
-export const BrancheTypeSchema = z.enum(['OISILLONS', 'LOUVETEAUX', 'ECLAIREURS', 'CHEMINOTS', 'COMPAGNONS'])
+export const BrancheTypeSchema = z.enum(['OISILLONS', 'LOUVETEAUX', 'ECLAIREURS', 'CHEMINOTS', 'COMPAGNONS', 'RESSOURCES_ADULTES'])
 
 export const RoleUtilisateurSchema = z.enum([
   'ADMIN_PLATEFORME', 'CHEF_GROUPE', 'ADJOINT_GROUPE', 'ASSISTANT_GROUPE',

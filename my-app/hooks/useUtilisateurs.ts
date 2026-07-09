@@ -51,6 +51,7 @@ export interface DonneesCreerUtilisateur {
   telephone?: string | null
   role: string
   password: string
+  scoutIds?: string[]
 }
 
 export interface DonneesModifierUtilisateur {
@@ -147,6 +148,7 @@ export function useCreerUtilisateur() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['utilisateurs'] })
+      queryClient.invalidateQueries({ queryKey: ['scouts'] })
     },
   })
 }

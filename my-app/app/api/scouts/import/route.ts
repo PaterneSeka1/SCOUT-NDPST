@@ -52,7 +52,7 @@ function validerLigne(row: LigneImport): { erreur: string } | {
 
   const brancheType = row.brancheType?.trim().toUpperCase()
   if (!brancheType || !(brancheType in BrancheType)) {
-    return { erreur: 'Branche invalide (OISILLONS, LOUVETEAUX, ECLAIREURS, CHEMINOTS ou COMPAGNONS attendu)' }
+    return { erreur: 'Branche invalide (OISILLONS, LOUVETEAUX, ECLAIREURS, CHEMINOTS, COMPAGNONS ou RESSOURCES_ADULTES attendu)' }
   }
 
   const contactNom = row.contactNom?.trim()

@@ -7,21 +7,10 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { confirmer } from '@/app/components/ConfirmDialog'
 import { ROLES_GROUPE, ROLES_BRANCHE } from '@/lib/roles'
+import { LABELS_BRANCHES as BRANCHES, COULEURS_BRANCHES as COULEURS_BRANCHE } from '@/lib/branches'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_LABEL = 'block text-xs font-medium text-gray-600 mb-1'
-
-const BRANCHES: Record<string, string> = {
-  OISILLONS: 'Oisillons', LOUVETEAUX: 'Louveteaux', ECLAIREURS: 'Éclaireurs',
-  CHEMINOTS: 'Cheminots', COMPAGNONS: 'Compagnons',
-}
-const COULEURS_BRANCHE: Record<string, string> = {
-  OISILLONS: 'bg-yellow-100 text-yellow-800',
-  LOUVETEAUX: 'bg-blue-100 text-blue-800',
-  ECLAIREURS: 'bg-green-100 text-green-800',
-  CHEMINOTS: 'bg-orange-100 text-orange-800',
-  COMPAGNONS: 'bg-purple-100 text-purple-800',
-}
 
 interface Ligne {
   id: string

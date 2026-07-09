@@ -43,10 +43,11 @@ export async function GET(request: NextRequest) {
     for (const scout of scouts) {
       const age = calculerAge(scout.dateNaissance, dateReference)
       const brancheCorrespondante = brancheSelonAge(age)
-      // brancheCorrespondante === null : âge hors de toute tranche (trop jeune
-      // pour Oisillons, ou plus de 20 ans révolus — sortie du mouvement).
-      // On ne propose rien pour les cas "trop jeune" (probable erreur de
-      // saisie), seulement pour les changements de branche et les sorties.
+      // brancheCorrespondante === null : trop jeune pour Oisillons (probable
+      // erreur de saisie de la date de naissance) — on ne propose rien dans
+      // ce cas. Au-delà de 20 ans révolus, le scout n'est plus "sorti du
+      // mouvement" automatiquement : il est proposé en Ressources Adultes
+      // (branche sans limite d'âge supérieure, cf. TRANCHES_AGE_BRANCHES).
       if (brancheCorrespondante === scout.brancheType) continue
       if (brancheCorrespondante === null && age < 6) continue
 

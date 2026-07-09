@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { confirmer } from '@/app/components/ConfirmDialog'
-import { LABELS_BRANCHES, COULEURS_BRANCHES, TRANCHES_AGE_BRANCHES, ORDRE_BRANCHES } from '@/lib/branches'
+import { LABELS_BRANCHES, COULEURS_BRANCHES, TRANCHES_AGE_BRANCHES, ORDRE_BRANCHES, formatTrancheAge } from '@/lib/branches'
 
 interface Proposition {
   scoutId: string
@@ -26,7 +26,7 @@ function badgeBranche(branche: string | null) {
   return (
     <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${couleur}`}>
       {LABELS_BRANCHES[branche] ?? branche}
-      {tranche ? ` · ${tranche.min}-${tranche.max} ans` : ''}
+      {tranche ? ` · ${formatTrancheAge(tranche)}` : ''}
     </span>
   )
 }
@@ -134,7 +134,7 @@ export default function PagePassageBranche() {
         <div className="flex flex-wrap gap-1.5 mt-3">
           {ORDRE_BRANCHES.map((branche) => (
             <span key={branche} className={`text-xs px-2 py-1 rounded-lg ${COULEURS_BRANCHES[branche]}`}>
-              {LABELS_BRANCHES[branche]} · {TRANCHES_AGE_BRANCHES[branche].min}-{TRANCHES_AGE_BRANCHES[branche].max} ans
+              {LABELS_BRANCHES[branche]} · {formatTrancheAge(TRANCHES_AGE_BRANCHES[branche])}
             </span>
           ))}
         </div>

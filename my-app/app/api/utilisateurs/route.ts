@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { nom, prenom, email, matricule, telephone, role, password } = body as {
+    const { nom, prenom, email, matricule, telephone, role, password, scoutIds } = body as {
       nom?: string
       prenom?: string
       email?: string
@@ -106,6 +106,7 @@ export async function POST(request: NextRequest) {
       telephone?: string | null
       role?: string
       password?: string
+      scoutIds?: unknown
     }
 
     if (!nom || !prenom || !role || !password) {
@@ -131,6 +132,21 @@ export async function POST(request: NextRequest) {
 
     const estParent = role === 'PARENT'
 
+    if (scoutIds !== undefined && !Array.isArray(scoutIds)) {
+      return NextResponse.json({ error: 'La liste des enfants est invalide' }, { status: 400 })
+    }
+
+    const scoutIdsUniques = Array.isArray(scoutIds)
+      ? [...new Set(scoutIds.map((id) => (typeof id === 'string' ? id.trim() : '')).filter(Boolean))]
+      : []
+
+    if (!estParent && scoutIdsUniques.length > 0) {
+      return NextResponse.json(
+        { error: 'Seuls les comptes parents peuvent être rattachés à des enfants' },
+        { status: 400 },
+      )
+    }
+
     if (estParent && !telephone?.trim()) {
       return NextResponse.json(
         { error: 'Le numéro de téléphone est requis pour un parent' },
@@ -146,6 +162,18 @@ export async function POST(request: NextRequest) {
     }
 
     const paroisseId = paroisseIdRequise(session)
+
+    if (scoutIdsUniques.length > 0) {
+      const scoutsAutorises = await prisma.scout.count({
+        where: { id: { in: scoutIdsUniques }, paroisseId },
+      })
+      if (scoutsAutorises !== scoutIdsUniques.length) {
+        return NextResponse.json(
+          { error: 'Un ou plusieurs enfants sélectionnés sont introuvables' },
+          { status: 400 },
+        )
+      }
+    }
 
     if (matricule?.trim()) {
       const existingByMatricule = await prisma.utilisateur.findUnique({
@@ -181,28 +209,42 @@ export async function POST(request: NextRequest) {
 
     const passwordHache = await hash(password, 12)
 
-    const utilisateur = await prisma.utilisateur.create({
-      data: {
-        nom,
-        prenom,
-        email: email?.trim() || null,
-        matricule: matricule?.trim() || null,
-        telephone: telephone?.trim() || null,
-        role: role as RoleUtilisateur,
-        password: passwordHache,
-        paroisseId,
-      },
-      select: {
-        id: true,
-        nom: true,
-        prenom: true,
-        matricule: true,
-        telephone: true,
-        email: true,
-        role: true,
-        actif: true,
-        createdAt: true,
-      },
+    const utilisateur = await prisma.$transaction(async (tx) => {
+      const nouveauUtilisateur = await tx.utilisateur.create({
+        data: {
+          nom,
+          prenom,
+          email: email?.trim() || null,
+          matricule: matricule?.trim() || null,
+          telephone: telephone?.trim() || null,
+          role: role as RoleUtilisateur,
+          password: passwordHache,
+          paroisseId,
+        },
+        select: {
+          id: true,
+          nom: true,
+          prenom: true,
+          matricule: true,
+          telephone: true,
+          email: true,
+          role: true,
+          actif: true,
+          createdAt: true,
+        },
+      })
+
+      if (scoutIdsUniques.length > 0) {
+        await tx.lienParentScout.createMany({
+          data: scoutIdsUniques.map((scoutId) => ({
+            parentId: nouveauUtilisateur.id,
+            scoutId,
+          })),
+          skipDuplicates: true,
+        })
+      }
+
+      return nouveauUtilisateur
     })
 
     await enregistrerAudit({
@@ -211,7 +253,7 @@ export async function POST(request: NextRequest) {
       action: 'UTILISATEUR_CREE',
       entite: 'Utilisateur',
       entiteId: utilisateur.id,
-      details: { role: utilisateur.role },
+      details: { role: utilisateur.role, scoutIds: scoutIdsUniques },
     })
 
     if (utilisateur.email) {

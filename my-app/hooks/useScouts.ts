@@ -96,6 +96,7 @@ export interface ListeScoutsResponse {
 
 export interface FiltresScouts {
   page?: number
+  limite?: number
   branche?: string
   recherche?: string
   actif?: boolean
@@ -146,6 +147,7 @@ export const QUERY_KEYS = {
 async function fetchScouts(filtres: FiltresScouts): Promise<ListeScoutsResponse> {
   const params = new URLSearchParams()
   if (filtres.page) params.set('page', String(filtres.page))
+  if (filtres.limite) params.set('limite', String(filtres.limite))
   if (filtres.branche) params.set('branche', filtres.branche)
   if (filtres.recherche) params.set('recherche', filtres.recherche)
   if (filtres.actif !== undefined) params.set('actif', String(filtres.actif))

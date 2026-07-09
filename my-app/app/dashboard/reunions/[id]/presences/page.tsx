@@ -6,17 +6,13 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { ScannerQR } from '@/app/components/ScannerQR'
 import { decoderQrScout } from '@/lib/qr'
+import { LABELS_BRANCHES as BRANCHES } from '@/lib/branches'
 
 const STATUTS = [
   { value: 'PRESENT', label: 'Présent', cls: 'bg-green-100 text-green-700 border-green-200', active: 'bg-green-500 text-white border-green-500' },
   { value: 'EXCUSE', label: 'Excusé', cls: 'bg-orange-100 text-orange-700 border-orange-200', active: 'bg-orange-400 text-white border-orange-400' },
   { value: 'ABSENT', label: 'Absent', cls: 'bg-red-100 text-red-700 border-red-200', active: 'bg-red-500 text-white border-red-500' },
 ]
-
-const BRANCHES: Record<string, string> = {
-  OISILLONS: 'Oisillons', LOUVETEAUX: 'Louveteaux', ECLAIREURS: 'Éclaireurs',
-  CHEMINOTS: 'Cheminots', COMPAGNONS: 'Compagnons',
-}
 
 interface Scout {
   id: string; prenom: string; nom: string; photo: string | null; brancheType: string
