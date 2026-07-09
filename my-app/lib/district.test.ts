@@ -1,19 +1,19 @@
 import { describe, it, expect } from 'vitest'
-import { normaliserDoyenne } from './district'
+import { normaliserDistrict } from './district'
 
-describe('normaliserDoyenne', () => {
+describe('normaliserDistrict', () => {
   it('trime les espaces superflus', () => {
-    expect(normaliserDoyenne('  Doyenné de Cocody  ')).toBe('Doyenné de Cocody')
+    expect(normaliserDistrict('  District Nord  ')).toBe('District Nord')
   })
 
   it('retourne null pour une valeur vide, nulle, indéfinie ou uniquement des espaces', () => {
-    expect(normaliserDoyenne('')).toBeNull()
-    expect(normaliserDoyenne('   ')).toBeNull()
-    expect(normaliserDoyenne(null)).toBeNull()
-    expect(normaliserDoyenne(undefined)).toBeNull()
+    expect(normaliserDistrict('')).toBeNull()
+    expect(normaliserDistrict('   ')).toBeNull()
+    expect(normaliserDistrict(null)).toBeNull()
+    expect(normaliserDistrict(undefined)).toBeNull()
   })
 
   it('conserve une valeur déjà propre telle quelle', () => {
-    expect(normaliserDoyenne('Doyenné de Cocody')).toBe('Doyenné de Cocody')
+    expect(normaliserDistrict('District Nord')).toBe('District Nord')
   })
 })

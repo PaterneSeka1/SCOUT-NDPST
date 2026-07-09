@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_TOUT_STAFF, ROLES_BRANCHE } from '@/lib/roles'
 import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
+import { getParoissesDuDistrict } from '@/lib/district'
 import { TypeActiviteSchema, BrancheTypeSchema } from '@/lib/validation'
 import { paroisseIdRequise } from '@/lib/session'
 
@@ -89,13 +90,13 @@ export async function POST(request: NextRequest) {
   if (!session?.user) {
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
   }
-  if (!ROLES_TOUT_STAFF.includes(session.user.role)) {
+  const estAssistantDistrict = session.user.role === 'ASSISTANT_DISTRICT'
+  if (!ROLES_TOUT_STAFF.includes(session.user.role) && !estAssistantDistrict) {
     return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
   }
-  const paroisseId = paroisseIdRequise(session)
 
   const corps = await request.json()
-  const { titre, description, dateDebut, dateFin, lieu, type, brancheType } = corps
+  const { titre, description, dateDebut, dateFin, lieu, type, brancheType, paroisseId: paroisseIdCorps } = corps
 
   if (!titre || !dateDebut) {
     return NextResponse.json({ error: 'Le titre et la date de début sont obligatoires' }, { status: 400 })
@@ -108,14 +109,32 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Branche invalide' }, { status: 400 })
   }
 
-  // Un responsable de branche ne peut créer une activité que pour sa propre
-  // branche — décider d'une activité inter-branches (brancheType null) reste
-  // une décision du groupe.
+  let paroisseId: string
   let brancheEffective = brancheType ?? null
-  if (ROLES_BRANCHE.includes(session.user.role)) {
-    const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
+
+  if (estAssistantDistrict) {
+    // Assistant au Commissaire de District chargé d'une branche : choisit la
+    // paroisse cible parmi celles de son district, brancheType forcé à sa
+    // branche — toute valeur envoyée par le client pour brancheType est ignorée.
+    const bt = await getBrancheUtilisateur(session.user.id)
     if (!bt) return NextResponse.json({ error: 'Aucune branche assignée' }, { status: 403 })
+    const { paroisses } = await getParoissesDuDistrict(paroisseIdRequise(session))
+    const paroisseIds = paroisses.map((p) => p.id)
+    if (!paroisseIdCorps || !paroisseIds.includes(paroisseIdCorps)) {
+      return NextResponse.json({ error: 'Paroisse invalide ou manquante' }, { status: 400 })
+    }
+    paroisseId = paroisseIdCorps
     brancheEffective = bt
+  } else {
+    paroisseId = paroisseIdRequise(session)
+    // Un responsable de branche ne peut créer une activité que pour sa propre
+    // branche — décider d'une activité inter-branches (brancheType null) reste
+    // une décision du groupe.
+    if (ROLES_BRANCHE.includes(session.user.role)) {
+      const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
+      if (!bt) return NextResponse.json({ error: 'Aucune branche assignée' }, { status: 403 })
+      brancheEffective = bt
+    }
   }
 
   const activite = await prisma.activite.create({

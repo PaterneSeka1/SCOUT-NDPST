@@ -1,17 +1,18 @@
 import { prisma } from './prisma'
 
-// Renvoie la branche assignée à un utilisateur (via son PosteBranche) dans une
-// paroisse donnée, ou null s'il n'en a aucune. Centralisé ici pour que les
-// routes scopées par branche partagent la même logique — plusieurs routes
-// dupliquaient cette fonction localement, avec un risque de divergence.
+// La branche gérée par un compte vit directement sur Utilisateur.brancheType
+// (RESPONSABLE_BRANCHE/ADJOINT_BRANCHE/ASSISTANT_BRANCHE au niveau paroisse,
+// ASSISTANT_DISTRICT chargé d'une branche au niveau district) — le paramètre
+// paroisseId n'est plus nécessaire pour ce calcul (un compte n'a qu'une seule
+// paroisse d'ancrage), mais reste accepté et ignoré pour ne pas casser les
+// appelants existants.
 export async function getBrancheUtilisateur(
   utilisateurId: string,
-  paroisseId: string,
+  _paroisseId?: string,
 ): Promise<string | null> {
-  const poste = await prisma.posteBranche.findFirst({
-    where: { utilisateurId, paroisseId },
+  const utilisateur = await prisma.utilisateur.findUnique({
+    where: { id: utilisateurId },
     select: { brancheType: true },
-    orderBy: { createdAt: 'asc' },
   })
-  return poste?.brancheType ?? null
+  return utilisateur?.brancheType ?? null
 }

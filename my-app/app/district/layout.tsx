@@ -17,6 +17,7 @@ export default async function DistrictLayout({ children }: { children: React.Rea
   if (!ROLES_DISTRICT_ETENDU.includes(session.user.role)) redirect('/dashboard')
 
   const plateforme = await prisma.configurationPlateforme.findUnique({ where: { id: 'platform' } })
+  const utilisateur = await prisma.utilisateur.findUnique({ where: { id: session.user.id }, select: { brancheType: true } })
   const theme = {
     couleurPrimaire: couleurSure(plateforme?.couleurPrimaire, THEME_DEFAUT.couleurPrimaire),
     couleurAccent: couleurSure(plateforme?.couleurAccent, THEME_DEFAUT.couleurAccent),
@@ -37,7 +38,7 @@ export default async function DistrictLayout({ children }: { children: React.Rea
   let nomDistrict: string
   try {
     const district = await getParoissesDuDistrict(session.user.paroisseId!)
-    nomDistrict = district.doyenne
+    nomDistrict = district.nomDistrict
   } catch (error) {
     if (!(error instanceof DistrictInvalideError)) throw error
     // Jamais de redirect('/dashboard') ici : ce rôle y serait immédiatement
@@ -64,6 +65,7 @@ export default async function DistrictLayout({ children }: { children: React.Rea
         role={session.user.role}
         nomComplet={`${session.user.prenom} ${session.user.nom}`}
         nomDistrict={nomDistrict}
+        brancheType={utilisateur?.brancheType ?? null}
       >
         {children}
       </DistrictShell>

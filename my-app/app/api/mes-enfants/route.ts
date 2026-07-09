@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { ROLES_BRANCHE } from '@/lib/roles'
+import { RoleUtilisateur } from '@/app/generated/prisma/client'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -80,18 +82,22 @@ export async function GET() {
       })
   }
 
-  const responsables = await prisma.posteBranche.findMany({
+  const responsablesUtilisateurs = await prisma.utilisateur.findMany({
     where: {
       paroisseId: session.user.paroisseId ?? undefined,
       brancheType: { in: branches as never[] },
+      role: { in: ROLES_BRANCHE as RoleUtilisateur[] },
     },
-    include: {
-      utilisateur: {
-        select: { id: true, prenom: true, nom: true, telephone: true, email: true, role: true },
-      },
-    },
+    select: { id: true, nom: true, prenom: true, telephone: true, email: true, role: true, brancheType: true },
     orderBy: { role: 'asc' },
   })
+
+  const responsables = responsablesUtilisateurs.map((u) => ({
+    id: u.id,
+    brancheType: u.brancheType,
+    role: u.role,
+    utilisateur: { id: u.id, prenom: u.prenom, nom: u.nom, telephone: u.telephone, email: u.email, role: u.role },
+  }))
 
   // Prochaines activités de la paroisse
   const prochaines = await prisma.activite.findMany({

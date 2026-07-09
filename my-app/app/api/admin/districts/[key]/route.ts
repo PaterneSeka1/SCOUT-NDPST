@@ -14,10 +14,10 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
   }
 
   const { key } = await params
-  const doyenne = decodeURIComponent(key)
+  const nom = decodeURIComponent(key)
 
   const paroisses = await prisma.paroisse.findMany({
-    where: { doyenne },
+    where: { district: nom },
     select: {
       id: true,
       nom: true,
@@ -38,7 +38,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
   const equipe = await prisma.utilisateur.findMany({
     where: {
       role: { in: ['COMMISSAIRE_DISTRICT', 'ADJOINT_DISTRICT', 'ASSISTANT_DISTRICT'] },
-      paroisse: { doyenne },
+      paroisse: { district: nom },
     },
     select: {
       id: true,
@@ -50,6 +50,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       actif: true,
       role: true,
       fonction: true,
+      brancheType: true,
       createdAt: true,
       paroisse: { select: { id: true, nom: true } },
     },
@@ -57,7 +58,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
   })
 
   return NextResponse.json({
-    doyenne,
+    nom,
     paroisses: paroisses.map((p) => ({
       id: p.id,
       nom: p.nom,

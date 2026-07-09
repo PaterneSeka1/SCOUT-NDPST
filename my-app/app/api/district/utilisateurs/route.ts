@@ -3,13 +3,14 @@ import { getServerSession } from 'next-auth/next'
 import { hash } from 'bcryptjs'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { Prisma, RoleUtilisateur } from '@/app/generated/prisma/client'
+import { Prisma, RoleUtilisateur, BrancheType } from '@/app/generated/prisma/client'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { ROLES_DISTRICT as ROLES_AUTORISES, ROLES_ASSIGNABLES_DISTRICT, libelleRoleAvecFonction } from '@/lib/roles'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 import { envoyerEmailBienvenue } from '@/lib/notifications'
 import { paroisseIdRequise } from '@/lib/session'
+import { BrancheTypeSchema } from '@/lib/validation'
 
 export async function GET(request: NextRequest) {
   try {
@@ -66,6 +67,7 @@ export async function GET(request: NextRequest) {
           email: true,
           role: true,
           fonction: true,
+          brancheType: true,
           actif: true,
           createdAt: true,
         },
@@ -98,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { nom, prenom, email, matricule, telephone, role, password, fonction } = body as {
+    const { nom, prenom, email, matricule, telephone, role, password, fonction, brancheType } = body as {
       nom?: string
       prenom?: string
       email?: string
@@ -107,6 +109,7 @@ export async function POST(request: NextRequest) {
       role?: string
       password?: string
       fonction?: string | null
+      brancheType?: string | null
     }
 
     if (!nom || !prenom || !role || !password) {
@@ -132,9 +135,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ erreur: 'Le matricule est requis' }, { status: 400 })
     }
 
-    // fonction n'a de sens que pour ASSISTANT_DISTRICT — ignoré/forcé à null
-    // pour ADJOINT_DISTRICT.
-    const fonctionValeur = role === 'ASSISTANT_DISTRICT' ? (fonction?.trim() || null) : null
+    if (brancheType != null && !BrancheTypeSchema.safeParse(brancheType).success) {
+      return NextResponse.json({ erreur: 'Branche invalide' }, { status: 400 })
+    }
+
+    // brancheType (chargé d'une branche) et fonction (texte libre) sont
+    // mutuellement exclusifs et n'ont de sens que pour ASSISTANT_DISTRICT —
+    // ignorés/forcés à null pour ADJOINT_DISTRICT.
+    const brancheTypeValeur = role === 'ASSISTANT_DISTRICT' && brancheType ? (brancheType as BrancheType) : null
+    const fonctionValeur =
+      role === 'ASSISTANT_DISTRICT' && !brancheTypeValeur ? (fonction?.trim() || null) : null
 
     const paroisseId = paroisseIdRequise(session)
 
@@ -177,6 +187,7 @@ export async function POST(request: NextRequest) {
         telephone: telephone?.trim() || null,
         role: role as RoleUtilisateur,
         fonction: fonctionValeur,
+        brancheType: brancheTypeValeur,
         password: passwordHache,
         paroisseId,
       },
@@ -189,6 +200,7 @@ export async function POST(request: NextRequest) {
         email: true,
         role: true,
         fonction: true,
+        brancheType: true,
         actif: true,
         createdAt: true,
       },
@@ -208,7 +220,7 @@ export async function POST(request: NextRequest) {
         email: utilisateur.email,
         prenom: utilisateur.prenom,
         identifiant: utilisateur.matricule ?? utilisateur.telephone ?? utilisateur.email,
-        roleLabel: libelleRoleAvecFonction(utilisateur.role, utilisateur.fonction),
+        roleLabel: libelleRoleAvecFonction(utilisateur.role, utilisateur.fonction, utilisateur.brancheType),
         nomSite: 'SCOUT ASCCI',
         urlConnexion: `${process.env.NEXTAUTH_URL ?? ''}/login`,
       }).catch((error) => logger.error('district_utilisateurs.email_bienvenue_echoue', error))

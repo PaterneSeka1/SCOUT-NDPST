@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_PLATEFORME } from '@/lib/roles'
-import { normaliserDoyenne } from '@/lib/district'
+import { normaliserDistrict } from '@/lib/district'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -12,27 +12,28 @@ export async function GET() {
     return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
   }
 
+  // Toute paroisse appartient désormais à un district (colonne non nulle) — pas
+  // de filtre "not: null" à appliquer, contrairement à l'ancien champ doyenne.
   const groupes = await prisma.paroisse.groupBy({
-    by: ['doyenne'],
-    where: { doyenne: { not: null } },
+    by: ['district'],
     _count: { id: true },
-    orderBy: { doyenne: 'asc' },
+    orderBy: { district: 'asc' },
   })
 
   const districts = await Promise.all(
     groupes
-      .filter((g) => normaliserDoyenne(g.doyenne) !== null)
+      .filter((g) => normaliserDistrict(g.district) !== null)
       .map(async (g) => {
-        const doyenne = normaliserDoyenne(g.doyenne) as string
+        const nom = normaliserDistrict(g.district) as string
 
         const commissaire = await prisma.utilisateur.findFirst({
-          where: { role: 'COMMISSAIRE_DISTRICT', actif: true, paroisse: { doyenne } },
+          where: { role: 'COMMISSAIRE_DISTRICT', actif: true, paroisse: { district: nom } },
           select: { id: true, nom: true, prenom: true, actif: true },
         })
 
         return {
-          doyenne,
-          key: encodeURIComponent(doyenne),
+          nom,
+          key: encodeURIComponent(nom),
           nbParoisses: g._count.id,
           commissaire,
         }

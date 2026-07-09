@@ -48,13 +48,13 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { nom, ville, diocese, ocean, doyenne, adresse, telephone, email } = body as {
-      nom?: string; ville?: string; diocese?: string; ocean?: string; doyenne?: string
+    const { nom, ville, diocese, ocean, district, adresse, telephone, email } = body as {
+      nom?: string; ville?: string; diocese?: string; ocean?: string; district?: string
       adresse?: string; telephone?: string; email?: string
     }
 
-    if (!nom?.trim() || !ville?.trim() || !diocese?.trim()) {
-      return NextResponse.json({ erreur: 'Le nom, la ville et le diocèse sont obligatoires' }, { status: 400 })
+    if (!nom?.trim() || !ville?.trim() || !diocese?.trim() || !district?.trim()) {
+      return NextResponse.json({ erreur: 'Le nom, la ville, le diocèse et le district sont obligatoires' }, { status: 400 })
     }
 
     if (email?.trim()) {
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
         ville: ville.trim(),
         diocese: diocese.trim(),
         ocean: ocean?.trim() || null,
-        doyenne: doyenne?.trim() || null,
+        district: district.trim(),
         adresse: adresse?.trim() || null,
         telephone: telephone?.trim() || null,
         email: email?.trim() || null,

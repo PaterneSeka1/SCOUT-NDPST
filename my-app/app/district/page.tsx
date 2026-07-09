@@ -27,7 +27,7 @@ interface Totaux {
 }
 
 interface Apercu {
-  doyenne: string
+  nomDistrict: string
   totaux: Totaux
   paroisses: ParoisseApercu[]
 }
@@ -71,7 +71,7 @@ export default function ApercuDistrict() {
     )
   }
 
-  const { doyenne, totaux, paroisses } = apercu
+  const { nomDistrict, totaux, paroisses } = apercu
 
   const cartes = [
     { label: 'Paroisses actives', value: `${totaux.paroissesActives} / ${totaux.paroisses}`, couleur: '#1a4731' },
@@ -84,7 +84,7 @@ export default function ApercuDistrict() {
     <div className="space-y-5 sm:space-y-6">
       <div>
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Vue d&apos;ensemble</h1>
-        <p className="text-sm text-gray-500 mt-0.5">District {doyenne}</p>
+        <p className="text-sm text-gray-500 mt-0.5">District {nomDistrict}</p>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

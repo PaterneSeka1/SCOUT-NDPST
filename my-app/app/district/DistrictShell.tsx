@@ -21,8 +21,14 @@ const MENU_COMMISSAIRE: MenuItem[] = [
   { label: 'Rapports', href: '/district/rapports', icone: '📈' },
 ]
 
-function menuPour(role: string): MenuItem[] {
-  return role === 'COMMISSAIRE_DISTRICT' ? [...MENU_BASE, ...MENU_COMMISSAIRE] : MENU_BASE
+function menuPour(role: string, brancheType: string | null): MenuItem[] {
+  const menu = [...MENU_BASE]
+  // Juste après "Vue d'ensemble" : seul un ASSISTANT_DISTRICT chargé d'une
+  // branche (Utilisateur.brancheType renseigné) voit cet item.
+  if (role === 'ASSISTANT_DISTRICT' && brancheType) {
+    menu.splice(1, 0, { label: 'Ma branche', href: '/district/ma-branche', icone: '🎖️' })
+  }
+  return role === 'COMMISSAIRE_DISTRICT' ? [...menu, ...MENU_COMMISSAIRE] : menu
 }
 
 function SidebarContent({
@@ -81,13 +87,13 @@ function SidebarContent({
 }
 
 export function DistrictShell({
-  children, role, nomComplet, nomDistrict,
+  children, role, nomComplet, nomDistrict, brancheType,
 }: {
-  children: React.ReactNode; role: string; nomComplet: string; nomDistrict: string
+  children: React.ReactNode; role: string; nomComplet: string; nomDistrict: string; brancheType: string | null
 }) {
   const pathname = usePathname()
   const [sidebarOuverte, setSidebarOuverte] = useState(false)
-  const menuItems = menuPour(role)
+  const menuItems = menuPour(role, brancheType)
   const sidebarStyle = { backgroundColor: 'var(--cp)' }
   const titrePage = menuItems.find((m) => (m.href === '/district' ? pathname === '/district' : pathname.startsWith(m.href)))?.label ?? 'District'
   const initiale = nomComplet?.trim()?.[0]?.toUpperCase() ?? 'D'

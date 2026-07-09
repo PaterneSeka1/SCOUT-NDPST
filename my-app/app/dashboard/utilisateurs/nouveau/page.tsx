@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { LABELS_ROLES, ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT } from '@/lib/roles'
+import { LABELS_ROLES, ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT, ROLES_BRANCHE } from '@/lib/roles'
+import { LABELS_BRANCHES } from '@/lib/branches'
 import { useCreerUtilisateur } from '@/hooks/useUtilisateurs'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
@@ -22,6 +23,7 @@ interface FormData {
   matricule: string
   telephone: string
   role: string
+  brancheType: string
   motDePasse: string
   confirmation: string
 }
@@ -32,6 +34,7 @@ interface FormErrors {
   matricule?: string
   telephone?: string
   role?: string
+  brancheType?: string
   motDePasse?: string
   confirmation?: string
 }
@@ -43,11 +46,12 @@ export default function NouvelUtilisateurPage() {
   const { mutateAsync, isPending } = useCreerUtilisateur()
 
   const [form, setForm] = useState<FormData>({
-    nom: '', prenom: '', email: '', matricule: '', telephone: '', role: '', motDePasse: '', confirmation: '',
+    nom: '', prenom: '', email: '', matricule: '', telephone: '', role: '', brancheType: '', motDePasse: '', confirmation: '',
   })
   const [erreurs, setErreurs] = useState<FormErrors>({})
 
   const estParent = form.role === 'PARENT'
+  const estBranche = ROLES_BRANCHE.includes(form.role)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -60,6 +64,7 @@ export default function NouvelUtilisateurPage() {
     if (!form.nom.trim()) e.nom = 'Le nom est requis'
     if (!form.prenom.trim()) e.prenom = 'Le prénom est requis'
     if (!form.role) e.role = 'Le rôle est requis'
+    if (estBranche && !form.brancheType) e.brancheType = 'La branche est requise'
     if (estParent) {
       if (!form.telephone.trim()) e.telephone = 'Le numéro de téléphone est requis pour un parent'
     } else {
@@ -84,6 +89,7 @@ export default function NouvelUtilisateurPage() {
         matricule: !estParent && form.matricule.trim() ? form.matricule.trim() : null,
         telephone: form.telephone.trim() || null,
         role: form.role,
+        brancheType: estBranche ? form.brancheType : null,
         password: form.motDePasse,
       })
       router.push('/dashboard/utilisateurs')
@@ -130,6 +136,19 @@ export default function NouvelUtilisateurPage() {
             </select>
             {erreurs.role && <p className="mt-1 text-xs text-red-600">{erreurs.role}</p>}
           </div>
+
+          {/* Branche — uniquement pour l'encadrement de branche */}
+          {estBranche && (
+            <div>
+              <label className={CLS_LABEL}>Branche <span className="text-red-500">*</span></label>
+              <select id="brancheType" name="brancheType" value={form.brancheType} onChange={handleChange}
+                className={erreurs.brancheType ? CLS_SELECT_ERR : CLS_SELECT}>
+                <option value="">Sélectionner une branche</option>
+                {Object.entries(LABELS_BRANCHES).map(([valeur, libelle]) => <option key={valeur} value={valeur}>{libelle}</option>)}
+              </select>
+              {erreurs.brancheType && <p className="mt-1 text-xs text-red-600">{erreurs.brancheType}</p>}
+            </div>
+          )}
 
           {/* Matricule — masqué pour les parents */}
           {form.role && !estParent && (

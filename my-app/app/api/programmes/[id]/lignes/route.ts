@@ -5,17 +5,9 @@ import { prisma } from '@/lib/prisma'
 import { ROLES_BRANCHE, ROLES_GESTION } from '@/lib/roles'
 import { logger } from '@/lib/logger'
 import { paroisseIdRequise } from '@/lib/session'
+import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 
 type RouteParams = { params: Promise<{ id: string }> }
-
-async function getBrancheUtilisateur(userId: string, paroisseId: string): Promise<string | null> {
-  const poste = await prisma.posteBranche.findFirst({
-    where: { utilisateurId: userId, paroisseId },
-    select: { brancheType: true },
-    orderBy: { createdAt: 'asc' },
-  })
-  return poste?.brancheType ?? null
-}
 
 export async function POST(req: NextRequest, { params }: RouteParams) {
   try {

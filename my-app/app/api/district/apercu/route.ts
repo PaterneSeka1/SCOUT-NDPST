@@ -16,11 +16,11 @@ export async function GET() {
 
   const paroisseId = paroisseIdRequise(session)
 
-  let doyenne: string
+  let nomDistrict: string
   let idsParoisses: string[]
   try {
     const district = await getParoissesDuDistrict(paroisseId)
-    doyenne = district.doyenne
+    nomDistrict = district.nomDistrict
     idsParoisses = district.paroisses.map((p) => p.id)
   } catch (error) {
     if (error instanceof DistrictInvalideError) {
@@ -71,7 +71,7 @@ export async function GET() {
   )
 
   return NextResponse.json({
-    doyenne,
+    nomDistrict,
     totaux: { ...totaux, activitesMois },
     paroisses: paroisses.map((p) => ({
       id: p.id,

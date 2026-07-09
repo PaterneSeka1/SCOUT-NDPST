@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_ROLES, ROLES_ASSIGNABLES_DISTRICT } from '@/lib/roles'
+import { LABELS_BRANCHES } from '@/lib/branches'
 import { useCreerDistrictUtilisateur } from '@/hooks/useDistrictUtilisateurs'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
@@ -23,6 +24,7 @@ interface FormData {
   telephone: string
   role: string
   fonction: string
+  brancheType: string
   motDePasse: string
   confirmation: string
 }
@@ -33,6 +35,7 @@ interface FormErrors {
   matricule?: string
   telephone?: string
   role?: string
+  brancheType?: string
   motDePasse?: string
   confirmation?: string
 }
@@ -44,11 +47,13 @@ export default function NouveauMembreEquipePage() {
   const { mutateAsync, isPending } = useCreerDistrictUtilisateur()
 
   const [form, setForm] = useState<FormData>({
-    nom: '', prenom: '', email: '', matricule: '', telephone: '', role: '', fonction: '', motDePasse: '', confirmation: '',
+    nom: '', prenom: '', email: '', matricule: '', telephone: '', role: '', fonction: '', brancheType: '', motDePasse: '', confirmation: '',
   })
   const [erreurs, setErreurs] = useState<FormErrors>({})
+  const [modeFonction, setModeFonction] = useState<'branche' | 'autre'>('autre')
 
   const estAssistant = form.role === 'ASSISTANT_DISTRICT'
+  const modeBranche = modeFonction === 'branche'
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -61,6 +66,7 @@ export default function NouveauMembreEquipePage() {
     if (!form.nom.trim()) e.nom = 'Le nom est requis'
     if (!form.prenom.trim()) e.prenom = 'Le prénom est requis'
     if (!form.role) e.role = 'Le rôle est requis'
+    if (estAssistant && modeBranche && !form.brancheType) e.brancheType = 'La branche est requise'
     if (!form.matricule.trim()) e.matricule = 'Le matricule est requis'
     if (!form.motDePasse) e.motDePasse = 'Le mot de passe est requis'
     else if (!motDePasseValide(form.motDePasse)) e.motDePasse = REGLE_MOT_DE_PASSE
@@ -81,7 +87,8 @@ export default function NouveauMembreEquipePage() {
         matricule: form.matricule.trim(),
         telephone: form.telephone.trim() || null,
         role: form.role,
-        fonction: estAssistant && form.fonction.trim() ? form.fonction.trim() : null,
+        fonction: estAssistant && !modeBranche && form.fonction.trim() ? form.fonction.trim() : null,
+        brancheType: estAssistant && modeBranche && form.brancheType ? form.brancheType : null,
         password: form.motDePasse,
       })
       router.push('/district/equipe')
@@ -129,12 +136,44 @@ export default function NouveauMembreEquipePage() {
             {erreurs.role && <p className="mt-1 text-xs text-red-600">{erreurs.role}</p>}
           </div>
 
-          {/* Fonction — uniquement pour ASSISTANT_DISTRICT */}
+          {/* Fonction — uniquement pour ASSISTANT_DISTRICT : chargé d'une branche (structuré) OU autre fonction (texte libre), mutuellement exclusifs */}
           {estAssistant && (
-            <div>
-              <label className={CLS_LABEL}>Fonction <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
-              <input id="fonction" name="fonction" type="text" value={form.fonction} onChange={handleChange}
-                placeholder="Ex. Branche Route, Spiritualité…" className={CLS_INPUT} />
+            <div className="space-y-3">
+              <div>
+                <label className={CLS_LABEL}>Fonction de l&apos;assistant</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input type="radio" name="modeFonction" checked={modeBranche}
+                      onChange={() => setModeFonction('branche')} className="accent-[#1a4731]" />
+                    Chargé d&apos;une branche
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input type="radio" name="modeFonction" checked={!modeBranche}
+                      onChange={() => setModeFonction('autre')} className="accent-[#1a4731]" />
+                    Autre fonction
+                  </label>
+                </div>
+              </div>
+
+              {modeBranche ? (
+                <div>
+                  <label className={CLS_LABEL}>Branche <span className="text-red-500">*</span></label>
+                  <select id="brancheType" name="brancheType" value={form.brancheType} onChange={handleChange}
+                    className={erreurs.brancheType ? CLS_SELECT_ERR : CLS_SELECT}>
+                    <option value="">Sélectionner une branche</option>
+                    {Object.entries(LABELS_BRANCHES).map(([valeur, libelle]) => (
+                      <option key={valeur} value={valeur}>{libelle}</option>
+                    ))}
+                  </select>
+                  {erreurs.brancheType && <p className="mt-1 text-xs text-red-600">{erreurs.brancheType}</p>}
+                </div>
+              ) : (
+                <div>
+                  <label className={CLS_LABEL}>Fonction <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
+                  <input id="fonction" name="fonction" type="text" value={form.fonction} onChange={handleChange}
+                    placeholder="Ex. Spiritualité, Secrétariat…" className={CLS_INPUT} />
+                </div>
+              )}
             </div>
           )}
 

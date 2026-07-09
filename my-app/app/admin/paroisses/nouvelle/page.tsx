@@ -9,31 +9,31 @@ const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm te
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 interface FormParoisse {
-  nom: string; ville: string; diocese: string; ocean: string; doyenne: string
+  nom: string; ville: string; diocese: string; ocean: string; district: string
   adresse: string; telephone: string; email: string
 }
 
-const VIDE: FormParoisse = { nom: '', ville: '', diocese: '', ocean: '', doyenne: '', adresse: '', telephone: '', email: '' }
+const VIDE: FormParoisse = { nom: '', ville: '', diocese: '', ocean: '', district: '', adresse: '', telephone: '', email: '' }
 
 export default function NouvelleParoissePage() {
   const router = useRouter()
   const [form, setForm] = useState<FormParoisse>(VIDE)
   const [soumission, setSoumission] = useState(false)
-  const [doyennesExistantes, setDoyennesExistantes] = useState<string[]>([])
+  const [districtsExistants, setDistrictsExistants] = useState<string[]>([])
 
   useEffect(() => {
     fetch('/api/admin/districts')
       .then((r) => (r.ok ? r.json() : null))
-      .then((data: { districts?: { doyenne: string }[] } | null) => {
-        if (data?.districts) setDoyennesExistantes(data.districts.map((d) => d.doyenne))
+      .then((data: { districts?: { nom: string }[] } | null) => {
+        if (data?.districts) setDistrictsExistants(data.districts.map((d) => d.nom))
       })
       .catch(() => {})
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.nom.trim() || !form.ville.trim() || !form.diocese.trim()) {
-      toast.error('Le nom, la ville et le diocèse sont obligatoires.')
+    if (!form.nom.trim() || !form.ville.trim() || !form.diocese.trim() || !form.district.trim()) {
+      toast.error('Le nom, la ville, le diocèse et le district sont obligatoires.')
       return
     }
     setSoumission(true)
@@ -79,18 +79,19 @@ export default function NouvelleParoissePage() {
             <input className={CLS_INPUT} value={form.diocese} onChange={(e) => setForm({ ...form, diocese: e.target.value })} required />
           </div>
           <div>
-            <label className={CLS_LABEL}>Doyenné</label>
+            <label className={CLS_LABEL}>District *</label>
             <input
               className={CLS_INPUT}
-              value={form.doyenne}
-              onChange={(e) => setForm({ ...form, doyenne: e.target.value })}
-              list="doyennes-existantes"
-              placeholder="Ex. Doyenné de Cocody"
+              value={form.district}
+              onChange={(e) => setForm({ ...form, district: e.target.value })}
+              list="districts-existants"
+              placeholder="Ex. District Nord"
+              required
             />
-            <datalist id="doyennes-existantes">
-              {doyennesExistantes.map((d) => <option key={d} value={d} />)}
+            <datalist id="districts-existants">
+              {districtsExistants.map((d) => <option key={d} value={d} />)}
             </datalist>
-            <p className="mt-1 text-xs text-gray-400">Détermine le district — reprenez exactement l&apos;orthographe d&apos;un doyenné existant si cette paroisse en fait partie.</p>
+            <p className="mt-1 text-xs text-gray-400">Toute paroisse appartient à un district — reprenez exactement l&apos;orthographe d&apos;un district existant si cette paroisse en fait partie.</p>
           </div>
           <div>
             <label className={CLS_LABEL}>Océan / secteur</label>

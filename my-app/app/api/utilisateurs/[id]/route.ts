@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { RoleUtilisateur } from '@/app/generated/prisma/client'
-import { ROLES_GROUPE as ROLES_AUTORISES, ROLES_DISTRICT_ETENDU } from '@/lib/roles'
+import { RoleUtilisateur, BrancheType } from '@/app/generated/prisma/client'
+import { ROLES_GROUPE as ROLES_AUTORISES, ROLES_DISTRICT_ETENDU, ROLES_BRANCHE } from '@/lib/roles'
+import { BrancheTypeSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 import { paroisseIdRequise } from '@/lib/session'
@@ -26,7 +27,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       where: { id, paroisseId, role: { notIn: ROLES_DISTRICT_ETENDU as RoleUtilisateur[] } },
       select: {
         id: true, nom: true, prenom: true, matricule: true, telephone: true,
-        email: true, role: true, actif: true, paroisseId: true,
+        email: true, role: true, brancheType: true, actif: true, paroisseId: true,
         createdAt: true, updatedAt: true,
         liensParent: {
           select: {
@@ -61,17 +62,20 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // modifier un compte de l'équipe district ancré sur sa paroisse.
     const existant = await prisma.utilisateur.findFirst({
       where: { id, paroisseId, role: { notIn: ROLES_DISTRICT_ETENDU as RoleUtilisateur[] } },
-      select: { id: true, role: true, actif: true },
+      select: { id: true, role: true, actif: true, brancheType: true },
     })
     if (!existant) return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 })
 
     const body = await request.json()
-    const { nom, prenom, email, role, actif } = body as {
-      nom?: string; prenom?: string; email?: string; role?: string; actif?: boolean
+    const { nom, prenom, email, role, actif, brancheType } = body as {
+      nom?: string; prenom?: string; email?: string; role?: string; actif?: boolean; brancheType?: string | null
     }
 
     if (role !== undefined && !(role in RoleUtilisateur))
       return NextResponse.json({ error: 'Rôle invalide' }, { status: 400 })
+
+    if (brancheType != null && !BrancheTypeSchema.safeParse(brancheType).success)
+      return NextResponse.json({ error: 'Branche invalide' }, { status: 400 })
 
     // Un admin plateforme (transverse, sans paroisse) ne se promeut jamais
     // depuis cette route, quel que soit qui l'appelle. Les rôles de district
@@ -95,6 +99,22 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       if (doublon) return NextResponse.json({ error: 'Cette adresse e-mail est déjà utilisée' }, { status: 400 })
     }
 
+    // brancheType n'a de sens que pour l'encadrement de branche : requis pour
+    // ces rôles (même si le rôle final n'a pas changé), forcé à null pour tout
+    // autre rôle même s'il n'a pas été envoyé — un utilisateur qui change de
+    // rôle vers un rôle hors branche ne doit jamais conserver une branche
+    // héritée d'un rôle précédent.
+    const roleFinal = role !== undefined ? role : existant.role
+    const brancheTypeFinal = !ROLES_BRANCHE.includes(roleFinal)
+      ? null
+      : brancheType !== undefined
+        ? (brancheType as BrancheType | null)
+        : existant.brancheType
+
+    if (ROLES_BRANCHE.includes(roleFinal) && !brancheTypeFinal) {
+      return NextResponse.json({ error: 'La branche est requise pour ce rôle' }, { status: 400 })
+    }
+
     const utilisateur = await prisma.utilisateur.update({
       where: { id },
       data: {
@@ -103,10 +123,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         ...(email !== undefined ? { email } : {}),
         ...(role !== undefined ? { role: role as RoleUtilisateur } : {}),
         ...(actif !== undefined ? { actif } : {}),
+        brancheType: brancheTypeFinal,
       },
       select: {
         id: true, nom: true, prenom: true, matricule: true, telephone: true,
-        email: true, role: true, actif: true, paroisseId: true,
+        email: true, role: true, brancheType: true, actif: true, paroisseId: true,
         createdAt: true, updatedAt: true,
       },
     })

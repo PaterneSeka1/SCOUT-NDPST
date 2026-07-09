@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { RoleUtilisateur } from '@/app/generated/prisma/client'
 import { ROLES_PLATEFORME, ROLES_ASSIGNABLES_PAROISSE, ROLES_DISTRICT_ETENDU } from '@/lib/roles'
-import { normaliserDoyenne } from '@/lib/district'
+import { normaliserDistrict } from '@/lib/district'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 
@@ -16,7 +16,7 @@ type RouteParams = { params: Promise<{ id: string }> }
 async function trouverCible(id: string) {
   return prisma.utilisateur.findFirst({
     where: { id, role: { not: 'ADMIN_PLATEFORME' } },
-    select: { id: true, role: true, actif: true, paroisse: { select: { doyenne: true } } },
+    select: { id: true, role: true, actif: true, paroisse: { select: { district: true } } },
   })
 }
 
@@ -83,10 +83,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Un rôle de district n'a de sens que si le périmètre du district (dérivé du
-    // doyenne de la paroisse d'ancrage, inchangée par cette route) est résoluble.
-    if (role !== undefined && ROLES_DISTRICT_ETENDU.includes(role) && !normaliserDoyenne(existant.paroisse?.doyenne)) {
+    // district de la paroisse d'ancrage, inchangée par cette route) est résoluble.
+    if (role !== undefined && ROLES_DISTRICT_ETENDU.includes(role) && !normaliserDistrict(existant.paroisse?.district)) {
       return NextResponse.json(
-        { erreur: "La paroisse d'ancrage de cet utilisateur n'a pas de doyenné renseigné — renseignez-le avant d'y rattacher un rôle de district" },
+        { erreur: "La paroisse d'ancrage de cet utilisateur n'a pas de district renseigné — renseignez-le avant d'y rattacher un rôle de district" },
         { status: 400 },
       )
     }

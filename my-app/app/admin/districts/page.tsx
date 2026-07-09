@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 
 interface District {
-  doyenne: string
+  nom: string
   key: string
   nbParoisses: number
   commissaire: { id: string; nom: string; prenom: string; actif: boolean } | null
@@ -32,7 +32,7 @@ function EtatVide({ rechercheActive }: { rechercheActive: boolean }) {
         {rechercheActive ? 'Aucun district trouvé' : 'Aucun district enregistré'}
       </p>
       <p className="text-xs text-gray-400 mt-1">
-        {rechercheActive ? 'Essayez avec un autre nom.' : 'Un district apparaît automatiquement dès qu’une paroisse a un doyenné renseigné.'}
+        {rechercheActive ? 'Essayez avec un autre nom.' : 'Un district apparaît automatiquement dès qu’une paroisse a un district renseigné.'}
       </p>
     </div>
   )
@@ -56,7 +56,7 @@ export default function ListeDistricts() {
 
   const rechercheNorm = recherche.trim().toLowerCase()
   const districtsFiltres = rechercheNorm
-    ? districts.filter((d) => d.doyenne.toLowerCase().includes(rechercheNorm))
+    ? districts.filter((d) => d.nom.toLowerCase().includes(rechercheNorm))
     : districts
 
   if (chargement) {
@@ -103,7 +103,7 @@ export default function ListeDistricts() {
                 className="block bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:border-gray-300 hover:shadow-md active:scale-[0.99] transition"
               >
                 <div className="min-w-0">
-                  <h2 className="text-base font-bold text-gray-900 leading-snug break-words">{d.doyenne}</h2>
+                  <h2 className="text-base font-bold text-gray-900 leading-snug break-words">{d.nom}</h2>
                   <p className="text-xs text-gray-500 mt-1">
                     {d.nbParoisses} paroisse{d.nbParoisses > 1 ? 's' : ''}
                   </p>
@@ -135,7 +135,7 @@ export default function ListeDistricts() {
                   {districtsFiltres.map((d) => (
                     <tr key={d.key} className="hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => (window.location.href = `/admin/districts/${d.key}`)}>
                       <td className="px-4 py-3">
-                        <p className="font-medium text-gray-900">{d.doyenne}</p>
+                        <p className="font-medium text-gray-900">{d.nom}</p>
                       </td>
                       <td className="px-4 py-3 text-center text-gray-700">{d.nbParoisses}</td>
                       <td className="px-4 py-3">

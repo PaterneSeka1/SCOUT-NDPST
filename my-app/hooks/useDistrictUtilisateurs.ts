@@ -17,6 +17,7 @@ export interface Utilisateur {
   prenom: string
   role: string
   fonction: string | null
+  brancheType?: string | null
   actif: boolean
   email: string | null
   paroisseId?: string
@@ -52,6 +53,7 @@ export interface DonneesCreerUtilisateur {
   telephone?: string | null
   role: string
   fonction?: string | null
+  brancheType?: string | null
   password: string
 }
 
@@ -61,6 +63,7 @@ export interface DonneesModifierUtilisateur {
   email?: string | null
   role?: string
   fonction?: string | null
+  brancheType?: string | null
   actif?: boolean
 }
 

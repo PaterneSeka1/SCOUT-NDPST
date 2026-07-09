@@ -1,3 +1,5 @@
+import { LABELS_BRANCHES } from './branches'
+
 export const LABELS_ROLES: Record<string, string> = {
   ADMIN_PLATEFORME: 'Administrateur plateforme',
   CHEF_GROUPE: 'Chef de Groupe',
@@ -28,9 +30,14 @@ export const COULEURS_ROLES: Record<string, string> = {
   SCOUT: 'bg-orange-100 text-orange-800',
 }
 
-/** "Assistant au Commissaire de District — Branche Route" si fonction renseignée, sinon le libellé seul. */
-export function libelleRoleAvecFonction(role: string, fonction?: string | null): string {
+/**
+ * "Assistant au Commissaire de District — Branche Route" si brancheType renseigné,
+ * "... — Spiritualité" si fonction renseignée (texte libre), sinon le libellé seul.
+ * brancheType et fonction sont mutuellement exclusifs (voir /district/equipe).
+ */
+export function libelleRoleAvecFonction(role: string, fonction?: string | null, brancheType?: string | null): string {
   const base = LABELS_ROLES[role] ?? role
+  if (brancheType) return `${base} — Branche ${LABELS_BRANCHES[brancheType] ?? brancheType}`
   return fonction?.trim() ? `${base} — ${fonction.trim()}` : base
 }
 
@@ -72,7 +79,7 @@ export const ROLES_PLATEFORME: string[] = ['ADMIN_PLATEFORME']
 
 /**
  * Direction du district : au-dessus des Chefs de Groupe de plusieurs paroisses
- * partageant le même Paroisse.doyenne. Rattaché à une paroisse d'ancrage précise
+ * partageant le même Paroisse.district. Rattaché à une paroisse d'ancrage précise
  * (voir lib/district.ts pour la résolution du périmètre réel). Comme
  * ROLES_PLATEFORME, JAMAIS mélangé à ROLES_TOUT_STAFF/ROLES_GESTION et consorts :
  * ces rôles opèrent au-dessus du périmètre d'une seule paroisse et n'ont pas accès

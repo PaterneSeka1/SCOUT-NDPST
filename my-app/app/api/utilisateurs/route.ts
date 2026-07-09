@@ -3,10 +3,10 @@ import { getServerSession } from 'next-auth/next'
 import { hash } from 'bcryptjs'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { Prisma, RoleUtilisateur } from '@/app/generated/prisma/client'
+import { Prisma, RoleUtilisateur, BrancheType } from '@/app/generated/prisma/client'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
-import { ROLES_GROUPE as ROLES_AUTORISES, ROLES_DISTRICT_ETENDU } from '@/lib/roles'
-import { RoleUtilisateurSchema } from '@/lib/validation'
+import { ROLES_GROUPE as ROLES_AUTORISES, ROLES_DISTRICT_ETENDU, ROLES_BRANCHE } from '@/lib/roles'
+import { RoleUtilisateurSchema, BrancheTypeSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 import { envoyerEmailBienvenue } from '@/lib/notifications'
@@ -72,6 +72,7 @@ export async function GET(request: NextRequest) {
           telephone: true,
           email: true,
           role: true,
+          brancheType: true,
           actif: true,
           createdAt: true,
         },
@@ -104,7 +105,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { nom, prenom, email, matricule, telephone, role, password, scoutIds } = body as {
+    const { nom, prenom, email, matricule, telephone, role, password, scoutIds, brancheType } = body as {
       nom?: string
       prenom?: string
       email?: string
@@ -113,6 +114,7 @@ export async function POST(request: NextRequest) {
       role?: string
       password?: string
       scoutIds?: unknown
+      brancheType?: string | null
     }
 
     if (!nom || !prenom || !role || !password) {
@@ -137,6 +139,17 @@ export async function POST(request: NextRequest) {
     if (role === 'ADMIN_PLATEFORME' || ROLES_DISTRICT_ETENDU.includes(role)) {
       return NextResponse.json({ error: 'Rôle invalide' }, { status: 400 })
     }
+
+    if (brancheType != null && !BrancheTypeSchema.safeParse(brancheType).success) {
+      return NextResponse.json({ error: 'Branche invalide' }, { status: 400 })
+    }
+
+    // brancheType n'a de sens que pour l'encadrement de branche : requis pour
+    // ces rôles, forcé à null pour tout autre rôle même si envoyé par erreur.
+    if (ROLES_BRANCHE.includes(role) && !brancheType) {
+      return NextResponse.json({ error: 'La branche est requise pour ce rôle' }, { status: 400 })
+    }
+    const brancheTypeFinal = ROLES_BRANCHE.includes(role) ? (brancheType as BrancheType) : null
 
     const estParent = role === 'PARENT'
 
@@ -226,6 +239,7 @@ export async function POST(request: NextRequest) {
           matricule: matricule?.trim() || null,
           telephone: telephone?.trim() || null,
           role: role as RoleUtilisateur,
+          brancheType: brancheTypeFinal,
           password: passwordHache,
           paroisseId,
         },
@@ -237,6 +251,7 @@ export async function POST(request: NextRequest) {
           telephone: true,
           email: true,
           role: true,
+          brancheType: true,
           actif: true,
           createdAt: true,
         },

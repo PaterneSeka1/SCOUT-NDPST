@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { ROLES_TOUT_STAFF } from '@/lib/roles'
+import { ROLES_TOUT_STAFF, ROLES_BRANCHE } from '@/lib/roles'
+import { RoleUtilisateur } from '@/app/generated/prisma/client'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -14,12 +15,10 @@ export async function GET() {
   const paroisseId = session.user.paroisseId
   if (!paroisseId) return NextResponse.json({ erreur: 'Aucune paroisse' }, { status: 400 })
 
-  const [postes, scoutsParBranche] = await Promise.all([
-    prisma.posteBranche.findMany({
-      where: { paroisseId },
-      include: {
-        utilisateur: { select: { id: true, nom: true, prenom: true, email: true, telephone: true } },
-      },
+  const [utilisateursBranche, scoutsParBranche] = await Promise.all([
+    prisma.utilisateur.findMany({
+      where: { paroisseId, role: { in: ROLES_BRANCHE as RoleUtilisateur[] }, brancheType: { not: null } },
+      select: { id: true, nom: true, prenom: true, email: true, telephone: true, role: true, fonction: true, brancheType: true },
       orderBy: [{ brancheType: 'asc' }, { role: 'asc' }],
     }),
     prisma.scout.groupBy({
@@ -28,6 +27,14 @@ export async function GET() {
       _count: { id: true },
     }),
   ])
+
+  const postes = utilisateursBranche.map((u) => ({
+    id: u.id,
+    brancheType: u.brancheType,
+    role: u.role.replace('_BRANCHE', ''),
+    fonction: u.fonction,
+    utilisateur: { id: u.id, nom: u.nom, prenom: u.prenom, email: u.email, telephone: u.telephone },
+  }))
 
   const comptesParBranche: Record<string, number> = {}
   for (const g of scoutsParBranche) comptesParBranche[g.brancheType] = g._count.id

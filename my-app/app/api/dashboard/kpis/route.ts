@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
+import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
+import { BrancheType } from '@/app/generated/prisma/client'
 
 function debutDuMois(): Date {
   const d = new Date()
@@ -82,14 +84,9 @@ export async function GET() {
         'Branches': branches.length,
       }
     } else if (['RESPONSABLE_BRANCHE', 'ADJOINT_BRANCHE', 'ASSISTANT_BRANCHE'].includes(role)) {
-      const poste = await prisma.posteBranche.findFirst({
-        where: { utilisateurId: userId },
-        select: { brancheType: true },
-        orderBy: { createdAt: 'asc' },
-      })
+      const brancheType = (await getBrancheUtilisateur(userId)) as BrancheType | null
 
-      if (poste) {
-        const { brancheType } = poste
+      if (brancheType) {
         const [scoutsBranche, activitesMois, presencesPositives, totalPresences] = await Promise.all([
           prisma.scout.count({ where: { paroisseId, brancheType, actif: true } }),
           prisma.activite.count({

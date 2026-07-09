@@ -32,9 +32,9 @@ enum RoleUtilisateur {
   ADJOINT_BRANCHE
   ASSISTANT_BRANCHE
   COMMISSAIRE_DISTRICT // Direction du district — au-dessus des Chefs de Groupe de plusieurs
-  // paroisses partageant le même Paroisse.doyenne. Rattaché à une paroisse d'ancrage
+  // paroisses partageant le même Paroisse.district. Rattaché à une paroisse d'ancrage
   // précise (paroisseId obligatoire, comme tout rôle ci-dessus) ; le périmètre réel
-  // se calcule via lib/district.ts à partir du doyenne de cette paroisse.
+  // se calcule via lib/district.ts à partir du district de cette paroisse.
   ADJOINT_DISTRICT
   ASSISTANT_DISTRICT // Le champ Utilisateur.fonction précise la charge : "Branche Route", "Spiritualité"...
   PARENT
@@ -110,7 +110,7 @@ model Paroisse {
   ville     String
   diocese   String
   ocean     String?
-  doyenne   String?
+  district  String // Toute paroisse appartient à un district — jamais nul
   adresse   String?
   telephone String?
   email     String?  @unique
@@ -141,7 +141,7 @@ model Paroisse {
 
   @@index([ville])
   @@index([diocese])
-  @@index([doyenne])
+  @@index([district])
 }
 
 // ---------------------------------------------------------------------------
@@ -182,8 +182,11 @@ model Utilisateur {
   email     String?         @unique
   password  String
   role      RoleUtilisateur
-  fonction  String?         // Champ libre, utilisé aujourd'hui uniquement pour ASSISTANT_DISTRICT
-                             // (ex. "Branche Route", "Spiritualité")
+  fonction  String?         // Champ libre, utilisé pour ASSISTANT_DISTRICT quand brancheType est vide
+                             // (ex. "Spiritualité", "Communication")
+  brancheType BrancheType?  // Branche gérée par ce compte : RESPONSABLE_BRANCHE/ADJOINT_BRANCHE/
+                             // ASSISTANT_BRANCHE (leur paroisse) ou ASSISTANT_DISTRICT chargé d'une
+                             // branche à l'échelle du district (voir lib/brancheUtilisateur.ts)
   actif     Boolean         @default(true)
   tokenCalendrier String?   @unique // Jeton d'abonnement au flux iCal personnel (généré à la demande)
   createdAt DateTime        @default(now())
@@ -216,6 +219,7 @@ model Utilisateur {
   @@index([telephone])
   @@index([paroisseId])
   @@index([role])
+  @@index([brancheType])
 }
 
 // ---------------------------------------------------------------------------

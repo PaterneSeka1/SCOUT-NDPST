@@ -50,16 +50,21 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     const body = await request.json()
     const {
-      nom, ville, diocese, ocean, doyenne, adresse, telephone, email, logo, actif,
+      nom, ville, diocese, ocean, district, adresse, telephone, email, logo, actif,
       couleurPrimaire, couleurAccent, couleurFond, couleurHover,
     } = body as {
-      nom?: string; ville?: string; diocese?: string; ocean?: string; doyenne?: string
+      nom?: string; ville?: string; diocese?: string; ocean?: string; district?: string
       adresse?: string; telephone?: string; email?: string; logo?: string; actif?: boolean
       couleurPrimaire?: string; couleurAccent?: string; couleurFond?: string; couleurHover?: string
     }
 
     if (logo != null && logo.trim() !== '' && !estUrlFichierValide(logo.trim(), urlPubliqueBase())) {
       return NextResponse.json({ erreur: 'logo doit être un chemin local (ex : /uploads/…) ou une URL de stockage autorisée' }, { status: 400 })
+    }
+
+    // Toute paroisse appartient à un district — jamais nul, donc jamais vidable ici.
+    if (district !== undefined && !district.trim()) {
+      return NextResponse.json({ erreur: 'Le district est obligatoire' }, { status: 400 })
     }
 
     for (const [champ, valeur] of Object.entries({ couleurPrimaire, couleurAccent, couleurFond, couleurHover })) {
@@ -75,7 +80,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         ...(ville !== undefined ? { ville: ville.trim() } : {}),
         ...(diocese !== undefined ? { diocese: diocese.trim() } : {}),
         ...(ocean !== undefined ? { ocean: ocean.trim() || null } : {}),
-        ...(doyenne !== undefined ? { doyenne: doyenne.trim() || null } : {}),
+        ...(district !== undefined ? { district: district.trim() } : {}),
         ...(adresse !== undefined ? { adresse: adresse.trim() || null } : {}),
         ...(telephone !== undefined ? { telephone: telephone.trim() || null } : {}),
         ...(email !== undefined ? { email: email.trim() || null } : {}),

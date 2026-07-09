@@ -17,7 +17,7 @@ interface ChefGroupe {
 
 interface Paroisse {
   id: string; nom: string; ville: string; diocese: string
-  ocean: string | null; doyenne: string | null
+  ocean: string | null; district: string | null
   adresse: string | null; telephone: string | null; email: string | null
   actif: boolean
   counts: { scouts: number; utilisateurs: number; activites: number }
@@ -25,7 +25,7 @@ interface Paroisse {
 }
 
 interface FormParoisse {
-  nom: string; ville: string; diocese: string; ocean: string; doyenne: string
+  nom: string; ville: string; diocese: string; ocean: string; district: string
   adresse: string; telephone: string; email: string
 }
 
@@ -46,13 +46,13 @@ export default function FicheParoissePage() {
   const [soumissionChef, setSoumissionChef] = useState(false)
   const [afficherFormChef, setAfficherFormChef] = useState(false)
   const [erreurChargement, setErreurChargement] = useState(false)
-  const [doyennesExistantes, setDoyennesExistantes] = useState<string[]>([])
+  const [districtsExistants, setDistrictsExistants] = useState<string[]>([])
 
   useEffect(() => {
     fetch('/api/admin/districts')
       .then((r) => (r.ok ? r.json() : null))
-      .then((data: { districts?: { doyenne: string }[] } | null) => {
-        if (data?.districts) setDoyennesExistantes(data.districts.map((d) => d.doyenne))
+      .then((data: { districts?: { nom: string }[] } | null) => {
+        if (data?.districts) setDistrictsExistants(data.districts.map((d) => d.nom))
       })
       .catch(() => {})
   }, [])
@@ -68,7 +68,7 @@ export default function FicheParoissePage() {
         setParoisse(data)
         setForm({
           nom: data.nom, ville: data.ville, diocese: data.diocese,
-          ocean: data.ocean ?? '', doyenne: data.doyenne ?? '',
+          ocean: data.ocean ?? '', district: data.district ?? '',
           adresse: data.adresse ?? '', telephone: data.telephone ?? '', email: data.email ?? '',
         })
       })
@@ -318,10 +318,10 @@ export default function FicheParoissePage() {
               <div><label className={CLS_LABEL}>Ville *</label><input className={CLS_INPUT} value={form.ville} onChange={(e) => setForm({ ...form, ville: e.target.value })} required /></div>
               <div><label className={CLS_LABEL}>Diocèse *</label><input className={CLS_INPUT} value={form.diocese} onChange={(e) => setForm({ ...form, diocese: e.target.value })} required /></div>
               <div>
-                <label className={CLS_LABEL}>Doyenné</label>
-                <input className={CLS_INPUT} value={form.doyenne} onChange={(e) => setForm({ ...form, doyenne: e.target.value })} list="doyennes-existantes" />
-                <datalist id="doyennes-existantes">
-                  {doyennesExistantes.map((d) => <option key={d} value={d} />)}
+                <label className={CLS_LABEL}>District *</label>
+                <input className={CLS_INPUT} value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} list="districts-existants" required />
+                <datalist id="districts-existants">
+                  {districtsExistants.map((d) => <option key={d} value={d} />)}
                 </datalist>
               </div>
               <div><label className={CLS_LABEL}>Océan / secteur</label><input className={CLS_INPUT} value={form.ocean} onChange={(e) => setForm({ ...form, ocean: e.target.value })} /></div>
@@ -341,7 +341,7 @@ export default function FicheParoissePage() {
           </form>
         ) : (
           <dl className="grid sm:grid-cols-2 gap-3 text-sm">
-            <div><dt className="text-gray-400">Doyenné</dt><dd className="text-gray-800">{paroisse.doyenne || '—'}</dd></div>
+            <div><dt className="text-gray-400">District</dt><dd className="text-gray-800">{paroisse.district || '—'}</dd></div>
             <div><dt className="text-gray-400">Océan / secteur</dt><dd className="text-gray-800">{paroisse.ocean || '—'}</dd></div>
             <div><dt className="text-gray-400">Téléphone</dt><dd className="text-gray-800">{paroisse.telephone || '—'}</dd></div>
             <div><dt className="text-gray-400">E-mail</dt><dd className="text-gray-800">{paroisse.email || '—'}</dd></div>

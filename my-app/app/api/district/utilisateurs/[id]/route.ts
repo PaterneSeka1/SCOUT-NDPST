@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { RoleUtilisateur } from '@/app/generated/prisma/client'
+import { RoleUtilisateur, BrancheType } from '@/app/generated/prisma/client'
 import { ROLES_DISTRICT as ROLES_AUTORISES, ROLES_ASSIGNABLES_DISTRICT } from '@/lib/roles'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 import { paroisseIdRequise } from '@/lib/session'
+import { BrancheTypeSchema } from '@/lib/validation'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -23,7 +24,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       where: { id, paroisseId, role: { in: ROLES_ASSIGNABLES_DISTRICT as RoleUtilisateur[] } },
       select: {
         id: true, nom: true, prenom: true, matricule: true, telephone: true,
-        email: true, role: true, fonction: true, actif: true, paroisseId: true,
+        email: true, role: true, fonction: true, brancheType: true, actif: true, paroisseId: true,
         createdAt: true, updatedAt: true,
       },
     })
@@ -53,12 +54,16 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (!existant) return NextResponse.json({ erreur: 'Utilisateur introuvable' }, { status: 404 })
 
     const body = await request.json()
-    const { nom, prenom, email, role, actif, fonction } = body as {
-      nom?: string; prenom?: string; email?: string; role?: string; actif?: boolean; fonction?: string | null
+    const { nom, prenom, email, role, actif, fonction, brancheType } = body as {
+      nom?: string; prenom?: string; email?: string; role?: string; actif?: boolean
+      fonction?: string | null; brancheType?: string | null
     }
 
     if (role !== undefined && !ROLES_ASSIGNABLES_DISTRICT.includes(role))
       return NextResponse.json({ erreur: 'Rôle invalide' }, { status: 400 })
+
+    if (brancheType != null && !BrancheTypeSchema.safeParse(brancheType).success)
+      return NextResponse.json({ erreur: 'Branche invalide' }, { status: 400 })
 
     if (email !== undefined && email !== null && email !== '') {
       const doublon = await prisma.utilisateur.findFirst({
@@ -76,6 +81,17 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const fonctionFinale =
       roleFinal !== 'ASSISTANT_DISTRICT' ? null : fonction !== undefined ? fonction?.trim() || null : undefined
 
+    // brancheType et fonction sont mutuellement exclusifs : si un texte de
+    // fonction a été fourni à la place, la branche est effacée même si un
+    // brancheType est aussi présent dans le corps de la requête.
+    const fonctionTexteFourni = fonction !== undefined && !!fonction?.trim()
+    const brancheFinale =
+      roleFinal !== 'ASSISTANT_DISTRICT' || fonctionTexteFourni
+        ? null
+        : brancheType !== undefined
+          ? (brancheType as BrancheType | null)
+          : undefined
+
     const utilisateur = await prisma.utilisateur.update({
       where: { id },
       data: {
@@ -85,10 +101,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         ...(role !== undefined ? { role: role as RoleUtilisateur } : {}),
         ...(actif !== undefined ? { actif } : {}),
         ...(fonctionFinale !== undefined ? { fonction: fonctionFinale } : {}),
+        ...(brancheFinale !== undefined ? { brancheType: brancheFinale } : {}),
       },
       select: {
         id: true, nom: true, prenom: true, matricule: true, telephone: true,
-        email: true, role: true, fonction: true, actif: true, paroisseId: true,
+        email: true, role: true, fonction: true, brancheType: true, actif: true, paroisseId: true,
         createdAt: true, updatedAt: true,
       },
     })

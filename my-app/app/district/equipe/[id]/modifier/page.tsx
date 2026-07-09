@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { LABELS_ROLES, ROLES_ASSIGNABLES_DISTRICT } from '@/lib/roles'
+import { LABELS_BRANCHES } from '@/lib/branches'
 import { useDistrictUtilisateur, useModifierDistrictUtilisateur, useResetDistrictPassword } from '@/hooks/useDistrictUtilisateurs'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
@@ -16,8 +17,8 @@ const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 const ROLES_LISTE = ROLES_ASSIGNABLES_DISTRICT
 
-interface FormInfos { nom: string; prenom: string; email: string; role: string; fonction: string; actif: boolean }
-interface FormInfosErrors { nom?: string; prenom?: string; role?: string }
+interface FormInfos { nom: string; prenom: string; email: string; role: string; fonction: string; brancheType: string; actif: boolean }
+interface FormInfosErrors { nom?: string; prenom?: string; role?: string; brancheType?: string }
 interface FormMdp { motDePasse: string; confirmation: string }
 interface FormMdpErrors { motDePasse?: string; confirmation?: string }
 
@@ -29,10 +30,11 @@ export default function ModifierMembreEquipePage() {
   const { mutateAsync: modifier, isPending: soumissionInfos } = useModifierDistrictUtilisateur(id)
   const { mutateAsync: resetPassword, isPending: soumissionMdp } = useResetDistrictPassword(id)
 
-  const [formInfos, setFormInfos] = useState<FormInfos>({ nom: '', prenom: '', email: '', role: '', fonction: '', actif: true })
+  const [formInfos, setFormInfos] = useState<FormInfos>({ nom: '', prenom: '', email: '', role: '', fonction: '', brancheType: '', actif: true })
   const [erreursInfos, setErreursInfos] = useState<FormInfosErrors>({})
   const [erreurServeurInfos, setErreurServeurInfos] = useState('')
   const [succesInfos, setSuccesInfos] = useState(false)
+  const [modeFonction, setModeFonction] = useState<'branche' | 'autre'>('autre')
 
   const [formMdp, setFormMdp] = useState<FormMdp>({ motDePasse: '', confirmation: '' })
   const [erreursMdp, setErreursMdp] = useState<FormMdpErrors>({})
@@ -43,12 +45,14 @@ export default function ModifierMembreEquipePage() {
     if (utilisateur) {
       setFormInfos({
         nom: utilisateur.nom, prenom: utilisateur.prenom, email: utilisateur.email ?? '',
-        role: utilisateur.role, fonction: utilisateur.fonction ?? '', actif: utilisateur.actif,
+        role: utilisateur.role, fonction: utilisateur.fonction ?? '', brancheType: utilisateur.brancheType ?? '', actif: utilisateur.actif,
       })
+      setModeFonction(utilisateur.brancheType ? 'branche' : 'autre')
     }
   }, [utilisateur])
 
   const estAssistant = formInfos.role === 'ASSISTANT_DISTRICT'
+  const modeBranche = modeFonction === 'branche'
 
   const handleInfosChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target
@@ -62,6 +66,7 @@ export default function ModifierMembreEquipePage() {
     if (!formInfos.nom.trim()) e.nom = 'Le nom est requis'
     if (!formInfos.prenom.trim()) e.prenom = 'Le prénom est requis'
     if (!formInfos.role) e.role = 'Le rôle est requis'
+    if (estAssistant && modeBranche && !formInfos.brancheType) e.brancheType = 'La branche est requise'
     setErreursInfos(e)
     return Object.keys(e).length === 0
   }
@@ -77,7 +82,8 @@ export default function ModifierMembreEquipePage() {
         prenom: formInfos.prenom.trim(),
         email: formInfos.email.trim() || null,
         role: formInfos.role,
-        fonction: estAssistant && formInfos.fonction.trim() ? formInfos.fonction.trim() : null,
+        fonction: estAssistant && !modeBranche && formInfos.fonction.trim() ? formInfos.fonction.trim() : null,
+        brancheType: estAssistant && modeBranche && formInfos.brancheType ? formInfos.brancheType : null,
         actif: formInfos.actif,
       })
       setSuccesInfos(true)
@@ -180,12 +186,44 @@ export default function ModifierMembreEquipePage() {
             {erreursInfos.role && <p className="mt-1 text-xs text-red-600">{erreursInfos.role}</p>}
           </div>
 
-          {/* Fonction — uniquement pour ASSISTANT_DISTRICT */}
+          {/* Fonction — uniquement pour ASSISTANT_DISTRICT : chargé d'une branche (structuré) OU autre fonction (texte libre), mutuellement exclusifs */}
           {estAssistant && (
-            <div>
-              <label className={CLS_LABEL}>Fonction <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
-              <input id="fonction" name="fonction" type="text" value={formInfos.fonction} onChange={handleInfosChange}
-                placeholder="Ex. Branche Route, Spiritualité…" className={CLS_INPUT} />
+            <div className="space-y-3">
+              <div>
+                <label className={CLS_LABEL}>Fonction de l&apos;assistant</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input type="radio" name="modeFonction" checked={modeBranche}
+                      onChange={() => setModeFonction('branche')} className="accent-[#1a4731]" />
+                    Chargé d&apos;une branche
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input type="radio" name="modeFonction" checked={!modeBranche}
+                      onChange={() => setModeFonction('autre')} className="accent-[#1a4731]" />
+                    Autre fonction
+                  </label>
+                </div>
+              </div>
+
+              {modeBranche ? (
+                <div>
+                  <label className={CLS_LABEL}>Branche <span className="text-red-500">*</span></label>
+                  <select id="brancheType" name="brancheType" value={formInfos.brancheType} onChange={handleInfosChange}
+                    className={erreursInfos.brancheType ? CLS_SELECT_ERR : CLS_SELECT}>
+                    <option value="">Sélectionner une branche</option>
+                    {Object.entries(LABELS_BRANCHES).map(([valeur, libelle]) => (
+                      <option key={valeur} value={valeur}>{libelle}</option>
+                    ))}
+                  </select>
+                  {erreursInfos.brancheType && <p className="mt-1 text-xs text-red-600">{erreursInfos.brancheType}</p>}
+                </div>
+              ) : (
+                <div>
+                  <label className={CLS_LABEL}>Fonction <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
+                  <input id="fonction" name="fonction" type="text" value={formInfos.fonction} onChange={handleInfosChange}
+                    placeholder="Ex. Spiritualité, Secrétariat…" className={CLS_INPUT} />
+                </div>
+              )}
             </div>
           )}
 

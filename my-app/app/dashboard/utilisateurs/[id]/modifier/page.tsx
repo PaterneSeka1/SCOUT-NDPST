@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { LABELS_ROLES, ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT } from '@/lib/roles'
+import { LABELS_ROLES, ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT, ROLES_BRANCHE } from '@/lib/roles'
+import { LABELS_BRANCHES } from '@/lib/branches'
 import { useUtilisateur, useModifierUtilisateur, useResetPassword } from '@/hooks/useUtilisateurs'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
@@ -16,8 +17,8 @@ const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 const ROLES_LISTE = ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT
 
-interface FormInfos { nom: string; prenom: string; email: string; role: string; actif: boolean }
-interface FormInfosErrors { nom?: string; prenom?: string; role?: string }
+interface FormInfos { nom: string; prenom: string; email: string; role: string; brancheType: string; actif: boolean }
+interface FormInfosErrors { nom?: string; prenom?: string; role?: string; brancheType?: string }
 interface FormMdp { motDePasse: string; confirmation: string }
 interface FormMdpErrors { motDePasse?: string; confirmation?: string }
 
@@ -29,7 +30,7 @@ export default function ModifierUtilisateurPage() {
   const { mutateAsync: modifier, isPending: soumissionInfos } = useModifierUtilisateur(id)
   const { mutateAsync: resetPassword, isPending: soumissionMdp } = useResetPassword(id)
 
-  const [formInfos, setFormInfos] = useState<FormInfos>({ nom: '', prenom: '', email: '', role: '', actif: true })
+  const [formInfos, setFormInfos] = useState<FormInfos>({ nom: '', prenom: '', email: '', role: '', brancheType: '', actif: true })
   const [erreursInfos, setErreursInfos] = useState<FormInfosErrors>({})
   const [erreurServeurInfos, setErreurServeurInfos] = useState('')
   const [succesInfos, setSuccesInfos] = useState(false)
@@ -41,9 +42,11 @@ export default function ModifierUtilisateurPage() {
 
   useEffect(() => {
     if (utilisateur) {
-      setFormInfos({ nom: utilisateur.nom, prenom: utilisateur.prenom, email: utilisateur.email ?? '', role: utilisateur.role, actif: utilisateur.actif })
+      setFormInfos({ nom: utilisateur.nom, prenom: utilisateur.prenom, email: utilisateur.email ?? '', role: utilisateur.role, brancheType: utilisateur.brancheType ?? '', actif: utilisateur.actif })
     }
   }, [utilisateur])
+
+  const estBranche = ROLES_BRANCHE.includes(formInfos.role)
 
   const handleInfosChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target
@@ -57,6 +60,7 @@ export default function ModifierUtilisateurPage() {
     if (!formInfos.nom.trim()) e.nom = 'Le nom est requis'
     if (!formInfos.prenom.trim()) e.prenom = 'Le prénom est requis'
     if (!formInfos.role) e.role = 'Le rôle est requis'
+    if (estBranche && !formInfos.brancheType) e.brancheType = 'La branche est requise'
     setErreursInfos(e)
     return Object.keys(e).length === 0
   }
@@ -67,7 +71,7 @@ export default function ModifierUtilisateurPage() {
     setSuccesInfos(false)
     if (!validerInfos()) return
     try {
-      await modifier({ nom: formInfos.nom.trim(), prenom: formInfos.prenom.trim(), email: formInfos.email.trim() || null, role: formInfos.role, actif: formInfos.actif })
+      await modifier({ nom: formInfos.nom.trim(), prenom: formInfos.prenom.trim(), email: formInfos.email.trim() || null, role: formInfos.role, brancheType: estBranche ? formInfos.brancheType : null, actif: formInfos.actif })
       setSuccesInfos(true)
       setTimeout(() => router.push('/dashboard/utilisateurs'), 1500)
     } catch (err) {
@@ -167,6 +171,19 @@ export default function ModifierUtilisateurPage() {
             </select>
             {erreursInfos.role && <p className="mt-1 text-xs text-red-600">{erreursInfos.role}</p>}
           </div>
+
+          {/* Branche — uniquement pour l'encadrement de branche */}
+          {estBranche && (
+            <div>
+              <label className={CLS_LABEL}>Branche <span className="text-red-500">*</span></label>
+              <select id="brancheType" name="brancheType" value={formInfos.brancheType} onChange={handleInfosChange}
+                className={erreursInfos.brancheType ? CLS_SELECT_ERR : CLS_SELECT}>
+                <option value="">Sélectionner une branche</option>
+                {Object.entries(LABELS_BRANCHES).map(([valeur, libelle]) => <option key={valeur} value={valeur}>{libelle}</option>)}
+              </select>
+              {erreursInfos.brancheType && <p className="mt-1 text-xs text-red-600">{erreursInfos.brancheType}</p>}
+            </div>
+          )}
 
           <label className="flex items-center gap-2.5 cursor-pointer">
             <input id="actif" name="actif" type="checkbox" checked={formInfos.actif} onChange={handleInfosChange}

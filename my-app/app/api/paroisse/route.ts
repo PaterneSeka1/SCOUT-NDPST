@@ -38,7 +38,7 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json()
   // Les couleurs de la paroisse ne sont plus modifiables par le Chef de
   // Groupe (uniquement nom/coordonnées/logo) — pas de champ couleur* ici.
-  // doyenne n'est plus modifiable en self-service depuis que ce champ détermine
+  // district n'est plus modifiable en self-service depuis que ce champ détermine
   // le périmètre d'autorité d'un Commissaire de District (voir lib/district.ts) —
   // seul ADMIN_PLATEFORME peut le modifier, via /admin/paroisses/[id].
   const { nom, ville, diocese, ocean, adresse, telephone, email, logo } = body as {

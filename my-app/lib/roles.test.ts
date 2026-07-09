@@ -110,9 +110,14 @@ describe('groupes de rôles RBAC', () => {
   })
 
   it('libelleRoleAvecFonction ajoute la fonction seulement si renseignée', () => {
-    expect(libelleRoleAvecFonction('ASSISTANT_DISTRICT', 'Branche Route')).toBe('Assistant au Commissaire de District — Branche Route')
+    expect(libelleRoleAvecFonction('ASSISTANT_DISTRICT', 'Spiritualité')).toBe('Assistant au Commissaire de District — Spiritualité')
     expect(libelleRoleAvecFonction('ASSISTANT_DISTRICT', null)).toBe('Assistant au Commissaire de District')
     expect(libelleRoleAvecFonction('ASSISTANT_DISTRICT', '  ')).toBe('Assistant au Commissaire de District')
     expect(libelleRoleAvecFonction('COMMISSAIRE_DISTRICT')).toBe('Commissaire de District')
+  })
+
+  it('libelleRoleAvecFonction privilégie brancheType sur fonction quand les deux sont fournis', () => {
+    expect(libelleRoleAvecFonction('ASSISTANT_DISTRICT', null, 'ECLAIREURS')).toBe('Assistant au Commissaire de District — Branche Éclaireurs')
+    expect(libelleRoleAvecFonction('ASSISTANT_DISTRICT', 'Spiritualité', 'COMPAGNONS')).toBe('Assistant au Commissaire de District — Branche Compagnons (Routiers)')
   })
 })
