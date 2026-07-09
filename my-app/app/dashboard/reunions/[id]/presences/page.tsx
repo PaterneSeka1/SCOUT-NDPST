@@ -9,9 +9,9 @@ import { decoderQrScout } from '@/lib/qr'
 import { LABELS_BRANCHES as BRANCHES } from '@/lib/branches'
 
 const STATUTS = [
-  { value: 'PRESENT', label: 'Présent', cls: 'bg-green-100 text-green-700 border-green-200', active: 'bg-green-500 text-white border-green-500' },
-  { value: 'EXCUSE', label: 'Excusé', cls: 'bg-orange-100 text-orange-700 border-orange-200', active: 'bg-orange-400 text-white border-orange-400' },
-  { value: 'ABSENT', label: 'Absent', cls: 'bg-red-100 text-red-700 border-red-200', active: 'bg-red-500 text-white border-red-500' },
+  { value: 'PRESENT', label: 'Présent', cls: 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200', active: 'bg-green-500 text-white border-green-500 hover:bg-green-600' },
+  { value: 'EXCUSE', label: 'Excusé', cls: 'bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-200', active: 'bg-orange-400 text-white border-orange-400 hover:bg-orange-500' },
+  { value: 'ABSENT', label: 'Absent', cls: 'bg-red-100 text-red-700 border-red-200 hover:bg-red-200', active: 'bg-red-500 text-white border-red-500 hover:bg-red-600' },
 ]
 
 interface Scout {

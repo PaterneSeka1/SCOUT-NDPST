@@ -108,7 +108,7 @@ export default function ListeParoisses() {
               <Link
                 key={p.id}
                 href={`/admin/paroisses/${p.id}`}
-                className="block bg-white rounded-xl border border-gray-200 p-4 shadow-sm active:scale-[0.99] transition"
+                className="block bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:border-gray-300 hover:shadow-md active:scale-[0.99] transition"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">

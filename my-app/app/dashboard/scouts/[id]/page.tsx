@@ -220,7 +220,7 @@ export default function FicheScoutPage() {
             <span className="font-mono text-lg font-bold text-[#1a4731] bg-[#1a4731]/5 px-3 py-1 rounded">
               {scout.matricule}
             </span>
-            <button onClick={() => setAfficherFormulaireMatricule(!afficherFormulaireMatricule)} className="text-sm text-gray-500 underline">
+            <button onClick={() => setAfficherFormulaireMatricule(!afficherFormulaireMatricule)} className="text-sm text-gray-500 underline hover:text-gray-700">
               Modifier
             </button>
           </div>
@@ -247,10 +247,10 @@ export default function FicheScoutPage() {
               />
               {erreurMatricule && <p className="text-xs text-red-600 mt-1">{erreurMatricule}</p>}
             </div>
-            <button type="submit" disabled={matriculeEnCours} className="bg-[#1a4731] text-white px-3 py-1.5 rounded-md text-sm disabled:opacity-60">
+            <button type="submit" disabled={matriculeEnCours} className="bg-[#1a4731] text-white px-3 py-1.5 rounded-md text-sm hover:bg-[#163d29] transition-colors disabled:opacity-60">
               {matriculeEnCours ? '…' : 'Enregistrer'}
             </button>
-            <button type="button" onClick={() => setAfficherFormulaireMatricule(false)} className="text-sm text-gray-500 px-2 py-1.5">
+            <button type="button" onClick={() => setAfficherFormulaireMatricule(false)} className="text-sm text-gray-500 px-2 py-1.5 hover:text-gray-700">
               Annuler
             </button>
           </form>
@@ -295,10 +295,10 @@ export default function FicheScoutPage() {
                     </div>
                     {erreurCompte && <p className="text-xs text-red-600">{erreurCompte}</p>}
                     <div className="flex gap-2">
-                      <button type="submit" disabled={compteEnCours} className="bg-[#1a4731] text-white px-3 py-1.5 rounded-md text-sm disabled:opacity-60">
+                      <button type="submit" disabled={compteEnCours} className="bg-[#1a4731] text-white px-3 py-1.5 rounded-md text-sm hover:bg-[#163d29] transition-colors disabled:opacity-60">
                         {compteEnCours ? 'Création…' : 'Créer le compte'}
                       </button>
-                      <button type="button" onClick={() => setAfficherFormulaireCompte(false)} className="text-sm text-gray-500 px-2">Annuler</button>
+                      <button type="button" onClick={() => setAfficherFormulaireCompte(false)} className="text-sm text-gray-500 px-2 hover:text-gray-700">Annuler</button>
                     </div>
                   </form>
                 )}
@@ -379,10 +379,10 @@ export default function FicheScoutPage() {
             </label>
             {erreurContact && <p className="text-xs text-red-600">{erreurContact}</p>}
             <div className="flex gap-2">
-              <button type="submit" disabled={contactEnCours} className="bg-[#1a4731] text-white px-3 py-1.5 rounded-md text-sm disabled:opacity-60">
+              <button type="submit" disabled={contactEnCours} className="bg-[#1a4731] text-white px-3 py-1.5 rounded-md text-sm hover:bg-[#163d29] transition-colors disabled:opacity-60">
                 {contactEnCours ? '…' : 'Ajouter'}
               </button>
-              <button type="button" onClick={() => setAfficherFormulaireContact(false)} className="text-sm text-gray-500 px-2">Annuler</button>
+              <button type="button" onClick={() => setAfficherFormulaireContact(false)} className="text-sm text-gray-500 px-2 hover:text-gray-700">Annuler</button>
             </div>
           </form>
         )}

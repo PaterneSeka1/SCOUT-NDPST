@@ -81,7 +81,7 @@ function CarteUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
           onClick={handleToggle}
           disabled={isPending}
           className={`text-xs font-medium disabled:opacity-50 ${
-            utilisateur.actif ? 'text-red-600' : 'text-green-600'
+            utilisateur.actif ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'
           }`}
         >
           {isPending ? '…' : utilisateur.actif ? 'Désactiver' : 'Activer'}

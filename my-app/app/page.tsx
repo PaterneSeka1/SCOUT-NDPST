@@ -115,7 +115,7 @@ export default async function Home() {
 
         <div className="relative z-10 mx-auto flex min-h-[82svh] w-full max-w-7xl flex-col px-5 py-5 sm:px-8 lg:px-10">
           <header className="flex items-center justify-between gap-4">
-            <Link href="/" className="flex items-center gap-3" aria-label={nomSite}>
+            <Link href="/" className="flex items-center gap-3 transition-opacity hover:opacity-80" aria-label={nomSite}>
               <span className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/25 bg-white/12 text-sm font-bold backdrop-blur overflow-hidden">
                 {logoUrl ? (
                   <ParoisseLogoImage logoUrl={logoUrl} taille="md" />

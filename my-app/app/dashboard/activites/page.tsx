@@ -76,7 +76,7 @@ function CarteActivite({ activite, onSupprimer }: { activite: Activite; onSuppri
         <span className="text-gray-200">|</span>
         <Link href={`/dashboard/activites/${activite.id}/modifier`} className="text-blue-600 font-medium text-xs hover:underline">Modifier</Link>
         <span className="text-gray-200">|</span>
-        <button onClick={() => onSupprimer(activite.id, activite.titre)} className="text-red-600 font-medium text-xs">Supprimer</button>
+        <button onClick={() => onSupprimer(activite.id, activite.titre)} className="text-red-600 font-medium text-xs hover:text-red-700 hover:underline">Supprimer</button>
       </div>
     </div>
   )

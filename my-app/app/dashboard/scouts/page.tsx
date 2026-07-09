@@ -87,7 +87,7 @@ function CarteScout({ scout }: { scout: Scout }) {
           onClick={handleToggle}
           disabled={isPending}
           className={`text-xs font-medium disabled:opacity-50 ${
-            scout.actif ? 'text-red-600' : 'text-green-600'
+            scout.actif ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'
           }`}
         >
           {isPending ? '…' : scout.actif ? 'Désactiver' : 'Activer'}
