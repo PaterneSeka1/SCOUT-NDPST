@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { LABELS_ROLES, COULEURS_ROLES, ROLES_ASSIGNABLES_PAROISSE } from '@/lib/roles'
+import { LABELS_ROLES, COULEURS_ROLES, ROLES_ASSIGNABLES_PAROISSE, libelleRoleAvecFonction } from '@/lib/roles'
 
 interface UtilisateurListe {
   id: string
@@ -13,6 +13,8 @@ interface UtilisateurListe {
   telephone: string | null
   email: string | null
   role: string
+  fonction: string | null
+  brancheType: string | null
   actif: boolean
   createdAt: string
   paroisse: { id: string; nom: string }
@@ -165,7 +167,7 @@ export default function UtilisateursPlateformePage() {
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                       COULEURS_ROLES[u.role] ?? 'bg-gray-100 text-gray-700'
                     }`}>
-                      {LABELS_ROLES[u.role] ?? u.role}
+                      {libelleRoleAvecFonction(u.role, u.fonction, u.brancheType)}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-gray-700">

@@ -3,10 +3,10 @@ import { getServerSession } from 'next-auth'
 import { hash } from 'bcryptjs'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { Prisma, RoleUtilisateur } from '@/app/generated/prisma/client'
+import { Prisma, RoleUtilisateur, BrancheType } from '@/app/generated/prisma/client'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
-import { ROLES_PLATEFORME, ROLES_ASSIGNABLES_PAROISSE, ROLES_DISTRICT_ETENDU, LABELS_ROLES } from '@/lib/roles'
-import { RoleUtilisateurSchema } from '@/lib/validation'
+import { ROLES_PLATEFORME, ROLES_ASSIGNABLES_PAROISSE, ROLES_DISTRICT_ETENDU, ROLES_BRANCHE, libelleRoleAvecFonction } from '@/lib/roles'
+import { RoleUtilisateurSchema, BrancheTypeSchema } from '@/lib/validation'
 import { normaliserDistrict } from '@/lib/district'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
@@ -58,6 +58,8 @@ export async function GET(request: NextRequest) {
           telephone: true,
           email: true,
           role: true,
+          fonction: true,
+          brancheType: true,
           actif: true,
           createdAt: true,
           paroisse: { select: { id: true, nom: true } },
@@ -87,7 +89,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { paroisseId, nom, prenom, email, matricule, telephone, role, password } = body as {
+    const { paroisseId, nom, prenom, email, matricule, telephone, role, password, fonction, brancheType } = body as {
       paroisseId?: string
       nom?: string
       prenom?: string
@@ -96,6 +98,8 @@ export async function POST(request: NextRequest) {
       telephone?: string | null
       role?: string
       password?: string
+      fonction?: string | null
+      brancheType?: string | null
     }
 
     if (!paroisseId || !nom || !prenom || !role || !password) {
@@ -126,6 +130,20 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       )
     }
+
+    if (brancheType != null && !BrancheTypeSchema.safeParse(brancheType).success) {
+      return NextResponse.json({ erreur: 'Branche invalide' }, { status: 400 })
+    }
+
+    // brancheType a un sens pour l'encadrement de branche paroissial (requis) et
+    // pour ASSISTANT_DISTRICT chargé d'une branche (optionnel, mutuellement
+    // exclusif avec fonction) — null pour tout autre rôle même si fourni.
+    const estBranche = ROLES_BRANCHE.includes(role)
+    if (estBranche && !brancheType) {
+      return NextResponse.json({ erreur: 'La branche est requise pour ce rôle' }, { status: 400 })
+    }
+    const brancheTypeValeur = (estBranche || (role === 'ASSISTANT_DISTRICT' && brancheType)) ? (brancheType as BrancheType) : null
+    const fonctionValeur = role === 'ASSISTANT_DISTRICT' && !brancheTypeValeur ? (fonction?.trim() || null) : null
 
     const estParent = role === 'PARENT'
 
@@ -182,6 +200,8 @@ export async function POST(request: NextRequest) {
         matricule: matricule?.trim() || null,
         telephone: telephone?.trim() || null,
         role: role as RoleUtilisateur,
+        fonction: fonctionValeur,
+        brancheType: brancheTypeValeur,
         password: passwordHache,
         paroisseId,
       },
@@ -193,6 +213,8 @@ export async function POST(request: NextRequest) {
         telephone: true,
         email: true,
         role: true,
+        fonction: true,
+        brancheType: true,
         actif: true,
         createdAt: true,
         paroisseId: true,
@@ -214,7 +236,7 @@ export async function POST(request: NextRequest) {
         email: utilisateur.email,
         prenom: utilisateur.prenom,
         identifiant: utilisateur.matricule ?? utilisateur.telephone ?? utilisateur.email,
-        roleLabel: LABELS_ROLES[utilisateur.role] ?? utilisateur.role,
+        roleLabel: libelleRoleAvecFonction(utilisateur.role, utilisateur.fonction, utilisateur.brancheType),
         nomSite: 'SCOUT ASCCI',
         urlConnexion: `${process.env.NEXTAUTH_URL ?? ''}/login`,
       }).catch((error) => logger.error('admin.utilisateurs.email_bienvenue_echoue', error))

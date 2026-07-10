@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { LABELS_ROLES, COULEURS_ROLES } from '@/lib/roles'
+import { COULEURS_ROLES, libelleRoleAvecFonction } from '@/lib/roles'
 
 interface UtilisateurDetail {
   id: string
@@ -14,6 +14,8 @@ interface UtilisateurDetail {
   telephone: string | null
   email: string | null
   role: string
+  fonction: string | null
+  brancheType: string | null
   actif: boolean
   createdAt: string
   updatedAt: string
@@ -154,7 +156,7 @@ export default function FicheUtilisateurPlateformePage() {
                   COULEURS_ROLES[utilisateur.role] ?? 'bg-gray-100 text-gray-700'
                 }`}
               >
-                {LABELS_ROLES[utilisateur.role] ?? utilisateur.role}
+                {libelleRoleAvecFonction(utilisateur.role, utilisateur.fonction, utilisateur.brancheType)}
               </span>
             </dd>
           </div>

@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { RoleUtilisateur } from '@/app/generated/prisma/client'
-import { ROLES_PLATEFORME, ROLES_ASSIGNABLES_PAROISSE, ROLES_DISTRICT_ETENDU } from '@/lib/roles'
+import { RoleUtilisateur, BrancheType } from '@/app/generated/prisma/client'
+import { ROLES_PLATEFORME, ROLES_ASSIGNABLES_PAROISSE, ROLES_DISTRICT_ETENDU, ROLES_BRANCHE } from '@/lib/roles'
 import { normaliserDistrict } from '@/lib/district'
+import { BrancheTypeSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 
@@ -16,7 +17,7 @@ type RouteParams = { params: Promise<{ id: string }> }
 async function trouverCible(id: string) {
   return prisma.utilisateur.findFirst({
     where: { id, role: { not: 'ADMIN_PLATEFORME' } },
-    select: { id: true, role: true, actif: true, paroisse: { select: { district: true } } },
+    select: { id: true, role: true, actif: true, fonction: true, brancheType: true, paroisse: { select: { district: true } } },
   })
 }
 
@@ -40,6 +41,8 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
         telephone: true,
         email: true,
         role: true,
+        fonction: true,
+        brancheType: true,
         actif: true,
         createdAt: true,
         updatedAt: true,
@@ -68,19 +71,46 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (!existant) return NextResponse.json({ erreur: 'Utilisateur introuvable' }, { status: 404 })
 
     const body = await request.json()
-    const { nom, prenom, email, role, actif } = body as {
+    const { nom, prenom, email, role, actif, fonction, brancheType } = body as {
       nom?: string
       prenom?: string
       email?: string
       role?: string
       actif?: boolean
+      fonction?: string | null
+      brancheType?: string | null
     }
 
     // Pas de réaffectation de paroisse dans cette itération : seuls nom, prenom,
-    // email, role et actif sont modifiables via cette route.
+    // email, role, actif, fonction et brancheType sont modifiables via cette route.
     if (role !== undefined && !ROLES_ASSIGNABLES_PAROISSE.includes(role)) {
       return NextResponse.json({ erreur: 'Rôle invalide' }, { status: 400 })
     }
+
+    if (brancheType != null && !BrancheTypeSchema.safeParse(brancheType).success) {
+      return NextResponse.json({ erreur: 'Branche invalide' }, { status: 400 })
+    }
+
+    // brancheType/fonction recalculés sur le RÔLE FINAL (nouveau si fourni,
+    // sinon existant) — un utilisateur qui change de rôle ne doit jamais
+    // conserver une branche/fonction héritée d'un rôle précédent.
+    const roleFinal = role !== undefined ? role : existant.role
+    const estBrancheFinal = ROLES_BRANCHE.includes(roleFinal)
+    if (estBrancheFinal && brancheType === undefined && !existant.brancheType) {
+      return NextResponse.json({ erreur: 'La branche est requise pour ce rôle' }, { status: 400 })
+    }
+    if (estBrancheFinal && brancheType === null) {
+      return NextResponse.json({ erreur: 'La branche est requise pour ce rôle' }, { status: 400 })
+    }
+    const brancheTypeFinal = estBrancheFinal
+      ? ((brancheType !== undefined ? brancheType : existant.brancheType) as BrancheType)
+      : roleFinal === 'ASSISTANT_DISTRICT' && brancheType
+        ? (brancheType as BrancheType)
+        : null
+    const fonctionFinal =
+      roleFinal === 'ASSISTANT_DISTRICT' && !brancheTypeFinal
+        ? (fonction !== undefined ? fonction?.trim() || null : existant.fonction)
+        : null
 
     // Un rôle de district n'a de sens que si le périmètre du district (dérivé du
     // district de la paroisse d'ancrage, inchangée par cette route) est résoluble.
@@ -107,6 +137,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         ...(email !== undefined ? { email } : {}),
         ...(role !== undefined ? { role: role as RoleUtilisateur } : {}),
         ...(actif !== undefined ? { actif } : {}),
+        fonction: fonctionFinal,
+        brancheType: brancheTypeFinal,
       },
       select: {
         id: true,
@@ -116,6 +148,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         telephone: true,
         email: true,
         role: true,
+        fonction: true,
+        brancheType: true,
         actif: true,
         createdAt: true,
         updatedAt: true,
