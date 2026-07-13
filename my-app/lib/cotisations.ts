@@ -6,12 +6,14 @@ export const LABELS_TYPE_COTISATION: Record<string, string> = {
 
 export const LABELS_STATUT_COTISATION: Record<string, string> = {
   EN_ATTENTE: 'En attente',
+  PARTIELLEMENT_PAYEE: 'Partiellement payée',
   PAYEE: 'Payée',
   EXONEREE: 'Exonérée',
 }
 
 export const COULEURS_STATUT_COTISATION: Record<string, string> = {
   EN_ATTENTE: 'bg-amber-100 text-amber-800',
+  PARTIELLEMENT_PAYEE: 'bg-blue-100 text-blue-800',
   PAYEE: 'bg-green-100 text-green-800',
   EXONEREE: 'bg-gray-100 text-gray-700',
 }

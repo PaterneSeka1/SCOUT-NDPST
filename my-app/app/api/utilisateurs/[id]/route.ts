@@ -67,12 +67,32 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (!existant) return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 })
 
     const body = await request.json()
-    const { nom, prenom, email, role, actif, brancheType } = body as {
+    const { nom, prenom, email, role, actif, brancheType, scoutIds } = body as {
       nom?: string; prenom?: string; email?: string; role?: string; actif?: boolean; brancheType?: string | null
+      scoutIds?: unknown
     }
 
     if (role !== undefined && !(role in RoleUtilisateur))
       return NextResponse.json({ error: 'Rôle invalide' }, { status: 400 })
+
+    if (scoutIds !== undefined && !Array.isArray(scoutIds))
+      return NextResponse.json({ error: 'La liste des enfants est invalide' }, { status: 400 })
+
+    // undefined = champ non envoyé, ne touche pas aux enfants rattachés ;
+    // tableau (même vide) = remplace intégralement la liste. Un compte staff
+    // (Chef de Groupe, encadrement de branche, Ressources Adultes…) peut être
+    // rattaché à des enfants tout autant qu'un compte PARENT dédié — voir
+    // POST ci-dessus pour la même règle à la création.
+    const scoutIdsUniques = Array.isArray(scoutIds)
+      ? [...new Set(scoutIds.map((sid) => (typeof sid === 'string' ? sid.trim() : '')).filter(Boolean))]
+      : undefined
+
+    if (scoutIdsUniques && scoutIdsUniques.length > 0) {
+      const scoutsAutorises = await prisma.scout.count({ where: { id: { in: scoutIdsUniques }, paroisseId } })
+      if (scoutsAutorises !== scoutIdsUniques.length) {
+        return NextResponse.json({ error: 'Un ou plusieurs enfants sélectionnés sont introuvables' }, { status: 400 })
+      }
+    }
 
     if (brancheType != null && !BrancheTypeSchema.safeParse(brancheType).success)
       return NextResponse.json({ error: 'Branche invalide' }, { status: 400 })
@@ -115,21 +135,45 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'La branche est requise pour ce rôle' }, { status: 400 })
     }
 
-    const utilisateur = await prisma.utilisateur.update({
-      where: { id },
-      data: {
-        ...(nom !== undefined ? { nom } : {}),
-        ...(prenom !== undefined ? { prenom } : {}),
-        ...(email !== undefined ? { email } : {}),
-        ...(role !== undefined ? { role: role as RoleUtilisateur } : {}),
-        ...(actif !== undefined ? { actif } : {}),
-        brancheType: brancheTypeFinal,
-      },
-      select: {
-        id: true, nom: true, prenom: true, matricule: true, telephone: true,
-        email: true, role: true, brancheType: true, actif: true, paroisseId: true,
-        createdAt: true, updatedAt: true,
-      },
+    const utilisateur = await prisma.$transaction(async (tx) => {
+      const u = await tx.utilisateur.update({
+        where: { id },
+        data: {
+          ...(nom !== undefined ? { nom } : {}),
+          ...(prenom !== undefined ? { prenom } : {}),
+          ...(email !== undefined ? { email } : {}),
+          ...(role !== undefined ? { role: role as RoleUtilisateur } : {}),
+          ...(actif !== undefined ? { actif } : {}),
+          brancheType: brancheTypeFinal,
+        },
+        select: {
+          id: true, nom: true, prenom: true, matricule: true, telephone: true,
+          email: true, role: true, brancheType: true, actif: true, paroisseId: true,
+          createdAt: true, updatedAt: true,
+        },
+      })
+
+      if (scoutIdsUniques !== undefined) {
+        // Remplacement intégral de l'ensemble des enfants rattachés (pas un
+        // simple ajout) : un tableau vide détache tous les enfants existants.
+        await tx.lienParentScout.deleteMany({ where: { parentId: id, scoutId: { notIn: scoutIdsUniques } } })
+        if (scoutIdsUniques.length > 0) {
+          await tx.lienParentScout.createMany({
+            data: scoutIdsUniques.map((scoutId) => ({ parentId: id, scoutId })),
+            skipDuplicates: true,
+          })
+        }
+      }
+
+      return u
+    })
+
+    // Renvoyé avec le même champ `enfants` que le GET : sans ça, le cache
+    // React Query (qui remplace la donnée en place après un PUT réussi)
+    // perdrait les enfants rattachés jusqu'au prochain rechargement complet.
+    const liensParent = await prisma.lienParentScout.findMany({
+      where: { parentId: id },
+      select: { scout: { select: { id: true, nom: true, prenom: true, brancheType: true, matricule: true, actif: true } } },
     })
 
     if (role !== undefined && role !== existant.role) {
@@ -152,7 +196,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       })
     }
 
-    return NextResponse.json(utilisateur)
+    return NextResponse.json({ ...utilisateur, enfants: liensParent.map((lien) => lien.scout) })
   } catch (error) {
     logger.error('PUT /api/utilisateurs/[id]', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })

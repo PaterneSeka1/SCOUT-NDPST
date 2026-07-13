@@ -7,6 +7,7 @@ import { LABELS_ROLES, ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT, ROLES_BRANCHE } f
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { useUtilisateur, useModifierUtilisateur, useResetPassword } from '@/hooks/useUtilisateurs'
 import { PasswordInput } from '@/app/components/PasswordInput'
+import { SelecteurEnfants } from '@/app/components/SelecteurEnfants'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -34,6 +35,10 @@ export default function ModifierUtilisateurPage() {
   const [erreursInfos, setErreursInfos] = useState<FormInfosErrors>({})
   const [erreurServeurInfos, setErreurServeurInfos] = useState('')
   const [succesInfos, setSuccesInfos] = useState(false)
+  // Enfants rattachés : indépendant du rôle — un membre du staff (Chef de
+  // Groupe, encadrement de branche, Ressources Adultes…) peut tout autant
+  // être parent d'un scout de la paroisse qu'un compte PARENT dédié.
+  const [scoutIds, setScoutIds] = useState<string[]>([])
 
   const [formMdp, setFormMdp] = useState<FormMdp>({ motDePasse: '', confirmation: '' })
   const [erreursMdp, setErreursMdp] = useState<FormMdpErrors>({})
@@ -43,6 +48,7 @@ export default function ModifierUtilisateurPage() {
   useEffect(() => {
     if (utilisateur) {
       setFormInfos({ nom: utilisateur.nom, prenom: utilisateur.prenom, email: utilisateur.email ?? '', role: utilisateur.role, brancheType: utilisateur.brancheType ?? '', actif: utilisateur.actif })
+      setScoutIds((utilisateur.enfants ?? []).map((e) => e.id))
     }
   }, [utilisateur])
 
@@ -71,7 +77,7 @@ export default function ModifierUtilisateurPage() {
     setSuccesInfos(false)
     if (!validerInfos()) return
     try {
-      await modifier({ nom: formInfos.nom.trim(), prenom: formInfos.prenom.trim(), email: formInfos.email.trim() || null, role: formInfos.role, brancheType: estBranche ? formInfos.brancheType : null, actif: formInfos.actif })
+      await modifier({ nom: formInfos.nom.trim(), prenom: formInfos.prenom.trim(), email: formInfos.email.trim() || null, role: formInfos.role, brancheType: estBranche ? formInfos.brancheType : null, actif: formInfos.actif, scoutIds })
       setSuccesInfos(true)
       setTimeout(() => router.push('/dashboard/utilisateurs'), 1500)
     } catch (err) {
@@ -190,6 +196,10 @@ export default function ModifierUtilisateurPage() {
               className="w-4 h-4 accent-[#1a4731] rounded" />
             <span className="text-sm text-gray-700">Compte actif</span>
           </label>
+
+          <div className="border-t border-gray-100 pt-4">
+            <SelecteurEnfants scoutIds={scoutIds} onChange={setScoutIds} scoutsInitiaux={utilisateur.enfants} />
+          </div>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={soumissionInfos || succesInfos}

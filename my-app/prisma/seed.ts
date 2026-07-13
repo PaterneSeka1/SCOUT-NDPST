@@ -55,7 +55,7 @@ async function main() {
     { name: 'prenom', value: process.env.ADMIN_PRENOM ?? 'Plateforme' },
     { name: 'matricule', value: process.env.ADMIN_MATRICULE ?? 'ADMIN001A' },
     { name: 'email', value: process.env.ADMIN_EMAIL ?? null },
-    { name: 'password', value: await hash(motDePasse, 10) },
+    { name: 'password', value: await hash(motDePasse, 12) },
     { name: 'role', value: 'ADMIN_PLATEFORME', cast: '"RoleUtilisateur"' },
     { name: 'paroisseId', value: null },
   ])

@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { ROLES_TOUT_STAFF as ROLES_AUTORISES } from '@/lib/roles'
+import { ROLES_TOUT_STAFF as ROLES_AUTORISES, ROLES_BRANCHE } from '@/lib/roles'
+import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 import { paroisseIdRequise } from '@/lib/session'
+import type { BrancheType } from '@/app/generated/prisma/client'
 
 type RouteParams = { params: Promise<{ id: string; documentId: string }> }
 
@@ -25,8 +27,17 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 
     const paroisseId = paroisseIdRequise(session)
 
+    // Un responsable de branche ne peut supprimer que les documents des
+    // scouts de sa propre branche.
+    let brancheRequise: string | undefined
+    if (ROLES_BRANCHE.includes(session.user.role)) {
+      const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
+      if (!bt) return NextResponse.json({ error: 'Scout introuvable' }, { status: 404 })
+      brancheRequise = bt
+    }
+
     const scout = await prisma.scout.findFirst({
-      where: { id, paroisseId },
+      where: { id, paroisseId, ...(brancheRequise ? { brancheType: brancheRequise as BrancheType } : {}) },
       select: { id: true },
     })
 

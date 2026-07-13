@@ -1,6 +1,20 @@
 import nodemailer from 'nodemailer'
 import { logger } from './logger'
 
+// Échappement minimal pour les champs interpolés dans du HTML d'email
+// (prénom, nom de site, identifiant...) : ces valeurs viennent de saisies
+// utilisateur (nom d'un compte créé par un Chef de Groupe, config plateforme)
+// et ne doivent jamais permettre d'injecter du balisage dans un email envoyé
+// à un tiers.
+export function echapperHtml(valeur: string): string {
+  return valeur
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 function createTransporter() {
   if (!process.env.SMTP_HOST) return null
   return nodemailer.createTransport({
@@ -51,7 +65,7 @@ export async function envoyerEmailReinitialisation(email: string, prenom: string
           <h1 style="color:#1a4731;font-size:22px;margin:0">⚜️ SCOUT ASCCI</h1>
           <p style="color:#666;font-size:14px;margin-top:4px">Côte d'Ivoire</p>
         </div>
-        <p style="color:#222;font-size:15px">Bonjour <strong>${prenom}</strong>,</p>
+        <p style="color:#222;font-size:15px">Bonjour <strong>${echapperHtml(prenom)}</strong>,</p>
         <p style="color:#444;font-size:14px;line-height:1.6">
           Vous avez demandé la réinitialisation de votre mot de passe.
           Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe.
@@ -76,7 +90,17 @@ export async function envoyerEmailReinitialisation(email: string, prenom: string
   if (process.env.SMTP_HOST) {
     return envoyerEmailBrut(email, 'Réinitialisation de votre mot de passe', html)
   }
-  // Comportement historique en dev sans SMTP : afficher le lien directement,
+
+  if (process.env.NODE_ENV === 'production') {
+    // Ne jamais journaliser un secret : sans SMTP configuré en prod, on échoue
+    // explicitement (le lien contient un token de réinitialisation à usage unique)
+    // plutôt que de l'exposer en clair dans des logs potentiellement accessibles
+    // à d'autres que le destinataire.
+    logger.error('email.smtp_non_configure', { contexte: 'reinitialisation_mot_de_passe' })
+    return { ok: false, mode: 'erreur' as const }
+  }
+
+  // Comportement de confort en dev sans SMTP : afficher le lien directement,
   // plus pratique que de devoir aller lire les logs pour le retrouver.
   console.log('\n[RESET PASSWORD LINK]', lien, '\n')
   return { ok: true, mode: 'console' as const }

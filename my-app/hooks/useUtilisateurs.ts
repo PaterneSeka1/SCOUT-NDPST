@@ -75,6 +75,7 @@ export interface DonneesModifierUtilisateur {
   role?: string
   brancheType?: string | null
   actif?: boolean
+  scoutIds?: string[]
 }
 
 export interface DonneesResetPassword {

@@ -20,6 +20,7 @@ interface Cotisation {
   type: string
   libelle: string | null
   montant: number
+  montantPaye: number
   anneeScolaire: string
   statut: string
   datePaiement: string | null
@@ -80,7 +81,7 @@ export default function PageCotisations() {
     const payees = cotisations.filter((c) => c.statut === 'PAYEE').length
     const enAttente = cotisations.filter((c) => c.statut === 'EN_ATTENTE').length
     const montantAttendu = cotisations.reduce((s, c) => s + c.montant, 0)
-    const montantPercu = cotisations.filter((c) => c.statut === 'PAYEE').reduce((s, c) => s + c.montant, 0)
+    const montantPercu = cotisations.reduce((s, c) => s + c.montantPaye, 0)
     return { payees, enAttente, montantAttendu, montantPercu }
   }, [cotisations])
 
@@ -95,6 +96,30 @@ export default function PageCotisations() {
       const data = await res.json()
       if (!res.ok) { toast.error(data.erreur ?? 'Erreur'); return }
       toast.success('Statut mis à jour')
+      charger()
+    } finally {
+      setEnCours(null)
+    }
+  }
+
+  const enregistrerPaiementPartiel = async (id: string, montantDu: number) => {
+    const saisie = window.prompt(`Montant payé (sur ${formatMontantFCFA(montantDu)}) :`)
+    if (saisie === null) return
+    const montantPaye = Number(saisie)
+    if (!Number.isInteger(montantPaye) || montantPaye <= 0 || montantPaye >= montantDu) {
+      toast.error('Montant invalide : doit être un entier positif, inférieur au montant dû')
+      return
+    }
+    setEnCours(id)
+    try {
+      const res = await fetch(`/api/cotisations/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statut: 'PARTIELLEMENT_PAYEE', montantPaye }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.erreur ?? 'Erreur'); return }
+      toast.success('Paiement partiel enregistré')
       charger()
     } finally {
       setEnCours(null)
@@ -246,12 +271,19 @@ export default function PageCotisations() {
                   </div>
                   <p className="text-xs text-gray-600">
                     {LABELS_TYPE_COTISATION[c.type] ?? c.type}{c.libelle ? ` — ${c.libelle}` : ''} · {formatMontantFCFA(c.montant)}
+                    {c.statut === 'PARTIELLEMENT_PAYEE' && <> (payé : {formatMontantFCFA(c.montantPaye)})</>}
                   </p>
                   <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-gray-50">
                     {c.statut !== 'PAYEE' && (
                       <button disabled={enCours === c.id} onClick={() => changerStatut(c.id, 'PAYEE')}
                         className="text-xs text-green-700 border border-green-200 px-2.5 py-1 rounded-lg hover:bg-green-50 disabled:opacity-50">
                         Marquer payée
+                      </button>
+                    )}
+                    {c.statut !== 'PAYEE' && (
+                      <button disabled={enCours === c.id} onClick={() => enregistrerPaiementPartiel(c.id, c.montant)}
+                        className="text-xs text-blue-700 border border-blue-200 px-2.5 py-1 rounded-lg hover:bg-blue-50 disabled:opacity-50">
+                        Paiement partiel
                       </button>
                     )}
                     {c.statut !== 'EXONEREE' && (
@@ -302,7 +334,12 @@ export default function PageCotisations() {
                       <td className="py-2.5 pr-4 text-gray-500 whitespace-nowrap">
                         {LABELS_TYPE_COTISATION[c.type] ?? c.type}{c.libelle ? ` — ${c.libelle}` : ''}
                       </td>
-                      <td className="py-2.5 pr-4 text-gray-700 whitespace-nowrap">{formatMontantFCFA(c.montant)}</td>
+                      <td className="py-2.5 pr-4 text-gray-700 whitespace-nowrap">
+                        {formatMontantFCFA(c.montant)}
+                        {c.statut === 'PARTIELLEMENT_PAYEE' && (
+                          <span className="text-gray-400"> (payé : {formatMontantFCFA(c.montantPaye)})</span>
+                        )}
+                      </td>
                       <td className="py-2.5 pr-4 whitespace-nowrap">
                         <span className={`text-xs px-2 py-0.5 rounded-full ${COULEURS_STATUT_COTISATION[c.statut]}`}>
                           {LABELS_STATUT_COTISATION[c.statut] ?? c.statut}
@@ -314,6 +351,12 @@ export default function PageCotisations() {
                             <button disabled={enCours === c.id} onClick={() => changerStatut(c.id, 'PAYEE')}
                               className="text-xs text-green-700 border border-green-200 px-2.5 py-1 rounded-lg hover:bg-green-50 disabled:opacity-50">
                               Marquer payée
+                            </button>
+                          )}
+                          {c.statut !== 'PAYEE' && (
+                            <button disabled={enCours === c.id} onClick={() => enregistrerPaiementPartiel(c.id, c.montant)}
+                              className="text-xs text-blue-700 border border-blue-200 px-2.5 py-1 rounded-lg hover:bg-blue-50 disabled:opacity-50">
+                              Paiement partiel
                             </button>
                           )}
                           {c.statut !== 'EXONEREE' && (

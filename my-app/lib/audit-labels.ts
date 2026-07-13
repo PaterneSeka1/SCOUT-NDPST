@@ -17,4 +17,11 @@ export const LABELS_ACTIONS_AUDIT: Record<string, string> = {
   COTISATION_CREEE: 'Création cotisation',
   COTISATION_STATUT_MODIFIE: 'Changement de statut de cotisation',
   COTISATION_SUPPRIMEE: 'Suppression cotisation',
+  SCOUT_BRANCHE_MODIFIEE: 'Passage de branche',
+  SCOUT_SORTIE_MOUVEMENT: 'Sortie du mouvement',
+  REUNION_SUPPRIMEE: 'Suppression réunion',
+  PAROISSE_DESACTIVEE: 'Désactivation paroisse',
+  PAROISSE_REACTIVEE: 'Réactivation paroisse',
+  PAROISSE_SCOUTS_EXPORTES: 'Export des scouts',
+  PAROISSE_UTILISATEURS_EXPORTES: 'Export des utilisateurs',
 }

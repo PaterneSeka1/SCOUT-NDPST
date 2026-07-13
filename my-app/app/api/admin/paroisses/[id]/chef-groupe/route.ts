@@ -25,6 +25,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const paroisse = await prisma.paroisse.findUnique({ where: { id: paroisseId }, select: { id: true } })
     if (!paroisse) return NextResponse.json({ erreur: 'Paroisse introuvable' }, { status: 404 })
 
+    // Une paroisse n'a qu'un seul Chef de Groupe actif à la fois — en créer un
+    // second serait une double direction, non prévue par le modèle de rôles
+    // (voir ROLES_GROUPE dans lib/roles.ts). Un remplacement passe par la
+    // désactivation de l'ancien compte, pas par la coexistence des deux.
+    const chefGroupeExistant = await prisma.utilisateur.findFirst({
+      where: { paroisseId, role: 'CHEF_GROUPE', actif: true },
+      select: { id: true },
+    })
+    if (chefGroupeExistant) {
+      return NextResponse.json(
+        { erreur: 'Cette paroisse a déjà un Chef de Groupe actif. Désactivez-le avant d\'en créer un nouveau.' },
+        { status: 409 },
+      )
+    }
+
     const body = await request.json()
     const { nom, prenom, matricule, telephone, email, password } = body as {
       nom?: string; prenom?: string; matricule?: string; telephone?: string; email?: string; password?: string

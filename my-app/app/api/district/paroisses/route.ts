@@ -14,10 +14,31 @@ export async function GET() {
     return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
   }
 
+  // Un ASSISTANT_DISTRICT chargé d'une branche précise n'a besoin que des
+  // données de sa branche (voir /api/district/ma-branche), jamais du détail
+  // multi-branches (contact du Chef de Groupe, effectifs de chaque branche)
+  // de chaque paroisse du district. La simple liste des paroisses (id/nom/
+  // ville) reste en revanche nécessaire : les pages "+ Nouvelle activité de
+  // branche" et "+ Nouveau programme de branche" sous /district/ma-branche
+  // réutilisent cet endpoint pour peupler leur sélecteur de paroisse — un 403
+  // pur et simple les casserait. On renvoie donc une version allégée plutôt
+  // que de bloquer la route entière.
+  let detailMultiBranchesAutorise = true
+  if (session.user.role === 'ASSISTANT_DISTRICT') {
+    const utilisateur = await prisma.utilisateur.findUnique({ where: { id: session.user.id }, select: { brancheType: true } })
+    if (utilisateur?.brancheType) detailMultiBranchesAutorise = false
+  }
+
   try {
     const paroisseId = paroisseIdRequise(session)
     const { paroisses } = await getParoissesDuDistrict(paroisseId)
     const paroisseIds = paroisses.map((p) => p.id)
+
+    if (!detailMultiBranchesAutorise) {
+      return NextResponse.json({
+        paroisses: paroisses.map((p) => ({ id: p.id, nom: p.nom, ville: p.ville, actif: p.actif, chefGroupe: null, effectifsParBranche: [] })),
+      })
+    }
 
     const [chefsGroupe, effectifs] = await Promise.all([
       prisma.utilisateur.findMany({

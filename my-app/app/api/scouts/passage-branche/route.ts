@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
+import { enregistrerAudit } from '@/lib/audit'
 import { ROLES_GROUPE } from '@/lib/roles'
 import { BrancheTypeSchema } from '@/lib/validation'
 import { calculerAge, brancheSelonAge } from '@/lib/branches'
@@ -100,14 +101,17 @@ export async function POST(request: NextRequest) {
 
     const paroisseId = paroisseIdRequise(session)
 
-    // Vérifie que tous les scouts appartiennent bien à la paroisse de l'appelant.
+    // Vérifie que tous les scouts appartiennent bien à la paroisse de l'appelant,
+    // et récupère leur branche actuelle pour la trace d'audit (ancienne → nouvelle).
     const scoutIds = passages.map((p) => p.scoutId!)
-    const scoutsAutorises = await prisma.scout.count({
+    const scoutsExistants = await prisma.scout.findMany({
       where: { id: { in: scoutIds }, paroisseId },
+      select: { id: true, brancheType: true },
     })
-    if (scoutsAutorises !== scoutIds.length) {
+    if (scoutsExistants.length !== scoutIds.length) {
       return NextResponse.json({ erreur: 'Un ou plusieurs scouts sont introuvables' }, { status: 404 })
     }
+    const brancheActuelleParScout = new Map(scoutsExistants.map((s) => [s.id, s.brancheType]))
 
     await prisma.$transaction(
       passages.map((p) =>
@@ -116,6 +120,22 @@ export async function POST(request: NextRequest) {
           // nouvelleBranche null = sortie du mouvement (âge dépassé) : le scout
           // est désactivé plutôt que supprimé, pour conserver son historique.
           : prisma.scout.update({ where: { id: p.scoutId! }, data: { actif: false } }),
+      ),
+    )
+
+    // Action sensible (changement de branche en masse, ou sortie définitive du
+    // mouvement) : une entrée d'audit par scout, à l'image des autres opérations
+    // en masse (voir /api/cotisations).
+    await Promise.all(
+      passages.map((p) =>
+        enregistrerAudit({
+          paroisseId,
+          acteurId: session.user.id,
+          action: p.nouvelleBranche ? 'SCOUT_BRANCHE_MODIFIEE' : 'SCOUT_SORTIE_MOUVEMENT',
+          entite: 'Scout',
+          entiteId: p.scoutId!,
+          details: { ancienneBranche: brancheActuelleParScout.get(p.scoutId!), nouvelleBranche: p.nouvelleBranche ?? null },
+        }),
       ),
     )
 

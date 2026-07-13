@@ -157,16 +157,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'La liste des enfants est invalide' }, { status: 400 })
     }
 
+    // Un compte staff (Chef de Groupe, encadrement de branche, Ressources
+    // Adultes…) peut tout autant être parent d'un scout de la paroisse que
+    // quelqu'un créé spécifiquement avec le rôle PARENT — le rattachement à
+    // des enfants n'est donc jamais limité à un rôle particulier.
     const scoutIdsUniques = Array.isArray(scoutIds)
       ? [...new Set(scoutIds.map((id) => (typeof id === 'string' ? id.trim() : '')).filter(Boolean))]
       : []
-
-    if (!estParent && scoutIdsUniques.length > 0) {
-      return NextResponse.json(
-        { error: 'Seuls les comptes parents peuvent être rattachés à des enfants' },
-        { status: 400 },
-      )
-    }
 
     if (estParent && !telephone?.trim()) {
       return NextResponse.json(

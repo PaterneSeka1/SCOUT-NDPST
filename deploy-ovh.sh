@@ -75,6 +75,15 @@ npm ci --include=dev
 info "Génération du client Prisma"
 npx prisma generate
 
+info "Sauvegarde de la base avant migration..."
+mkdir -p "$SCRIPT_DIR/backups"
+DUMP_FICHIER="$SCRIPT_DIR/backups/pre-migrate-$(date +%Y%m%d%H%M%S).sql"
+if "${COMPOSE[@]}" --env-file ../.env.prod -f ../docker-compose.prod.yml exec -T db pg_dump -U scout scout_db > "$DUMP_FICHIER"; then
+  ok "Sauvegarde écrite dans backups/$(basename "$DUMP_FICHIER")"
+else
+  err "Échec de la sauvegarde pré-migration — migration NON appliquée. Vérifie la base avant de relancer."
+fi
+
 info "Application des migrations Prisma"
 npx prisma migrate deploy
 

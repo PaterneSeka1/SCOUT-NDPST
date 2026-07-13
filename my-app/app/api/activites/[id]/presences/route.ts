@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { ROLES_TOUT_STAFF } from '@/lib/roles'
+import { ROLES_TOUT_STAFF, ROLES_BRANCHE } from '@/lib/roles'
+import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { paroisseIdRequise } from '@/lib/session'
 
 export async function GET(
@@ -26,6 +27,16 @@ export async function GET(
 
   if (!activite) {
     return NextResponse.json({ error: 'Activité introuvable' }, { status: 404 })
+  }
+
+  // Un responsable de branche ne peut consulter les présences que d'une
+  // activité de sa propre branche (une activité sans branche = inter-branches,
+  // ouverte à tout le staff, comme dans le calcul de la liste de scouts ci-dessous).
+  if (ROLES_BRANCHE.includes(session.user.role)) {
+    const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
+    if (activite.brancheType && activite.brancheType !== bt) {
+      return NextResponse.json({ error: 'Accès refusé à cette activité' }, { status: 403 })
+    }
   }
 
   // Pour les camps, on vérifie en plus que le parent a signé (fiche médicale + autorisation) pour CE camp précis
@@ -104,6 +115,15 @@ export async function POST(
 
   if (!activite) {
     return NextResponse.json({ error: 'Activité introuvable' }, { status: 404 })
+  }
+
+  // Cf. GET ci-dessus : un responsable de branche ne peut enregistrer les
+  // présences que d'une activité de sa propre branche (ou inter-branches).
+  if (ROLES_BRANCHE.includes(session.user.role)) {
+    const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
+    if (activite.brancheType && activite.brancheType !== bt) {
+      return NextResponse.json({ error: 'Accès refusé à cette activité' }, { status: 403 })
+    }
   }
 
   const corps = await request.json()

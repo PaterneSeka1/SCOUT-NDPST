@@ -7,6 +7,7 @@ import { estCouleurHexValide } from '@/lib/theme'
 import { estUrlFichierValide } from '@/lib/validation'
 import { urlPubliqueBase } from '@/lib/storage'
 import { logger } from '@/lib/logger'
+import { enregistrerAudit } from '@/lib/audit'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -45,7 +46,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     const { id } = await params
-    const existante = await prisma.paroisse.findUnique({ where: { id }, select: { id: true } })
+    const existante = await prisma.paroisse.findUnique({ where: { id }, select: { id: true, actif: true } })
     if (!existante) return NextResponse.json({ erreur: 'Paroisse introuvable' }, { status: 404 })
 
     const body = await request.json()
@@ -92,6 +93,18 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         ...(couleurHover !== undefined ? { couleurHover: couleurHover.trim() || null } : {}),
       },
     })
+
+    // Désactiver une paroisse bloque la connexion de tout son personnel
+    // (voir lib/auth.ts) : action sensible à journaliser, dans les deux sens.
+    if (actif !== undefined && actif !== existante.actif) {
+      await enregistrerAudit({
+        paroisseId: id,
+        acteurId: session.user.id,
+        action: actif ? 'PAROISSE_REACTIVEE' : 'PAROISSE_DESACTIVEE',
+        entite: 'Paroisse',
+        entiteId: id,
+      })
+    }
 
     return NextResponse.json(paroisse)
   } catch (error) {

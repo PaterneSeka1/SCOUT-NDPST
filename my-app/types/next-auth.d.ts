@@ -30,5 +30,8 @@ declare module 'next-auth/jwt' {
     paroisseId: string | null
     nom: string
     prenom: string
+    // Horodatage (Date.now()) de la dernière revalidation en base de
+    // role/actif/paroisseId — voir lib/auth.ts, callback jwt().
+    revalideLe?: number
   }
 }

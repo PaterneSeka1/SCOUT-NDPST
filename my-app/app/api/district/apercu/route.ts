@@ -14,6 +14,14 @@ export async function GET() {
     return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
   }
 
+  // Un ASSISTANT_DISTRICT chargé d'une branche précise n'a besoin que des
+  // données de sa branche (voir /api/district/ma-branche), jamais de la vue
+  // d'ensemble multi-branches de tout le district.
+  if (session.user.role === 'ASSISTANT_DISTRICT') {
+    const utilisateur = await prisma.utilisateur.findUnique({ where: { id: session.user.id }, select: { brancheType: true } })
+    if (utilisateur?.brancheType) return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
+  }
+
   const paroisseId = paroisseIdRequise(session)
 
   let nomDistrict: string

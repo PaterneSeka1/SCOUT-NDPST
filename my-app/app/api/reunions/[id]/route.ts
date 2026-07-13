@@ -6,6 +6,7 @@ import { ROLES_BRANCHE, ROLES_GESTION as ROLES_CREATION, ROLES_TOUT_STAFF as ROL
 import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { StatutReunionSchema, BrancheTypeSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
+import { enregistrerAudit } from '@/lib/audit'
 import { paroisseIdRequise } from '@/lib/session'
 
 type RouteParams = { params: Promise<{ id: string }> }
@@ -124,10 +125,23 @@ export async function DELETE(_req: NextRequest, { params }: RouteParams) {
     const { id } = await params
     const existant = await prisma.jourReunion.findFirst({
       where: { id, paroisseId },
+      include: { _count: { select: { presences: true } } },
     })
     if (!existant) return NextResponse.json({ erreur: 'Réunion introuvable' }, { status: 404 })
 
     await prisma.jourReunion.delete({ where: { id } })
+
+    // Suppression cascade sur tout l'historique de présence de cette réunion
+    // (PresenceReunion.onDelete: Cascade) : action sensible à journaliser.
+    await enregistrerAudit({
+      paroisseId,
+      acteurId: session.user.id,
+      action: 'REUNION_SUPPRIMEE',
+      entite: 'JourReunion',
+      entiteId: id,
+      details: { titre: existant.titre, dateHeure: existant.dateHeure, presencesSupprimees: existant._count.presences },
+    })
+
     return NextResponse.json({ ok: true })
   } catch (error) {
     logger.error('DELETE /api/reunions/[id]', error)

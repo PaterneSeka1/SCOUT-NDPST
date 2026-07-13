@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { ROLES_PLATEFORME, LABELS_ROLES } from '@/lib/roles'
 import { champCsv as champ, contentDispositionTelechargement } from '@/lib/csv'
 import { logger } from '@/lib/logger'
+import { enregistrerAudit } from '@/lib/audit'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -43,6 +44,17 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       '"Nom";"Prénom";"Matricule";"Téléphone";"Email";"Rôle";"Statut"',
       ...lignes,
     ].join('\r\n')
+
+    // Export de données personnelles (dont téléphone/email) : action sensible
+    // à journaliser, comme toute lecture en masse de ces données.
+    await enregistrerAudit({
+      paroisseId: id,
+      acteurId: session.user.id,
+      action: 'PAROISSE_UTILISATEURS_EXPORTES',
+      entite: 'Paroisse',
+      entiteId: id,
+      details: { nombre: utilisateurs.length },
+    })
 
     const bom = '﻿'
     const nomFichier = `utilisateurs_${paroisse.nom.toLowerCase().replace(/\s+/g, '-')}_${new Date().toISOString().slice(0, 10)}.csv`

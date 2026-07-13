@@ -52,6 +52,26 @@ if [ -f .env ]; then
   cp .env .next/standalone/.env
 fi
 
+echo "→ Sauvegarde de la base avant migration..."
+# Pas de conteneur Docker ici (base gérée par l'hébergeur, via DATABASE_URL) :
+# on ne peut sauvegarder que si le binaire pg_dump est présent dans cet
+# environnement virtuel Node.js cPanel — ce qui n'est pas garanti. Best-effort :
+# on avertit plutôt que d'échouer si l'outil est absent, mais on ne masque pas
+# l'absence de sauvegarde à l'opérateur qui lance ce script.
+if command -v pg_dump >/dev/null 2>&1; then
+  mkdir -p backups
+  DUMP_FICHIER="backups/pre-migrate-$(date +%Y%m%d%H%M%S).sql"
+  if pg_dump "$DATABASE_URL" > "$DUMP_FICHIER"; then
+    echo "  Sauvegarde écrite dans my-app/$DUMP_FICHIER"
+  else
+    echo "  ⚠ La sauvegarde a échoué — vérifie la base avant de continuer si le doute persiste."
+    exit 1
+  fi
+else
+  echo "  ⚠ pg_dump indisponible dans cet environnement — AUCUNE sauvegarde n'a été prise avant la migration."
+  echo "    Fais un backup manuel (ex: depuis cPanel, ou pg_dump lancé ailleurs) avant de relancer si tu n'es pas sûr."
+fi
+
 echo "→ Application des migrations Prisma (nécessite DATABASE_URL dans l'environnement)"
 npx prisma migrate deploy
 

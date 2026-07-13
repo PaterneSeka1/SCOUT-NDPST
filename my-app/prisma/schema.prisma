@@ -41,18 +41,6 @@ enum RoleUtilisateur {
   SCOUT
 }
 
-enum RolePosteGroupe {
-  CHEF_GROUPE
-  ADJOINT_GROUPE
-  ASSISTANT_GROUPE
-}
-
-enum RolePosteBranche {
-  RESPONSABLE
-  ADJOINT
-  ASSISTANT
-}
-
 enum Sexe {
   MASCULIN
   FEMININ
@@ -96,6 +84,7 @@ enum TypeCotisation {
 
 enum StatutCotisation {
   EN_ATTENTE
+  PARTIELLEMENT_PAYEE
   PAYEE
   EXONEREE
 }
@@ -129,8 +118,6 @@ model Paroisse {
 
   // Relations
   utilisateurs   Utilisateur[]
-  postesGroupe   PosteGroupe[]
-  postesBranche  PosteBranche[]
   scouts         Scout[]
   activites      Activite[]
   joursReunion   JourReunion[]
@@ -199,8 +186,6 @@ model Utilisateur {
   paroisse   Paroisse? @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
 
   // Relations
-  posteGroupe                 PosteGroupe?
-  postesBranche               PosteBranche[]
   liensParent                 LienParentScout[]
   contactsUrgence             ContactUrgence[] // Contacts d'urgence liés à ce compte
   ficheScout                  Scout? // Fiche Scout liée (si rôle SCOUT)
@@ -215,67 +200,15 @@ model Utilisateur {
   actionsAudit                JournalAudit[]
   cotisationsEnregistrees     Cotisation[]            @relation("CotisationEnregistreePar")
 
+  // Unicité "1 seul CHEF_GROUPE actif par paroisse" et "1 seul RESPONSABLE_BRANCHE
+  // actif par (paroisse, brancheType)" : non exprimable en index partiel dans le
+  // DSL Prisma (pas de clause WHERE sur @@unique) — appliquée manuellement via
+  // deux CREATE UNIQUE INDEX ... WHERE dans une migration (voir prisma/migrations).
   @@index([matricule])
   @@index([telephone])
   @@index([paroisseId])
   @@index([role])
   @@index([brancheType])
-}
-
-// ---------------------------------------------------------------------------
-// Poste Groupe (équipe de groupe de la paroisse)
-// Un seul CHEF_GROUPE et un seul ADJOINT_GROUPE par paroisse
-// ---------------------------------------------------------------------------
-
-model PosteGroupe {
-  id        String          @id @default(cuid())
-  role      RolePosteGroupe
-  fonction  String? // Champ libre pour ASSISTANT_GROUPE (ex. Logistique, Secrétariat)
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
-
-  // Clés étrangères
-  utilisateurId String      @unique
-  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
-
-  paroisseId String
-  paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
-
-  // Règle : 1 seul CHEF_GROUPE et 1 seul ADJOINT_GROUPE par paroisse, N ASSISTANT_GROUPE possible.
-  // La contrainte d'unicité pour CHEF et ADJOINT est gérée en logique applicative (service layer).
-  // En migration SQL, un partial unique index peut être ajouté manuellement :
-  //   CREATE UNIQUE INDEX ON "PosteGroupe"("paroisseId", role) WHERE role != 'ASSISTANT_GROUPE';
-  @@index([paroisseId])
-  @@index([role])
-}
-
-// ---------------------------------------------------------------------------
-// Poste Branche (responsables de chaque branche)
-// Un seul RESPONSABLE et un seul ADJOINT par (brancheType, paroisse)
-// ---------------------------------------------------------------------------
-
-model PosteBranche {
-  id          String           @id @default(cuid())
-  brancheType BrancheType
-  role        RolePosteBranche
-  fonction    String? // Champ libre pour ASSISTANT
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-
-  // Clés étrangères
-  utilisateurId String
-  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
-
-  paroisseId String
-  paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
-
-  // Règle : 1 seul RESPONSABLE et 1 seul ADJOINT par (brancheType, paroisse), N ASSISTANT possible.
-  // Contrainte RESPONSABLE/ADJOINT gérée en logique applicative.
-  // En migration SQL, partial unique index recommandé :
-  //   CREATE UNIQUE INDEX ON "PosteBranche"("paroisseId", "brancheType", role) WHERE role != 'ASSISTANT';
-  @@index([paroisseId])
-  @@index([brancheType])
-  @@index([utilisateurId])
 }
 
 // ---------------------------------------------------------------------------
@@ -407,6 +340,7 @@ model Activite {
   @@index([paroisseId])
   @@index([brancheType])
   @@index([dateDebut])
+  @@index([creePar])
 }
 
 // ---------------------------------------------------------------------------
@@ -475,6 +409,7 @@ model ProgressionScout {
   @@unique([scoutId, badgeId])
   @@index([scoutId])
   @@index([badgeId])
+  @@index([valideParId])
 }
 
 // ---------------------------------------------------------------------------
@@ -530,6 +465,7 @@ model JourReunion {
   @@index([brancheType])
   @@index([dateHeure])
   @@index([statut])
+  @@index([creePar])
 }
 
 // ---------------------------------------------------------------------------
@@ -555,6 +491,7 @@ model PresenceReunion {
   @@unique([jourReunionId, scoutId])
   @@index([jourReunionId])
   @@index([scoutId])
+  @@index([marqueParId])
 }
 
 // ---------------------------------------------------------------------------
@@ -622,6 +559,7 @@ model Programme {
   @@index([paroisseId])
   @@index([brancheType])
   @@index([periodeDebut])
+  @@index([creePar])
 }
 
 // ---------------------------------------------------------------------------
@@ -679,6 +617,7 @@ model AutorisationCamp {
   @@unique([activiteId, scoutId, type])
   @@index([activiteId])
   @@index([scoutId])
+  @@index([confirmeParId])
 }
 
 // ---------------------------------------------------------------------------
@@ -698,8 +637,12 @@ model JournalAudit {
 
   // Nulle pour les actions de portée plateforme (gestion des paroisses, branding
   // commun...) qui n'ont pas de paroisse naturelle à qui être rattachées.
+  // Restrict (pas Cascade) : cohérent avec le reste du schéma (une Paroisse
+  // n'est jamais supprimée physiquement) et surtout avec l'objectif même de ce
+  // modèle — le journal d'audit doit survivre, il ne doit jamais pouvoir
+  // disparaître silencieusement avec l'entité qu'il concerne.
   paroisseId String?
-  paroisse   Paroisse? @relation(fields: [paroisseId], references: [id], onDelete: Cascade)
+  paroisse   Paroisse? @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
 
   acteurId String?
   acteur   Utilisateur? @relation(fields: [acteurId], references: [id], onDelete: SetNull)
@@ -719,6 +662,7 @@ model Cotisation {
   type          TypeCotisation   @default(ADHESION_ANNUELLE)
   libelle       String? // Précision libre, surtout utile pour le type AUTRE
   montant       Int // Montant dû, en FCFA
+  montantPaye   Int              @default(0) // Toujours cohérent avec statut : 0 (EN_ATTENTE), = montant (PAYEE), entre les deux (PARTIELLEMENT_PAYEE)
   anneeScolaire String // Ex : "2026-2027"
   statut        StatutCotisation @default(EN_ATTENTE)
   datePaiement  DateTime?
@@ -727,11 +671,15 @@ model Cotisation {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
+  // Restrict (pas Cascade) : un scout ou une paroisse ne sont jamais supprimés
+  // physiquement dans l'application (désactivés, pour conserver l'historique) —
+  // et si une suppression manuelle était un jour nécessaire, elle ne doit
+  // jamais effacer silencieusement un historique de paiement.
   scoutId String
-  scout   Scout  @relation(fields: [scoutId], references: [id], onDelete: Cascade)
+  scout   Scout  @relation(fields: [scoutId], references: [id], onDelete: Restrict)
 
   paroisseId String
-  paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Cascade)
+  paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
 
   enregistreParId String?
   enregistrePar   Utilisateur? @relation("CotisationEnregistreePar", fields: [enregistreParId], references: [id], onDelete: SetNull)
@@ -740,4 +688,5 @@ model Cotisation {
   @@index([scoutId])
   @@index([statut])
   @@index([anneeScolaire])
+  @@index([enregistreParId])
 }

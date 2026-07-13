@@ -36,23 +36,39 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     }
 
     // Scouts de la branche concernée (ou tous si inter-branches)
-    const scouts = await prisma.scout.findMany({
+    const scoutsBranche = await prisma.scout.findMany({
       where: {
         paroisseId,
         actif: true,
         ...(reunion.brancheType ? { brancheType: reunion.brancheType } : {}),
       },
       select: { id: true, prenom: true, nom: true, photo: true, brancheType: true },
-      orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
     })
 
     // Presences déjà enregistrées
     const presences = await prisma.presenceReunion.findMany({
       where: { jourReunionId: id },
-      select: { scoutId: true, statut: true, note: true },
+      select: {
+        scoutId: true,
+        statut: true,
+        note: true,
+        scout: { select: { id: true, prenom: true, nom: true, photo: true, brancheType: true } },
+      },
     })
 
-    const presencesMap = Object.fromEntries(presences.map((p) => [p.scoutId, p]))
+    const presencesMap = Object.fromEntries(presences.map((p) => [p.scoutId, { statut: p.statut, note: p.note }]))
+
+    // Un scout ayant changé de branche (ou été désactivé) depuis cette réunion
+    // n'apparaît plus dans scoutsBranche (filtré sur sa branche/statut actuels)
+    // alors que sa présence pour CETTE réunion existe toujours : on le
+    // réintègre dans la liste pour ne jamais faire disparaître une présence
+    // déjà enregistrée en consultant/éditant une réunion passée.
+    const idsBranche = new Set(scoutsBranche.map((s) => s.id))
+    const scoutsHistoriques = presences.filter((p) => !idsBranche.has(p.scoutId)).map((p) => p.scout)
+
+    const scouts = [...scoutsBranche, ...scoutsHistoriques].sort(
+      (a, b) => a.nom.localeCompare(b.nom) || a.prenom.localeCompare(b.prenom),
+    )
 
     return NextResponse.json({ reunion, scouts, presencesMap })
   } catch (error) {

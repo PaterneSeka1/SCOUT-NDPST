@@ -5,7 +5,7 @@
 // tous les appels via cette fonction — plutôt que d'appeler lib/email
 // directement — permet d'activer le SMS plus tard sans toucher aux appelants.
 
-import { envoyerEmailBrut } from './email'
+import { envoyerEmailBrut, echapperHtml } from './email'
 import { logger } from './logger'
 
 export type CanalNotification = 'email' | 'sms'
@@ -38,7 +38,7 @@ export async function envoyerNotification(
 function enteteEmail(titre: string): string {
   return `
     <div style="text-align:center;margin-bottom:24px">
-      <h1 style="color:#1a4731;font-size:22px;margin:0">⚜️ ${titre}</h1>
+      <h1 style="color:#1a4731;font-size:22px;margin:0">⚜️ ${echapperHtml(titre)}</h1>
       <p style="color:#666;font-size:14px;margin-top:4px">Côte d'Ivoire</p>
     </div>
   `
@@ -65,13 +65,13 @@ export async function envoyerEmailBienvenue(params: {
   const html = `
     <div style="font-family:sans-serif;max-width:500px;margin:auto;padding:24px">
       ${enteteEmail(nomSite)}
-      <p style="color:#222;font-size:15px">Bonjour <strong>${prenom}</strong>,</p>
+      <p style="color:#222;font-size:15px">Bonjour <strong>${echapperHtml(prenom)}</strong>,</p>
       <p style="color:#444;font-size:14px;line-height:1.6">
-        Un compte <strong>${roleLabel}</strong> vient d'être créé pour vous sur ${nomSite}.
+        Un compte <strong>${echapperHtml(roleLabel)}</strong> vient d'être créé pour vous sur ${echapperHtml(nomSite)}.
         Votre identifiant de connexion est :
       </p>
       <p style="text-align:center;margin:20px 0">
-        <span style="background:#1a4731;color:#fff;font-family:monospace;font-size:16px;padding:8px 16px;border-radius:8px;display:inline-block">${identifiant}</span>
+        <span style="background:#1a4731;color:#fff;font-family:monospace;font-size:16px;padding:8px 16px;border-radius:8px;display:inline-block">${echapperHtml(identifiant)}</span>
       </p>
       <p style="color:#444;font-size:14px;line-height:1.6">
         Le mot de passe vous a été communiqué séparément. Si vous ne le connaissez pas,
@@ -105,13 +105,13 @@ export async function envoyerEmailRappelDocuments(params: {
   const lignes = documents
     .map(
       (d) =>
-        `<li style="margin-bottom:6px">${d.typeLabel} de <strong>${d.scoutNomComplet}</strong> — expire le ${d.dateExpiration.toLocaleDateString('fr-FR')}</li>`,
+        `<li style="margin-bottom:6px">${echapperHtml(d.typeLabel)} de <strong>${echapperHtml(d.scoutNomComplet)}</strong> — expire le ${d.dateExpiration.toLocaleDateString('fr-FR')}</li>`,
     )
     .join('')
   const html = `
     <div style="font-family:sans-serif;max-width:500px;margin:auto;padding:24px">
       ${enteteEmail(nomSite)}
-      <p style="color:#222;font-size:15px">Bonjour <strong>${prenom}</strong>,</p>
+      <p style="color:#222;font-size:15px">Bonjour <strong>${echapperHtml(prenom)}</strong>,</p>
       <p style="color:#444;font-size:14px;line-height:1.6">
         Les documents suivants arrivent bientôt à expiration :
       </p>

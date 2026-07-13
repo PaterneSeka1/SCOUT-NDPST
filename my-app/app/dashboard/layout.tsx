@@ -16,7 +16,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (session.user.role === 'ADMIN_PLATEFORME') redirect('/admin')
   if (ROLES_DISTRICT_ETENDU.includes(session.user.role)) redirect('/district')
 
-  const [paroisse, plateforme] = await Promise.all([
+  const [paroisse, plateforme, nombreEnfants] = await Promise.all([
     session.user.paroisseId
       ? prisma.paroisse.findUnique({
           where: { id: session.user.paroisseId },
@@ -24,6 +24,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
         })
       : null,
     prisma.configurationPlateforme.findUnique({ where: { id: 'platform' } }),
+    // Un membre du staff (Chef de Groupe, encadrement de branche, Ressources
+    // Adultes rattaché via un compte SCOUT…) peut être par ailleurs parent
+    // d'un scout de la paroisse : la page "Mes enfants" doit alors lui être
+    // accessible aussi, pas seulement au rôle PARENT dédié.
+    prisma.lienParentScout.count({ where: { parentId: session.user.id } }),
   ])
 
   const defautPlateforme = {
@@ -61,6 +66,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         logoUrl={logoUrl}
         nomSite={nomSite}
         sousTitreSite={sousTitreSite}
+        aDesEnfants={nombreEnfants > 0}
       >
         {children}
       </DashboardShell>

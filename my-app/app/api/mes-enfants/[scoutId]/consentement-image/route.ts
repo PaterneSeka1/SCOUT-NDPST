@@ -16,9 +16,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
-    if (session.user.role !== 'PARENT') {
-      return NextResponse.json({ erreur: 'Accès réservé aux parents' }, { status: 403 })
-    }
 
     const { scoutId } = await params
     const body = await request.json()
@@ -27,6 +24,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ erreur: 'Le champ consentement (booléen) est requis' }, { status: 400 })
     }
 
+    // Le rôle du compte n'est jamais la condition d'accès : un membre du
+    // staff ou un compte SCOUT (Ressources Adultes) peut être par ailleurs
+    // parent d'un scout de la paroisse (voir LienParentScout). Seul le lien
+    // réel fait foi — jamais un scout quelconque.
     const lien = await prisma.lienParentScout.findFirst({
       where: { parentId: session.user.id, scoutId },
     })

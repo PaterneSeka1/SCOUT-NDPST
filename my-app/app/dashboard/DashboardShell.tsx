@@ -12,7 +12,23 @@ type MenuItem = {
   icone: string
 }
 
-function getMenuItems(role: string): MenuItem[] {
+// aDesEnfants : un membre du staff (Chef de Groupe, encadrement de branche,
+// Ressources Adultes rattaché via un compte SCOUT…) peut être par ailleurs
+// parent d'un scout de la paroisse — le rôle PARENT n'est pas une condition
+// pour avoir des enfants rattachés (voir app/api/utilisateurs/route.ts). Le
+// lien "Mes enfants" doit donc apparaître dans son menu habituel, sans lui
+// substituer le menu PARENT (dont il n'a pas les autres droits).
+function getMenuItems(role: string, aDesEnfants: boolean): MenuItem[] {
+  const items = getMenuItemsDeBase(role)
+  if (role === 'PARENT' || !aDesEnfants) return items
+
+  const item = { label: 'Mes enfants', href: '/dashboard/mes-enfants', icone: '👨‍👧‍👦' }
+  const indexApresParoisse = items.findIndex((m) => m.href === '/dashboard/paroisse')
+  const position = indexApresParoisse >= 0 ? indexApresParoisse + 1 : items.length
+  return [...items.slice(0, position), item, ...items.slice(position)]
+}
+
+function getMenuItemsDeBase(role: string): MenuItem[] {
   switch (role) {
     case 'CHEF_GROUPE':
       return [
@@ -183,6 +199,7 @@ export function DashboardShell({
   logoUrl,
   nomSite,
   sousTitreSite,
+  aDesEnfants = false,
 }: {
   children: React.ReactNode
   role: string
@@ -190,6 +207,7 @@ export function DashboardShell({
   logoUrl: string | null
   nomSite: string
   sousTitreSite: string
+  aDesEnfants?: boolean
 }) {
   const pathname = usePathname()
   const [sidebarOuverte, setSidebarOuverte] = useState(false)
@@ -201,7 +219,7 @@ export function DashboardShell({
     return () => mq.removeEventListener('change', handler)
   }, [])
 
-  const menuItems = getMenuItems(role)
+  const menuItems = getMenuItems(role, aDesEnfants)
   const titrePage = menuItems.find((m) => m.href === pathname)?.label ?? 'Tableau de bord'
   const initiale = nomComplet?.[0] ?? '?'
 

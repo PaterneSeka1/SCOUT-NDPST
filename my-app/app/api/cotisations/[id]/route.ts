@@ -44,14 +44,38 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     if (!existante) return NextResponse.json({ erreur: 'Cotisation introuvable' }, { status: 404 })
 
     const body = await req.json()
-    const { statut, modePaiement, notes } = body as {
+    const { statut, modePaiement, notes, montantPaye } = body as {
       statut?: string
       modePaiement?: string | null
       notes?: string | null
+      montantPaye?: number
     }
 
     if (statut !== undefined && !(statut in StatutCotisation)) {
       return NextResponse.json({ erreur: 'Statut invalide' }, { status: 400 })
+    }
+
+    if (statut === 'PARTIELLEMENT_PAYEE') {
+      if (
+        typeof montantPaye !== 'number' ||
+        !Number.isInteger(montantPaye) ||
+        montantPaye <= 0 ||
+        montantPaye >= existante.montant
+      ) {
+        return NextResponse.json(
+          { erreur: 'Le montant payé doit être un entier positif, inférieur au montant dû (sinon utilisez le statut "Payée")' },
+          { status: 400 },
+        )
+      }
+    }
+
+    // montantPaye reste toujours cohérent avec statut : 0 pour EN_ATTENTE/EXONEREE,
+    // le montant dû en entier pour PAYEE, la valeur fournie pour PARTIELLEMENT_PAYEE.
+    const montantPayeSelonStatut: Record<string, number> = {
+      EN_ATTENTE: 0,
+      EXONEREE: 0,
+      PAYEE: existante.montant,
+      PARTIELLEMENT_PAYEE: montantPaye ?? 0,
     }
 
     const cotisation = await prisma.cotisation.update({
@@ -60,8 +84,9 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
         ...(statut !== undefined
           ? {
               statut: statut as StatutCotisation,
-              datePaiement: statut === 'PAYEE' ? new Date() : null,
-              enregistreParId: statut === 'PAYEE' ? session.user.id : null,
+              montantPaye: montantPayeSelonStatut[statut],
+              datePaiement: statut === 'PAYEE' || statut === 'PARTIELLEMENT_PAYEE' ? new Date() : null,
+              enregistreParId: statut === 'PAYEE' || statut === 'PARTIELLEMENT_PAYEE' ? session.user.id : null,
             }
           : {}),
         ...(modePaiement !== undefined ? { modePaiement: modePaiement?.trim() || null } : {}),
@@ -73,14 +98,26 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       },
     })
 
-    if (statut !== undefined && statut !== existante.statut) {
+    // Auditer tout changement de statut, mais aussi un complément de paiement
+    // partiel qui laisse le statut à PARTIELLEMENT_PAYEE (ex: 5000 puis 3000
+    // FCFA de plus) — sans quoi ce second mouvement d'argent ne laisserait
+    // aucune trace, alors que c'est justement ce que ce statut vise à tracer.
+    const statutInchange = statut !== undefined && statut === existante.statut
+    const montantInchange = statutInchange && montantPayeSelonStatut[statut] === existante.montantPaye
+    if (statut !== undefined && !montantInchange) {
       await enregistrerAudit({
         paroisseId,
         acteurId: session.user.id,
         action: 'COTISATION_STATUT_MODIFIE',
         entite: 'Cotisation',
         entiteId: id,
-        details: { ancienStatut: existante.statut, nouveauStatut: statut, scoutId: existante.scoutId },
+        details: {
+          ancienStatut: existante.statut,
+          nouveauStatut: statut,
+          scoutId: existante.scoutId,
+          ancienMontantPaye: existante.montantPaye,
+          montantPaye: montantPayeSelonStatut[statut],
+        },
       })
     }
 

@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SCOUT ASCCI
 
-## Getting Started
+Application de gestion du mouvement scout (Association Scouts Catholiques de Côte d'Ivoire) : paroisses, districts, branches, scouts, cotisations, présences, programmes. Next.js (App Router) + Prisma/PostgreSQL + NextAuth.
 
-First, run the development server:
+## Démarrer en local
 
 ```bash
+# Depuis la racine du dépôt (pas my-app/) : démarre uniquement la base de données
+docker compose up -d db
+
+# Depuis my-app/
+npm install
+npx prisma migrate deploy   # applique les migrations existantes (voir ci-dessous — jamais `migrate dev` en dehors du cas ci-dessous)
+npm run seed                # crée le compte ADMIN_PLATEFORME (voir prisma/seed.ts)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Migrations Prisma — lire avant de toucher au schéma
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Ne jamais lancer `prisma migrate dev` sur une base qui contient des données que tu veux garder.** Sur ce projet, `migrate dev` peut déclencher un faux positif de "drift" et proposer un reset de la base alors qu'aucune perte de données n'est réellement nécessaire. Le workflow sûr pour ajouter une migration :
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+# 1. Modifier prisma/schema.prisma
+# 2. Générer le SQL de la migration à la main, sans toucher à la base :
+npx prisma migrate diff --from-config-datasource --to-schema ./prisma/schema.prisma --script > /tmp/diff.sql
 
-## Learn More
+# 3. Créer le dossier de migration et y coller le SQL généré (en ajustant si besoin,
+#    ex : ajout d'une étape de backfill avant une contrainte NOT NULL, index partiel
+#    non exprimable dans le DSL Prisma...) :
+mkdir prisma/migrations/$(date +%Y%m%d%H%M%S)_description
+# éditer prisma/migrations/.../migration.sql
 
-To learn more about Next.js, take a look at the following resources:
+# 4. Appliquer :
+npx prisma migrate deploy
+npx prisma generate
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Toujours prévoir un backfill avant de rendre une colonne `NOT NULL`** sur une table qui peut déjà contenir des lignes (`UPDATE ... WHERE colonne IS NULL` avant l'`ALTER COLUMN ... SET NOT NULL`, dans la même migration ou une migration précédente) — une contrainte posée sans backfill fonctionne tant que la base est vide (premier déploiement) mais fait échouer `migrate deploy` sur une base qui contient déjà des lignes invalides.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+En production (voir `deploy-ovh.sh` et `scripts/deploy-o2switch.sh`), une sauvegarde (`pg_dump`) est prise automatiquement juste avant `migrate deploy` — mais elle ne remplace pas une vraie stratégie de sauvegarde périodique.
 
-## Deploy on Vercel
+## Déploiement
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **VPS (OVH)** : `deploy-ovh.sh` — PostgreSQL en Docker, application sur l'hôte via pm2, nginx en reverse proxy (déjà en place).
+- **Hébergement mutualisé (o2switch)** : `my-app/scripts/deploy-o2switch.sh`, via l'interface "Setup Node.js App" de cPanel.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Tests
+
+```bash
+npm run test        # vitest, une fois
+npm run test:watch
+```

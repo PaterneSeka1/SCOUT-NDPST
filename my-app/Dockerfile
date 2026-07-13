@@ -52,6 +52,10 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod 755 ./docker-entrypoint.sh
 
+# pg_dump : utilisé par docker-entrypoint.sh pour sauvegarder la base juste
+# avant d'appliquer les migrations en attente au démarrage du conteneur.
+RUN apk add --no-cache postgresql16-client
+
 USER nextjs
 
 EXPOSE 3000

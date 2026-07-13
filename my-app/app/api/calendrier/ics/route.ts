@@ -57,22 +57,31 @@ export async function GET(req: NextRequest) {
     const debut = new Date(maintenant.getTime() - FENETRE_PASSEE_JOURS * 86400000)
     const fin = new Date(maintenant.getTime() + FENETRE_FUTURE_JOURS * 86400000)
 
+    const condBranche = filtreBranche ? { OR: [{ brancheType: filtreBranche as never }, { brancheType: null }] } : {}
+
     const [activites, reunions] = await Promise.all([
       prisma.activite.findMany({
         where: {
           paroisseId,
           dateDebut: { gte: debut, lt: fin },
-          ...(filtreBranche ? { OR: [{ brancheType: filtreBranche as never }, { brancheType: null }] } : {}),
+          ...condBranche,
         },
         select: { id: true, titre: true, description: true, dateDebut: true, dateFin: true, lieu: true },
       }),
       prisma.jourReunion.findMany({
         where: {
           paroisseId,
-          dateHeure: { gte: debut, lt: fin },
-          ...(filtreBranche ? { OR: [{ brancheType: filtreBranche as never }, { brancheType: null }] } : {}),
+          // Cf. /api/calendrier : une réunion apparaît à sa date effective
+          // (dateReportee si reportée), et une réunion annulée est exclue du
+          // flux — sinon elle continuerait de s'afficher comme un rendez-vous
+          // à honorer dans Google/Apple/Outlook Calendar.
+          AND: [
+            { OR: [{ dateReportee: null, dateHeure: { gte: debut, lt: fin } }, { dateReportee: { gte: debut, lt: fin } }] },
+            condBranche,
+          ],
+          statut: { not: 'ANNULEE' },
         },
-        select: { id: true, titre: true, dateHeure: true, dureeMinutes: true, lieu: true, notes: true },
+        select: { id: true, titre: true, dateHeure: true, dateReportee: true, dureeMinutes: true, lieu: true, notes: true },
       }),
     ])
 
@@ -85,14 +94,17 @@ export async function GET(req: NextRequest) {
         lieu: a.lieu,
         description: a.description,
       })),
-      ...reunions.map((r) => ({
-        uid: `reunion-${r.id}`,
-        debut: r.dateHeure,
-        fin: r.dureeMinutes ? new Date(r.dateHeure.getTime() + r.dureeMinutes * 60000) : null,
-        titre: r.titre ?? 'Réunion',
-        lieu: r.lieu,
-        description: r.notes,
-      })),
+      ...reunions.map((r) => {
+        const debutEffectif = r.dateReportee ?? r.dateHeure
+        return {
+          uid: `reunion-${r.id}`,
+          debut: debutEffectif,
+          fin: r.dureeMinutes ? new Date(debutEffectif.getTime() + r.dureeMinutes * 60000) : null,
+          titre: r.titre ?? 'Réunion',
+          lieu: r.lieu,
+          description: r.notes,
+        }
+      }),
     ]
 
     const ics = genererICS(`SCOUT ASCCI — ${utilisateur.prenom} ${utilisateur.nom}`, evenements)

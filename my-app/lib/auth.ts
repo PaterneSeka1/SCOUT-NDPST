@@ -8,6 +8,19 @@ import { logger } from './logger'
 const MAX_TENTATIVES_CONNEXION = 5
 const FENETRE_CONNEXION_MS = 15 * 60 * 1000 // 15 minutes
 
+// Le rôle/statut actif d'un compte sont figés dans le JWT jusqu'à la
+// prochaine revalidation (voir callback jwt() ci-dessous) plutôt que jusqu'à
+// la fin de la session (12h) : désactiver un compte ou changer son rôle doit
+// prendre effet rapidement, pas seulement à la prochaine reconnexion.
+const DELAI_REVALIDATION_MS = 5 * 60 * 1000 // 5 minutes
+
+// Rôle "sentinelle" affecté à un compte dont la revalidation a échoué (compte
+// désactivé, supprimé, ou paroisse désactivée entre-temps) : ne correspond à
+// aucune constante ROLES_XXX de lib/roles.ts, donc tout contrôle d'accès
+// (`ROLES_XXX.includes(session.user.role)`) échoue — sans avoir besoin
+// d'invalider explicitement le cookie de session.
+const ROLE_COMPTE_INVALIDE = '__COMPTE_INVALIDE__'
+
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
@@ -102,7 +115,29 @@ export const authOptions: NextAuthOptions = {
         token.prenom = user.prenom
         token.role = user.role
         token.paroisseId = user.paroisseId
+        token.revalideLe = Date.now()
+        return token
       }
+
+      // Revalidation périodique (debounce via revalideLe, jamais à chaque
+      // requête) : relit role/actif/paroisseId en base pour détecter une
+      // désactivation ou un changement de rôle décidé depuis la connexion.
+      if (token.id && Date.now() - (token.revalideLe ?? 0) >= DELAI_REVALIDATION_MS) {
+        const utilisateur = await prisma.utilisateur.findUnique({
+          where: { id: token.id },
+          select: { role: true, actif: true, paroisseId: true, paroisse: { select: { actif: true } } },
+        })
+
+        if (!utilisateur || !utilisateur.actif || (utilisateur.paroisse && !utilisateur.paroisse.actif)) {
+          token.role = ROLE_COMPTE_INVALIDE
+          token.paroisseId = null
+        } else {
+          token.role = utilisateur.role
+          token.paroisseId = utilisateur.paroisseId
+        }
+        token.revalideLe = Date.now()
+      }
+
       return token
     },
     async session({ session, token }) {

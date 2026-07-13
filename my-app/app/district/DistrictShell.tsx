@@ -22,12 +22,17 @@ const MENU_COMMISSAIRE: MenuItem[] = [
 ]
 
 function menuPour(role: string, brancheType: string | null): MenuItem[] {
-  const menu = [...MENU_BASE]
-  // Juste après "Vue d'ensemble" : seul un ASSISTANT_DISTRICT chargé d'une
-  // branche (Utilisateur.brancheType renseigné) voit cet item.
+  // Un ASSISTANT_DISTRICT chargé d'une branche précise (Utilisateur.brancheType
+  // renseigné) n'a besoin que de "Ma branche" (voir /api/district/ma-branche) :
+  // la vue d'ensemble et la liste des paroisses montrent des données
+  // multi-branches de tout le district, hors de son périmètre. Un assistant
+  // sans branche assignée (fonction libre, ex. "Spiritualité") garde le menu
+  // complet : sa charge est par nature transverse à tout le district.
   if (role === 'ASSISTANT_DISTRICT' && brancheType) {
-    menu.splice(1, 0, { label: 'Ma branche', href: '/district/ma-branche', icone: '🎖️' })
+    return [{ label: 'Ma branche', href: '/district/ma-branche', icone: '🎖️' }]
   }
+
+  const menu = [...MENU_BASE]
   return role === 'COMMISSAIRE_DISTRICT' ? [...menu, ...MENU_COMMISSAIRE] : menu
 }
 

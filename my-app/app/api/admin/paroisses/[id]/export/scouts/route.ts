@@ -6,6 +6,7 @@ import { ROLES_PLATEFORME } from '@/lib/roles'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { champCsv as champ, contentDispositionTelechargement } from '@/lib/csv'
 import { logger } from '@/lib/logger'
+import { enregistrerAudit } from '@/lib/audit'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -47,6 +48,17 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       '"Nom";"Prénom";"Matricule";"Branche";"Sexe";"Date de naissance";"Statut"',
       ...lignes,
     ].join('\r\n')
+
+    // Export de données personnelles de mineurs (dont date de naissance) :
+    // action sensible à journaliser, comme toute lecture en masse de ces données.
+    await enregistrerAudit({
+      paroisseId: id,
+      acteurId: session.user.id,
+      action: 'PAROISSE_SCOUTS_EXPORTES',
+      entite: 'Paroisse',
+      entiteId: id,
+      details: { nombre: scouts.length },
+    })
 
     const bom = '﻿'
     const nomFichier = `scouts_${paroisse.nom.toLowerCase().replace(/\s+/g, '-')}_${new Date().toISOString().slice(0, 10)}.csv`
