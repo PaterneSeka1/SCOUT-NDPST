@@ -12,12 +12,12 @@ import { ApercuDistrictClient } from './ApercuDistrictClient'
 // "Spiritualité", dont la charge est par nature transverse à tout le district).
 export default async function DistrictRoot() {
   const session = await getServerSession(authOptions)
-  if (session?.user?.role === 'ASSISTANT_DISTRICT') {
+  if (session?.user?.roleDistrict === 'ASSISTANT_DISTRICT') {
     const utilisateur = await prisma.utilisateur.findUnique({
       where: { id: session.user.id },
-      select: { brancheType: true },
+      select: { brancheTypeDistrict: true },
     })
-    if (utilisateur?.brancheType) redirect('/district/ma-branche')
+    if (utilisateur?.brancheTypeDistrict) redirect('/district/ma-branche')
   }
 
   return <ApercuDistrictClient />

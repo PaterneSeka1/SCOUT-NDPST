@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { Prisma, RoleUtilisateur, BrancheType } from '@/app/generated/prisma/client'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { ROLES_PLATEFORME, ROLES_ASSIGNABLES_PAROISSE, ROLES_BRANCHE, libelleRoleAvecFonction } from '@/lib/roles'
-import { RoleUtilisateurSchema, BrancheTypeSchema } from '@/lib/validation'
+import { BrancheTypeSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 import { envoyerEmailBienvenue } from '@/lib/notifications'
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
     const limite = Math.max(1, parseInt(searchParams.get('limite') ?? '20', 10))
     const roleParam = searchParams.get('role')
-    const role = roleParam && RoleUtilisateurSchema.safeParse(roleParam).success ? roleParam : undefined
+    const role = roleParam && ROLES_ASSIGNABLES_PAROISSE.includes(roleParam) ? roleParam : undefined
     const paroisseId = searchParams.get('paroisseId') ?? undefined
     const recherche = searchParams.get('recherche') ?? undefined
 
@@ -116,29 +116,27 @@ export async function POST(request: NextRequest) {
     if (!paroisse) return NextResponse.json({ erreur: 'Paroisse introuvable' }, { status: 404 })
 
     // Un admin plateforme (transverse, sans paroisse) ne se crée jamais via cette
-    // route — ROLES_ASSIGNABLES_PAROISSE exclut déjà ADMIN_PLATEFORME.
+    // route — ROLES_ASSIGNABLES_PAROISSE exclut ADMIN_PLATEFORME. Les rôles de
+    // district non plus : `role` est toujours un rôle PAROISSIAL, jamais une
+    // valeur de district — une affectation district (roleDistrict) se fait en
+    // promouvant un membre du staff déjà actif, via /admin/districts/[id]/commissaire
+    // ou /district/utilisateurs, jamais en créant un compte avec ce rôle.
     if (!ROLES_ASSIGNABLES_PAROISSE.includes(role)) {
       return NextResponse.json({ erreur: 'Rôle invalide' }, { status: 400 })
     }
-
-    // Un rôle de district n'a de sens que si le périmètre du district (dérivé du
-    // district de la paroisse d'ancrage) est résoluble — voir lib/district.ts.
-    // Depuis que District est une clé étrangère obligatoire sur Paroisse, ce
-    // périmètre est toujours résoluble : plus de vérification à faire ici.
 
     if (brancheType != null && !BrancheTypeSchema.safeParse(brancheType).success) {
       return NextResponse.json({ erreur: 'Branche invalide' }, { status: 400 })
     }
 
-    // brancheType a un sens pour l'encadrement de branche paroissial (requis) et
-    // pour ASSISTANT_DISTRICT chargé d'une branche (optionnel, mutuellement
-    // exclusif avec fonction) — null pour tout autre rôle même si fourni.
+    // brancheType n'a de sens que pour l'encadrement de branche paroissial :
+    // requis pour ces rôles, forcé à null pour tout autre rôle même si fourni.
     const estBranche = ROLES_BRANCHE.includes(role)
     if (estBranche && !brancheType) {
       return NextResponse.json({ erreur: 'La branche est requise pour ce rôle' }, { status: 400 })
     }
-    const brancheTypeValeur = (estBranche || (role === 'ASSISTANT_DISTRICT' && brancheType)) ? (brancheType as BrancheType) : null
-    const fonctionValeur = role === 'ASSISTANT_DISTRICT' && !brancheTypeValeur ? (fonction?.trim() || null) : null
+    const brancheTypeValeur = estBranche ? (brancheType as BrancheType) : null
+    const fonctionValeur = fonction?.trim() || null
 
     const estParent = role === 'PARENT'
 

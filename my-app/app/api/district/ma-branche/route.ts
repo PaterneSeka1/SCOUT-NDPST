@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { BrancheType } from '@/app/generated/prisma/client'
-import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
+import { getBrancheDistrictUtilisateur } from '@/lib/brancheUtilisateur'
 import { getParoissesDuDistrict, DistrictInvalideError } from '@/lib/district'
 import { paroisseIdRequise } from '@/lib/session'
 import { logger } from '@/lib/logger'
@@ -12,11 +12,11 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
-    if (session.user.role !== 'ASSISTANT_DISTRICT') {
+    if (session.user.roleDistrict !== 'ASSISTANT_DISTRICT') {
       return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
     }
 
-    const brancheUtilisateur = await getBrancheUtilisateur(session.user.id)
+    const brancheUtilisateur = await getBrancheDistrictUtilisateur(session.user.id)
     if (!brancheUtilisateur) return NextResponse.json({ erreur: 'Aucune branche assignée' }, { status: 403 })
     const bt = brancheUtilisateur as BrancheType
 

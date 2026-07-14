@@ -15,9 +15,16 @@ export interface Utilisateur {
   telephone: string | null
   nom: string
   prenom: string
+  // Rôle DISTRICT (roleDistrict) — additif au rôle paroissial ci-dessous,
+  // jamais un remplacement : voir prisma/schema.prisma.
   role: string
   fonction: string | null
   brancheType?: string | null
+  // Rôle PAROISSIAL (role) que cette personne continue d'exercer normalement
+  // dans sa paroisse en plus de son affectation district — affichage seul,
+  // non modifiable depuis cette surface (voir /dashboard/utilisateurs).
+  roleParoisse: string
+  paroisse?: { id: string; nom: string } | null
   actif: boolean
   email: string | null
   paroisseId?: string
@@ -46,25 +53,25 @@ export interface FiltresUtilisateurs {
 }
 
 export interface DonneesCreerUtilisateur {
-  nom: string
-  prenom: string
-  email?: string | null
-  matricule: string
-  telephone?: string | null
+  utilisateurId: string
   role: string
   fonction?: string | null
   brancheType?: string | null
-  password: string
 }
 
 export interface DonneesModifierUtilisateur {
-  nom?: string
-  prenom?: string
-  email?: string | null
   role?: string
   fonction?: string | null
   brancheType?: string | null
-  actif?: boolean
+}
+
+export interface MembrePersonnelEligible {
+  id: string
+  nom: string
+  prenom: string
+  matricule: string | null
+  role: string
+  paroisse: { id: string; nom: string } | null
 }
 
 export interface DonneesResetPassword {
@@ -106,6 +113,16 @@ async function fetchUtilisateur(id: string): Promise<Utilisateur> {
   return res.json()
 }
 
+async function fetchPersonnelEligible(): Promise<MembrePersonnelEligible[]> {
+  const res = await fetch('/api/district/utilisateurs/eligibles')
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.erreur ?? 'Erreur lors du chargement du personnel éligible')
+  }
+  const data = await res.json()
+  return data.personnel
+}
+
 // ---- Hooks ----------------------------------------------------------------
 
 /**
@@ -131,6 +148,17 @@ export function useDistrictUtilisateur(id: string) {
 }
 
 /**
+ * Personnel (staff paroissial) éligible à rejoindre l'équipe du district —
+ * pas encore affecté (roleDistrict null), actif, dans une paroisse du district.
+ */
+export function useDistrictPersonnelEligible() {
+  return useQuery({
+    queryKey: ['district-personnel-eligible'],
+    queryFn: fetchPersonnelEligible,
+  })
+}
+
+/**
  * Création d'un nouveau membre de l'équipe du district.
  */
 export function useCreerDistrictUtilisateur() {
@@ -151,6 +179,7 @@ export function useCreerDistrictUtilisateur() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['district-utilisateurs'] })
+      queryClient.invalidateQueries({ queryKey: ['district-personnel-eligible'] })
     },
   })
 }
@@ -182,9 +211,11 @@ export function useModifierDistrictUtilisateur(id: string) {
 }
 
 /**
- * Désactivation (soft-delete) d'un membre de l'équipe du district via DELETE.
+ * Retrait d'un membre de l'équipe du district via DELETE — efface uniquement
+ * son affectation district (roleDistrict), son compte reste actif et son rôle
+ * paroissial inchangé : la personne continue de travailler normalement dans sa paroisse.
  */
-export function useDesactiverDistrictUtilisateur() {
+export function useRetirerDistrictUtilisateur() {
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -194,13 +225,14 @@ export function useDesactiverDistrictUtilisateur() {
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.erreur ?? 'Erreur lors de la désactivation du membre')
+        throw new Error(data.erreur ?? 'Erreur lors du retrait du membre')
       }
       return res.json()
     },
     onSuccess: (utilisateur) => {
       queryClient.setQueryData(QUERY_KEYS.utilisateur(utilisateur.id), utilisateur)
       queryClient.invalidateQueries({ queryKey: ['district-utilisateurs'] })
+      queryClient.invalidateQueries({ queryKey: ['district-personnel-eligible'] })
     },
   })
 }

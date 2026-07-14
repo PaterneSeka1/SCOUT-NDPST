@@ -9,6 +9,7 @@ import { RoleUtilisateur } from '@/app/generated/prisma/client'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 import { paroisseIdRequise } from '@/lib/session'
+import { getParoissesDuDistrict, DistrictInvalideError } from '@/lib/district'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -20,16 +21,18 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
     }
 
-    if (!ROLES_AUTORISES.includes(session.user.role)) {
+    if (!session.user.roleDistrict || !ROLES_AUTORISES.includes(session.user.roleDistrict)) {
       return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
     }
 
     const paroisseId = paroisseIdRequise(session)
+    const { paroisses } = await getParoissesDuDistrict(paroisseId)
+    const paroisseIds = paroisses.map((p) => p.id)
     const { id } = await params
 
     const existant = await prisma.utilisateur.findFirst({
-      where: { id, paroisseId, role: { in: ROLES_ASSIGNABLES_DISTRICT as RoleUtilisateur[] } },
-      select: { id: true },
+      where: { id, paroisseId: { in: paroisseIds }, roleDistrict: { in: ROLES_ASSIGNABLES_DISTRICT as RoleUtilisateur[] } },
+      select: { id: true, paroisseId: true },
     })
 
     if (!existant) {
@@ -51,7 +54,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     })
 
     await enregistrerAudit({
-      paroisseId,
+      paroisseId: existant.paroisseId,
       acteurId: session.user.id,
       action: 'UTILISATEUR_MOT_DE_PASSE_REINITIALISE',
       entite: 'Utilisateur',
@@ -60,6 +63,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ message: 'Mot de passe mis à jour' })
   } catch (error) {
+    if (error instanceof DistrictInvalideError) {
+      return NextResponse.json({ erreur: error.message }, { status: 400 })
+    }
     logger.error('PUT /api/district/utilisateurs/[id]/password', error)
     return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
   }

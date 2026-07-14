@@ -31,7 +31,6 @@ interface FormData {
   matricule: string
   telephone: string
   role: string
-  fonction: string
   brancheType: string
   motDePasse: string
   confirmation: string
@@ -60,15 +59,12 @@ export default function NouvelUtilisateurPlateformePage() {
 
   const [form, setForm] = useState<FormData>({
     paroisseId: '', nom: '', prenom: '', email: '', matricule: '', telephone: '', role: '',
-    fonction: '', brancheType: '', motDePasse: '', confirmation: '',
+    brancheType: '', motDePasse: '', confirmation: '',
   })
   const [erreurs, setErreurs] = useState<FormErrors>({})
-  const [modeFonction, setModeFonction] = useState<'branche' | 'autre'>('autre')
 
   const estParent = form.role === 'PARENT'
   const estBranche = ROLES_BRANCHE.includes(form.role)
-  const estAssistantDistrict = form.role === 'ASSISTANT_DISTRICT'
-  const modeBranche = modeFonction === 'branche'
 
   useEffect(() => {
     fetch('/api/admin/paroisses')
@@ -94,7 +90,6 @@ export default function NouvelUtilisateurPlateformePage() {
     if (!form.prenom.trim()) e.prenom = 'Le prénom est requis'
     if (!form.role) e.role = 'Le rôle est requis'
     if (estBranche && !form.brancheType) e.brancheType = 'La branche est requise'
-    if (estAssistantDistrict && modeBranche && !form.brancheType) e.brancheType = 'La branche est requise'
     if (estParent) {
       if (!form.telephone.trim()) e.telephone = 'Le numéro de téléphone est requis pour un parent'
     } else {
@@ -124,8 +119,7 @@ export default function NouvelUtilisateurPlateformePage() {
           matricule: !estParent && form.matricule.trim() ? form.matricule.trim() : undefined,
           telephone: form.telephone.trim() || undefined,
           role: form.role,
-          fonction: estAssistantDistrict && !modeBranche && form.fonction.trim() ? form.fonction.trim() : null,
-          brancheType: (estBranche || (estAssistantDistrict && modeBranche)) && form.brancheType ? form.brancheType : null,
+          brancheType: estBranche && form.brancheType ? form.brancheType : null,
           password: form.motDePasse,
         }),
       })
@@ -205,47 +199,6 @@ export default function NouvelUtilisateurPlateformePage() {
                 ))}
               </select>
               {erreurs.brancheType && <p className="mt-1 text-xs text-red-600">{erreurs.brancheType}</p>}
-            </div>
-          )}
-
-          {/* Fonction — uniquement pour ASSISTANT_DISTRICT : chargé d'une branche (structuré) OU autre fonction (texte libre), mutuellement exclusifs */}
-          {estAssistantDistrict && (
-            <div className="space-y-3">
-              <div>
-                <label className={CLS_LABEL}>Fonction de l&apos;assistant</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                    <input type="radio" name="modeFonction" checked={modeBranche}
-                      onChange={() => setModeFonction('branche')} className="accent-[#1a4731]" />
-                    Chargé d&apos;une branche
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                    <input type="radio" name="modeFonction" checked={!modeBranche}
-                      onChange={() => setModeFonction('autre')} className="accent-[#1a4731]" />
-                    Autre fonction
-                  </label>
-                </div>
-              </div>
-
-              {modeBranche ? (
-                <div>
-                  <label className={CLS_LABEL}>Branche <span className="text-red-500">*</span></label>
-                  <select id="brancheType" name="brancheType" value={form.brancheType} onChange={handleChange}
-                    className={erreurs.brancheType ? CLS_SELECT_ERR : CLS_SELECT}>
-                    <option value="">Sélectionner une branche</option>
-                    {Object.entries(LABELS_BRANCHES).map(([valeur, libelle]) => (
-                      <option key={valeur} value={valeur}>{libelle}</option>
-                    ))}
-                  </select>
-                  {erreurs.brancheType && <p className="mt-1 text-xs text-red-600">{erreurs.brancheType}</p>}
-                </div>
-              ) : (
-                <div>
-                  <label className={CLS_LABEL}>Fonction <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
-                  <input id="fonction" name="fonction" type="text" value={form.fonction} onChange={handleChange}
-                    placeholder="Ex. Spiritualité, Secrétariat…" className={CLS_INPUT} />
-                </div>
-              )}
             </div>
           )}
 

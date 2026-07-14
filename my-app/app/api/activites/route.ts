@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_TOUT_STAFF, ROLES_BRANCHE } from '@/lib/roles'
-import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
+import { getBrancheUtilisateur, getBrancheDistrictUtilisateur } from '@/lib/brancheUtilisateur'
 import { getParoissesDuDistrict } from '@/lib/district'
 import { TypeActiviteSchema, BrancheTypeSchema } from '@/lib/validation'
 import { paroisseIdRequise } from '@/lib/session'
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
   // par le client est ignorée pour ce groupe de rôles.
   if (ROLES_BRANCHE.includes(session.user.role)) {
     const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
-    // Compte mal configuré (rôle de branche sans PosteBranche assigné) :
+    // Compte mal configuré (rôle de branche sans brancheType assigné) :
     // aucun résultat plutôt que la paroisse entière par défaut.
     if (!bt) {
       return NextResponse.json({ activites: [], pagination: { page, limite, total: 0, totalPages: 0 } })
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
   if (!session?.user) {
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
   }
-  const estAssistantDistrict = session.user.role === 'ASSISTANT_DISTRICT'
+  const estAssistantDistrict = session.user.roleDistrict === 'ASSISTANT_DISTRICT'
   if (!ROLES_TOUT_STAFF.includes(session.user.role) && !estAssistantDistrict) {
     return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
   }
@@ -112,15 +112,20 @@ export async function POST(request: NextRequest) {
   let paroisseId: string
   let brancheEffective = brancheType ?? null
 
-  if (estAssistantDistrict) {
+  // La création via le district (choix de la paroisse cible) n'est utilisée
+  // que par /district/ma-branche/activites/nouvelle, seule à envoyer
+  // paroisseId dans le corps — un ASSISTANT_DISTRICT qui exerce par ailleurs
+  // un rôle paroissial de branche crée normalement via l'autre branche
+  // ci-dessous quand ce champ est absent (formulaire du tableau de bord).
+  if (estAssistantDistrict && paroisseIdCorps) {
     // Assistant au Commissaire de District chargé d'une branche : choisit la
     // paroisse cible parmi celles de son district, brancheType forcé à sa
     // branche — toute valeur envoyée par le client pour brancheType est ignorée.
-    const bt = await getBrancheUtilisateur(session.user.id)
+    const bt = await getBrancheDistrictUtilisateur(session.user.id)
     if (!bt) return NextResponse.json({ error: 'Aucune branche assignée' }, { status: 403 })
     const { paroisses } = await getParoissesDuDistrict(paroisseIdRequise(session))
     const paroisseIds = paroisses.map((p) => p.id)
-    if (!paroisseIdCorps || !paroisseIds.includes(paroisseIdCorps)) {
+    if (!paroisseIds.includes(paroisseIdCorps)) {
       return NextResponse.json({ error: 'Paroisse invalide ou manquante' }, { status: 400 })
     }
     paroisseId = paroisseIdCorps

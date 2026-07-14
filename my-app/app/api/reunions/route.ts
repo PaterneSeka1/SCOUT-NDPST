@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     let filtreBranche = branche
     if (ROLES_BRANCHE.includes(session.user.role)) {
       const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
-      // Compte mal configuré (rôle de branche sans PosteBranche assigné) :
+      // Compte mal configuré (rôle de branche sans brancheType assigné) :
       // aucun résultat plutôt que la paroisse entière par défaut.
       if (!bt) return NextResponse.json([])
       filtreBranche = bt

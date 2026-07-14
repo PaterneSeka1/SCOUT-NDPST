@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
     let filtreBranche: string | null = null
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
       filtreBranche = await getBrancheUtilisateur(utilisateur.id, paroisseId)
-      // Compte mal configuré (rôle de branche sans PosteBranche assigné) :
+      // Compte mal configuré (rôle de branche sans brancheType assigné) :
       // flux vide plutôt que toute la paroisse par défaut.
       if (!filtreBranche) {
         return new NextResponse(genererICS(`SCOUT ASCCI — ${utilisateur.prenom} ${utilisateur.nom}`, []), {

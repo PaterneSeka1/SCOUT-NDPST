@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { RoleUtilisateur } from '@/app/generated/prisma/client'
 import { ROLES_DISTRICT_ETENDU } from '@/lib/roles'
 import { paroisseIdRequise } from '@/lib/session'
 import { getParoissesDuDistrict, DistrictInvalideError } from '@/lib/district'
@@ -10,16 +9,16 @@ import { getParoissesDuDistrict, DistrictInvalideError } from '@/lib/district'
 export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
-  if (!ROLES_DISTRICT_ETENDU.includes(session.user.role)) {
+  if (!session.user.roleDistrict || !ROLES_DISTRICT_ETENDU.includes(session.user.roleDistrict)) {
     return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
   }
 
   // Un ASSISTANT_DISTRICT chargé d'une branche précise n'a besoin que des
   // données de sa branche (voir /api/district/ma-branche), jamais de la vue
   // d'ensemble multi-branches de tout le district.
-  if (session.user.role === 'ASSISTANT_DISTRICT') {
-    const utilisateur = await prisma.utilisateur.findUnique({ where: { id: session.user.id }, select: { brancheType: true } })
-    if (utilisateur?.brancheType) return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
+  if (session.user.roleDistrict === 'ASSISTANT_DISTRICT') {
+    const utilisateur = await prisma.utilisateur.findUnique({ where: { id: session.user.id }, select: { brancheTypeDistrict: true } })
+    if (utilisateur?.brancheTypeDistrict) return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
   }
 
   const paroisseId = paroisseIdRequise(session)
@@ -51,7 +50,7 @@ export async function GET() {
         _count: {
           select: {
             scouts: true,
-            utilisateurs: { where: { role: { notIn: ROLES_DISTRICT_ETENDU as RoleUtilisateur[] } } },
+            utilisateurs: true,
           },
         },
         utilisateurs: {

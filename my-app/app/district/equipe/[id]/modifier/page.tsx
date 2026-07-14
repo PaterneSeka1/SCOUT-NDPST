@@ -17,8 +17,8 @@ const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 const ROLES_LISTE = ROLES_ASSIGNABLES_DISTRICT
 
-interface FormInfos { nom: string; prenom: string; email: string; role: string; fonction: string; brancheType: string; actif: boolean }
-interface FormInfosErrors { nom?: string; prenom?: string; role?: string; brancheType?: string }
+interface FormInfos { role: string; fonction: string; brancheType: string }
+interface FormInfosErrors { role?: string; brancheType?: string }
 interface FormMdp { motDePasse: string; confirmation: string }
 interface FormMdpErrors { motDePasse?: string; confirmation?: string }
 
@@ -30,7 +30,7 @@ export default function ModifierMembreEquipePage() {
   const { mutateAsync: modifier, isPending: soumissionInfos } = useModifierDistrictUtilisateur(id)
   const { mutateAsync: resetPassword, isPending: soumissionMdp } = useResetDistrictPassword(id)
 
-  const [formInfos, setFormInfos] = useState<FormInfos>({ nom: '', prenom: '', email: '', role: '', fonction: '', brancheType: '', actif: true })
+  const [formInfos, setFormInfos] = useState<FormInfos>({ role: '', fonction: '', brancheType: '' })
   const [erreursInfos, setErreursInfos] = useState<FormInfosErrors>({})
   const [erreurServeurInfos, setErreurServeurInfos] = useState('')
   const [succesInfos, setSuccesInfos] = useState(false)
@@ -44,8 +44,7 @@ export default function ModifierMembreEquipePage() {
   useEffect(() => {
     if (utilisateur) {
       setFormInfos({
-        nom: utilisateur.nom, prenom: utilisateur.prenom, email: utilisateur.email ?? '',
-        role: utilisateur.role, fonction: utilisateur.fonction ?? '', brancheType: utilisateur.brancheType ?? '', actif: utilisateur.actif,
+        role: utilisateur.role, fonction: utilisateur.fonction ?? '', brancheType: utilisateur.brancheType ?? '',
       })
       setModeFonction(utilisateur.brancheType ? 'branche' : 'autre')
     }
@@ -55,16 +54,13 @@ export default function ModifierMembreEquipePage() {
   const modeBranche = modeFonction === 'branche'
 
   const handleInfosChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target
-    const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
-    setFormInfos((p) => ({ ...p, [name]: val }))
+    const { name, value } = e.target
+    setFormInfos((p) => ({ ...p, [name]: value }))
     if (erreursInfos[name as keyof FormInfosErrors]) setErreursInfos((p) => ({ ...p, [name]: undefined }))
   }
 
   const validerInfos = (): boolean => {
     const e: FormInfosErrors = {}
-    if (!formInfos.nom.trim()) e.nom = 'Le nom est requis'
-    if (!formInfos.prenom.trim()) e.prenom = 'Le prénom est requis'
     if (!formInfos.role) e.role = 'Le rôle est requis'
     if (estAssistant && modeBranche && !formInfos.brancheType) e.brancheType = 'La branche est requise'
     setErreursInfos(e)
@@ -78,13 +74,9 @@ export default function ModifierMembreEquipePage() {
     if (!validerInfos()) return
     try {
       await modifier({
-        nom: formInfos.nom.trim(),
-        prenom: formInfos.prenom.trim(),
-        email: formInfos.email.trim() || null,
         role: formInfos.role,
         fonction: estAssistant && !modeBranche && formInfos.fonction.trim() ? formInfos.fonction.trim() : null,
         brancheType: estAssistant && modeBranche && formInfos.brancheType ? formInfos.brancheType : null,
-        actif: formInfos.actif,
       })
       setSuccesInfos(true)
       setTimeout(() => router.push('/district/equipe'), 1500)
@@ -145,39 +137,27 @@ export default function ModifierMembreEquipePage() {
       <div>
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Modifier le membre</h1>
         <p className="text-sm text-gray-500 mt-0.5">{utilisateur.prenom} {utilisateur.nom}</p>
+        <p className="text-xs text-gray-400 mt-0.5">
+          {LABELS_ROLES[utilisateur.roleParoisse] ?? utilisateur.roleParoisse}
+          {utilisateur.paroisse ? ` — ${utilisateur.paroisse.nom}` : ''}
+          {' · '}
+          {utilisateur.actif ? 'Compte actif' : 'Compte désactivé'}
+        </p>
       </div>
 
-      {/* Section 1 — Informations générales */}
+      {/* Section 1 — Affectation district */}
       <form onSubmit={soumettreInfos} noValidate>
         <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">
-          <h2 className="text-sm font-semibold text-gray-800 border-b border-gray-100 pb-3">Informations générales</h2>
+          <h2 className="text-sm font-semibold text-gray-800 border-b border-gray-100 pb-3">Affectation district</h2>
+          <p className="text-xs text-gray-400 -mt-2">
+            Le rôle paroissial de cette personne est affiché ici pour contexte et reste géré par sa paroisse.
+          </p>
 
           {succesInfos && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">Modifications enregistrées. Redirection…</div>}
           {erreurServeurInfos && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreurServeurInfos}</div>}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className={CLS_LABEL}>Nom <span className="text-red-500">*</span></label>
-              <input id="nom" name="nom" type="text" value={formInfos.nom} onChange={handleInfosChange}
-                placeholder="Nom de famille" className={erreursInfos.nom ? CLS_INPUT_ERR : CLS_INPUT} />
-              {erreursInfos.nom && <p className="mt-1 text-xs text-red-600">{erreursInfos.nom}</p>}
-            </div>
-            <div>
-              <label className={CLS_LABEL}>Prénom <span className="text-red-500">*</span></label>
-              <input id="prenom" name="prenom" type="text" value={formInfos.prenom} onChange={handleInfosChange}
-                placeholder="Prénom" className={erreursInfos.prenom ? CLS_INPUT_ERR : CLS_INPUT} />
-              {erreursInfos.prenom && <p className="mt-1 text-xs text-red-600">{erreursInfos.prenom}</p>}
-            </div>
-          </div>
-
           <div>
-            <label className={CLS_LABEL}>Email <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
-            <input id="email" name="email" type="email" value={formInfos.email} onChange={handleInfosChange}
-              placeholder="exemple@email.com" className={CLS_INPUT} />
-          </div>
-
-          <div>
-            <label className={CLS_LABEL}>Rôle <span className="text-red-500">*</span></label>
+            <label className={CLS_LABEL}>Rôle de district <span className="text-red-500">*</span></label>
             <select id="role" name="role" value={formInfos.role} onChange={handleInfosChange}
               className={erreursInfos.role ? CLS_SELECT_ERR : CLS_SELECT}>
               <option value="">Sélectionner un rôle</option>
@@ -226,12 +206,6 @@ export default function ModifierMembreEquipePage() {
               )}
             </div>
           )}
-
-          <label className="flex items-center gap-2.5 cursor-pointer">
-            <input id="actif" name="actif" type="checkbox" checked={formInfos.actif} onChange={handleInfosChange}
-              className="w-4 h-4 accent-[#1a4731] rounded" />
-            <span className="text-sm text-gray-700">Compte actif</span>
-          </label>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={soumissionInfos || succesInfos}

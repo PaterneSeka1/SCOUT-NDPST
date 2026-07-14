@@ -14,10 +14,13 @@ export default async function DistrictLayout({ children }: { children: React.Rea
   const session = await getServerSession(authOptions)
   if (!session?.user) redirect('/login')
   if (session.user.role === 'ADMIN_PLATEFORME') redirect('/admin')
-  if (!ROLES_DISTRICT_ETENDU.includes(session.user.role)) redirect('/dashboard')
+  // roleDistrict est une affectation ADDITIVE au rôle paroissial (session.user.role) :
+  // une personne peut très bien être CHEF_GROUPE (role) et COMMISSAIRE_DISTRICT
+  // (roleDistrict) en même temps — c'est roleDistrict qui gouverne l'accès à /district.
+  if (!session.user.roleDistrict || !ROLES_DISTRICT_ETENDU.includes(session.user.roleDistrict)) redirect('/dashboard')
 
   const plateforme = await prisma.configurationPlateforme.findUnique({ where: { id: 'platform' } })
-  const utilisateur = await prisma.utilisateur.findUnique({ where: { id: session.user.id }, select: { brancheType: true } })
+  const utilisateur = await prisma.utilisateur.findUnique({ where: { id: session.user.id }, select: { brancheTypeDistrict: true } })
   const theme = {
     couleurPrimaire: couleurSure(plateforme?.couleurPrimaire, THEME_DEFAUT.couleurPrimaire),
     couleurAccent: couleurSure(plateforme?.couleurAccent, THEME_DEFAUT.couleurAccent),
@@ -62,10 +65,11 @@ export default async function DistrictLayout({ children }: { children: React.Rea
     <>
       <style dangerouslySetInnerHTML={{ __html: cssVars }} />
       <DistrictShell
-        role={session.user.role}
+        role={session.user.roleDistrict}
+        roleParoisse={session.user.role}
         nomComplet={`${session.user.prenom} ${session.user.nom}`}
         nomDistrict={nomDistrict}
-        brancheType={utilisateur?.brancheType ?? null}
+        brancheType={utilisateur?.brancheTypeDistrict ?? null}
       >
         {children}
       </DistrictShell>

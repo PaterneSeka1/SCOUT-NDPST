@@ -6,38 +6,23 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_ROLES, ROLES_ASSIGNABLES_DISTRICT } from '@/lib/roles'
 import { LABELS_BRANCHES } from '@/lib/branches'
-import { useCreerDistrictUtilisateur } from '@/hooks/useDistrictUtilisateurs'
-import { PasswordInput } from '@/app/components/PasswordInput'
-import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
+import { useCreerDistrictUtilisateur, useDistrictPersonnelEligible } from '@/hooks/useDistrictUtilisateurs'
 
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
-const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_SELECT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 interface FormData {
-  nom: string
-  prenom: string
-  email: string
-  matricule: string
-  telephone: string
+  utilisateurId: string
   role: string
   fonction: string
   brancheType: string
-  motDePasse: string
-  confirmation: string
 }
 
 interface FormErrors {
-  nom?: string
-  prenom?: string
-  matricule?: string
-  telephone?: string
+  utilisateurId?: string
   role?: string
   brancheType?: string
-  motDePasse?: string
-  confirmation?: string
 }
 
 const ROLES_LISTE = ROLES_ASSIGNABLES_DISTRICT
@@ -45,17 +30,17 @@ const ROLES_LISTE = ROLES_ASSIGNABLES_DISTRICT
 export default function NouveauMembreEquipePage() {
   const router = useRouter()
   const { mutateAsync, isPending } = useCreerDistrictUtilisateur()
+  const { data: personnelEligible, isLoading: chargementPersonnel, isError: erreurPersonnel } = useDistrictPersonnelEligible()
 
-  const [form, setForm] = useState<FormData>({
-    nom: '', prenom: '', email: '', matricule: '', telephone: '', role: '', fonction: '', brancheType: '', motDePasse: '', confirmation: '',
-  })
+  const [form, setForm] = useState<FormData>({ utilisateurId: '', role: '', fonction: '', brancheType: '' })
   const [erreurs, setErreurs] = useState<FormErrors>({})
   const [modeFonction, setModeFonction] = useState<'branche' | 'autre'>('autre')
 
   const estAssistant = form.role === 'ASSISTANT_DISTRICT'
   const modeBranche = modeFonction === 'branche'
+  const personnel = personnelEligible ?? []
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
     const { name, value } = e.target
     setForm((p) => ({ ...p, [name]: value }))
     if (erreurs[name as keyof FormErrors]) setErreurs((p) => ({ ...p, [name]: undefined }))
@@ -63,15 +48,9 @@ export default function NouveauMembreEquipePage() {
 
   const valider = (): boolean => {
     const e: FormErrors = {}
-    if (!form.nom.trim()) e.nom = 'Le nom est requis'
-    if (!form.prenom.trim()) e.prenom = 'Le prénom est requis'
+    if (!form.utilisateurId) e.utilisateurId = 'Le membre du staff à désigner est requis'
     if (!form.role) e.role = 'Le rôle est requis'
     if (estAssistant && modeBranche && !form.brancheType) e.brancheType = 'La branche est requise'
-    if (!form.matricule.trim()) e.matricule = 'Le matricule est requis'
-    if (!form.motDePasse) e.motDePasse = 'Le mot de passe est requis'
-    else if (!motDePasseValide(form.motDePasse)) e.motDePasse = REGLE_MOT_DE_PASSE
-    if (!form.confirmation) e.confirmation = 'La confirmation est requise'
-    else if (form.motDePasse !== form.confirmation) e.confirmation = 'Les mots de passe ne correspondent pas'
     setErreurs(e)
     return Object.keys(e).length === 0
   }
@@ -81,15 +60,10 @@ export default function NouveauMembreEquipePage() {
     if (!valider()) return
     try {
       await mutateAsync({
-        nom: form.nom.trim(),
-        prenom: form.prenom.trim(),
-        email: form.email.trim() || null,
-        matricule: form.matricule.trim(),
-        telephone: form.telephone.trim() || null,
+        utilisateurId: form.utilisateurId,
         role: form.role,
         fonction: estAssistant && !modeBranche && form.fonction.trim() ? form.fonction.trim() : null,
         brancheType: estAssistant && modeBranche && form.brancheType ? form.brancheType : null,
-        password: form.motDePasse,
       })
       router.push('/district/equipe')
     } catch (err) {
@@ -104,25 +78,34 @@ export default function NouveauMembreEquipePage() {
       </Link>
 
       <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Nouveau membre de l&apos;équipe</h1>
+      <p className="text-sm text-gray-500 -mt-4">
+        Choisi parmi le staff des paroisses du district — il continue d&apos;exercer son rôle paroissial normalement en plus de sa charge de district.
+      </p>
+
+      {erreurPersonnel && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+          Impossible de charger le personnel éligible du district.
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} noValidate>
         <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">
           <h2 className="text-sm font-semibold text-gray-800 border-b border-gray-100 pb-3">Informations générales</h2>
 
-          {/* Nom + Prénom */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className={CLS_LABEL}>Nom <span className="text-red-500">*</span></label>
-              <input id="nom" name="nom" type="text" value={form.nom} onChange={handleChange} placeholder="Nom de famille"
-                className={erreurs.nom ? CLS_INPUT_ERR : CLS_INPUT} />
-              {erreurs.nom && <p className="mt-1 text-xs text-red-600">{erreurs.nom}</p>}
-            </div>
-            <div>
-              <label className={CLS_LABEL}>Prénom <span className="text-red-500">*</span></label>
-              <input id="prenom" name="prenom" type="text" value={form.prenom} onChange={handleChange} placeholder="Prénom"
-                className={erreurs.prenom ? CLS_INPUT_ERR : CLS_INPUT} />
-              {erreurs.prenom && <p className="mt-1 text-xs text-red-600">{erreurs.prenom}</p>}
-            </div>
+          <div>
+            <label className={CLS_LABEL}>Membre du staff <span className="text-red-500">*</span></label>
+            <select id="utilisateurId" name="utilisateurId" value={form.utilisateurId} onChange={handleChange}
+              disabled={chargementPersonnel || personnel.length === 0}
+              className={erreurs.utilisateurId ? CLS_SELECT_ERR : CLS_SELECT}>
+              <option value="">{chargementPersonnel ? 'Chargement…' : '— Choisir un membre du staff —'}</option>
+              {personnel.map((p) => (
+                <option key={p.id} value={p.id}>{p.prenom} {p.nom} — {LABELS_ROLES[p.role] ?? p.role} — {p.paroisse?.nom}</option>
+              ))}
+            </select>
+            {!chargementPersonnel && personnel.length === 0 && (
+              <p className="mt-1 text-xs text-orange-600">Aucun membre du staff disponible dans les paroisses de ce district.</p>
+            )}
+            {erreurs.utilisateurId && <p className="mt-1 text-xs text-red-600">{erreurs.utilisateurId}</p>}
           </div>
 
           {/* Rôle */}
@@ -171,59 +154,16 @@ export default function NouveauMembreEquipePage() {
                 <div>
                   <label className={CLS_LABEL}>Fonction <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
                   <input id="fonction" name="fonction" type="text" value={form.fonction} onChange={handleChange}
-                    placeholder="Ex. Spiritualité, Secrétariat…" className={CLS_INPUT} />
+                    placeholder="Ex. Spiritualité, Secrétariat…" className={CLS_SELECT} />
                 </div>
               )}
             </div>
           )}
 
-          {/* Matricule */}
-          <div>
-            <label className={CLS_LABEL}>Matricule <span className="text-red-500">*</span></label>
-            <input id="matricule" name="matricule" type="text" value={form.matricule} onChange={handleChange}
-              placeholder="Ex : 0545247O" className={`${erreurs.matricule ? CLS_INPUT_ERR : CLS_INPUT} font-mono`} />
-            <p className="mt-1 text-xs text-gray-400">Fourni par le mouvement scout</p>
-            {erreurs.matricule && <p className="mt-1 text-xs text-red-600">{erreurs.matricule}</p>}
-          </div>
-
-          {/* Téléphone */}
-          <div>
-            <label className={CLS_LABEL}>Téléphone <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
-            <input id="telephone" name="telephone" type="tel" value={form.telephone} onChange={handleChange}
-              placeholder="07 00 00 00 00" className={erreurs.telephone ? CLS_INPUT_ERR : CLS_INPUT} />
-            {erreurs.telephone && <p className="mt-1 text-xs text-red-600">{erreurs.telephone}</p>}
-          </div>
-
-          {/* Email */}
-          <div>
-            <label className={CLS_LABEL}>Email <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
-            <input id="email" name="email" type="email" value={form.email} onChange={handleChange}
-              placeholder="exemple@email.com" className={CLS_INPUT} />
-          </div>
-
-          <div className="border-t border-gray-100 pt-4 space-y-4">
-            <h3 className="text-sm font-semibold text-gray-700">Mot de passe</h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className={CLS_LABEL}>Mot de passe <span className="text-red-500">*</span></label>
-                <PasswordInput id="motDePasse" name="motDePasse" value={form.motDePasse} onChange={handleChange}
-                  placeholder={REGLE_MOT_DE_PASSE} className={erreurs.motDePasse ? CLS_INPUT_ERR : CLS_INPUT} />
-                {erreurs.motDePasse && <p className="mt-1 text-xs text-red-600">{erreurs.motDePasse}</p>}
-              </div>
-              <div>
-                <label className={CLS_LABEL}>Confirmation <span className="text-red-500">*</span></label>
-                <PasswordInput id="confirmation" name="confirmation" value={form.confirmation} onChange={handleChange}
-                  placeholder="Répéter le mot de passe" className={erreurs.confirmation ? CLS_INPUT_ERR : CLS_INPUT} />
-                {erreurs.confirmation && <p className="mt-1 text-xs text-red-600">{erreurs.confirmation}</p>}
-              </div>
-            </div>
-          </div>
-
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={isPending}
               className="sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
-              {isPending ? 'Enregistrement…' : 'Créer le membre'}
+              {isPending ? 'Enregistrement…' : 'Ajouter à l’équipe'}
             </button>
             <Link href="/district/equipe"
               className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm">

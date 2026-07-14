@@ -71,6 +71,7 @@ export const authOptions: NextAuthOptions = {
             nom: true,
             prenom: true,
             role: true,
+            roleDistrict: true,
             paroisseId: true,
             password: true,
             actif: true,
@@ -100,6 +101,7 @@ export const authOptions: NextAuthOptions = {
           nom: utilisateur.nom,
           prenom: utilisateur.prenom,
           role: utilisateur.role,
+          roleDistrict: utilisateur.roleDistrict,
           paroisseId: utilisateur.paroisseId,
         }
       },
@@ -114,25 +116,29 @@ export const authOptions: NextAuthOptions = {
         token.nom = user.nom
         token.prenom = user.prenom
         token.role = user.role
+        token.roleDistrict = user.roleDistrict
         token.paroisseId = user.paroisseId
         token.revalideLe = Date.now()
         return token
       }
 
       // Revalidation périodique (debounce via revalideLe, jamais à chaque
-      // requête) : relit role/actif/paroisseId en base pour détecter une
-      // désactivation ou un changement de rôle décidé depuis la connexion.
+      // requête) : relit role/roleDistrict/actif/paroisseId en base pour
+      // détecter une désactivation ou un changement de rôle décidé depuis la
+      // connexion.
       if (token.id && Date.now() - (token.revalideLe ?? 0) >= DELAI_REVALIDATION_MS) {
         const utilisateur = await prisma.utilisateur.findUnique({
           where: { id: token.id },
-          select: { role: true, actif: true, paroisseId: true, paroisse: { select: { actif: true } } },
+          select: { role: true, roleDistrict: true, actif: true, paroisseId: true, paroisse: { select: { actif: true } } },
         })
 
         if (!utilisateur || !utilisateur.actif || (utilisateur.paroisse && !utilisateur.paroisse.actif)) {
           token.role = ROLE_COMPTE_INVALIDE
+          token.roleDistrict = null
           token.paroisseId = null
         } else {
           token.role = utilisateur.role
+          token.roleDistrict = utilisateur.roleDistrict
           token.paroisseId = utilisateur.paroisseId
         }
         token.revalideLe = Date.now()
@@ -147,6 +153,7 @@ export const authOptions: NextAuthOptions = {
       session.user.nom = token.nom
       session.user.prenom = token.prenom
       session.user.role = token.role
+      session.user.roleDistrict = token.roleDistrict
       session.user.paroisseId = token.paroisseId
       return session
     },

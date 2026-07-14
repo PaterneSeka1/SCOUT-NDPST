@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { BrancheType } from '@/app/generated/prisma/client'
 import { ROLES_GROUPE, ROLES_BRANCHE, ROLES_TOUT_STAFF as ROLES_LECTURE } from '@/lib/roles'
-import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
+import { getBrancheUtilisateur, getBrancheDistrictUtilisateur } from '@/lib/brancheUtilisateur'
 import { getParoissesDuDistrict } from '@/lib/district'
 import { BrancheTypeSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     let filtreBranche = branche
     if (ROLES_BRANCHE.includes(session.user.role)) {
       const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
-      // Compte mal configuré (rôle de branche sans PosteBranche assigné) :
+      // Compte mal configuré (rôle de branche sans brancheType assigné) :
       // aucun résultat plutôt que la paroisse entière par défaut.
       if (!bt) return NextResponse.json([])
       filtreBranche = bt
@@ -60,9 +60,6 @@ export async function POST(req: NextRequest) {
 
     const estGroupe = ROLES_GROUPE.includes(session.user.role)
     const estBranche = ROLES_BRANCHE.includes(session.user.role)
-    const estAssistantDistrict = session.user.role === 'ASSISTANT_DISTRICT'
-    if (!estGroupe && !estBranche && !estAssistantDistrict) return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
-
     const body = await req.json()
     const { titre, description, periodeDebut, periodeFin, brancheType, paroisseId: paroisseIdCorps } = body as {
       titre?: string
@@ -72,6 +69,9 @@ export async function POST(req: NextRequest) {
       brancheType?: string
       paroisseId?: string
     }
+    const estAssistantDistrict = session.user.roleDistrict === 'ASSISTANT_DISTRICT'
+    const creationDistrict = estAssistantDistrict && !!paroisseIdCorps
+    if (!estGroupe && !estBranche && !creationDistrict) return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
 
     if (!titre || !periodeDebut || !periodeFin) {
       return NextResponse.json({ erreur: 'Le titre et la période sont obligatoires' }, { status: 400 })
@@ -86,15 +86,20 @@ export async function POST(req: NextRequest) {
     let paroisseId: string
     let brancheEffective: string | null = brancheType ?? null
 
-    if (estAssistantDistrict) {
+    // La création via le district (choix de la paroisse cible) n'est utilisée
+    // que par /district/ma-branche/programmes/nouveau, seule à envoyer
+    // paroisseId dans le corps — un ASSISTANT_DISTRICT qui exerce par ailleurs
+    // un rôle paroissial de groupe/branche crée normalement via l'autre
+    // branche ci-dessous quand ce champ est absent (formulaire du tableau de bord).
+    if (creationDistrict) {
       // Assistant au Commissaire de District chargé d'une branche : choisit la
       // paroisse cible parmi celles de son district, brancheType forcé à sa
       // branche — toute valeur envoyée par le client pour brancheType est ignorée.
-      const bt = await getBrancheUtilisateur(session.user.id)
+      const bt = await getBrancheDistrictUtilisateur(session.user.id)
       if (!bt) return NextResponse.json({ erreur: 'Aucune branche assignée' }, { status: 403 })
       const { paroisses } = await getParoissesDuDistrict(paroisseIdRequise(session))
       const paroisseIds = paroisses.map((p) => p.id)
-      if (!paroisseIdCorps || !paroisseIds.includes(paroisseIdCorps)) {
+      if (!paroisseIds.includes(paroisseIdCorps)) {
         return NextResponse.json({ erreur: 'Paroisse invalide ou manquante' }, { status: 400 })
       }
       paroisseId = paroisseIdCorps

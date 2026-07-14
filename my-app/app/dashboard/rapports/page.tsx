@@ -58,12 +58,16 @@ function JaugeTaux({ taux }: { taux: number }) {
 export default function PageRapports() {
   const [rapport, setRapport] = useState<Rapport | null>(null)
   const [chargement, setChargement] = useState(true)
+  const [erreur, setErreur] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/rapports')
       .then((r) => r.json())
-      .then((data) => { if (data.erreur) { toast.error(data.erreur); return }; setRapport(data) })
-      .catch(() => toast.error('Impossible de charger les rapports'))
+      .then((data) => {
+        if (data.erreur) { setErreur(data.erreur); toast.error(data.erreur); return }
+        setRapport(data)
+      })
+      .catch(() => { setErreur('Impossible de charger les rapports.'); toast.error('Impossible de charger les rapports') })
       .finally(() => setChargement(false))
   }, [])
 
@@ -72,7 +76,12 @@ export default function PageRapports() {
       <div className="w-6 h-6 border-2 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
     </div>
   )
-  if (!rapport) return null
+
+  if (erreur || !rapport) return (
+    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+      {erreur ?? 'Impossible de charger les rapports.'}
+    </div>
+  )
 
   const maxScouts = Math.max(...rapport.scoutsParBranche.map((b) => b._count.id), 1)
   const totalScouts = rapport.scoutsActifs + rapport.scoutsInactifs

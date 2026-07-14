@@ -37,9 +37,9 @@ function menuPour(role: string, brancheType: string | null): MenuItem[] {
 }
 
 function SidebarContent({
-  menuItems, pathname, nomComplet, role, nomDistrict, onNavigate,
+  menuItems, pathname, nomComplet, role, roleParoisse, nomDistrict, onNavigate,
 }: {
-  menuItems: MenuItem[]; pathname: string; nomComplet: string; role: string; nomDistrict: string; onNavigate?: () => void
+  menuItems: MenuItem[]; pathname: string; nomComplet: string; role: string; roleParoisse: string; nomDistrict: string; onNavigate?: () => void
 }) {
   return (
     <>
@@ -70,7 +70,19 @@ function SidebarContent({
 
       <div className="px-4 py-4 border-t border-white/15 flex-shrink-0">
         <p className="text-white/60 text-xs truncate mb-0.5">{nomComplet}</p>
-        <p className="text-[#f39c12] text-xs font-medium mb-3">{LABELS_ROLES[role] ?? role}</p>
+        <p className="text-[#f39c12] text-xs font-medium mb-0.5">{LABELS_ROLES[role] ?? role}</p>
+        <p className="text-white/50 text-[11px] mb-3">{LABELS_ROLES[roleParoisse] ?? roleParoisse} (paroisse)</p>
+        {/* Toute personne affectée au district a par ailleurs toujours un rôle
+            paroissial actif (roleDistrict est additif, jamais un remplacement)
+            — ce lien de bascule est donc toujours pertinent, sans condition. */}
+        <Link
+          href="/dashboard"
+          onClick={onNavigate}
+          className="w-full text-xs text-white/60 hover:text-white hover:bg-white/10 px-3 py-2 rounded-lg transition-colors flex items-center gap-2 mb-1"
+        >
+          <span>⛪</span>
+          Mon espace paroisse
+        </Link>
         <Link
           href="/district/profil"
           onClick={onNavigate}
@@ -92,9 +104,9 @@ function SidebarContent({
 }
 
 export function DistrictShell({
-  children, role, nomComplet, nomDistrict, brancheType,
+  children, role, roleParoisse, nomComplet, nomDistrict, brancheType,
 }: {
-  children: React.ReactNode; role: string; nomComplet: string; nomDistrict: string; brancheType: string | null
+  children: React.ReactNode; role: string; roleParoisse: string; nomComplet: string; nomDistrict: string; brancheType: string | null
 }) {
   const pathname = usePathname()
   const [sidebarOuverte, setSidebarOuverte] = useState(false)
@@ -117,14 +129,14 @@ export function DistrictShell({
       )}
 
       <aside className="hidden lg:flex w-64 flex-col flex-shrink-0" style={sidebarStyle}>
-        <SidebarContent menuItems={menuItems} pathname={pathname} nomComplet={nomComplet} role={role} nomDistrict={nomDistrict} />
+        <SidebarContent menuItems={menuItems} pathname={pathname} nomComplet={nomComplet} role={role} roleParoisse={roleParoisse} nomDistrict={nomDistrict} />
       </aside>
 
       <aside
         className={`fixed inset-y-0 left-0 z-30 w-72 flex flex-col transition-transform duration-300 lg:hidden ${sidebarOuverte ? 'translate-x-0' : '-translate-x-full'}`}
         style={sidebarStyle}
       >
-        <SidebarContent menuItems={menuItems} pathname={pathname} nomComplet={nomComplet} role={role} nomDistrict={nomDistrict} onNavigate={() => setSidebarOuverte(false)} />
+        <SidebarContent menuItems={menuItems} pathname={pathname} nomComplet={nomComplet} role={role} roleParoisse={roleParoisse} nomDistrict={nomDistrict} onNavigate={() => setSidebarOuverte(false)} />
       </aside>
 
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">

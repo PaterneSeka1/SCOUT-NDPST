@@ -25,7 +25,6 @@ interface UtilisateurDetail {
   telephone: string | null
   email: string | null
   role: string
-  fonction: string | null
   brancheType: string | null
   actif: boolean
   createdAt: string
@@ -33,7 +32,7 @@ interface UtilisateurDetail {
   paroisse: { id: string; nom: string }
 }
 
-interface FormInfos { nom: string; prenom: string; email: string; role: string; fonction: string; brancheType: string; actif: boolean }
+interface FormInfos { nom: string; prenom: string; email: string; role: string; brancheType: string; actif: boolean }
 interface FormInfosErrors { nom?: string; prenom?: string; role?: string; brancheType?: string }
 interface FormMdp { motDePasse: string; confirmation: string }
 interface FormMdpErrors { motDePasse?: string; confirmation?: string }
@@ -46,16 +45,13 @@ export default function ModifierUtilisateurPlateformePage() {
   const [chargement, setChargement] = useState(true)
   const [erreurChargement, setErreurChargement] = useState(false)
 
-  const [formInfos, setFormInfos] = useState<FormInfos>({ nom: '', prenom: '', email: '', role: '', fonction: '', brancheType: '', actif: true })
+  const [formInfos, setFormInfos] = useState<FormInfos>({ nom: '', prenom: '', email: '', role: '', brancheType: '', actif: true })
   const [erreursInfos, setErreursInfos] = useState<FormInfosErrors>({})
   const [erreurServeurInfos, setErreurServeurInfos] = useState('')
   const [succesInfos, setSuccesInfos] = useState(false)
   const [soumissionInfos, setSoumissionInfos] = useState(false)
-  const [modeFonction, setModeFonction] = useState<'branche' | 'autre'>('autre')
 
   const estBranche = ROLES_BRANCHE.includes(formInfos.role)
-  const estAssistantDistrict = formInfos.role === 'ASSISTANT_DISTRICT'
-  const modeBranche = modeFonction === 'branche'
 
   const [formMdp, setFormMdp] = useState<FormMdp>({ motDePasse: '', confirmation: '' })
   const [erreursMdp, setErreursMdp] = useState<FormMdpErrors>({})
@@ -74,9 +70,8 @@ export default function ModifierUtilisateurPlateformePage() {
         setUtilisateur(data)
         setFormInfos({
           nom: data.nom, prenom: data.prenom, email: data.email ?? '', role: data.role,
-          fonction: data.fonction ?? '', brancheType: data.brancheType ?? '', actif: data.actif,
+          brancheType: data.brancheType ?? '', actif: data.actif,
         })
-        setModeFonction(data.brancheType ? 'branche' : 'autre')
       })
       .catch(() => {
         setErreurChargement(true)
@@ -100,7 +95,6 @@ export default function ModifierUtilisateurPlateformePage() {
     if (!formInfos.prenom.trim()) e.prenom = 'Le prénom est requis'
     if (!formInfos.role) e.role = 'Le rôle est requis'
     if (estBranche && !formInfos.brancheType) e.brancheType = 'La branche est requise'
-    if (estAssistantDistrict && modeBranche && !formInfos.brancheType) e.brancheType = 'La branche est requise'
     setErreursInfos(e)
     return Object.keys(e).length === 0
   }
@@ -120,8 +114,7 @@ export default function ModifierUtilisateurPlateformePage() {
           prenom: formInfos.prenom.trim(),
           email: formInfos.email.trim() || null,
           role: formInfos.role,
-          fonction: estAssistantDistrict && !modeBranche && formInfos.fonction.trim() ? formInfos.fonction.trim() : null,
-          brancheType: (estBranche || (estAssistantDistrict && modeBranche)) && formInfos.brancheType ? formInfos.brancheType : null,
+          brancheType: estBranche && formInfos.brancheType ? formInfos.brancheType : null,
           actif: formInfos.actif,
         }),
       })
@@ -266,47 +259,6 @@ export default function ModifierUtilisateurPlateformePage() {
                 ))}
               </select>
               {erreursInfos.brancheType && <p className="mt-1 text-xs text-red-600">{erreursInfos.brancheType}</p>}
-            </div>
-          )}
-
-          {/* Fonction — uniquement pour ASSISTANT_DISTRICT : chargé d'une branche (structuré) OU autre fonction (texte libre), mutuellement exclusifs */}
-          {estAssistantDistrict && (
-            <div className="space-y-3">
-              <div>
-                <label className={CLS_LABEL}>Fonction de l&apos;assistant</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                    <input type="radio" name="modeFonction" checked={modeBranche}
-                      onChange={() => setModeFonction('branche')} className="accent-[#1a4731]" />
-                    Chargé d&apos;une branche
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                    <input type="radio" name="modeFonction" checked={!modeBranche}
-                      onChange={() => setModeFonction('autre')} className="accent-[#1a4731]" />
-                    Autre fonction
-                  </label>
-                </div>
-              </div>
-
-              {modeBranche ? (
-                <div>
-                  <label className={CLS_LABEL}>Branche <span className="text-red-500">*</span></label>
-                  <select id="brancheType" name="brancheType" value={formInfos.brancheType} onChange={handleInfosChange}
-                    className={erreursInfos.brancheType ? CLS_SELECT_ERR : CLS_SELECT}>
-                    <option value="">Sélectionner une branche</option>
-                    {Object.entries(LABELS_BRANCHES).map(([valeur, libelle]) => (
-                      <option key={valeur} value={valeur}>{libelle}</option>
-                    ))}
-                  </select>
-                  {erreursInfos.brancheType && <p className="mt-1 text-xs text-red-600">{erreursInfos.brancheType}</p>}
-                </div>
-              ) : (
-                <div>
-                  <label className={CLS_LABEL}>Fonction <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
-                  <input id="fonction" name="fonction" type="text" value={formInfos.fonction} onChange={handleInfosChange}
-                    placeholder="Ex. Spiritualité, Secrétariat…" className={CLS_INPUT} />
-                </div>
-              )}
             </div>
           )}
 

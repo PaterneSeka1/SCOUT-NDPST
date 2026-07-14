@@ -4,8 +4,7 @@ import { hash } from 'bcryptjs'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
-import { ROLES_GROUPE, ROLES_DISTRICT_ETENDU } from '@/lib/roles'
-import { RoleUtilisateur } from '@/app/generated/prisma/client'
+import { ROLES_GROUPE } from '@/lib/roles'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 import { paroisseIdRequise } from '@/lib/session'
@@ -28,7 +27,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const { id } = await params
 
     const existant = await prisma.utilisateur.findFirst({
-      where: { id, paroisseId, role: { notIn: ROLES_DISTRICT_ETENDU as RoleUtilisateur[] } },
+      where: { id, paroisseId },
       select: { id: true },
     })
 

@@ -57,9 +57,12 @@ describe('groupes de rôles RBAC', () => {
     }
   })
 
-  it('ROLES_ASSIGNABLES_PAROISSE exclut ADMIN_PLATEFORME', () => {
+  it('ROLES_ASSIGNABLES_PAROISSE exclut ADMIN_PLATEFORME et les rôles de district', () => {
     expect(ROLES_ASSIGNABLES_PAROISSE).not.toContain('ADMIN_PLATEFORME')
-    expect(ROLES_ASSIGNABLES_PAROISSE.length).toBe(Object.keys(LABELS_ROLES).length - 1)
+    for (const roleDistrict of ROLES_DISTRICT_ETENDU) {
+      expect(ROLES_ASSIGNABLES_PAROISSE).not.toContain(roleDistrict)
+    }
+    expect(ROLES_ASSIGNABLES_PAROISSE.length).toBe(Object.keys(LABELS_ROLES).length - 1 - ROLES_DISTRICT_ETENDU.length)
   })
 
   it('chaque rôle utilisé dans les groupes a un libellé défini', () => {
@@ -94,12 +97,6 @@ describe('groupes de rôles RBAC', () => {
     expect(ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT).not.toContain('PARENT')
     for (const roleDistrict of ROLES_DISTRICT_ETENDU) {
       expect(ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT).not.toContain(roleDistrict)
-    }
-  })
-
-  it('ROLES_ASSIGNABLES_PAROISSE contient tout de même les rôles de district (créés par ADMIN_PLATEFORME)', () => {
-    for (const roleDistrict of ROLES_DISTRICT_ETENDU) {
-      expect(ROLES_ASSIGNABLES_PAROISSE).toContain(roleDistrict)
     }
   })
 

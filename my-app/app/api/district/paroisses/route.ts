@@ -10,7 +10,7 @@ import { logger } from '@/lib/logger'
 export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
-  if (!ROLES_DISTRICT_ETENDU.includes(session.user.role)) {
+  if (!session.user.roleDistrict || !ROLES_DISTRICT_ETENDU.includes(session.user.roleDistrict)) {
     return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
   }
 
@@ -24,9 +24,9 @@ export async function GET() {
   // pur et simple les casserait. On renvoie donc une version allégée plutôt
   // que de bloquer la route entière.
   let detailMultiBranchesAutorise = true
-  if (session.user.role === 'ASSISTANT_DISTRICT') {
-    const utilisateur = await prisma.utilisateur.findUnique({ where: { id: session.user.id }, select: { brancheType: true } })
-    if (utilisateur?.brancheType) detailMultiBranchesAutorise = false
+  if (session.user.roleDistrict === 'ASSISTANT_DISTRICT') {
+    const utilisateur = await prisma.utilisateur.findUnique({ where: { id: session.user.id }, select: { brancheTypeDistrict: true } })
+    if (utilisateur?.brancheTypeDistrict) detailMultiBranchesAutorise = false
   }
 
   try {
@@ -43,7 +43,7 @@ export async function GET() {
     const [chefsGroupe, effectifs] = await Promise.all([
       prisma.utilisateur.findMany({
         where: { paroisseId: { in: paroisseIds }, role: 'CHEF_GROUPE' },
-        select: { id: true, nom: true, prenom: true, matricule: true, telephone: true, email: true, paroisseId: true },
+        select: { id: true, nom: true, prenom: true, matricule: true, telephone: true, email: true, actif: true, paroisseId: true },
         orderBy: { createdAt: 'asc' },
       }),
       prisma.scout.groupBy({
@@ -76,7 +76,7 @@ export async function GET() {
           ville: p.ville,
           actif: p.actif,
           chefGroupe: chef
-            ? { id: chef.id, nom: chef.nom, prenom: chef.prenom, matricule: chef.matricule, telephone: chef.telephone, email: chef.email }
+            ? { id: chef.id, nom: chef.nom, prenom: chef.prenom, matricule: chef.matricule, telephone: chef.telephone, email: chef.email, actif: chef.actif }
             : null,
           effectifsParBranche: effectifsParParoisse.get(p.id) ?? [],
         }

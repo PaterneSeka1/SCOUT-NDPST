@@ -21,7 +21,7 @@ export async function GET() {
   const districtsAvecCommissaire = await Promise.all(
     districts.map(async (d) => {
       const commissaire = await prisma.utilisateur.findFirst({
-        where: { role: 'COMMISSAIRE_DISTRICT', actif: true, paroisse: { districtId: d.id } },
+        where: { roleDistrict: 'COMMISSAIRE_DISTRICT', actif: true, paroisse: { districtId: d.id } },
         select: { id: true, nom: true, prenom: true, actif: true },
       })
       return { id: d.id, nom: d.nom, nbParoisses: d._count.paroisses, commissaire }

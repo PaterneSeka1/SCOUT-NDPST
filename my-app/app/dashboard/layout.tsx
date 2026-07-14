@@ -3,18 +3,23 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { THEME_DEFAUT, couleurSure, hexToRgb } from '@/lib/theme'
-import { ROLES_DISTRICT_ETENDU } from '@/lib/roles'
 import { DashboardShell } from './DashboardShell'
 
 // Identité propre à la paroisse de l'utilisateur connecté (logo + couleurs),
 // en surcharge de l'identité plateforme injectée par le layout racine — un
 // membre d'une paroisse voit ses propres couleurs une fois connecté, plutôt
 // que l'identité commune affichée avant connexion.
+//
+// Pas de redirection basée sur une affectation district (roleDistrict) : elle
+// est ADDITIVE au rôle paroissial (role), jamais un remplacement — un Chef de
+// Groupe par ailleurs Commissaire de District doit voir son tableau de bord
+// paroissial normalement (voir DashboardShell, qui ajoute un lien "Espace
+// district" quand roleDistrict est renseigné, symétrique au lien "Mon espace
+// paroisse" de DistrictShell).
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) redirect('/login')
   if (session.user.role === 'ADMIN_PLATEFORME') redirect('/admin')
-  if (ROLES_DISTRICT_ETENDU.includes(session.user.role)) redirect('/district')
 
   const [paroisse, plateforme, nombreEnfants] = await Promise.all([
     session.user.paroisseId
@@ -62,6 +67,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <style dangerouslySetInnerHTML={{ __html: cssVars }} />
       <DashboardShell
         role={session.user.role}
+        roleDistrict={session.user.roleDistrict}
         nomComplet={`${session.user.prenom} ${session.user.nom}`}
         logoUrl={logoUrl}
         nomSite={nomSite}

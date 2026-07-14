@@ -16,6 +16,11 @@ const SELECTION_PROFIL = {
   telephone: true,
   matricule: true,
   role: true,
+  fonction: true,
+  brancheType: true,
+  roleDistrict: true,
+  fonctionDistrict: true,
+  brancheTypeDistrict: true,
   paroisse: { select: { id: true, nom: true } },
 } as const
 

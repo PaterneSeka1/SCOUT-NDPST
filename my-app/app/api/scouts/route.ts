@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     let branche = searchParams.get('branche') ?? undefined
     if (ROLES_BRANCHE.includes(session.user.role)) {
       const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
-      // Compte mal configuré (rôle de branche sans PosteBranche assigné) :
+      // Compte mal configuré (rôle de branche sans brancheType assigné) :
       // aucun résultat plutôt que la paroisse entière par défaut.
       if (!bt) return NextResponse.json({ scouts: [], total: 0, page, totalPages: 0 })
       branche = bt

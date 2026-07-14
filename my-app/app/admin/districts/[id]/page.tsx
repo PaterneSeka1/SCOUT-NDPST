@@ -4,10 +4,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
-import { PasswordInput } from '@/app/components/PasswordInput'
 import { confirmer } from '@/app/components/ConfirmDialog'
-import { libelleRoleAvecFonction } from '@/lib/roles'
+import { LABELS_ROLES, libelleRoleAvecFonction } from '@/lib/roles'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
@@ -33,28 +31,27 @@ interface MembreEquipe {
   role: string
   fonction: string | null
   brancheType: string | null
+  roleParoisse: string
   createdAt: string
+  paroisse: { id: string; nom: string }
+}
+
+interface PersonnelEligible {
+  id: string
+  nom: string
+  prenom: string
+  matricule: string | null
+  role: string
   paroisse: { id: string; nom: string }
 }
 
 interface District {
   id: string
   nom: string
+  personnelEligible: PersonnelEligible[]
   paroisses: ParoisseDistrict[]
   equipe: MembreEquipe[]
 }
-
-interface FormCommissaire {
-  paroisseId: string
-  nom: string
-  prenom: string
-  matricule: string
-  telephone: string
-  email: string
-  motDePasse: string
-}
-
-const COMMISSAIRE_VIDE: FormCommissaire = { paroisseId: '', nom: '', prenom: '', matricule: '', telephone: '', email: '', motDePasse: '' }
 
 export default function FicheDistrictPage() {
   const { id } = useParams<{ id: string }>()
@@ -62,7 +59,7 @@ export default function FicheDistrictPage() {
   const [district, setDistrict] = useState<District | null>(null)
   const [chargement, setChargement] = useState(true)
   const [erreurChargement, setErreurChargement] = useState(false)
-  const [formCommissaire, setFormCommissaire] = useState<FormCommissaire>(COMMISSAIRE_VIDE)
+  const [chefChoisi, setChefChoisi] = useState('')
   const [soumissionCommissaire, setSoumissionCommissaire] = useState(false)
   const [renommage, setRenommage] = useState(false)
   const [nouveauNom, setNouveauNom] = useState('')
@@ -133,16 +130,8 @@ export default function FicheDistrictPage() {
 
   const handleCreerCommissaire = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formCommissaire.paroisseId) {
-      toast.error('La paroisse d’ancrage est requise.')
-      return
-    }
-    if (!formCommissaire.nom.trim() || !formCommissaire.prenom.trim() || !formCommissaire.matricule.trim() || !formCommissaire.motDePasse) {
-      toast.error('Le nom, le prénom, le matricule et le mot de passe sont requis.')
-      return
-    }
-    if (!motDePasseValide(formCommissaire.motDePasse)) {
-      toast.error(REGLE_MOT_DE_PASSE)
+    if (!chefChoisi) {
+      toast.error('Le membre à désigner est requis.')
       return
     }
     setSoumissionCommissaire(true)
@@ -150,23 +139,15 @@ export default function FicheDistrictPage() {
       const res = await fetch(`/api/admin/districts/${id}/commissaire`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          paroisseId: formCommissaire.paroisseId,
-          nom: formCommissaire.nom,
-          prenom: formCommissaire.prenom,
-          matricule: formCommissaire.matricule,
-          telephone: formCommissaire.telephone || undefined,
-          email: formCommissaire.email || undefined,
-          password: formCommissaire.motDePasse,
-        }),
+        body: JSON.stringify({ utilisateurId: chefChoisi }),
       })
       const data = await res.json()
       if (!res.ok) { toast.error(data.erreur ?? 'Erreur serveur'); return }
-      toast.success('Commissaire de District désigné. Communiquez-lui ses identifiants.')
-      setFormCommissaire(COMMISSAIRE_VIDE)
+      toast.success('Commissaire de District désigné.')
+      setChefChoisi('')
       charger()
     } catch {
-      toast.error('Erreur lors de la création')
+      toast.error('Erreur lors de la désignation')
     } finally {
       setSoumissionCommissaire(false)
     }
@@ -281,59 +262,38 @@ export default function FicheDistrictPage() {
               <div>
                 <p className="text-sm font-medium text-gray-900">{commissaire.prenom} {commissaire.nom}</p>
                 <p className="text-xs text-gray-500">{commissaire.matricule ?? commissaire.telephone ?? commissaire.email ?? '—'}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{LABELS_ROLES[commissaire.roleParoisse] ?? commissaire.roleParoisse} — {commissaire.paroisse.nom}</p>
               </div>
               <span className={`text-xs font-medium ${commissaire.actif ? 'text-green-700' : 'text-gray-400'}`}>{commissaire.actif ? 'Actif' : 'Désactivé'}</span>
             </div>
             <p className="text-xs text-gray-400 mt-3">
-              La modification de ce compte se fait depuis <Link href="/admin/utilisateurs" className="underline hover:text-gray-600">/admin/utilisateurs</Link>.
+              La modification du rôle paroissial de ce compte se fait depuis la gestion des utilisateurs.
             </p>
           </>
         ) : (
           <>
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
               <p className="text-sm font-medium text-orange-700">Aucun Commissaire de District désigné.</p>
-              <p className="text-sm text-orange-600 mt-0.5">Désignez-en un ci-dessous pour que ce district puisse être piloté.</p>
+              <p className="text-sm text-orange-600 mt-0.5">Désignez-en un ci-dessous parmi le staff des paroisses de ce district — il continuera d&apos;exercer son rôle paroissial normalement.</p>
             </div>
 
             <form onSubmit={handleCreerCommissaire} className="space-y-3">
               <div>
-                <label className={CLS_LABEL}>Paroisse d’ancrage *</label>
+                <label className={CLS_LABEL}>Membre du staff *</label>
                 <select
                   className={CLS_INPUT}
-                  value={formCommissaire.paroisseId}
-                  onChange={(e) => setFormCommissaire({ ...formCommissaire, paroisseId: e.target.value })}
+                  value={chefChoisi}
+                  onChange={(e) => setChefChoisi(e.target.value)}
+                  disabled={district.personnelEligible.length === 0}
                 >
-                  <option value="">— Choisir une paroisse —</option>
-                  {district.paroisses.map((p) => (
-                    <option key={p.id} value={p.id}>{p.nom}</option>
+                  <option value="">— Choisir un membre du staff —</option>
+                  {district.personnelEligible.map((c) => (
+                    <option key={c.id} value={c.id}>{c.prenom} {c.nom} — {LABELS_ROLES[c.role] ?? c.role} — {c.paroisse.nom}</option>
                   ))}
                 </select>
-              </div>
-              <div className="grid sm:grid-cols-2 gap-3">
-                <div>
-                  <label className={CLS_LABEL}>Prénom *</label>
-                  <input className={CLS_INPUT} value={formCommissaire.prenom} onChange={(e) => setFormCommissaire({ ...formCommissaire, prenom: e.target.value })} />
-                </div>
-                <div>
-                  <label className={CLS_LABEL}>Nom *</label>
-                  <input className={CLS_INPUT} value={formCommissaire.nom} onChange={(e) => setFormCommissaire({ ...formCommissaire, nom: e.target.value })} />
-                </div>
-                <div>
-                  <label className={CLS_LABEL}>Matricule *</label>
-                  <input className={CLS_INPUT} value={formCommissaire.matricule} onChange={(e) => setFormCommissaire({ ...formCommissaire, matricule: e.target.value })} />
-                </div>
-                <div>
-                  <label className={CLS_LABEL}>Téléphone</label>
-                  <input className={CLS_INPUT} value={formCommissaire.telephone} onChange={(e) => setFormCommissaire({ ...formCommissaire, telephone: e.target.value })} />
-                </div>
-                <div>
-                  <label className={CLS_LABEL}>E-mail</label>
-                  <input type="email" className={CLS_INPUT} value={formCommissaire.email} onChange={(e) => setFormCommissaire({ ...formCommissaire, email: e.target.value })} />
-                </div>
-                <div>
-                  <label className={CLS_LABEL}>Mot de passe temporaire *</label>
-                  <PasswordInput className={CLS_INPUT} value={formCommissaire.motDePasse} onChange={(e) => setFormCommissaire({ ...formCommissaire, motDePasse: e.target.value })} />
-                </div>
+                {district.personnelEligible.length === 0 && (
+                  <p className="mt-1 text-xs text-orange-600">Aucun membre du staff actif disponible dans les paroisses de ce district.</p>
+                )}
               </div>
               <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
                 <button
@@ -343,7 +303,7 @@ export default function FicheDistrictPage() {
                   style={{ backgroundColor: 'var(--cp)' }}
                 >
                   {soumissionCommissaire && <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />}
-                  {soumissionCommissaire ? 'Création…' : 'Désigner le Commissaire'}
+                  {soumissionCommissaire ? 'Désignation…' : 'Désigner le Commissaire'}
                 </button>
               </div>
             </form>
@@ -365,6 +325,7 @@ export default function FicheDistrictPage() {
                   <p className="text-xs text-gray-500">
                     {libelleRoleAvecFonction(m.role, m.fonction, m.brancheType)}
                   </p>
+                  <p className="text-xs text-gray-400 mt-0.5">{LABELS_ROLES[m.roleParoisse] ?? m.roleParoisse} — {m.paroisse.nom}</p>
                 </div>
                 <span className={`text-xs font-medium ${m.actif ? 'text-green-700' : 'text-gray-400'}`}>{m.actif ? 'Actif' : 'Désactivé'}</span>
               </li>
@@ -373,7 +334,7 @@ export default function FicheDistrictPage() {
         )}
 
         <p className="text-xs text-gray-400 mt-3">
-          Les membres de l’équipe sont ajoutés par le Commissaire de District lui-même, via /district/equipe.
+          Les membres de l’équipe sont ajoutés par le Commissaire de District depuis son espace district.
         </p>
       </section>
     </div>

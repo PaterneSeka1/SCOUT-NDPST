@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { hash } from 'bcryptjs'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { ROLES_PLATEFORME } from '@/lib/roles'
-import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
+import { RoleUtilisateur } from '@/app/generated/prisma/client'
+import { ROLES_PLATEFORME, ROLES_TOUT_STAFF } from '@/lib/roles'
 import { enregistrerAudit } from '@/lib/audit'
 import { logger } from '@/lib/logger'
-import { envoyerEmailBienvenue } from '@/lib/notifications'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
+// Désigne un Commissaire de District en affectant roleDistrict à un membre du
+// staff (ROLES_TOUT_STAFF) déjà en poste et actif dans l'une des paroisses du
+// district — jamais en créant un nouveau compte, et sans jamais toucher à son
+// rôle paroissial (role) : il continue de l'exercer normalement.
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions)
@@ -20,93 +22,78 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     const { id: districtId } = await params
-    const districtCible = await prisma.district.findUnique({ where: { id: districtId }, select: { id: true } })
-    if (!districtCible) return NextResponse.json({ erreur: 'District introuvable' }, { status: 404 })
+    const district = await prisma.district.findUnique({ where: { id: districtId }, select: { id: true } })
+    if (!district) return NextResponse.json({ erreur: 'District introuvable' }, { status: 404 })
 
     const body = await request.json()
-    const { paroisseId, nom, prenom, matricule, telephone, email, password } = body as {
-      paroisseId?: string; nom?: string; prenom?: string; matricule?: string; telephone?: string; email?: string; password?: string
+    const { utilisateurId } = body as { utilisateurId?: string }
+    if (!utilisateurId?.trim()) {
+      return NextResponse.json({ erreur: 'Le membre à désigner est requis' }, { status: 400 })
     }
 
-    if (!paroisseId?.trim()) {
-      return NextResponse.json({ erreur: 'La paroisse est requise' }, { status: 400 })
+    const membre = await prisma.utilisateur.findUnique({
+      where: { id: utilisateurId },
+      select: { id: true, role: true, roleDistrict: true, actif: true, paroisseId: true, paroisse: { select: { districtId: true } } },
+    })
+    if (!membre) return NextResponse.json({ erreur: 'Utilisateur introuvable' }, { status: 404 })
+
+    if (!ROLES_TOUT_STAFF.includes(membre.role) || !membre.actif) {
+      return NextResponse.json({ erreur: "Seul un membre actif du staff d'une paroisse peut être désigné Commissaire de District" }, { status: 400 })
     }
-
-    const paroisse = await prisma.paroisse.findUnique({ where: { id: paroisseId }, select: { id: true, districtId: true } })
-    if (!paroisse) return NextResponse.json({ erreur: 'Paroisse introuvable' }, { status: 404 })
-
-    if (paroisse.districtId !== districtId) {
-      return NextResponse.json({ erreur: "Cette paroisse n'appartient pas à ce district" }, { status: 400 })
+    if (membre.roleDistrict) {
+      return NextResponse.json({ erreur: 'Cette personne fait déjà partie de l\'équipe du district' }, { status: 400 })
+    }
+    if (membre.paroisse?.districtId !== districtId) {
+      return NextResponse.json({ erreur: "Cette personne n'appartient pas à une paroisse de ce district" }, { status: 400 })
     }
 
     const commissaireExistant = await prisma.utilisateur.findFirst({
-      where: { role: 'COMMISSAIRE_DISTRICT', actif: true, paroisse: { districtId } },
+      where: { roleDistrict: 'COMMISSAIRE_DISTRICT', actif: true, paroisse: { districtId } },
       select: { id: true },
     })
     if (commissaireExistant) {
       return NextResponse.json(
-        { erreur: 'Un Commissaire de District actif existe déjà pour ce district. Désactivez-le avant d\'en désigner un nouveau.' },
+        { erreur: 'Un Commissaire de District actif existe déjà pour ce district. Retirez-le de l\'équipe avant d\'en désigner un nouveau.' },
         { status: 409 },
       )
     }
 
-    if (!nom?.trim() || !prenom?.trim() || !matricule?.trim() || !password) {
-      return NextResponse.json({ erreur: 'Le nom, le prénom, le matricule et le mot de passe sont requis' }, { status: 400 })
-    }
-
-    if (!motDePasseValide(password)) {
-      return NextResponse.json({ erreur: REGLE_MOT_DE_PASSE }, { status: 400 })
-    }
-
-    const doublonMatricule = await prisma.utilisateur.findUnique({ where: { matricule: matricule.trim() }, select: { id: true } })
-    if (doublonMatricule) return NextResponse.json({ erreur: 'Ce matricule est déjà utilisé' }, { status: 400 })
-
-    if (telephone?.trim()) {
-      const doublonTel = await prisma.utilisateur.findUnique({ where: { telephone: telephone.trim() }, select: { id: true } })
-      if (doublonTel) return NextResponse.json({ erreur: 'Ce numéro de téléphone est déjà utilisé' }, { status: 400 })
-    }
-
-    if (email?.trim()) {
-      const doublonEmail = await prisma.utilisateur.findFirst({ where: { email: { equals: email.trim(), mode: 'insensitive' } }, select: { id: true } })
-      if (doublonEmail) return NextResponse.json({ erreur: 'Cette adresse e-mail est déjà utilisée' }, { status: 400 })
-    }
-
-    const passwordHache = await hash(password, 12)
-    const commissaire = await prisma.utilisateur.create({
-      data: {
-        nom: nom.trim(),
-        prenom: prenom.trim(),
-        matricule: matricule.trim(),
-        telephone: telephone?.trim() || null,
-        email: email?.trim() || null,
-        role: 'COMMISSAIRE_DISTRICT',
-        password: passwordHache,
-        paroisseId: paroisse.id,
+    // Ne touche jamais à `role` (rôle paroissial) : la personne continue de
+    // l'exercer normalement dans sa paroisse, l'affectation district s'ajoute
+    // simplement à son compte existant.
+    const commissaire = await prisma.utilisateur.update({
+      where: { id: membre.id },
+      data: { roleDistrict: 'COMMISSAIRE_DISTRICT' as RoleUtilisateur },
+      select: {
+        id: true, nom: true, prenom: true, matricule: true, telephone: true, email: true, actif: true, createdAt: true,
+        role: true, roleDistrict: true, paroisseId: true,
       },
-      select: { id: true, nom: true, prenom: true, matricule: true, telephone: true, email: true, actif: true, createdAt: true },
     })
 
     await enregistrerAudit({
-      paroisseId: paroisse.id,
+      paroisseId: membre.paroisseId,
       acteurId: session.user.id,
-      action: 'UTILISATEUR_CREE',
+      action: 'UTILISATEUR_ROLE_DISTRICT_AFFECTE',
       entite: 'Utilisateur',
       entiteId: commissaire.id,
-      details: { role: 'COMMISSAIRE_DISTRICT' },
+      details: { roleParoisse: commissaire.role, roleDistrict: commissaire.roleDistrict },
     })
 
-    if (commissaire.email) {
-      envoyerEmailBienvenue({
-        email: commissaire.email,
+    return NextResponse.json(
+      {
+        id: commissaire.id,
+        nom: commissaire.nom,
         prenom: commissaire.prenom,
-        identifiant: commissaire.matricule ?? commissaire.telephone ?? commissaire.email,
-        roleLabel: 'Commissaire de District',
-        nomSite: 'SCOUT ASCCI',
-        urlConnexion: `${process.env.NEXTAUTH_URL ?? ''}/login`,
-      }).catch((error) => logger.error('admin.districts.commissaire.email_bienvenue_echoue', error))
-    }
-
-    return NextResponse.json(commissaire, { status: 201 })
+        matricule: commissaire.matricule,
+        telephone: commissaire.telephone,
+        email: commissaire.email,
+        actif: commissaire.actif,
+        createdAt: commissaire.createdAt,
+        paroisseId: commissaire.paroisseId,
+        roleParoisse: commissaire.role,
+      },
+      { status: 200 },
+    )
   } catch (error) {
     logger.error('POST /api/admin/districts/[id]/commissaire', error)
     return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })

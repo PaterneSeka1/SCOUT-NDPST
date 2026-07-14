@@ -18,14 +18,25 @@ type MenuItem = {
 // pour avoir des enfants rattachés (voir app/api/utilisateurs/route.ts). Le
 // lien "Mes enfants" doit donc apparaître dans son menu habituel, sans lui
 // substituer le menu PARENT (dont il n'a pas les autres droits).
-function getMenuItems(role: string, aDesEnfants: boolean): MenuItem[] {
+//
+// roleDistrict : affectation district ADDITIVE au rôle paroissial (role),
+// jamais un remplacement (voir prisma/schema.prisma) — un Chef de Groupe par
+// ailleurs Commissaire de District garde son menu paroissial complet, avec un
+// lien de bascule supplémentaire vers /district (symétrique au lien "Mon
+// espace paroisse" de DistrictShell).
+function getMenuItems(role: string, aDesEnfants: boolean, roleDistrict?: string | null): MenuItem[] {
   const items = getMenuItemsDeBase(role)
-  if (role === 'PARENT' || !aDesEnfants) return items
-
-  const item = { label: 'Mes enfants', href: '/dashboard/mes-enfants', icone: '👨‍👧‍👦' }
-  const indexApresParoisse = items.findIndex((m) => m.href === '/dashboard/paroisse')
-  const position = indexApresParoisse >= 0 ? indexApresParoisse + 1 : items.length
-  return [...items.slice(0, position), item, ...items.slice(position)]
+  let menu = items
+  if (role !== 'PARENT' && aDesEnfants) {
+    const item = { label: 'Mes enfants', href: '/dashboard/mes-enfants', icone: '👨‍👧‍👦' }
+    const indexApresParoisse = items.findIndex((m) => m.href === '/dashboard/paroisse')
+    const position = indexApresParoisse >= 0 ? indexApresParoisse + 1 : items.length
+    menu = [...items.slice(0, position), item, ...items.slice(position)]
+  }
+  if (roleDistrict) {
+    menu = [...menu, { label: 'Espace district', href: '/district', icone: '🏛️' }]
+  }
+  return menu
 }
 
 function getMenuItemsDeBase(role: string): MenuItem[] {
@@ -195,6 +206,7 @@ function SidebarContent({
 export function DashboardShell({
   children,
   role,
+  roleDistrict,
   nomComplet,
   logoUrl,
   nomSite,
@@ -203,6 +215,7 @@ export function DashboardShell({
 }: {
   children: React.ReactNode
   role: string
+  roleDistrict?: string | null
   nomComplet: string
   logoUrl: string | null
   nomSite: string
@@ -219,7 +232,7 @@ export function DashboardShell({
     return () => mq.removeEventListener('change', handler)
   }, [])
 
-  const menuItems = getMenuItems(role, aDesEnfants)
+  const menuItems = getMenuItems(role, aDesEnfants, roleDistrict)
   const titrePage = menuItems.find((m) => m.href === pathname)?.label ?? 'Tableau de bord'
   const initiale = nomComplet?.[0] ?? '?'
 

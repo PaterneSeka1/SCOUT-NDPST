@@ -80,11 +80,14 @@ export const ROLES_PLATEFORME: string[] = ['ADMIN_PLATEFORME']
 /**
  * Direction du district : au-dessus des Chefs de Groupe de plusieurs paroisses
  * partageant le même Paroisse.district. Rattaché à une paroisse d'ancrage précise
- * (voir lib/district.ts pour la résolution du périmètre réel). Comme
- * ROLES_PLATEFORME, JAMAIS mélangé à ROLES_TOUT_STAFF/ROLES_GESTION et consorts :
- * ces rôles opèrent au-dessus du périmètre d'une seule paroisse et n'ont pas accès
- * aux routes opérationnelles paroissiales (scouts, activités, cotisations...).
- * Voir la zone applicative /district.
+ * (voir lib/district.ts pour la résolution du périmètre réel).
+ *
+ * Ces valeurs ne peuplent JAMAIS `Utilisateur.role` (rôle paroissial, testé par
+ * ces constantes ROLES_XXX ci-dessus) — elles peuplent `Utilisateur.roleDistrict`,
+ * un champ ADDITIF distinct (voir prisma/schema.prisma) : une personne peut très
+ * bien être CHEF_GROUPE (role) ET COMMISSAIRE_DISTRICT (roleDistrict) en même
+ * temps, elle continue d'exercer son rôle paroissial normalement. C'est
+ * roleDistrict qui gouverne l'accès à la zone applicative /district, jamais role.
  */
 export const ROLES_DISTRICT: string[] = ['COMMISSAIRE_DISTRICT']
 
@@ -94,16 +97,21 @@ export const ROLES_DISTRICT_ETENDU: string[] = [...ROLES_DISTRICT, 'ADJOINT_DIST
 /** Rôles assignables par un Commissaire de District à sa propre équipe, via /district/equipe. */
 export const ROLES_ASSIGNABLES_DISTRICT: string[] = ['ADJOINT_DISTRICT', 'ASSISTANT_DISTRICT']
 
-/** Rôles assignables à un utilisateur d'une paroisse (tous sauf ADMIN_PLATEFORME, réservé à la zone /admin). */
-export const ROLES_ASSIGNABLES_PAROISSE: string[] = Object.keys(LABELS_ROLES).filter((r) => r !== 'ADMIN_PLATEFORME')
+/**
+ * Rôles assignables à `role` (rôle PAROISSIAL) sur un utilisateur : tous sauf
+ * ADMIN_PLATEFORME (zone /admin) et les rôles de district. `role` n'est jamais
+ * une valeur de district, même pour un compte qui sert aussi le district : une
+ * affectation district (roleDistrict) est additive, jamais assignée en posant
+ * directement `role` — voir prisma/schema.prisma et /district/utilisateurs.
+ */
+export const ROLES_ASSIGNABLES_PAROISSE: string[] = Object.keys(LABELS_ROLES).filter(
+  (r) => r !== 'ADMIN_PLATEFORME' && !ROLES_DISTRICT_ETENDU.includes(r),
+)
 
 /**
  * Rôles d'équipe (page "Membres", pilotée par le Chef de Groupe) — exclut PARENT
- * (page dédiée) et les rôles de district : un Chef de Groupe ne doit jamais
- * pouvoir créer/promouvoir un membre de sa paroisse en Commissaire de District —
- * rôle géré exclusivement par ADMIN_PLATEFORME (création) puis par le Commissaire
- * de District lui-même via /district/equipe.
+ * (page dédiée). Les rôles de district sont déjà exclus de ROLES_ASSIGNABLES_PAROISSE.
  */
 export const ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT: string[] = ROLES_ASSIGNABLES_PAROISSE.filter(
-  (r) => r !== 'PARENT' && !ROLES_DISTRICT_ETENDU.includes(r),
+  (r) => r !== 'PARENT',
 )

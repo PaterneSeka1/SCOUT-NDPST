@@ -2,8 +2,10 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { LABELS_ROLES, COULEURS_ROLES, ROLES_ASSIGNABLES_DISTRICT, libelleRoleAvecFonction } from '@/lib/roles'
-import { useDistrictUtilisateurs, useModifierDistrictUtilisateur } from '@/hooks/useDistrictUtilisateurs'
+import { toast } from 'sonner'
+import { LABELS_ROLES, ROLES_ASSIGNABLES_DISTRICT, libelleRoleAvecFonction } from '@/lib/roles'
+import { confirmer } from '@/app/components/ConfirmDialog'
+import { useDistrictUtilisateurs, useRetirerDistrictUtilisateur } from '@/hooks/useDistrictUtilisateurs'
 import type { Utilisateur } from '@/hooks/useDistrictUtilisateurs'
 
 const ROLES_FILTRE = ROLES_ASSIGNABLES_DISTRICT
@@ -36,9 +38,27 @@ function SkeletonRow() {
   )
 }
 
+async function retirerAvecConfirmation(
+  utilisateur: Utilisateur,
+  mutateAsync: (id: string) => Promise<Utilisateur>,
+) {
+  const ok = await confirmer({
+    titre: 'Retirer ce membre de l\'équipe ?',
+    description: `${utilisateur.prenom} ${utilisateur.nom} perdra son rôle de district, mais conservera son compte et son rôle paroissial (${LABELS_ROLES[utilisateur.roleParoisse] ?? utilisateur.roleParoisse}).`,
+    labelConfirmer: 'Retirer',
+    danger: true,
+  })
+  if (!ok) return
+  try {
+    await mutateAsync(utilisateur.id)
+    toast.success('Membre retiré de l\'équipe du district.')
+  } catch (err) {
+    toast.error(err instanceof Error ? err.message : 'Une erreur est survenue')
+  }
+}
+
 function CarteUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
-  const { mutateAsync, isPending } = useModifierDistrictUtilisateur(utilisateur.id)
-  const handleToggle = async () => { await mutateAsync({ actif: !utilisateur.actif }) }
+  const { mutateAsync, isPending } = useRetirerDistrictUtilisateur()
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2.5">
@@ -49,20 +69,20 @@ function CarteUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
         <span className={`flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
           utilisateur.actif ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
         }`}>
-          {utilisateur.actif ? 'Actif' : 'Inactif'}
+          {utilisateur.actif ? 'Compte actif' : 'Compte désactivé'}
         </span>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-          COULEURS_ROLES[utilisateur.role] ?? 'bg-gray-100 text-gray-700'
-        }`}>
-          {libelleRoleAvecFonction(utilisateur.role, utilisateur.fonction, utilisateur.brancheType)}
-        </span>
-        {utilisateur.matricule && (
-          <span className="font-mono text-xs text-gray-500">{utilisateur.matricule}</span>
-        )}
-      </div>
+      <p className="text-xs text-gray-500">
+        {libelleRoleAvecFonction(utilisateur.role, utilisateur.fonction, utilisateur.brancheType)}
+      </p>
+      <p className="text-xs text-gray-400">
+        {LABELS_ROLES[utilisateur.roleParoisse] ?? utilisateur.roleParoisse}
+        {utilisateur.paroisse ? ` — ${utilisateur.paroisse.nom}` : ''}
+      </p>
+      {utilisateur.matricule && (
+        <span className="font-mono text-xs text-gray-500">{utilisateur.matricule}</span>
+      )}
 
       <div className="flex items-center gap-3 pt-1 border-t border-gray-50">
         <Link
@@ -73,13 +93,11 @@ function CarteUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
         </Link>
         <span className="text-gray-200">|</span>
         <button
-          onClick={handleToggle}
+          onClick={() => retirerAvecConfirmation(utilisateur, mutateAsync)}
           disabled={isPending}
-          className={`text-xs font-medium disabled:opacity-50 ${
-            utilisateur.actif ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'
-          }`}
+          className="text-xs font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
         >
-          {isPending ? '…' : utilisateur.actif ? 'Désactiver' : 'Activer'}
+          {isPending ? '…' : 'Retirer'}
         </button>
       </div>
     </div>
@@ -87,8 +105,7 @@ function CarteUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
 }
 
 function LigneUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
-  const { mutateAsync, isPending } = useModifierDistrictUtilisateur(utilisateur.id)
-  const handleToggle = async () => { await mutateAsync({ actif: !utilisateur.actif }) }
+  const { mutateAsync, isPending } = useRetirerDistrictUtilisateur()
 
   return (
     <tr className="hover:bg-gray-50 transition-colors">
@@ -97,17 +114,17 @@ function LigneUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
         {utilisateur.nom} {utilisateur.prenom}
       </td>
       <td className="px-4 py-3">
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-          COULEURS_ROLES[utilisateur.role] ?? 'bg-gray-100 text-gray-700'
-        }`}>
-          {libelleRoleAvecFonction(utilisateur.role, utilisateur.fonction, utilisateur.brancheType)}
-        </span>
+        <p className="text-sm text-gray-800">{libelleRoleAvecFonction(utilisateur.role, utilisateur.fonction, utilisateur.brancheType)}</p>
+        <p className="text-xs text-gray-400 mt-0.5">
+          {LABELS_ROLES[utilisateur.roleParoisse] ?? utilisateur.roleParoisse}
+          {utilisateur.paroisse ? ` — ${utilisateur.paroisse.nom}` : ''}
+        </p>
       </td>
       <td className="px-4 py-3">
         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
           utilisateur.actif ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
         }`}>
-          {utilisateur.actif ? 'Actif' : 'Inactif'}
+          {utilisateur.actif ? 'Compte actif' : 'Compte désactivé'}
         </span>
       </td>
       <td className="px-4 py-3">
@@ -120,13 +137,11 @@ function LigneUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
           </Link>
           <span className="text-gray-300">|</span>
           <button
-            onClick={handleToggle}
+            onClick={() => retirerAvecConfirmation(utilisateur, mutateAsync)}
             disabled={isPending}
-            className={`text-xs font-medium disabled:opacity-50 ${
-              utilisateur.actif ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'
-            }`}
+            className="text-xs font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
           >
-            {isPending ? '…' : utilisateur.actif ? 'Désactiver' : 'Activer'}
+            {isPending ? '…' : 'Retirer'}
           </button>
         </div>
       </td>

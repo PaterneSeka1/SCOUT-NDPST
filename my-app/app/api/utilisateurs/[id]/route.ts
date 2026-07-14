@@ -20,11 +20,11 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     const paroisseId = paroisseIdRequise(session)
     const { id } = await params
 
-    // Exclut systématiquement les rôles de district : un membre de l'équipe
-    // district ancré sur cette paroisse n'apparaît jamais dans cette surface
-    // paroissiale, gérée par le Chef de Groupe (voir /district/equipe).
+    // Un membre de l'équipe du district (roleDistrict renseigné) reste un
+    // membre normal de sa paroisse (role inchangé) : il apparaît donc
+    // normalement ici, comme n'importe quel autre membre du staff.
     const utilisateur = await prisma.utilisateur.findFirst({
-      where: { id, paroisseId, role: { notIn: ROLES_DISTRICT_ETENDU as RoleUtilisateur[] } },
+      where: { id, paroisseId },
       select: {
         id: true, nom: true, prenom: true, matricule: true, telephone: true,
         email: true, role: true, brancheType: true, actif: true, paroisseId: true,
@@ -58,10 +58,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const paroisseId = paroisseIdRequise(session)
     const { id } = await params
 
-    // Exclut les rôles de district : un Chef de Groupe ne peut ni voir ni
-    // modifier un compte de l'équipe district ancré sur sa paroisse.
     const existant = await prisma.utilisateur.findFirst({
-      where: { id, paroisseId, role: { notIn: ROLES_DISTRICT_ETENDU as RoleUtilisateur[] } },
+      where: { id, paroisseId },
       select: { id: true, role: true, actif: true, brancheType: true },
     })
     if (!existant) return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 })
@@ -217,7 +215,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     }
 
     const existant = await prisma.utilisateur.findFirst({
-      where: { id, paroisseId, role: { notIn: ROLES_DISTRICT_ETENDU as RoleUtilisateur[] } },
+      where: { id, paroisseId },
       select: { id: true },
     })
     if (!existant) return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 })

@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@/app/generated/prisma/client'
 import { ROLES_BRANCHE } from '@/lib/roles'
-import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
+import { getBrancheUtilisateur, getBrancheDistrictUtilisateur } from '@/lib/brancheUtilisateur'
 import { getParoissesDuDistrict } from '@/lib/district'
 import { paroisseIdRequise } from '@/lib/session'
 import { logger } from '@/lib/logger'
@@ -16,21 +16,23 @@ type RouteParams = { params: Promise<{ id: string }> }
 // "Scout introuvable" (même message qu'un scout absent) pour ne jamais révéler
 // à un tiers non autorisé qu'un scout existe dans une autre paroisse/branche.
 async function autoriseSurScout(
-  session: { user: { id: string; role: string; paroisseId: string | null } },
+  session: { user: { id: string; role: string; roleDistrict: string | null; paroisseId: string | null } },
   scout: { paroisseId: string; brancheType: string },
 ): Promise<boolean> {
   if (ROLES_BRANCHE.includes(session.user.role)) {
     const paroisseId = paroisseIdRequise(session)
-    if (scout.paroisseId !== paroisseId) return false
-    const brancheUtilisateur = await getBrancheUtilisateur(session.user.id)
-    return brancheUtilisateur === scout.brancheType
+    if (scout.paroisseId === paroisseId) {
+      const brancheUtilisateur = await getBrancheUtilisateur(session.user.id)
+      if (brancheUtilisateur === scout.brancheType) return true
+    }
   }
 
-  if (session.user.role === 'ASSISTANT_DISTRICT') {
-    const brancheUtilisateur = await getBrancheUtilisateur(session.user.id)
-    if (!brancheUtilisateur || brancheUtilisateur !== scout.brancheType) return false
-    const { paroisses } = await getParoissesDuDistrict(paroisseIdRequise(session))
-    return paroisses.some((p) => p.id === scout.paroisseId)
+  if (session.user.roleDistrict === 'ASSISTANT_DISTRICT') {
+    const brancheUtilisateur = await getBrancheDistrictUtilisateur(session.user.id)
+    if (brancheUtilisateur && brancheUtilisateur === scout.brancheType) {
+      const { paroisses } = await getParoissesDuDistrict(paroisseIdRequise(session))
+      if (paroisses.some((p) => p.id === scout.paroisseId)) return true
+    }
   }
 
   return false

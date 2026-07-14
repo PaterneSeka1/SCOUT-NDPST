@@ -28,4 +28,7 @@ export const LABELS_ACTIONS_AUDIT: Record<string, string> = {
   DISTRICT_CREE: 'Création district',
   DISTRICT_MODIFIE: 'Renommage district',
   DISTRICT_SUPPRIME: 'Suppression district',
+  UTILISATEUR_ROLE_DISTRICT_AFFECTE: 'Affectation à l\'équipe de district',
+  UTILISATEUR_ROLE_DISTRICT_MODIFIE: 'Changement de rôle dans l\'équipe de district',
+  UTILISATEUR_ROLE_DISTRICT_RETIRE: 'Retrait de l\'équipe de district',
 }

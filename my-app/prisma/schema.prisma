@@ -36,7 +36,7 @@ enum RoleUtilisateur {
   // précise (paroisseId obligatoire, comme tout rôle ci-dessus) ; le périmètre réel
   // se calcule via lib/district.ts à partir du district de cette paroisse.
   ADJOINT_DISTRICT
-  ASSISTANT_DISTRICT // Le champ Utilisateur.fonction précise la charge : "Branche Route", "Spiritualité"...
+  ASSISTANT_DISTRICT // L'affectation district utilise fonctionDistrict ou brancheTypeDistrict.
   PARENT
   SCOUT
 }
@@ -191,13 +191,26 @@ model Utilisateur {
   telephone String?         @unique // Requis pour parents, optionnel pour les autres
   email     String?         @unique
   password  String
-  role      RoleUtilisateur
-  fonction  String?         // Champ libre, utilisé pour ASSISTANT_DISTRICT quand brancheType est vide
-                             // (ex. "Spiritualité", "Communication")
-  brancheType BrancheType?  // Branche gérée par ce compte : RESPONSABLE_BRANCHE/ADJOINT_BRANCHE/
-                             // ASSISTANT_BRANCHE (leur paroisse) ou ASSISTANT_DISTRICT chargé d'une
-                             // branche à l'échelle du district (voir lib/brancheUtilisateur.ts)
+  role      RoleUtilisateur // Rôle PAROISSIAL (direction de groupe ou encadrement de branche) —
+                             // jamais une valeur de district, même si ce compte sert aussi le
+                             // district (voir roleDistrict) : les deux sont indépendants, une
+                             // personne désignée au district continue d'exercer son rôle paroissial.
+  fonction  String?         // Champ libre pour un rôle paroissial sans fonction structurée (non
+                             // utilisé actuellement, réservé pour un futur rôle de ce type)
+  brancheType BrancheType?  // Branche gérée par ce compte au niveau PAROISSIAL : RESPONSABLE_BRANCHE/
+                             // ADJOINT_BRANCHE/ASSISTANT_BRANCHE (voir lib/brancheUtilisateur.ts)
   actif     Boolean         @default(true)
+
+  // Affectation district — additive au rôle paroissial ci-dessus, jamais un
+  // remplacement : un Chef de Groupe désigné Commissaire de District reste
+  // Chef de Groupe de sa paroisse, il gagne seulement roleDistrict en plus.
+  // Éligible parmi ROLES_TOUT_STAFF (tout rôle non-PARENT/SCOUT) d'une des
+  // paroisses du district (voir lib/roles.ts, app/api/district/utilisateurs).
+  roleDistrict        RoleUtilisateur?
+  fonctionDistrict    String?          // Fonction libre de roleDistrict=ASSISTANT_DISTRICT quand
+                                        // brancheTypeDistrict est vide (ex. "Spiritualité")
+  brancheTypeDistrict BrancheType?     // Branche gérée à l'échelle du district par
+                                        // roleDistrict=ASSISTANT_DISTRICT
   tokenCalendrier String?   @unique // Jeton d'abonnement au flux iCal personnel (généré à la demande)
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
@@ -232,6 +245,7 @@ model Utilisateur {
   @@index([paroisseId])
   @@index([role])
   @@index([brancheType])
+  @@index([roleDistrict])
 }
 
 // ---------------------------------------------------------------------------

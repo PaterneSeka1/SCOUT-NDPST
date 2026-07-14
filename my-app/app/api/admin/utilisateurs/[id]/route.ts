@@ -82,6 +82,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // Pas de réaffectation de paroisse dans cette itération : seuls nom, prenom,
     // email, role, actif, fonction et brancheType sont modifiables via cette route.
+    // `role` est toujours un rôle PAROISSIAL, jamais une valeur de district —
+    // ROLES_ASSIGNABLES_PAROISSE les exclut (voir lib/roles.ts) : une affectation
+    // district (roleDistrict) se gère exclusivement via /admin/districts/[id]/commissaire
+    // ou /district/utilisateurs.
     if (role !== undefined && !ROLES_ASSIGNABLES_PAROISSE.includes(role)) {
       return NextResponse.json({ erreur: 'Rôle invalide' }, { status: 400 })
     }
@@ -92,7 +96,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // brancheType/fonction recalculés sur le RÔLE FINAL (nouveau si fourni,
     // sinon existant) — un utilisateur qui change de rôle ne doit jamais
-    // conserver une branche/fonction héritée d'un rôle précédent.
+    // conserver une branche héritée d'un rôle précédent.
     const roleFinal = role !== undefined ? role : existant.role
     const estBrancheFinal = ROLES_BRANCHE.includes(roleFinal)
     if (estBrancheFinal && brancheType === undefined && !existant.brancheType) {
@@ -103,18 +107,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
     const brancheTypeFinal = estBrancheFinal
       ? ((brancheType !== undefined ? brancheType : existant.brancheType) as BrancheType)
-      : roleFinal === 'ASSISTANT_DISTRICT' && brancheType
-        ? (brancheType as BrancheType)
-        : null
-    const fonctionFinal =
-      roleFinal === 'ASSISTANT_DISTRICT' && !brancheTypeFinal
-        ? (fonction !== undefined ? fonction?.trim() || null : existant.fonction)
-        : null
-
-    // Un rôle de district n'a de sens que si le périmètre du district (dérivé du
-    // district de la paroisse d'ancrage, inchangée par cette route) est résoluble.
-    // Depuis que District est une clé étrangère obligatoire sur Paroisse, ce
-    // périmètre est toujours résoluble : plus de vérification à faire ici.
+      : null
+    const fonctionFinal = fonction !== undefined ? fonction?.trim() || null : existant.fonction
 
     if (email !== undefined && email !== null && email !== '') {
       const doublon = await prisma.utilisateur.findFirst({

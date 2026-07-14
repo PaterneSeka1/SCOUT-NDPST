@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { ROLES_PLATEFORME } from '@/lib/roles'
+import { RoleUtilisateur } from '@/app/generated/prisma/client'
+import { ROLES_PLATEFORME, ROLES_TOUT_STAFF } from '@/lib/roles'
 import { enregistrerAudit } from '@/lib/audit'
 import { logger } from '@/lib/logger'
 
@@ -39,7 +40,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
   const equipe = await prisma.utilisateur.findMany({
     where: {
-      role: { in: ['COMMISSAIRE_DISTRICT', 'ADJOINT_DISTRICT', 'ASSISTANT_DISTRICT'] },
+      roleDistrict: { in: ['COMMISSAIRE_DISTRICT', 'ADJOINT_DISTRICT', 'ASSISTANT_DISTRICT'] },
       paroisse: { districtId: id },
     },
     select: {
@@ -51,17 +52,29 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       email: true,
       actif: true,
       role: true,
-      fonction: true,
-      brancheType: true,
+      roleDistrict: true,
+      fonctionDistrict: true,
+      brancheTypeDistrict: true,
       createdAt: true,
       paroisse: { select: { id: true, nom: true } },
     },
-    orderBy: [{ role: 'asc' }, { nom: 'asc' }, { prenom: 'asc' }],
+    orderBy: [{ roleDistrict: 'asc' }, { nom: 'asc' }, { prenom: 'asc' }],
+  })
+
+  // Tout membre de l'équipe du district (y compris le Commissaire) est
+  // désigné en affectant roleDistrict à un membre du staff (ROLES_TOUT_STAFF)
+  // déjà en poste et actif dans l'une des paroisses du district — jamais en
+  // créant un nouveau compte, et sans jamais toucher à son rôle paroissial.
+  const personnelEligible = await prisma.utilisateur.findMany({
+    where: { role: { in: ROLES_TOUT_STAFF as RoleUtilisateur[] }, actif: true, roleDistrict: null, paroisse: { districtId: id } },
+    select: { id: true, nom: true, prenom: true, matricule: true, role: true, paroisse: { select: { id: true, nom: true } } },
+    orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
   })
 
   return NextResponse.json({
     id: district.id,
     nom: district.nom,
+    personnelEligible,
     paroisses: paroisses.map((p) => ({
       id: p.id,
       nom: p.nom,
@@ -71,7 +84,21 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       utilisateurs: p._count.utilisateurs,
       chefGroupe: p.utilisateurs[0] ?? null,
     })),
-    equipe,
+    equipe: equipe.map((m) => ({
+      id: m.id,
+      nom: m.nom,
+      prenom: m.prenom,
+      matricule: m.matricule,
+      telephone: m.telephone,
+      email: m.email,
+      actif: m.actif,
+      role: m.roleDistrict,
+      fonction: m.fonctionDistrict,
+      brancheType: m.brancheTypeDistrict,
+      roleParoisse: m.role,
+      createdAt: m.createdAt,
+      paroisse: m.paroisse,
+    })),
   })
 }
 

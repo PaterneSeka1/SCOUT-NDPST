@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     let brancheType: string | null = null
     if (ROLES_BRANCHE.includes(session.user.role)) {
       brancheType = await getBrancheUtilisateur(session.user.id, paroisseId)
-      // Compte mal configuré (rôle de branche sans PosteBranche assigné) :
+      // Compte mal configuré (rôle de branche sans brancheType assigné) :
       // aucun résultat plutôt que la paroisse entière par défaut.
       if (!brancheType) return NextResponse.json({ documents: [] })
     }

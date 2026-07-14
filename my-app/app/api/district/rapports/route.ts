@@ -9,7 +9,7 @@ import { getParoissesDuDistrict } from '@/lib/district'
 export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session?.user) return NextResponse.json({ erreur: 'Non autorisé' }, { status: 401 })
-  if (!ROLES_DISTRICT.includes(session.user.role)) {
+  if (!session.user.roleDistrict || !ROLES_DISTRICT.includes(session.user.roleDistrict)) {
     return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
   }
 
