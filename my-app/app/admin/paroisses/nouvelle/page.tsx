@@ -9,30 +9,34 @@ const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm te
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 interface FormParoisse {
-  nom: string; ville: string; diocese: string; ocean: string; district: string
+  nom: string; ville: string; diocese: string; ocean: string; districtId: string
   adresse: string; telephone: string; email: string
 }
 
-const VIDE: FormParoisse = { nom: '', ville: '', diocese: '', ocean: '', district: '', adresse: '', telephone: '', email: '' }
+interface DistrictOption { id: string; nom: string }
+
+const VIDE: FormParoisse = { nom: '', ville: '', diocese: '', ocean: '', districtId: '', adresse: '', telephone: '', email: '' }
 
 export default function NouvelleParoissePage() {
   const router = useRouter()
   const [form, setForm] = useState<FormParoisse>(VIDE)
   const [soumission, setSoumission] = useState(false)
-  const [districtsExistants, setDistrictsExistants] = useState<string[]>([])
+  const [districts, setDistricts] = useState<DistrictOption[]>([])
+  const [chargementDistricts, setChargementDistricts] = useState(true)
 
   useEffect(() => {
     fetch('/api/admin/districts')
       .then((r) => (r.ok ? r.json() : null))
-      .then((data: { districts?: { nom: string }[] } | null) => {
-        if (data?.districts) setDistrictsExistants(data.districts.map((d) => d.nom))
+      .then((data: { districts?: DistrictOption[] } | null) => {
+        if (data?.districts) setDistricts(data.districts)
       })
       .catch(() => {})
+      .finally(() => setChargementDistricts(false))
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.nom.trim() || !form.ville.trim() || !form.diocese.trim() || !form.district.trim()) {
+    if (!form.nom.trim() || !form.ville.trim() || !form.diocese.trim() || !form.districtId.trim()) {
       toast.error('Le nom, la ville, le diocèse et le district sont obligatoires.')
       return
     }
@@ -80,18 +84,21 @@ export default function NouvelleParoissePage() {
           </div>
           <div>
             <label className={CLS_LABEL}>District *</label>
-            <input
+            <select
               className={CLS_INPUT}
-              value={form.district}
-              onChange={(e) => setForm({ ...form, district: e.target.value })}
-              list="districts-existants"
-              placeholder="Ex. District Nord"
+              value={form.districtId}
+              onChange={(e) => setForm({ ...form, districtId: e.target.value })}
+              disabled={chargementDistricts || districts.length === 0}
               required
-            />
-            <datalist id="districts-existants">
-              {districtsExistants.map((d) => <option key={d} value={d} />)}
-            </datalist>
-            <p className="mt-1 text-xs text-gray-400">Toute paroisse appartient à un district — reprenez exactement l&apos;orthographe d&apos;un district existant si cette paroisse en fait partie.</p>
+            >
+              <option value="">— Choisir un district —</option>
+              {districts.map((d) => <option key={d.id} value={d.id}>{d.nom}</option>)}
+            </select>
+            {!chargementDistricts && districts.length === 0 && (
+              <p className="mt-1 text-xs text-orange-600">
+                Aucun district enregistré — <Link href="/admin/districts" className="underline">créez-en un</Link> avant de créer une paroisse.
+              </p>
+            )}
           </div>
           <div>
             <label className={CLS_LABEL}>Océan / secteur</label>

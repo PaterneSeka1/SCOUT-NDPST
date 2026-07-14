@@ -9,19 +9,13 @@ export interface ParoisseDuDistrict {
 
 export class DistrictInvalideError extends Error {}
 
-// Trim uniquement : '' et les chaînes ne contenant que des espaces deviennent null.
-export function normaliserDistrict(district?: string | null): string | null {
-  const trim = district?.trim()
-  return trim ? trim : null
-}
-
-// Correspondance EXACTE (après trim), volontairement sans rapprochement approximatif :
-// deux valeurs différant par la casse ou un espace mal placé sont deux districts
-// distincts. Le champ district restant du texte libre côté admin, c'est un choix
-// assumé plutôt qu'une heuristique fragile de rapprochement.
-export async function paroissesParDistrict(district: string): Promise<ParoisseDuDistrict[]> {
+// Correspondance par districtId (clé étrangère), plus par rapprochement de
+// texte libre : depuis que District est une entité à part entière (choisie
+// via un select, jamais retapée), il ne peut plus y avoir deux paroisses
+// dans "le même district" sous des noms légèrement différents.
+export async function paroissesParDistrict(districtId: string): Promise<ParoisseDuDistrict[]> {
   return prisma.paroisse.findMany({
-    where: { district },
+    where: { districtId },
     select: { id: true, nom: true, ville: true, actif: true },
     orderBy: { nom: 'asc' },
   })
@@ -29,18 +23,20 @@ export async function paroissesParDistrict(district: string): Promise<ParoisseDu
 
 // Point d'entrée de la zone /district : dérive le district d'un membre de
 // l'équipe district à partir du district de SA paroisse d'ancrage (paroisseId).
+// Paroisse.districtId est obligatoire (contrainte NOT NULL + clé étrangère) :
+// la seule façon d'échouer ici est que la paroisse elle-même n'existe plus.
 export async function getParoissesDuDistrict(
   paroisseId: string,
-): Promise<{ nomDistrict: string; paroisses: ParoisseDuDistrict[] }> {
-  const paroisse = await prisma.paroisse.findUnique({ where: { id: paroisseId }, select: { district: true } })
+): Promise<{ districtId: string; nomDistrict: string; paroisses: ParoisseDuDistrict[] }> {
+  const paroisse = await prisma.paroisse.findUnique({
+    where: { id: paroisseId },
+    select: { districtId: true, district: { select: { nom: true } } },
+  })
   if (!paroisse) throw new DistrictInvalideError('Paroisse introuvable')
 
-  const nomDistrict = normaliserDistrict(paroisse.district)
-  if (!nomDistrict) {
-    throw new DistrictInvalideError(
-      "Cette paroisse n'a pas de district renseigné — impossible de déterminer son district. Contactez un administrateur.",
-    )
+  return {
+    districtId: paroisse.districtId,
+    nomDistrict: paroisse.district.nom,
+    paroisses: await paroissesParDistrict(paroisse.districtId),
   }
-
-  return { nomDistrict, paroisses: await paroissesParDistrict(nomDistrict) }
 }

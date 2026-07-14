@@ -5,9 +5,8 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { Prisma, RoleUtilisateur, BrancheType } from '@/app/generated/prisma/client'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
-import { ROLES_PLATEFORME, ROLES_ASSIGNABLES_PAROISSE, ROLES_DISTRICT_ETENDU, ROLES_BRANCHE, libelleRoleAvecFonction } from '@/lib/roles'
+import { ROLES_PLATEFORME, ROLES_ASSIGNABLES_PAROISSE, ROLES_BRANCHE, libelleRoleAvecFonction } from '@/lib/roles'
 import { RoleUtilisateurSchema, BrancheTypeSchema } from '@/lib/validation'
-import { normaliserDistrict } from '@/lib/district'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 import { envoyerEmailBienvenue } from '@/lib/notifications'
@@ -113,7 +112,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ erreur: REGLE_MOT_DE_PASSE }, { status: 400 })
     }
 
-    const paroisse = await prisma.paroisse.findUnique({ where: { id: paroisseId }, select: { id: true, district: true } })
+    const paroisse = await prisma.paroisse.findUnique({ where: { id: paroisseId }, select: { id: true } })
     if (!paroisse) return NextResponse.json({ erreur: 'Paroisse introuvable' }, { status: 404 })
 
     // Un admin plateforme (transverse, sans paroisse) ne se crée jamais via cette
@@ -124,12 +123,8 @@ export async function POST(request: NextRequest) {
 
     // Un rôle de district n'a de sens que si le périmètre du district (dérivé du
     // district de la paroisse d'ancrage) est résoluble — voir lib/district.ts.
-    if (ROLES_DISTRICT_ETENDU.includes(role) && !normaliserDistrict(paroisse.district)) {
-      return NextResponse.json(
-        { erreur: "Cette paroisse n'a pas de district renseigné — renseignez-le avant d'y rattacher un rôle de district" },
-        { status: 400 },
-      )
-    }
+    // Depuis que District est une clé étrangère obligatoire sur Paroisse, ce
+    // périmètre est toujours résoluble : plus de vérification à faire ici.
 
     if (brancheType != null && !BrancheTypeSchema.safeParse(brancheType).success) {
       return NextResponse.json({ erreur: 'Branche invalide' }, { status: 400 })

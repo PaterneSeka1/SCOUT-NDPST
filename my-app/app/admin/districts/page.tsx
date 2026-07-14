@@ -5,8 +5,8 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 
 interface District {
+  id: string
   nom: string
-  key: string
   nbParoisses: number
   commissaire: { id: string; nom: string; prenom: string; actif: boolean } | null
 }
@@ -42,8 +42,11 @@ export default function ListeDistricts() {
   const [districts, setDistricts] = useState<District[]>([])
   const [chargement, setChargement] = useState(true)
   const [recherche, setRecherche] = useState('')
+  const [creation, setCreation] = useState(false)
+  const [nomNouveauDistrict, setNomNouveauDistrict] = useState('')
+  const [soumissionCreation, setSoumissionCreation] = useState(false)
 
-  useEffect(() => {
+  const charger = () => {
     fetch('/api/admin/districts')
       .then((r) => {
         if (!r.ok) throw new Error('Erreur serveur')
@@ -52,7 +55,32 @@ export default function ListeDistricts() {
       .then((data: { districts: District[] }) => setDistricts(data.districts))
       .catch(() => toast.error('Impossible de charger les districts.'))
       .finally(() => setChargement(false))
-  }, [])
+  }
+
+  useEffect(charger, [])
+
+  const handleCreer = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!nomNouveauDistrict.trim()) { toast.error('Le nom du district est requis.'); return }
+    setSoumissionCreation(true)
+    try {
+      const res = await fetch('/api/admin/districts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nom: nomNouveauDistrict.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.erreur ?? 'Erreur serveur'); return }
+      toast.success('District créé.')
+      setNomNouveauDistrict('')
+      setCreation(false)
+      charger()
+    } catch {
+      toast.error('Erreur lors de la création')
+    } finally {
+      setSoumissionCreation(false)
+    }
+  }
 
   const rechercheNorm = recherche.trim().toLowerCase()
   const districtsFiltres = rechercheNorm
@@ -76,7 +104,36 @@ export default function ListeDistricts() {
             {districts.length} district{districts.length > 1 ? 's' : ''}
           </p>
         </div>
+        {!creation && (
+          <button
+            onClick={() => setCreation(true)}
+            className="sm:flex-shrink-0 rounded-lg px-4 py-2 text-sm font-bold text-white hover:brightness-110 transition"
+            style={{ backgroundColor: 'var(--cp)' }}
+          >
+            + Nouveau district
+          </button>
+        )}
       </div>
+
+      {creation && (
+        <form onSubmit={handleCreer} className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col sm:flex-row gap-3">
+          <input
+            autoFocus
+            placeholder="Nom du district (ex : District Nord)"
+            value={nomNouveauDistrict}
+            onChange={(e) => setNomNouveauDistrict(e.target.value)}
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent"
+          />
+          <div className="flex gap-2 flex-shrink-0">
+            <button type="submit" disabled={soumissionCreation} className="rounded-lg px-4 py-2 text-sm font-bold text-white disabled:opacity-50 transition" style={{ backgroundColor: 'var(--cp)' }}>
+              {soumissionCreation ? 'Création…' : 'Créer'}
+            </button>
+            <button type="button" onClick={() => { setCreation(false); setNomNouveauDistrict('') }} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
+              Annuler
+            </button>
+          </div>
+        </form>
+      )}
 
       <div className="relative">
         <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -98,8 +155,8 @@ export default function ListeDistricts() {
           <div className="md:hidden space-y-3">
             {districtsFiltres.map((d) => (
               <Link
-                key={d.key}
-                href={`/admin/districts/${d.key}`}
+                key={d.id}
+                href={`/admin/districts/${d.id}`}
                 className="block bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:border-gray-300 hover:shadow-md active:scale-[0.99] transition"
               >
                 <div className="min-w-0">
@@ -133,7 +190,7 @@ export default function ListeDistricts() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {districtsFiltres.map((d) => (
-                    <tr key={d.key} className="hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => (window.location.href = `/admin/districts/${d.key}`)}>
+                    <tr key={d.id} className="hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => (window.location.href = `/admin/districts/${d.id}`)}>
                       <td className="px-4 py-3">
                         <p className="font-medium text-gray-900">{d.nom}</p>
                       </td>

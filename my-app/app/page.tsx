@@ -194,7 +194,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="border-b border-[#d9e5dc] bg-white">
+      <section className="border-b border-[#d9e5dc] bg-white text-center">
         <div className="mx-auto grid max-w-7xl grid-cols-2 gap-px px-5 py-8 sm:px-8 lg:grid-cols-4 lg:px-10">
           {stats.map(({ value, label }) => (
             <div key={label} className="py-3">

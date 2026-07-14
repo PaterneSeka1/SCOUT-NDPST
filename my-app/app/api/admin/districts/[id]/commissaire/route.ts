@@ -4,13 +4,12 @@ import { hash } from 'bcryptjs'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_PLATEFORME } from '@/lib/roles'
-import { normaliserDistrict } from '@/lib/district'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { enregistrerAudit } from '@/lib/audit'
 import { logger } from '@/lib/logger'
 import { envoyerEmailBienvenue } from '@/lib/notifications'
 
-type RouteParams = { params: Promise<{ key: string }> }
+type RouteParams = { params: Promise<{ id: string }> }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
@@ -20,8 +19,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
     }
 
-    const { key } = await params
-    const districtCible = decodeURIComponent(key)
+    const { id: districtId } = await params
+    const districtCible = await prisma.district.findUnique({ where: { id: districtId }, select: { id: true } })
+    if (!districtCible) return NextResponse.json({ erreur: 'District introuvable' }, { status: 404 })
 
     const body = await request.json()
     const { paroisseId, nom, prenom, matricule, telephone, email, password } = body as {
@@ -32,15 +32,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ erreur: 'La paroisse est requise' }, { status: 400 })
     }
 
-    const paroisse = await prisma.paroisse.findUnique({ where: { id: paroisseId }, select: { id: true, district: true } })
+    const paroisse = await prisma.paroisse.findUnique({ where: { id: paroisseId }, select: { id: true, districtId: true } })
     if (!paroisse) return NextResponse.json({ erreur: 'Paroisse introuvable' }, { status: 404 })
 
-    if (normaliserDistrict(paroisse.district) !== districtCible) {
+    if (paroisse.districtId !== districtId) {
       return NextResponse.json({ erreur: "Cette paroisse n'appartient pas à ce district" }, { status: 400 })
     }
 
     const commissaireExistant = await prisma.utilisateur.findFirst({
-      where: { role: 'COMMISSAIRE_DISTRICT', actif: true, paroisse: { district: districtCible } },
+      where: { role: 'COMMISSAIRE_DISTRICT', actif: true, paroisse: { districtId } },
       select: { id: true },
     })
     if (commissaireExistant) {
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(commissaire, { status: 201 })
   } catch (error) {
-    logger.error('POST /api/admin/districts/[key]/commissaire', error)
+    logger.error('POST /api/admin/districts/[id]/commissaire', error)
     return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
   }
 }

@@ -99,7 +99,6 @@ model Paroisse {
   ville     String
   diocese   String
   ocean     String?
-  district  String // Toute paroisse appartient à un district — jamais nul
   adresse   String?
   telephone String?
   email     String?  @unique
@@ -116,6 +115,13 @@ model Paroisse {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Toute paroisse appartient à un district — jamais nul. Restrict (pas
+  // Cascade) : supprimer un district alors que des paroisses y sont encore
+  // rattachées doit être explicitement refusé (voir DELETE /api/admin/districts/[id]),
+  // jamais les détacher ou les supprimer silencieusement en cascade.
+  districtId String
+  district   District @relation(fields: [districtId], references: [id], onDelete: Restrict)
+
   // Relations
   utilisateurs   Utilisateur[]
   scouts         Scout[]
@@ -128,7 +134,24 @@ model Paroisse {
 
   @@index([ville])
   @@index([diocese])
-  @@index([district])
+  @@index([districtId])
+}
+
+// ---------------------------------------------------------------------------
+// District — regroupe plusieurs paroisses sous l'autorité d'un Commissaire de
+// District (voir lib/district.ts, ROLES_DISTRICT_ETENDU). Entité à part
+// entière (et non un simple champ texte sur Paroisse) : un nom de district
+// choisi une fois pour toutes dans un select, jamais retapé paroisse par
+// paroisse — élimine les doublons par faute de frappe/casse.
+// ---------------------------------------------------------------------------
+
+model District {
+  id        String   @id @default(cuid())
+  nom       String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  paroisses Paroisse[]
 }
 
 // ---------------------------------------------------------------------------

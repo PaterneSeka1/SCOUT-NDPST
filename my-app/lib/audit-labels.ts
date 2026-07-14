@@ -24,4 +24,8 @@ export const LABELS_ACTIONS_AUDIT: Record<string, string> = {
   PAROISSE_REACTIVEE: 'Réactivation paroisse',
   PAROISSE_SCOUTS_EXPORTES: 'Export des scouts',
   PAROISSE_UTILISATEURS_EXPORTES: 'Export des utilisateurs',
+  PAROISSE_SUPPRIMEE: 'Suppression paroisse',
+  DISTRICT_CREE: 'Création district',
+  DISTRICT_MODIFIE: 'Renommage district',
+  DISTRICT_SUPPRIME: 'Suppression district',
 }

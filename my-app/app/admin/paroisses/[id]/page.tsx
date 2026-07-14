@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
@@ -17,15 +17,17 @@ interface ChefGroupe {
 
 interface Paroisse {
   id: string; nom: string; ville: string; diocese: string
-  ocean: string | null; district: string | null
+  ocean: string | null; district: { id: string; nom: string }
   adresse: string | null; telephone: string | null; email: string | null
   actif: boolean
   counts: { scouts: number; utilisateurs: number; activites: number }
   chefsGroupe: ChefGroupe[]
 }
 
+interface DistrictOption { id: string; nom: string }
+
 interface FormParoisse {
-  nom: string; ville: string; diocese: string; ocean: string; district: string
+  nom: string; ville: string; diocese: string; ocean: string; districtId: string
   adresse: string; telephone: string; email: string
 }
 
@@ -37,6 +39,7 @@ const CHEF_VIDE: FormChefGroupe = { nom: '', prenom: '', matricule: '', telephon
 
 export default function FicheParoissePage() {
   const { id } = useParams<{ id: string }>()
+  const router = useRouter()
   const [paroisse, setParoisse] = useState<Paroisse | null>(null)
   const [chargement, setChargement] = useState(true)
   const [modeEdition, setModeEdition] = useState(false)
@@ -46,13 +49,14 @@ export default function FicheParoissePage() {
   const [soumissionChef, setSoumissionChef] = useState(false)
   const [afficherFormChef, setAfficherFormChef] = useState(false)
   const [erreurChargement, setErreurChargement] = useState(false)
-  const [districtsExistants, setDistrictsExistants] = useState<string[]>([])
+  const [districts, setDistricts] = useState<DistrictOption[]>([])
+  const [suppression, setSuppression] = useState(false)
 
   useEffect(() => {
     fetch('/api/admin/districts')
       .then((r) => (r.ok ? r.json() : null))
-      .then((data: { districts?: { nom: string }[] } | null) => {
-        if (data?.districts) setDistrictsExistants(data.districts.map((d) => d.nom))
+      .then((data: { districts?: DistrictOption[] } | null) => {
+        if (data?.districts) setDistricts(data.districts)
       })
       .catch(() => {})
   }, [])
@@ -68,7 +72,7 @@ export default function FicheParoissePage() {
         setParoisse(data)
         setForm({
           nom: data.nom, ville: data.ville, diocese: data.diocese,
-          ocean: data.ocean ?? '', district: data.district ?? '',
+          ocean: data.ocean ?? '', districtId: data.district.id,
           adresse: data.adresse ?? '', telephone: data.telephone ?? '', email: data.email ?? '',
         })
       })
@@ -125,6 +129,29 @@ export default function FicheParoissePage() {
       charger()
     } catch {
       toast.error('Erreur lors de la mise à jour')
+    }
+  }
+
+  const handleSupprimer = async () => {
+    if (!paroisse) return
+    const ok = await confirmer({
+      titre: 'Supprimer définitivement cette paroisse ?',
+      description: `"${paroisse.nom}" sera supprimée pour de bon. Cette action est irréversible et n'est possible que si la paroisse n'a encore aucune donnée (scouts, membres, activités…) — sinon, désactivez-la plutôt.`,
+      labelConfirmer: 'Supprimer',
+      danger: true,
+    })
+    if (!ok) return
+    setSuppression(true)
+    try {
+      const res = await fetch(`/api/admin/paroisses/${id}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { toast.error(data.erreur ?? 'Erreur serveur'); return }
+      toast.success('Paroisse supprimée.')
+      router.push('/admin/paroisses')
+    } catch {
+      toast.error('Erreur lors de la suppression')
+    } finally {
+      setSuppression(false)
     }
   }
 
@@ -319,10 +346,10 @@ export default function FicheParoissePage() {
               <div><label className={CLS_LABEL}>Diocèse *</label><input className={CLS_INPUT} value={form.diocese} onChange={(e) => setForm({ ...form, diocese: e.target.value })} required /></div>
               <div>
                 <label className={CLS_LABEL}>District *</label>
-                <input className={CLS_INPUT} value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} list="districts-existants" required />
-                <datalist id="districts-existants">
-                  {districtsExistants.map((d) => <option key={d} value={d} />)}
-                </datalist>
+                <select className={CLS_INPUT} value={form.districtId} onChange={(e) => setForm({ ...form, districtId: e.target.value })} required>
+                  <option value="">— Choisir un district —</option>
+                  {districts.map((d) => <option key={d.id} value={d.id}>{d.nom}</option>)}
+                </select>
               </div>
               <div><label className={CLS_LABEL}>Océan / secteur</label><input className={CLS_INPUT} value={form.ocean} onChange={(e) => setForm({ ...form, ocean: e.target.value })} /></div>
               <div><label className={CLS_LABEL}>Téléphone</label><input className={CLS_INPUT} value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} /></div>
@@ -341,7 +368,7 @@ export default function FicheParoissePage() {
           </form>
         ) : (
           <dl className="grid sm:grid-cols-2 gap-3 text-sm">
-            <div><dt className="text-gray-400">District</dt><dd className="text-gray-800">{paroisse.district || '—'}</dd></div>
+            <div><dt className="text-gray-400">District</dt><dd className="text-gray-800">{paroisse.district.nom}</dd></div>
             <div><dt className="text-gray-400">Océan / secteur</dt><dd className="text-gray-800">{paroisse.ocean || '—'}</dd></div>
             <div><dt className="text-gray-400">Téléphone</dt><dd className="text-gray-800">{paroisse.telephone || '—'}</dd></div>
             <div><dt className="text-gray-400">E-mail</dt><dd className="text-gray-800">{paroisse.email || '—'}</dd></div>
@@ -351,8 +378,8 @@ export default function FicheParoissePage() {
       </section>
 
       {/* Zone sensible */}
-      <section className="bg-white rounded-xl border border-red-100 p-5 sm:p-6">
-        <h2 className="text-sm font-bold uppercase tracking-widest text-red-500 mb-3">Zone sensible</h2>
+      <section className="bg-white rounded-xl border border-red-100 p-5 sm:p-6 space-y-4">
+        <h2 className="text-sm font-bold uppercase tracking-widest text-red-500">Zone sensible</h2>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <p className="text-sm text-gray-600">
             {paroisse.actif
@@ -364,6 +391,19 @@ export default function FicheParoissePage() {
             className={`sm:flex-shrink-0 rounded-lg px-4 py-2 text-sm font-semibold transition ${paroisse.actif ? 'border border-red-300 text-red-600 hover:bg-red-50' : 'border border-green-300 text-green-700 hover:bg-green-50'}`}
           >
             {paroisse.actif ? 'Désactiver' : 'Réactiver'}
+          </button>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-red-100 pt-4">
+          <p className="text-sm text-gray-600">
+            Supprimer définitivement n&apos;est possible que si cette paroisse n&apos;a encore aucune donnée (scouts, membres, activités…). Dans tous les autres cas, désactivez-la plutôt.
+          </p>
+          <button
+            onClick={handleSupprimer}
+            disabled={suppression}
+            className="sm:flex-shrink-0 rounded-lg border border-red-300 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-50"
+          >
+            {suppression ? 'Suppression…' : 'Supprimer définitivement'}
           </button>
         </div>
       </section>

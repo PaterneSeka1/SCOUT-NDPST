@@ -11,7 +11,7 @@ const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 interface Paroisse {
   id: string; nom: string; ville: string; diocese: string
-  ocean: string | null; district: string | null
+  ocean: string | null; district: { id: string; nom: string }
   adresse: string | null; telephone: string | null; email: string | null; logo: string | null
   _count: { scouts: number; utilisateurs: number; activites: number }
 }
@@ -23,7 +23,7 @@ interface Activite {
 
 interface FormParoisse {
   nom: string; ville: string; diocese: string
-  ocean: string; district: string
+  ocean: string
   adresse: string; telephone: string; email: string
 }
 
@@ -40,7 +40,7 @@ export default function PageParoisse() {
   const [chargementErreur, setChargementErreur] = useState(false)
 
   const [modeEdition, setModeEdition] = useState(false)
-  const [form, setForm] = useState<FormParoisse>({ nom: '', ville: '', diocese: '', ocean: '', district: '', adresse: '', telephone: '', email: '' })
+  const [form, setForm] = useState<FormParoisse>({ nom: '', ville: '', diocese: '', ocean: '', adresse: '', telephone: '', email: '' })
   const [soumission, setSoumission] = useState(false)
 
   const [logoPreview, setLogoPreview] = useState('')
@@ -59,7 +59,7 @@ export default function PageParoisse() {
       setParoisse(paroisseData)
       setForm({
         nom: paroisseData.nom, ville: paroisseData.ville, diocese: paroisseData.diocese,
-        ocean: paroisseData.ocean ?? '', district: paroisseData.district ?? '',
+        ocean: paroisseData.ocean ?? '',
         adresse: paroisseData.adresse ?? '', telephone: paroisseData.telephone ?? '', email: paroisseData.email ?? '',
       })
       if (paroisseData.logo) setLogoPreview(paroisseData.logo)
@@ -202,11 +202,9 @@ export default function PageParoisse() {
                       <span className="font-medium">Océan :</span> {paroisse.ocean}
                     </span>
                   )}
-                  {paroisse.district && (
-                    <span className="inline-flex items-center gap-1 bg-purple-50 text-purple-700 text-xs px-2 py-0.5 rounded-full border border-purple-100">
-                      <span className="font-medium">District :</span> {paroisse.district}
-                    </span>
-                  )}
+                  <span className="inline-flex items-center gap-1 bg-purple-50 text-purple-700 text-xs px-2 py-0.5 rounded-full border border-purple-100">
+                    <span className="font-medium">District :</span> {paroisse.district.nom}
+                  </span>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
@@ -267,7 +265,7 @@ export default function PageParoisse() {
               </div>
               <div>
                 <label className={CLS_LABEL}>District</label>
-                <p className={`${CLS_INPUT} bg-gray-50 text-gray-500`}>{form.district || '—'}</p>
+                <p className={`${CLS_INPUT} bg-gray-50 text-gray-500`}>{paroisse?.district.nom ?? '—'}</p>
                 <p className="text-xs text-gray-400 mt-1">Modifiable uniquement par l&apos;administrateur plateforme.</p>
               </div>
               <div className="sm:col-span-2">

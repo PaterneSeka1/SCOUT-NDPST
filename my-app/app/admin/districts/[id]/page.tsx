@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { PasswordInput } from '@/app/components/PasswordInput'
+import { confirmer } from '@/app/components/ConfirmDialog'
 import { libelleRoleAvecFonction } from '@/lib/roles'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -37,6 +38,7 @@ interface MembreEquipe {
 }
 
 interface District {
+  id: string
   nom: string
   paroisses: ParoisseDistrict[]
   equipe: MembreEquipe[]
@@ -55,29 +57,79 @@ interface FormCommissaire {
 const COMMISSAIRE_VIDE: FormCommissaire = { paroisseId: '', nom: '', prenom: '', matricule: '', telephone: '', email: '', motDePasse: '' }
 
 export default function FicheDistrictPage() {
-  const { key } = useParams<{ key: string }>()
+  const { id } = useParams<{ id: string }>()
+  const router = useRouter()
   const [district, setDistrict] = useState<District | null>(null)
   const [chargement, setChargement] = useState(true)
   const [erreurChargement, setErreurChargement] = useState(false)
   const [formCommissaire, setFormCommissaire] = useState<FormCommissaire>(COMMISSAIRE_VIDE)
   const [soumissionCommissaire, setSoumissionCommissaire] = useState(false)
+  const [renommage, setRenommage] = useState(false)
+  const [nouveauNom, setNouveauNom] = useState('')
+  const [soumissionRenommage, setSoumissionRenommage] = useState(false)
+  const [suppression, setSuppression] = useState(false)
 
   const charger = useCallback(() => {
     setErreurChargement(false)
-    fetch(`/api/admin/districts/${key}`)
+    fetch(`/api/admin/districts/${id}`)
       .then((r) => {
         if (!r.ok) throw new Error('Erreur serveur')
         return r.json()
       })
-      .then((data: District) => setDistrict(data))
+      .then((data: District) => { setDistrict(data); setNouveauNom(data.nom) })
       .catch(() => {
         setErreurChargement(true)
         toast.error('Impossible de charger ce district.')
       })
       .finally(() => setChargement(false))
-  }, [key])
+  }, [id])
 
   useEffect(() => { charger() }, [charger])
+
+  const handleRenommer = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!nouveauNom.trim()) { toast.error('Le nom du district est requis.'); return }
+    setSoumissionRenommage(true)
+    try {
+      const res = await fetch(`/api/admin/districts/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nom: nouveauNom.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.erreur ?? 'Erreur serveur'); return }
+      toast.success('District renommé.')
+      setRenommage(false)
+      charger()
+    } catch {
+      toast.error('Erreur lors du renommage')
+    } finally {
+      setSoumissionRenommage(false)
+    }
+  }
+
+  const handleSupprimer = async () => {
+    if (!district) return
+    const ok = await confirmer({
+      titre: 'Supprimer ce district ?',
+      description: `"${district.nom}" sera supprimé définitivement. Cette action est irréversible et n'est possible que si ce district ne contient plus aucune paroisse.`,
+      labelConfirmer: 'Supprimer',
+      danger: true,
+    })
+    if (!ok) return
+    setSuppression(true)
+    try {
+      const res = await fetch(`/api/admin/districts/${id}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { toast.error(data.erreur ?? 'Erreur serveur'); return }
+      toast.success('District supprimé.')
+      router.push('/admin/districts')
+    } catch {
+      toast.error('Erreur lors de la suppression')
+    } finally {
+      setSuppression(false)
+    }
+  }
 
   const handleCreerCommissaire = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -95,7 +147,7 @@ export default function FicheDistrictPage() {
     }
     setSoumissionCommissaire(true)
     try {
-      const res = await fetch(`/api/admin/districts/${key}/commissaire`, {
+      const res = await fetch(`/api/admin/districts/${id}/commissaire`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -144,7 +196,38 @@ export default function FicheDistrictPage() {
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
         <Link href="/admin/districts" className="text-sm text-gray-500 hover:text-gray-800">← Retour aux districts</Link>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mt-2">District {district.nom}</h1>
+
+        {renommage ? (
+          <form onSubmit={handleRenommer} className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2">
+            <input className={CLS_INPUT} value={nouveauNom} onChange={(e) => setNouveauNom(e.target.value)} autoFocus />
+            <div className="flex gap-2">
+              <button type="submit" disabled={soumissionRenommage} className="rounded-lg px-4 py-2 text-sm font-bold text-white disabled:opacity-50 transition" style={{ backgroundColor: 'var(--cp)' }}>
+                {soumissionRenommage ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+              <button type="button" onClick={() => { setRenommage(false); setNouveauNom(district.nom) }} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
+                Annuler
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="flex items-start justify-between gap-3 mt-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">District {district.nom}</h1>
+            <div className="flex gap-3 flex-shrink-0 pt-1">
+              <button onClick={() => setRenommage(true)} className="text-sm font-medium hover:underline" style={{ color: 'var(--cp)' }}>
+                Renommer
+              </button>
+              <button
+                onClick={handleSupprimer}
+                disabled={suppression || district.paroisses.length > 0}
+                title={district.paroisses.length > 0 ? 'Déplacez les paroisses de ce district avant de le supprimer' : undefined}
+                className="text-sm font-medium text-red-600 hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
+              >
+                {suppression ? 'Suppression…' : 'Supprimer'}
+              </button>
+            </div>
+          </div>
+        )}
+
         <p className="text-sm text-gray-500 mt-0.5">
           {district.paroisses.length} paroisse{district.paroisses.length > 1 ? 's' : ''}
         </p>

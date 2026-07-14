@@ -48,14 +48,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { nom, ville, diocese, ocean, district, adresse, telephone, email } = body as {
-      nom?: string; ville?: string; diocese?: string; ocean?: string; district?: string
+    const { nom, ville, diocese, ocean, districtId, adresse, telephone, email } = body as {
+      nom?: string; ville?: string; diocese?: string; ocean?: string; districtId?: string
       adresse?: string; telephone?: string; email?: string
     }
 
-    if (!nom?.trim() || !ville?.trim() || !diocese?.trim() || !district?.trim()) {
+    if (!nom?.trim() || !ville?.trim() || !diocese?.trim() || !districtId?.trim()) {
       return NextResponse.json({ erreur: 'Le nom, la ville, le diocèse et le district sont obligatoires' }, { status: 400 })
     }
+
+    const district = await prisma.district.findUnique({ where: { id: districtId }, select: { id: true } })
+    if (!district) return NextResponse.json({ erreur: 'District invalide' }, { status: 400 })
 
     if (email?.trim()) {
       const doublon = await prisma.paroisse.findUnique({ where: { email: email.trim() }, select: { id: true } })
@@ -68,7 +71,7 @@ export async function POST(request: NextRequest) {
         ville: ville.trim(),
         diocese: diocese.trim(),
         ocean: ocean?.trim() || null,
-        district: district.trim(),
+        districtId: district.id,
         adresse: adresse?.trim() || null,
         telephone: telephone?.trim() || null,
         email: email?.trim() || null,

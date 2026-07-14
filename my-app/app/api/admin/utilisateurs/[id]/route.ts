@@ -3,8 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { RoleUtilisateur, BrancheType } from '@/app/generated/prisma/client'
-import { ROLES_PLATEFORME, ROLES_ASSIGNABLES_PAROISSE, ROLES_DISTRICT_ETENDU, ROLES_BRANCHE } from '@/lib/roles'
-import { normaliserDistrict } from '@/lib/district'
+import { ROLES_PLATEFORME, ROLES_ASSIGNABLES_PAROISSE, ROLES_BRANCHE } from '@/lib/roles'
 import { BrancheTypeSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
@@ -17,7 +16,7 @@ type RouteParams = { params: Promise<{ id: string }> }
 async function trouverCible(id: string) {
   return prisma.utilisateur.findFirst({
     where: { id, role: { not: 'ADMIN_PLATEFORME' } },
-    select: { id: true, role: true, actif: true, fonction: true, brancheType: true, paroisse: { select: { district: true } } },
+    select: { id: true, role: true, actif: true, fonction: true, brancheType: true },
   })
 }
 
@@ -114,12 +113,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // Un rôle de district n'a de sens que si le périmètre du district (dérivé du
     // district de la paroisse d'ancrage, inchangée par cette route) est résoluble.
-    if (role !== undefined && ROLES_DISTRICT_ETENDU.includes(role) && !normaliserDistrict(existant.paroisse?.district)) {
-      return NextResponse.json(
-        { erreur: "La paroisse d'ancrage de cet utilisateur n'a pas de district renseigné — renseignez-le avant d'y rattacher un rôle de district" },
-        { status: 400 },
-      )
-    }
+    // Depuis que District est une clé étrangère obligatoire sur Paroisse, ce
+    // périmètre est toujours résoluble : plus de vérification à faire ici.
 
     if (email !== undefined && email !== null && email !== '') {
       const doublon = await prisma.utilisateur.findFirst({

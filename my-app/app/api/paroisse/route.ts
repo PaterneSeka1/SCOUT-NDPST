@@ -16,6 +16,7 @@ export async function GET() {
   const paroisse = await prisma.paroisse.findUnique({
     where: { id: paroisseId },
     include: {
+      district: { select: { id: true, nom: true } },
       _count: { select: { scouts: true, utilisateurs: true, activites: true } },
     },
   })
