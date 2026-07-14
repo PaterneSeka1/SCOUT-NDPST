@@ -61,7 +61,7 @@ export default function AdminAccueil() {
     { label: 'Taux de présence', value: `${kpis?.tauxPresence ?? 0} %`, icone: '✅', couleur: '#27ae60' },
     { label: 'Activités ce mois', value: kpis?.activitesMois ?? 0, icone: '🗓️', couleur: '#3498db' },
     { label: 'Cotisations payées', value: formatMontantFCFA(kpis?.cotisationsPayees ?? 0), icone: '💰', couleur: '#27ae60' },
-    { label: 'Cotisations en attente', value: formatMontantFCFA(kpis?.cotisationsEnAttente ?? 0), icone: '⏳', couleur: '#f39c12' },
+    { label: 'Cotisations à finaliser', value: formatMontantFCFA(kpis?.cotisationsEnAttente ?? 0), icone: '⏳', couleur: '#f39c12' },
   ]
 
   return (

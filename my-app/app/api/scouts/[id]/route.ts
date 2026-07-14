@@ -89,7 +89,18 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
         },
         cotisations: {
           orderBy: [{ statut: 'asc' }, { anneeScolaire: 'desc' }],
-          select: { id: true, type: true, libelle: true, montant: true, anneeScolaire: true, statut: true, datePaiement: true },
+          select: {
+            id: true,
+            type: true,
+            libelle: true,
+            montant: true,
+            montantPaye: true,
+            anneeScolaire: true,
+            statut: true,
+            datePaiement: true,
+            collectePar: { select: { id: true, nom: true, prenom: true, role: true } },
+            enregistrePar: { select: { id: true, nom: true, prenom: true, role: true } },
+          },
         },
       },
     })

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { StatutCotisation } from '@/app/generated/prisma/client'
+import { Prisma, StatutCotisation, BrancheType } from '@/app/generated/prisma/client'
 import { ROLES_GESTION, ROLES_GROUPE, ROLES_BRANCHE } from '@/lib/roles'
 import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { logger } from '@/lib/logger'
@@ -25,8 +25,8 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
 
     const { id } = await params
 
-    // Un responsable de branche ne peut enregistrer un paiement que pour un
-    // scout de sa propre branche.
+    // Un responsable de branche ne peut enregistrer un paiement que pour une
+    // personne de sa propre branche, qu'elle soit fiche scout ou compte staff.
     let brancheRequise: string | undefined
     if (ROLES_BRANCHE.includes(session.user.role)) {
       const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
@@ -34,11 +34,20 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       brancheRequise = bt
     }
 
+    const participantBrancheWhere: Prisma.CotisationWhereInput = brancheRequise
+      ? {
+          OR: [
+            { scout: { brancheType: brancheRequise as BrancheType } },
+            { utilisateur: { brancheType: brancheRequise as BrancheType } },
+          ],
+        }
+      : {}
+
     const existante = await prisma.cotisation.findFirst({
       where: {
         id,
         paroisseId,
-        ...(brancheRequise ? { scout: { brancheType: brancheRequise as never } } : {}),
+        ...participantBrancheWhere,
       },
     })
     if (!existante) return NextResponse.json({ erreur: 'Cotisation introuvable' }, { status: 404 })
@@ -63,38 +72,92 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
         montantPaye >= existante.montant
       ) {
         return NextResponse.json(
-          { erreur: 'Le montant payé doit être un entier positif, inférieur au montant dû (sinon utilisez le statut "Payée")' },
+          { erreur: 'Le montant reçu doit être un entier positif, inférieur au montant dû' },
           { status: 400 },
         )
       }
     }
 
-    // montantPaye reste toujours cohérent avec statut : 0 pour EN_ATTENTE/EXONEREE,
-    // le montant dû en entier pour PAYEE, la valeur fournie pour PARTIELLEMENT_PAYEE.
-    const montantPayeSelonStatut: Record<string, number> = {
-      EN_ATTENTE: 0,
-      EXONEREE: 0,
-      PAYEE: existante.montant,
-      PARTIELLEMENT_PAYEE: montantPaye ?? 0,
+    const statutData: Prisma.CotisationUncheckedUpdateInput = {}
+    let montantPayeAudit: number | undefined
+    let collecteParAudit: string | null | undefined
+
+    if (statut !== undefined) {
+      const statutDemande = statut as StatutCotisation
+      const montantComplet = existante.montant
+
+      switch (statutDemande) {
+        case 'EN_ATTENTE':
+          montantPayeAudit = 0
+          collecteParAudit = null
+          Object.assign(statutData, {
+            statut: statutDemande,
+            montantPaye: 0,
+            datePaiement: null,
+            enregistreParId: null,
+            collecteParId: null,
+          })
+          break
+        case 'PARTIELLEMENT_PAYEE':
+          montantPayeAudit = montantPaye ?? 0
+          collecteParAudit = session.user.id
+          Object.assign(statutData, {
+            statut: statutDemande,
+            montantPaye: montantPayeAudit,
+            datePaiement: new Date(),
+            enregistreParId: session.user.id,
+            collecteParId: session.user.id,
+          })
+          break
+        case 'ARGENT_RECU':
+          montantPayeAudit = montantComplet
+          collecteParAudit = session.user.id
+          Object.assign(statutData, {
+            statut: statutDemande,
+            montantPaye: montantComplet,
+            datePaiement: new Date(),
+            enregistreParId: session.user.id,
+            collecteParId: session.user.id,
+          })
+          break
+        case 'PAYE_SITE':
+        case 'PAYEE':
+          montantPayeAudit = montantComplet
+          collecteParAudit = existante.collecteParId ?? session.user.id
+          Object.assign(statutData, {
+            statut: statutDemande,
+            montantPaye: montantComplet,
+            datePaiement: new Date(),
+            enregistreParId: session.user.id,
+            collecteParId: collecteParAudit,
+          })
+          break
+        case 'EXONEREE':
+          montantPayeAudit = 0
+          collecteParAudit = null
+          Object.assign(statutData, {
+            statut: statutDemande,
+            montantPaye: 0,
+            datePaiement: null,
+            enregistreParId: session.user.id,
+            collecteParId: null,
+          })
+          break
+      }
     }
 
     const cotisation = await prisma.cotisation.update({
       where: { id },
       data: {
-        ...(statut !== undefined
-          ? {
-              statut: statut as StatutCotisation,
-              montantPaye: montantPayeSelonStatut[statut],
-              datePaiement: statut === 'PAYEE' || statut === 'PARTIELLEMENT_PAYEE' ? new Date() : null,
-              enregistreParId: statut === 'PAYEE' || statut === 'PARTIELLEMENT_PAYEE' ? session.user.id : null,
-            }
-          : {}),
+        ...statutData,
         ...(modePaiement !== undefined ? { modePaiement: modePaiement?.trim() || null } : {}),
         ...(notes !== undefined ? { notes: notes?.trim() || null } : {}),
       },
       include: {
-        scout: { select: { id: true, nom: true, prenom: true, brancheType: true } },
-        enregistrePar: { select: { id: true, nom: true, prenom: true } },
+        scout: { select: { id: true, nom: true, prenom: true, brancheType: true, matricule: true, actif: true } },
+        utilisateur: { select: { id: true, nom: true, prenom: true, role: true, brancheType: true, matricule: true, actif: true } },
+        enregistrePar: { select: { id: true, nom: true, prenom: true, role: true } },
+        collectePar: { select: { id: true, nom: true, prenom: true, role: true } },
       },
     })
 
@@ -103,8 +166,9 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     // FCFA de plus) — sans quoi ce second mouvement d'argent ne laisserait
     // aucune trace, alors que c'est justement ce que ce statut vise à tracer.
     const statutInchange = statut !== undefined && statut === existante.statut
-    const montantInchange = statutInchange && montantPayeSelonStatut[statut] === existante.montantPaye
-    if (statut !== undefined && !montantInchange) {
+    const montantInchange = statutInchange && montantPayeAudit === existante.montantPaye
+    const collecteurInchange = statutInchange && collecteParAudit === existante.collecteParId
+    if (statut !== undefined && !(montantInchange && collecteurInchange)) {
       await enregistrerAudit({
         paroisseId,
         acteurId: session.user.id,
@@ -115,8 +179,11 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
           ancienStatut: existante.statut,
           nouveauStatut: statut,
           scoutId: existante.scoutId,
+          utilisateurId: existante.utilisateurId,
           ancienMontantPaye: existante.montantPaye,
-          montantPaye: montantPayeSelonStatut[statut],
+          montantPaye: montantPayeAudit,
+          ancienCollecteParId: existante.collecteParId,
+          collecteParId: collecteParAudit,
         },
       })
     }
@@ -154,7 +221,12 @@ export async function DELETE(_req: NextRequest, { params }: RouteParams) {
       action: 'COTISATION_SUPPRIMEE',
       entite: 'Cotisation',
       entiteId: id,
-      details: { scoutId: existante.scoutId, montant: existante.montant, anneeScolaire: existante.anneeScolaire },
+      details: {
+        scoutId: existante.scoutId,
+        utilisateurId: existante.utilisateurId,
+        montant: existante.montant,
+        anneeScolaire: existante.anneeScolaire,
+      },
     })
 
     return NextResponse.json({ ok: true })

@@ -1,6 +1,17 @@
+// Un champ commençant par =, +, -, @ (ou tabulation/retour chariot) est
+// interprété comme une formule par Excel/LibreOffice à l'ouverture du CSV —
+// classique vecteur d'injection de formule (OWASP CSV Injection) via un champ
+// libre (libellé, nom...) saisi par un utilisateur. On neutralise en
+// préfixant d'une apostrophe, qui force une lecture en texte brut.
+const PREFIXES_FORMULE = ['=', '+', '-', '@', '\t', '\r']
+
 /** Échappe un champ pour un CSV délimité par point-virgule (convention Excel FR). */
 export function champCsv(v: string | null | undefined): string {
-  return `"${(v ?? '').replace(/"/g, '""')}"`
+  let valeur = v ?? ''
+  if (PREFIXES_FORMULE.includes(valeur[0])) {
+    valeur = `'${valeur}`
+  }
+  return `"${valeur.replace(/"/g, '""')}"`
 }
 
 const DEBUT_MARQUES_DIACRITIQUES = 0x0300

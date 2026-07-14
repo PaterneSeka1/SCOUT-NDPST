@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { TypeCotisation, StatutCotisation } from '@/app/generated/prisma/client'
+import { Prisma, TypeCotisation, StatutCotisation, BrancheType, RoleUtilisateur } from '@/app/generated/prisma/client'
 import { ROLES_TOUT_STAFF, ROLES_GROUPE, ROLES_BRANCHE } from '@/lib/roles'
 import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { anneeScolaireCourante } from '@/lib/cotisations'
@@ -40,19 +40,33 @@ export async function GET(req: NextRequest) {
     if (statut !== undefined && !(statut in StatutCotisation)) {
       return NextResponse.json({ erreur: 'Statut invalide' }, { status: 400 })
     }
+    if (filtreBranche !== undefined && !(filtreBranche in BrancheType)) {
+      return NextResponse.json({ erreur: 'Branche invalide' }, { status: 400 })
+    }
+
+    const where: Prisma.CotisationWhereInput = {
+      paroisseId,
+      anneeScolaire,
+      ...(statut ? { statut: statut as StatutCotisation } : {}),
+      ...(filtreBranche
+        ? {
+            OR: [
+              { scout: { brancheType: filtreBranche as BrancheType } },
+              { utilisateur: { brancheType: filtreBranche as BrancheType } },
+            ],
+          }
+        : {}),
+    }
 
     const cotisations = await prisma.cotisation.findMany({
-      where: {
-        paroisseId,
-        anneeScolaire,
-        ...(statut ? { statut: statut as StatutCotisation } : {}),
-        ...(filtreBranche ? { scout: { brancheType: filtreBranche as never } } : {}),
-      },
+      where,
       include: {
         scout: { select: { id: true, nom: true, prenom: true, brancheType: true, matricule: true, actif: true } },
-        enregistrePar: { select: { id: true, nom: true, prenom: true } },
+        utilisateur: { select: { id: true, nom: true, prenom: true, role: true, brancheType: true, matricule: true, actif: true } },
+        enregistrePar: { select: { id: true, nom: true, prenom: true, role: true } },
+        collectePar: { select: { id: true, nom: true, prenom: true, role: true } },
       },
-      orderBy: [{ statut: 'asc' }, { scout: { nom: 'asc' } }],
+      orderBy: [{ statut: 'asc' }, { createdAt: 'desc' }],
     })
 
     return NextResponse.json({ cotisations })
@@ -77,48 +91,114 @@ export async function POST(req: NextRequest) {
     const paroisseId = paroisseIdRequise(session)
 
     const body = await req.json()
-    const { scoutId, scoutIds, type, libelle, montant, anneeScolaire } = body as {
+    const { scoutId, scoutIds, utilisateurId, utilisateurIds, cible, branche, type, libelle, montant, anneeScolaire } = body as {
       scoutId?: string
       scoutIds?: string[]
+      utilisateurId?: string
+      utilisateurIds?: string[]
+      cible?: 'SCOUTS_BRANCHE' | 'STAFF_BRANCHE' | 'TOUS_STAFF'
+      branche?: string
       type?: string
       libelle?: string
       montant?: number
       anneeScolaire?: string
     }
 
-    const cibles = scoutIds?.length ? scoutIds : scoutId ? [scoutId] : []
-    if (cibles.length === 0) {
-      return NextResponse.json({ erreur: 'scoutId ou scoutIds est requis' }, { status: 400 })
-    }
     if (!type || !(type in TypeCotisation)) {
       return NextResponse.json({ erreur: 'Type de cotisation invalide' }, { status: 400 })
     }
     if (typeof montant !== 'number' || montant < 0 || !Number.isInteger(montant)) {
       return NextResponse.json({ erreur: 'Le montant doit être un entier positif' }, { status: 400 })
     }
+    if (branche !== undefined && !(branche in BrancheType)) {
+      return NextResponse.json({ erreur: 'Branche invalide' }, { status: 400 })
+    }
     const annee = anneeScolaire?.trim() || anneeScolaireCourante()
 
-    const scouts = await prisma.scout.findMany({
-      where: { id: { in: cibles }, paroisseId },
-      select: { id: true },
-    })
-    if (scouts.length !== cibles.length) {
-      return NextResponse.json({ erreur: 'Un ou plusieurs scouts sont introuvables' }, { status: 404 })
+    let scouts: { id: string }[] = []
+    let utilisateurs: { id: string }[] = []
+
+    if (cible === 'SCOUTS_BRANCHE') {
+      if (!branche) return NextResponse.json({ erreur: 'La branche est requise' }, { status: 400 })
+      scouts = await prisma.scout.findMany({
+        where: { paroisseId, actif: true, brancheType: branche as BrancheType },
+        select: { id: true },
+      })
+    } else if (cible === 'STAFF_BRANCHE') {
+      if (!branche) return NextResponse.json({ erreur: 'La branche est requise' }, { status: 400 })
+      utilisateurs = await prisma.utilisateur.findMany({
+        where: {
+          paroisseId,
+          actif: true,
+          role: { in: ROLES_TOUT_STAFF as RoleUtilisateur[] },
+          brancheType: branche as BrancheType,
+        },
+        select: { id: true },
+      })
+    } else if (cible === 'TOUS_STAFF') {
+      utilisateurs = await prisma.utilisateur.findMany({
+        where: { paroisseId, actif: true, role: { in: ROLES_TOUT_STAFF as RoleUtilisateur[] } },
+        select: { id: true },
+      })
+    } else {
+      const ciblesScouts = scoutIds?.length ? scoutIds : scoutId ? [scoutId] : []
+      const ciblesUtilisateurs = utilisateurIds?.length ? utilisateurIds : utilisateurId ? [utilisateurId] : []
+      if (ciblesScouts.length === 0 && ciblesUtilisateurs.length === 0) {
+        return NextResponse.json({ erreur: 'Choisissez au moins un scout ou un chef/staff' }, { status: 400 })
+      }
+
+      scouts = ciblesScouts.length
+        ? await prisma.scout.findMany({
+            where: { id: { in: ciblesScouts }, paroisseId },
+            select: { id: true },
+          })
+        : []
+      utilisateurs = ciblesUtilisateurs.length
+        ? await prisma.utilisateur.findMany({
+            where: { id: { in: ciblesUtilisateurs }, paroisseId, role: { in: ROLES_TOUT_STAFF as RoleUtilisateur[] } },
+            select: { id: true },
+          })
+        : []
+
+      if (scouts.length !== ciblesScouts.length) {
+        return NextResponse.json({ erreur: 'Un ou plusieurs scouts sont introuvables' }, { status: 404 })
+      }
+      if (utilisateurs.length !== ciblesUtilisateurs.length) {
+        return NextResponse.json({ erreur: 'Un ou plusieurs chefs/staff sont introuvables' }, { status: 404 })
+      }
+    }
+
+    if (scouts.length === 0 && utilisateurs.length === 0) {
+      return NextResponse.json({ erreur: 'Aucune personne active ne correspond à cette génération' }, { status: 400 })
     }
 
     const cotisations = await prisma.$transaction(
-      scouts.map((s) =>
-        prisma.cotisation.create({
-          data: {
-            scoutId: s.id,
-            paroisseId,
-            type: type as TypeCotisation,
-            libelle: libelle?.trim() || null,
-            montant,
-            anneeScolaire: annee,
-          },
-        }),
-      ),
+      [
+        ...scouts.map((s) =>
+          prisma.cotisation.create({
+            data: {
+              scoutId: s.id,
+              paroisseId,
+              type: type as TypeCotisation,
+              libelle: libelle?.trim() || null,
+              montant,
+              anneeScolaire: annee,
+            },
+          }),
+        ),
+        ...utilisateurs.map((u) =>
+          prisma.cotisation.create({
+            data: {
+              utilisateurId: u.id,
+              paroisseId,
+              type: type as TypeCotisation,
+              libelle: libelle?.trim() || null,
+              montant,
+              anneeScolaire: annee,
+            },
+          }),
+        ),
+      ],
     )
 
     await Promise.all(
@@ -129,7 +209,13 @@ export async function POST(req: NextRequest) {
           action: 'COTISATION_CREEE',
           entite: 'Cotisation',
           entiteId: c.id,
-          details: { scoutId: c.scoutId, type: c.type, montant: c.montant, anneeScolaire: c.anneeScolaire },
+          details: {
+            scoutId: c.scoutId,
+            utilisateurId: c.utilisateurId,
+            type: c.type,
+            montant: c.montant,
+            anneeScolaire: c.anneeScolaire,
+          },
         }),
       ),
     )

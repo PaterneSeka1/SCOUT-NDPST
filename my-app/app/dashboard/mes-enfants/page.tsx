@@ -3,8 +3,15 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
-import { LABELS_TYPE_COTISATION, LABELS_STATUT_COTISATION, COULEURS_STATUT_COTISATION, formatMontantFCFA } from '@/lib/cotisations'
+import {
+  LABELS_TYPE_COTISATION,
+  LABELS_STATUT_COTISATION,
+  COULEURS_STATUT_COTISATION,
+  STATUTS_COTISATION_A_FINALISER,
+  formatMontantFCFA,
+} from '@/lib/cotisations'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
+import { LABELS_ROLES } from '@/lib/roles'
 
 const LABELS_STATUT_REUNION: Record<string, { label: string; cls: string; dot: string }> = {
   PRESENT: { label: 'Présent', cls: 'text-green-700 bg-green-50', dot: 'bg-green-500' },
@@ -22,8 +29,10 @@ interface PresenceReunion {
 }
 
 interface CotisationEnfant {
-  id: string; type: string; libelle: string | null; montant: number
+  id: string; type: string; libelle: string | null; montant: number; montantPaye: number
   anneeScolaire: string; statut: string; datePaiement: string | null
+  collectePar: { id: string; nom: string; prenom: string; role: string } | null
+  enregistrePar: { id: string; nom: string; prenom: string; role: string } | null
 }
 
 interface Scout {
@@ -227,25 +236,48 @@ export default function PageMesEnfants() {
                   <div className="border-t border-gray-100 px-5 py-3">
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-xs font-medium text-gray-700">Cotisations</p>
-                      {scout.cotisations.some((c) => c.statut === 'EN_ATTENTE') && (
+                      {scout.cotisations.some((c) => STATUTS_COTISATION_A_FINALISER.includes(c.statut) && c.montantPaye < c.montant) && (
                         <p className="text-xs font-semibold text-amber-700">
                           Total dû : {formatMontantFCFA(
-                            scout.cotisations.filter((c) => c.statut === 'EN_ATTENTE').reduce((s, c) => s + c.montant, 0),
+                            scout.cotisations
+                              .filter((c) => STATUTS_COTISATION_A_FINALISER.includes(c.statut))
+                              .reduce((s, c) => s + Math.max(0, c.montant - c.montantPaye), 0),
                           )}
                         </p>
                       )}
                     </div>
-                    <div className="space-y-1.5">
-                      {scout.cotisations.map((c) => (
-                        <div key={c.id} className="flex items-center justify-between gap-3">
-                          <span className="text-xs text-gray-500 truncate">
-                            {LABELS_TYPE_COTISATION[c.type] ?? c.type}{c.libelle ? ` — ${c.libelle}` : ''} ({c.anneeScolaire}) · {formatMontantFCFA(c.montant)}
-                          </span>
-                          <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full ${COULEURS_STATUT_COTISATION[c.statut]}`}>
-                            {LABELS_STATUT_COTISATION[c.statut] ?? c.statut}
-                          </span>
-                        </div>
-                      ))}
+                    <div className="space-y-2">
+                      {scout.cotisations.map((c) => {
+                        const reste = Math.max(0, c.montant - c.montantPaye)
+                        return (
+                          <div key={c.id} className="rounded-lg border border-gray-100 px-3 py-2">
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-xs text-gray-600 truncate">
+                                {LABELS_TYPE_COTISATION[c.type] ?? c.type}{c.libelle ? ` — ${c.libelle}` : ''} ({c.anneeScolaire})
+                              </span>
+                              <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full ${COULEURS_STATUT_COTISATION[c.statut]}`}>
+                                {LABELS_STATUT_COTISATION[c.statut] ?? c.statut}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-xs text-gray-500">
+                              Dû : {formatMontantFCFA(c.montant)}
+                              {c.montantPaye > 0 ? ` · reçu ${formatMontantFCFA(c.montantPaye)}` : ''}
+                              {reste > 0 && STATUTS_COTISATION_A_FINALISER.includes(c.statut) ? ` · reste ${formatMontantFCFA(reste)}` : ''}
+                            </p>
+                            {c.collectePar && (
+                              <p className="mt-1 text-xs text-gray-500">
+                                Reçu par {c.collectePar.prenom} {c.collectePar.nom}
+                                {LABELS_ROLES[c.collectePar.role] ? ` (${LABELS_ROLES[c.collectePar.role]})` : ''}
+                              </p>
+                            )}
+                            {!c.collectePar && c.enregistrePar && c.statut !== 'EN_ATTENTE' && (
+                              <p className="mt-1 text-xs text-gray-500">
+                                Mis à jour par {c.enregistrePar.prenom} {c.enregistrePar.nom}
+                              </p>
+                            )}
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 )}

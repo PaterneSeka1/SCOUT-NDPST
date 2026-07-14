@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
-import { formatMontantFCFA, anneeScolaireCourante } from '@/lib/cotisations'
+import { formatMontantFCFA, anneeScolaireCourante, STATUTS_COTISATION_A_FINALISER } from '@/lib/cotisations'
 
 interface Scout {
   id: string; prenom: string; nom: string; matricule: string | null; actif: boolean; photo: string | null
@@ -20,7 +20,7 @@ interface DocumentExpiration {
   id: string
 }
 interface Cotisation {
-  statut: string; montant: number
+  statut: string; montant: number; montantPaye: number
 }
 
 export default function PageMaBranche() {
@@ -70,7 +70,7 @@ export default function PageMaBranche() {
         setProchaineReunion(aVenir[0] ?? null)
 
         setDocumentsARenouveler(documentsData.documents ?? [])
-        setCotisationsEnAttente((cotisationsData.cotisations ?? []).filter((c: Cotisation) => c.statut === 'EN_ATTENTE'))
+        setCotisationsEnAttente((cotisationsData.cotisations ?? []).filter((c: Cotisation) => STATUTS_COTISATION_A_FINALISER.includes(c.statut)))
       })
       .catch(() => setErreur('Impossible de charger les données'))
       .finally(() => setChargement(false))
@@ -86,7 +86,7 @@ export default function PageMaBranche() {
 
   const couleur = brancheType ? COULEURS_BRANCHES[brancheType] : 'bg-gray-100 text-gray-700'
   const [bgCls, textCls] = couleur.split(' ')
-  const totalCotisationsDues = cotisationsEnAttente.reduce((s, c) => s + c.montant, 0)
+  const totalCotisationsARecevoir = cotisationsEnAttente.reduce((s, c) => s + Math.max(0, c.montant - c.montantPaye), 0)
 
   return (
     <div className="space-y-6">
@@ -128,12 +128,15 @@ export default function PageMaBranche() {
         </Link>
 
         <Link href="/dashboard/cotisations" className="bg-white rounded-xl border border-gray-200 p-4 hover:border-[#1a4731]/40 transition-colors">
-          <p className="text-xs font-medium text-gray-500">Cotisations en attente</p>
+          <p className="text-xs font-medium text-gray-500">Cotisations à finaliser</p>
           <p className={`text-2xl font-bold mt-1 ${cotisationsEnAttente.length > 0 ? 'text-amber-600' : 'text-gray-900'}`}>
             {cotisationsEnAttente.length}
           </p>
-          {cotisationsEnAttente.length > 0 && (
-            <p className="text-xs text-amber-600 mt-0.5">{formatMontantFCFA(totalCotisationsDues)} dus →</p>
+          {cotisationsEnAttente.length > 0 && totalCotisationsARecevoir > 0 && (
+            <p className="text-xs text-amber-600 mt-0.5">{formatMontantFCFA(totalCotisationsARecevoir)} à recevoir →</p>
+          )}
+          {cotisationsEnAttente.length > 0 && totalCotisationsARecevoir === 0 && (
+            <p className="text-xs text-amber-600 mt-0.5">Paiement site / validation →</p>
           )}
         </Link>
       </div>

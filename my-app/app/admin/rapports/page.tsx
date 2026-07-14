@@ -117,9 +117,9 @@ export default function RapportsPlateforme() {
             <p className="text-sm text-gray-500">taux consolidé</p>
           </div>
           <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Cotisations payées</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Cotisations validées</p>
             <p className="mt-2 text-xl font-bold text-gray-900">{formatMontantFCFA(kpis.cotisationsPayees)}</p>
-            <p className="text-sm text-gray-500">{formatMontantFCFA(kpis.cotisationsEnAttente)} en attente</p>
+            <p className="text-sm text-gray-500">{formatMontantFCFA(kpis.cotisationsEnAttente)} à finaliser</p>
           </div>
           <div className="rounded-xl border border-gray-200 bg-white p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Comptes</p>

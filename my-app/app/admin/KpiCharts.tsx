@@ -130,12 +130,12 @@ export function GraphiqueUtilisateursParCategorie({
 }
 
 // --- Cotisations -------------------------------------------------------------
-// Payée/en attente est un état, pas une identité : couleurs de statut fixes
+// Validée/à finaliser est un état, pas une identité : couleurs de statut fixes
 // (vert = good, ambre = warning), jamais les teintes catégorielles.
 export function GraphiqueCotisations({ payees, enAttente }: { payees: number; enAttente: number }) {
   const data = [
-    { name: 'Payées', value: payees, couleur: '#0ca30c' },
-    { name: 'En attente', value: enAttente, couleur: '#fab219' },
+    { name: 'Validées', value: payees, couleur: '#0ca30c' },
+    { name: 'À finaliser', value: enAttente, couleur: '#fab219' },
   ]
 
   if (payees === 0 && enAttente === 0) {

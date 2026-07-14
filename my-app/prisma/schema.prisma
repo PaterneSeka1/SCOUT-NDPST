@@ -84,8 +84,10 @@ enum TypeCotisation {
 
 enum StatutCotisation {
   EN_ATTENTE
-  PARTIELLEMENT_PAYEE
-  PAYEE
+  PARTIELLEMENT_PAYEE // Argent reçu partiellement par un chef, pas encore suffisant.
+  ARGENT_RECU // Montant complet remis au chef collecteur, pas encore payé sur le site externe.
+  PAYE_SITE // Paiement effectué sur le site externe, en attente de confirmation finale.
+  PAYEE // Adhésion confirmée/finalisée.
   EXONEREE
 }
 
@@ -235,6 +237,8 @@ model Utilisateur {
   consentementsImageConfirmes Scout[]                 @relation("ScoutConsentementImageConfirmePar")
   actionsAudit                JournalAudit[]
   cotisationsEnregistrees     Cotisation[]            @relation("CotisationEnregistreePar")
+  cotisationsPersonnelles     Cotisation[]            @relation("CotisationUtilisateur")
+  cotisationsCollectees       Cotisation[]            @relation("CotisationCollecteePar")
 
   // Unicité "1 seul CHEF_GROUPE actif par paroisse" et "1 seul RESPONSABLE_BRANCHE
   // actif par (paroisse, brancheType)" : non exprimable en index partiel dans le
@@ -690,8 +694,10 @@ model JournalAudit {
 }
 
 // ---------------------------------------------------------------------------
-// Cotisation — suivi des paiements d'adhésion et autres frais (camp…) par
-// scout et par année scolaire. Montants en FCFA (entiers, pas de décimales).
+// Cotisation — suivi des droits d'adhésion et autres frais (camp…) par année
+// pastorale/scoute. Une ligne cible soit un scout, soit un utilisateur/staff :
+// les chefs paient aussi leur adhésion annuelle, même sans fiche Scout.
+// Montants en FCFA (entiers, pas de décimales).
 // ---------------------------------------------------------------------------
 
 model Cotisation {
@@ -699,8 +705,8 @@ model Cotisation {
   type          TypeCotisation   @default(ADHESION_ANNUELLE)
   libelle       String? // Précision libre, surtout utile pour le type AUTRE
   montant       Int // Montant dû, en FCFA
-  montantPaye   Int              @default(0) // Toujours cohérent avec statut : 0 (EN_ATTENTE), = montant (PAYEE), entre les deux (PARTIELLEMENT_PAYEE)
-  anneeScolaire String // Ex : "2026-2027"
+  montantPaye   Int              @default(0) // Argent reçu localement : 0, partiel ou montant complet selon le statut.
+  anneeScolaire String // Ex : "2026-2027" (année pastorale/scoute)
   statut        StatutCotisation @default(EN_ATTENTE)
   datePaiement  DateTime?
   modePaiement  String? // Ex : Espèces, Mobile Money, Virement… champ libre
@@ -712,8 +718,11 @@ model Cotisation {
   // physiquement dans l'application (désactivés, pour conserver l'historique) —
   // et si une suppression manuelle était un jour nécessaire, elle ne doit
   // jamais effacer silencieusement un historique de paiement.
-  scoutId String
-  scout   Scout  @relation(fields: [scoutId], references: [id], onDelete: Restrict)
+  scoutId String?
+  scout   Scout?  @relation(fields: [scoutId], references: [id], onDelete: Restrict)
+
+  utilisateurId String?
+  utilisateur   Utilisateur? @relation("CotisationUtilisateur", fields: [utilisateurId], references: [id], onDelete: Restrict)
 
   paroisseId String
   paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
@@ -721,9 +730,16 @@ model Cotisation {
   enregistreParId String?
   enregistrePar   Utilisateur? @relation("CotisationEnregistreePar", fields: [enregistreParId], references: [id], onDelete: SetNull)
 
+  // Chef qui a physiquement reçu l'argent. Différent de enregistrePar, qui
+  // désigne seulement le compte ayant saisi le dernier mouvement dans l'app.
+  collecteParId String?
+  collectePar   Utilisateur? @relation("CotisationCollecteePar", fields: [collecteParId], references: [id], onDelete: SetNull)
+
   @@index([paroisseId])
   @@index([scoutId])
+  @@index([utilisateurId])
   @@index([statut])
   @@index([anneeScolaire])
   @@index([enregistreParId])
+  @@index([collecteParId])
 }

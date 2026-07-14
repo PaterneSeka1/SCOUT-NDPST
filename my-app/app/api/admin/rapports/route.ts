@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_PLATEFORME, ROLES_TOUT_STAFF } from '@/lib/roles'
+import { STATUTS_COTISATION_A_FINALISER } from '@/lib/cotisations'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -55,6 +56,7 @@ export async function GET() {
 
   const montantParStatut = (statut: string) =>
     cotisationsParStatut.find((c) => c.statut === statut)?._sum.montant ?? 0
+  const cotisationsAFinaliser = STATUTS_COTISATION_A_FINALISER.reduce((somme, statut) => somme + montantParStatut(statut), 0)
 
   const staff = utilisateursParRole
     .filter((u) => ROLES_TOUT_STAFF.includes(u.role))
@@ -68,7 +70,7 @@ export async function GET() {
       activitesMois,
       tauxPresence,
       cotisationsPayees: montantParStatut('PAYEE'),
-      cotisationsEnAttente: montantParStatut('EN_ATTENTE'),
+      cotisationsEnAttente: cotisationsAFinaliser,
       utilisateursParCategorie: { staff, parents, comptesScouts },
     },
     paroisses: paroisses.map((p) => ({

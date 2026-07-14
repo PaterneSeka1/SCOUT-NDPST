@@ -57,9 +57,12 @@ export interface CotisationScout {
   type: string
   libelle: string | null
   montant: number
+  montantPaye: number
   anneeScolaire: string
   statut: string
   datePaiement: string | null
+  collectePar: { id: string; nom: string; prenom: string; role: string } | null
+  enregistrePar: { id: string; nom: string; prenom: string; role: string } | null
 }
 
 export interface Scout {

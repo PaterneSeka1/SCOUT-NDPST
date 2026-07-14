@@ -10,7 +10,7 @@ import { useProgressionsScout, useValiderBadge } from '@/hooks/useProgressions'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
 import { LABELS_TYPE_DOCUMENT, ICONES_TYPE_DOCUMENT } from '@/lib/documents'
 import { LABELS_TYPE_COTISATION, LABELS_STATUT_COTISATION, COULEURS_STATUT_COTISATION, formatMontantFCFA } from '@/lib/cotisations'
-import { ROLES_BRANCHE } from '@/lib/roles'
+import { LABELS_ROLES, ROLES_BRANCHE } from '@/lib/roles'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { confirmer } from '@/app/components/ConfirmDialog'
@@ -419,12 +419,21 @@ export default function FicheScoutPage() {
         ) : (
           <ul className="space-y-2">
             {scout.cotisations.map((c) => (
-              <li key={c.id} className="flex items-center justify-between border border-gray-100 rounded-md p-3">
+              <li key={c.id} className="flex items-start justify-between gap-3 border border-gray-100 rounded-md p-3">
                 <div className="min-w-0">
                   <p className="text-sm text-gray-900">
                     {LABELS_TYPE_COTISATION[c.type] ?? c.type}{c.libelle ? ` — ${c.libelle}` : ''}
                   </p>
-                  <p className="text-xs text-gray-500 mt-0.5">{c.anneeScolaire} · {formatMontantFCFA(c.montant)}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {c.anneeScolaire} · dû {formatMontantFCFA(c.montant)}
+                    {c.montantPaye > 0 ? ` · reçu ${formatMontantFCFA(c.montantPaye)}` : ''}
+                  </p>
+                  {c.collectePar && (
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Reçu par {c.collectePar.prenom} {c.collectePar.nom}
+                      {LABELS_ROLES[c.collectePar.role] ? ` (${LABELS_ROLES[c.collectePar.role]})` : ''}
+                    </p>
+                  )}
                 </div>
                 <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full ${COULEURS_STATUT_COTISATION[c.statut]}`}>
                   {LABELS_STATUT_COTISATION[c.statut] ?? c.statut}

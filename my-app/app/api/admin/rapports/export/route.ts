@@ -190,30 +190,41 @@ async function exporterCotisations() {
       datePaiement: true,
       modePaiement: true,
       scout: { select: { nom: true, prenom: true, matricule: true, brancheType: true } },
+      utilisateur: { select: { nom: true, prenom: true, matricule: true, role: true, brancheType: true } },
+      collectePar: { select: { nom: true, prenom: true, role: true } },
+      enregistrePar: { select: { nom: true, prenom: true, role: true } },
       paroisse: { select: { nom: true, ville: true, district: { select: { nom: true } } } },
     },
-    orderBy: [{ anneeScolaire: 'desc' }, { paroisse: { nom: 'asc' } }, { scout: { nom: 'asc' } }],
+    orderBy: [{ anneeScolaire: 'desc' }, { paroisse: { nom: 'asc' } }, { createdAt: 'desc' }],
   })
 
   return reponseCsv(`rapport-cotisations_${dateFichier()}.csv`, [
-    '"District";"Paroisse";"Ville";"Scout";"Matricule";"Branche";"Année scolaire";"Type";"Libellé";"Montant dû";"Montant payé";"Reste à payer";"Statut";"Date paiement";"Mode paiement"',
-    ...cotisations.map((c) => [
-      champ(c.paroisse.district.nom),
-      champ(c.paroisse.nom),
-      champ(c.paroisse.ville),
-      champ(`${c.scout.prenom} ${c.scout.nom}`),
-      champ(c.scout.matricule),
-      champ(LABELS_BRANCHES[c.scout.brancheType] ?? c.scout.brancheType),
-      champ(c.anneeScolaire),
-      champ(LABELS_TYPE_COTISATION[c.type] ?? c.type),
-      champ(c.libelle),
-      c.montant,
-      c.montantPaye,
-      Math.max(0, c.montant - c.montantPaye),
-      champ(LABELS_STATUT_COTISATION[c.statut] ?? c.statut),
-      champ(c.datePaiement ? new Date(c.datePaiement).toLocaleDateString('fr-FR') : ''),
-      champ(c.modePaiement),
-    ].join(';')),
+    '"District";"Paroisse";"Ville";"Participant";"Profil";"Matricule";"Branche";"Année scolaire";"Type";"Libellé";"Montant dû";"Montant reçu";"Reste à recevoir";"Statut";"Date mouvement";"Mode paiement";"Argent reçu par";"Dernière saisie par"',
+    ...cotisations.map((c) => {
+      const participant = c.scout ?? c.utilisateur
+      const profil = c.scout ? 'Scout' : c.utilisateur ? LABELS_ROLES[c.utilisateur.role] ?? c.utilisateur.role : ''
+      const branche = participant?.brancheType ? LABELS_BRANCHES[participant.brancheType] ?? participant.brancheType : ''
+      return [
+        champ(c.paroisse.district.nom),
+        champ(c.paroisse.nom),
+        champ(c.paroisse.ville),
+        champ(participant ? `${participant.prenom} ${participant.nom}` : ''),
+        champ(profil),
+        champ(participant?.matricule),
+        champ(branche),
+        champ(c.anneeScolaire),
+        champ(LABELS_TYPE_COTISATION[c.type] ?? c.type),
+        champ(c.libelle),
+        c.montant,
+        c.montantPaye,
+        Math.max(0, c.montant - c.montantPaye),
+        champ(LABELS_STATUT_COTISATION[c.statut] ?? c.statut),
+        champ(c.datePaiement ? new Date(c.datePaiement).toLocaleDateString('fr-FR') : ''),
+        champ(c.modePaiement),
+        champ(c.collectePar ? `${c.collectePar.prenom} ${c.collectePar.nom} (${LABELS_ROLES[c.collectePar.role] ?? c.collectePar.role})` : ''),
+        champ(c.enregistrePar ? `${c.enregistrePar.prenom} ${c.enregistrePar.nom} (${LABELS_ROLES[c.enregistrePar.role] ?? c.enregistrePar.role})` : ''),
+      ].join(';')
+    }),
   ])
 }
 
