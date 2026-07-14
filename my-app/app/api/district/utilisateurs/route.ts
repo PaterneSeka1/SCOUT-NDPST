@@ -9,6 +9,7 @@ import { enregistrerAudit } from '@/lib/audit'
 import { paroisseIdRequise } from '@/lib/session'
 import { getParoissesDuDistrict, DistrictInvalideError } from '@/lib/district'
 import { BrancheTypeSchema } from '@/lib/validation'
+import { anneeScolaireCourante } from '@/lib/cotisations'
 
 export async function GET(request: NextRequest) {
   try {
@@ -73,6 +74,11 @@ export async function GET(request: NextRequest) {
           actif: true,
           paroisse: { select: { id: true, nom: true } },
           createdAt: true,
+          cotisationsPersonnelles: {
+            where: { anneeScolaire: anneeScolaireCourante(), type: 'ADHESION_ANNUELLE' },
+            select: { statut: true },
+            take: 1,
+          },
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limite,
@@ -98,6 +104,10 @@ export async function GET(request: NextRequest) {
         paroisse: u.paroisse,
         actif: u.actif,
         createdAt: u.createdAt,
+        // Le droit d'adhésion suit le rôle PAROISSIAL (u.role), pas le rôle
+        // district — c'est en tant que staff de sa paroisse que la personne
+        // paie, jamais au titre de son affectation district.
+        statutAdhesion: u.cotisationsPersonnelles[0]?.statut ?? null,
       })),
       total,
       page,

@@ -32,6 +32,9 @@ export interface Utilisateur {
   createdAt: string
   updatedAt?: string
   enfants?: EnfantLie[]
+  // Statut de la cotisation ADHESION_ANNUELLE de l'année pastorale en cours ;
+  // null = non applicable (rôle hors ROLES_TOUT_STAFF) ou pas encore générée.
+  statutAdhesion?: string | null
 }
 
 export interface PaginationMeta {

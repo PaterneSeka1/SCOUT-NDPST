@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { LABELS_ROLES, COULEURS_ROLES, ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT } from '@/lib/roles'
+import { LABELS_ROLES, COULEURS_ROLES, ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT, ROLES_TOUT_STAFF } from '@/lib/roles'
 import { useUtilisateurs, useModifierUtilisateur } from '@/hooks/useUtilisateurs'
 import type { Utilisateur } from '@/hooks/useUtilisateurs'
+import { BadgeAdhesion } from '@/app/components/BadgeAdhesion'
 
 // Page "Membres" = équipe d'encadrement, jamais les parents (page dédiée
 // /dashboard/parents). Sans filtre de rôle actif, on demande explicitement
@@ -32,7 +33,7 @@ function SkeletonCard() {
 function SkeletonRow() {
   return (
     <tr>
-      {Array.from({ length: 5 }).map((_, i) => (
+      {Array.from({ length: 6 }).map((_, i) => (
         <td key={i} className="px-4 py-3">
           <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
         </td>
@@ -67,6 +68,7 @@ function CarteUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
         {utilisateur.matricule && (
           <span className="font-mono text-xs text-gray-500">{utilisateur.matricule}</span>
         )}
+        {ROLES_TOUT_STAFF.includes(utilisateur.role) && <BadgeAdhesion statut={utilisateur.statutAdhesion ?? null} />}
       </div>
 
       <div className="flex items-center gap-3 pt-1 border-t border-gray-50">
@@ -114,6 +116,13 @@ function LigneUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
         }`}>
           {utilisateur.actif ? 'Actif' : 'Inactif'}
         </span>
+      </td>
+      <td className="px-4 py-3">
+        {ROLES_TOUT_STAFF.includes(utilisateur.role) ? (
+          <BadgeAdhesion statut={utilisateur.statutAdhesion ?? null} />
+        ) : (
+          <span className="text-xs text-gray-400">—</span>
+        )}
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
@@ -224,7 +233,7 @@ export default function UtilisateursPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
-                {['Matricule', 'Nom Prénom', 'Rôle', 'Statut', 'Actions'].map((h) => (
+                {['Matricule', 'Nom Prénom', 'Rôle', 'Statut', 'Adhésion', 'Actions'].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     {h}
                   </th>
@@ -236,7 +245,7 @@ export default function UtilisateursPage() {
                 Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
               ) : utilisateurs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-16 text-gray-400 text-sm">
+                  <td colSpan={6} className="text-center py-16 text-gray-400 text-sm">
                     Aucun membre trouvé.
                   </td>
                 </tr>

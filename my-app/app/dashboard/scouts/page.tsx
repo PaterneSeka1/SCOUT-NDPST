@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { LABELS_BRANCHES, COULEURS_BRANCHES, ORDRE_BRANCHES } from '@/lib/branches'
 import { useScouts, useModifierScout } from '@/hooks/useScouts'
 import type { Scout } from '@/hooks/useScouts'
+import { BadgeAdhesion } from '@/app/components/BadgeAdhesion'
 
 const BRANCHES_OPTIONS = [
   { valeur: '', label: 'Toutes les branches' },
@@ -31,7 +32,7 @@ function SkeletonCard() {
 function SkeletonRow() {
   return (
     <tr>
-      {Array.from({ length: 5 }).map((_, i) => (
+      {Array.from({ length: 6 }).map((_, i) => (
         <td key={i} className="px-4 py-3">
           <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
         </td>
@@ -66,6 +67,7 @@ function CarteScout({ scout }: { scout: Scout }) {
         {scout.matricule && (
           <span className="font-mono text-xs text-gray-500">{scout.matricule}</span>
         )}
+        <BadgeAdhesion statut={scout.statutAdhesion ?? null} />
       </div>
 
       <div className="flex items-center gap-3 pt-1 border-t border-gray-50">
@@ -122,6 +124,9 @@ function LigneScout({ scout }: { scout: Scout }) {
         }`}>
           {scout.actif ? 'Actif' : 'Inactif'}
         </span>
+      </td>
+      <td className="px-4 py-3">
+        <BadgeAdhesion statut={scout.statutAdhesion ?? null} />
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
@@ -237,7 +242,7 @@ export default function ScoutsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
-                {['Nom Prénom', 'Branche', 'Matricule', 'Statut', 'Actions'].map((h) => (
+                {['Nom Prénom', 'Branche', 'Matricule', 'Statut', 'Adhésion', 'Actions'].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     {h}
                   </th>
@@ -249,7 +254,7 @@ export default function ScoutsPage() {
                 Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
               ) : scouts.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-16 text-gray-400 text-sm">
+                  <td colSpan={6} className="text-center py-16 text-gray-400 text-sm">
                     Aucun scout trouvé.
                   </td>
                 </tr>

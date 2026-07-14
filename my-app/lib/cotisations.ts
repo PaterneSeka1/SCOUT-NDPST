@@ -25,6 +25,14 @@ export const COULEURS_STATUT_COTISATION: Record<string, string> = {
 export const STATUTS_COTISATION_A_FINALISER = ['EN_ATTENTE', 'PARTIELLEMENT_PAYEE', 'ARGENT_RECU', 'PAYE_SITE']
 export const STATUTS_COTISATION_ARGENT_RECU = ['PARTIELLEMENT_PAYEE', 'ARGENT_RECU', 'PAYE_SITE', 'PAYEE']
 
+// Vue simplifiée "à jour / pas à jour" du droit d'adhésion, utilisée là où le
+// détail du workflow de collecte (partiel, argent reçu, payé site...) n'a pas
+// sa place — ex. bascule administrative plateforme. Par défaut (aucune
+// cotisation générée, `statut` null/undefined), une personne est "pas à jour".
+export function adhesionEstAJour(statut: string | null | undefined): boolean {
+  return statut === 'PAYEE' || statut === 'EXONEREE'
+}
+
 // Année scolaire scoute (septembre → août). Ex, au 6 juillet 2026 : "2025-2026".
 export function anneeScolaireCourante(reference: Date = new Date()): string {
   const annee = reference.getFullYear()

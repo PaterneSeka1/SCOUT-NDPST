@@ -30,6 +30,10 @@ export interface Utilisateur {
   paroisseId?: string
   createdAt: string
   updatedAt?: string
+  // Suit le rôle PAROISSIAL (roleParoisse), jamais l'affectation district :
+  // c'est en tant que staff de sa paroisse que la personne paie son adhésion.
+  // null = non applicable (roleParoisse hors ROLES_TOUT_STAFF) ou pas générée.
+  statutAdhesion?: string | null
 }
 
 export interface PaginationMeta {

@@ -13,6 +13,8 @@ import {
   libelleRoleAvecFonction,
 } from '@/lib/roles'
 import { LABELS_BRANCHES } from '@/lib/branches'
+import { adhesionEstAJour } from '@/lib/cotisations'
+import { BadgeAdhesion } from '@/app/components/BadgeAdhesion'
 
 interface UtilisateurListe {
   id: string
@@ -30,6 +32,9 @@ interface UtilisateurListe {
   actif: boolean
   createdAt: string
   paroisse: { id: string; nom: string; district?: { id: string; nom: string } | null }
+  // Statut de la cotisation ADHESION_ANNUELLE de l'année pastorale en cours ;
+  // null = non applicable (rôle hors ROLES_TOUT_STAFF) ou pas encore générée.
+  statutAdhesion: string | null
 }
 
 interface ParoisseOption {
@@ -124,6 +129,7 @@ export default function UtilisateursPlateformePage() {
   })
   const [erreursNomination, setErreursNomination] = useState<FormNominationErrors>({})
   const [soumissionNomination, setSoumissionNomination] = useState(false)
+  const [enCoursAdhesion, setEnCoursAdhesion] = useState<string | null>(null)
 
   const roleNominationEstBranche = ROLES_BRANCHE.includes(formNomination.role)
   const nominationDistrictActive = !!formNomination.roleDistrict
@@ -314,6 +320,31 @@ export default function UtilisateursPlateformePage() {
       toast.error('Une erreur est survenue')
     } finally {
       setSoumissionNomination(false)
+    }
+  }
+
+  const basculerAdhesion = async (utilisateur: UtilisateurListe) => {
+    const aJour = !adhesionEstAJour(utilisateur.statutAdhesion)
+    setEnCoursAdhesion(utilisateur.id)
+    try {
+      const res = await fetch(`/api/admin/utilisateurs/${utilisateur.id}/adhesion`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aJour }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.erreur ?? 'Erreur serveur')
+        return
+      }
+      setUtilisateurs((liste) =>
+        liste.map((u) => (u.id === utilisateur.id ? { ...u, statutAdhesion: data.statutAdhesion } : u)),
+      )
+      toast.success(aJour ? 'Adhésion marquée à jour.' : 'Adhésion marquée pas à jour.')
+    } catch {
+      toast.error('Une erreur est survenue')
+    } finally {
+      setEnCoursAdhesion(null)
     }
   }
 
@@ -745,6 +776,20 @@ export default function UtilisateursPlateformePage() {
               </div>
             </button>
 
+            {ROLES_TOUT_STAFF.includes(u.role) && (
+              <div className="mt-3 flex items-center gap-2 border-t border-gray-50 pt-3">
+                <BadgeAdhesion statut={u.statutAdhesion} />
+                <button
+                  type="button"
+                  onClick={() => basculerAdhesion(u)}
+                  disabled={enCoursAdhesion === u.id}
+                  className="text-xs font-medium text-[#1a4731] hover:underline disabled:opacity-50"
+                >
+                  {enCoursAdhesion === u.id ? '…' : adhesionEstAJour(u.statutAdhesion) ? 'Marquer pas à jour' : 'Marquer à jour'}
+                </button>
+              </div>
+            )}
+
             <button
               type="button"
               onClick={() => ouvrirNomination(u)}
@@ -771,6 +816,7 @@ export default function UtilisateursPlateformePage() {
                 <th className="px-4 py-3">Rôle</th>
                 <th className="px-4 py-3">Matricule / Téléphone</th>
                 <th className="px-4 py-3 text-center">Statut</th>
+                <th className="px-4 py-3 text-center">Adhésion</th>
                 <th className="px-4 py-3 text-right">Action</th>
               </tr>
             </thead>
@@ -811,6 +857,26 @@ export default function UtilisateursPlateformePage() {
                       {u.actif ? 'Actif' : 'Inactif'}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-center">
+                    {ROLES_TOUT_STAFF.includes(u.role) ? (
+                      <div className="flex flex-col items-center gap-1">
+                        <BadgeAdhesion statut={u.statutAdhesion} />
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            basculerAdhesion(u)
+                          }}
+                          disabled={enCoursAdhesion === u.id}
+                          className="text-xs font-medium text-[#1a4731] hover:underline disabled:opacity-50"
+                        >
+                          {enCoursAdhesion === u.id ? '…' : adhesionEstAJour(u.statutAdhesion) ? 'Marquer pas à jour' : 'Marquer à jour'}
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <button
                       type="button"
@@ -827,7 +893,7 @@ export default function UtilisateursPlateformePage() {
               ))}
               {utilisateurs.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400">Aucun utilisateur trouvé.</td>
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400">Aucun utilisateur trouvé.</td>
                 </tr>
               )}
             </tbody>

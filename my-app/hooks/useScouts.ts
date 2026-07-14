@@ -85,6 +85,10 @@ export interface Scout {
   liensParents: ParentLie[]
   documents: DocumentScout[]
   cotisations: CotisationScout[]
+  // Uniquement renvoyé par la liste paginée (GET /api/scouts), pas par le
+  // détail — statut de la cotisation ADHESION_ANNUELLE de l'année pastorale
+  // en cours ; null = aucune cotisation générée cette année pour ce scout.
+  statutAdhesion?: string | null
   utilisateur?: UtilisateurLie | null
   createdAt: string
   _count?: { contactsUrgence: number }

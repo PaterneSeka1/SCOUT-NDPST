@@ -14,6 +14,7 @@ import {
   libelleRoleAvecFonction,
 } from '@/lib/roles'
 import { BrancheTypeSchema } from '@/lib/validation'
+import { anneeScolaireCourante } from '@/lib/cotisations'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 import { envoyerEmailBienvenue } from '@/lib/notifications'
@@ -111,7 +112,7 @@ export async function GET(request: NextRequest) {
       ...(and.length > 0 ? { AND: and } : {}),
     }
 
-    const [utilisateurs, total] = await Promise.all([
+    const [utilisateursBruts, total] = await Promise.all([
       prisma.utilisateur.findMany({
         where,
         select: {
@@ -130,6 +131,11 @@ export async function GET(request: NextRequest) {
           actif: true,
           createdAt: true,
           paroisse: { select: { id: true, nom: true, district: { select: { id: true, nom: true } } } },
+          cotisationsPersonnelles: {
+            where: { anneeScolaire: anneeScolaireCourante(), type: 'ADHESION_ANNUELLE' },
+            select: { statut: true },
+            take: 1,
+          },
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limite,
@@ -137,6 +143,11 @@ export async function GET(request: NextRequest) {
       }),
       prisma.utilisateur.count({ where }),
     ])
+
+    const utilisateurs = utilisateursBruts.map(({ cotisationsPersonnelles, ...u }) => ({
+      ...u,
+      statutAdhesion: cotisationsPersonnelles[0]?.statut ?? null,
+    }))
 
     const totalPages = Math.max(1, Math.ceil(total / limite))
 

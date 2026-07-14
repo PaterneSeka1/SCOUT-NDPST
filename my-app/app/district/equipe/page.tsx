@@ -3,10 +3,11 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { LABELS_ROLES, ROLES_ASSIGNABLES_DISTRICT, libelleRoleAvecFonction } from '@/lib/roles'
+import { LABELS_ROLES, ROLES_ASSIGNABLES_DISTRICT, ROLES_TOUT_STAFF, libelleRoleAvecFonction } from '@/lib/roles'
 import { confirmer } from '@/app/components/ConfirmDialog'
 import { useDistrictUtilisateurs, useRetirerDistrictUtilisateur } from '@/hooks/useDistrictUtilisateurs'
 import type { Utilisateur } from '@/hooks/useDistrictUtilisateurs'
+import { BadgeAdhesion } from '@/app/components/BadgeAdhesion'
 
 const ROLES_FILTRE = ROLES_ASSIGNABLES_DISTRICT
 
@@ -29,7 +30,7 @@ function SkeletonCard() {
 function SkeletonRow() {
   return (
     <tr>
-      {Array.from({ length: 5 }).map((_, i) => (
+      {Array.from({ length: 6 }).map((_, i) => (
         <td key={i} className="px-4 py-3">
           <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
         </td>
@@ -83,6 +84,9 @@ function CarteUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
       {utilisateur.matricule && (
         <span className="font-mono text-xs text-gray-500">{utilisateur.matricule}</span>
       )}
+      {ROLES_TOUT_STAFF.includes(utilisateur.roleParoisse) && (
+        <div><BadgeAdhesion statut={utilisateur.statutAdhesion ?? null} /></div>
+      )}
 
       <div className="flex items-center gap-3 pt-1 border-t border-gray-50">
         <Link
@@ -126,6 +130,13 @@ function LigneUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
         }`}>
           {utilisateur.actif ? 'Compte actif' : 'Compte désactivé'}
         </span>
+      </td>
+      <td className="px-4 py-3">
+        {ROLES_TOUT_STAFF.includes(utilisateur.roleParoisse) ? (
+          <BadgeAdhesion statut={utilisateur.statutAdhesion ?? null} />
+        ) : (
+          <span className="text-xs text-gray-400">—</span>
+        )}
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
@@ -242,7 +253,7 @@ export default function EquipeDistrictPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
-                {['Matricule', 'Nom Prénom', 'Rôle', 'Statut', 'Actions'].map((h) => (
+                {['Matricule', 'Nom Prénom', 'Rôle', 'Statut', 'Adhésion', 'Actions'].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     {h}
                   </th>
@@ -254,7 +265,7 @@ export default function EquipeDistrictPage() {
                 Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
               ) : utilisateurs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-16">
+                  <td colSpan={6} className="text-center py-16">
                     <p className="text-sm font-medium text-gray-700">Aucun membre dans l&apos;équipe.</p>
                     <Link
                       href="/district/equipe/nouveau"

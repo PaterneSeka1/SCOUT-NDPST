@@ -7,6 +7,7 @@ import { Prisma, RoleUtilisateur, BrancheType } from '@/app/generated/prisma/cli
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { ROLES_GROUPE as ROLES_AUTORISES, ROLES_DISTRICT_ETENDU, ROLES_BRANCHE, ROLES_ASSIGNABLES_PAROISSE } from '@/lib/roles'
 import { BrancheTypeSchema } from '@/lib/validation'
+import { anneeScolaireCourante } from '@/lib/cotisations'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 import { envoyerEmailBienvenue } from '@/lib/notifications'
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
         : {}),
     }
 
-    const [utilisateurs, total] = await Promise.all([
+    const [utilisateursBruts, total] = await Promise.all([
       prisma.utilisateur.findMany({
         where,
         select: {
@@ -73,6 +74,11 @@ export async function GET(request: NextRequest) {
           brancheType: true,
           actif: true,
           createdAt: true,
+          cotisationsPersonnelles: {
+            where: { anneeScolaire: anneeScolaireCourante(), type: 'ADHESION_ANNUELLE' },
+            select: { statut: true },
+            take: 1,
+          },
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limite,
@@ -80,6 +86,11 @@ export async function GET(request: NextRequest) {
       }),
       prisma.utilisateur.count({ where }),
     ])
+
+    const utilisateurs = utilisateursBruts.map(({ cotisationsPersonnelles, ...u }) => ({
+      ...u,
+      statutAdhesion: cotisationsPersonnelles[0]?.statut ?? null,
+    }))
 
     const totalPages = Math.ceil(total / limite)
 

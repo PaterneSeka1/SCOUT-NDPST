@@ -6,6 +6,7 @@ import { BrancheType, Prisma, Sexe } from '@/app/generated/prisma/client'
 import { ROLES_TOUT_STAFF as ROLES_AUTORISES, ROLES_BRANCHE } from '@/lib/roles'
 import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { estCheminLocalValide } from '@/lib/validation'
+import { anneeScolaireCourante } from '@/lib/cotisations'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 import { paroisseIdRequise } from '@/lib/session'
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
         : {}),
     }
 
-    const [scouts, total] = await Promise.all([
+    const [scoutsBruts, total] = await Promise.all([
       prisma.scout.findMany({
         where,
         select: {
@@ -74,6 +75,11 @@ export async function GET(request: NextRequest) {
           utilisateurId: true,
           createdAt: true,
           _count: { select: { contactsUrgence: true } },
+          cotisations: {
+            where: { anneeScolaire: anneeScolaireCourante(), type: 'ADHESION_ANNUELLE' },
+            select: { statut: true },
+            take: 1,
+          },
         },
         orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
         skip: (page - 1) * limite,
@@ -81,6 +87,14 @@ export async function GET(request: NextRequest) {
       }),
       prisma.scout.count({ where }),
     ])
+
+    // "Droit d'adhésion" désigne précisément le type ADHESION_ANNUELLE (pas les
+    // frais de camp/autres) — null = aucune cotisation générée cette année,
+    // distinct de EN_ATTENTE (générée, pas encore réglée).
+    const scouts = scoutsBruts.map(({ cotisations, ...s }) => ({
+      ...s,
+      statutAdhesion: cotisations[0]?.statut ?? null,
+    }))
 
     const totalPages = Math.ceil(total / limite)
 
