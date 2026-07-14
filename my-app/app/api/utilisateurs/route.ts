@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
       brancheType?: string | null
     }
 
-    if (!nom || !prenom || !role || !password) {
+    if (typeof nom !== 'string' || !nom.trim() || typeof prenom !== 'string' || !prenom.trim() || !role || !password) {
       return NextResponse.json(
         { error: 'Les champs nom, prenom, role et password sont requis' },
         { status: 400 },
@@ -228,8 +228,8 @@ export async function POST(request: NextRequest) {
     const utilisateur = await prisma.$transaction(async (tx) => {
       const nouveauUtilisateur = await tx.utilisateur.create({
         data: {
-          nom,
-          prenom,
+          nom: nom.trim(),
+          prenom: prenom.trim(),
           email: email?.trim() || null,
           matricule: matricule?.trim() || null,
           telephone: telephone?.trim() || null,

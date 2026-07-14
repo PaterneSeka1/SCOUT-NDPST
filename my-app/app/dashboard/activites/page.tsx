@@ -1,11 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useActivites, useSupprimerActivite } from '@/hooks/useActivites'
 import { LABELS_TYPE_ACTIVITE, COULEURS_TYPE_ACTIVITE } from '@/lib/activites'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
+import { ROLES_BRANCHE } from '@/lib/roles'
 import { confirmer } from '@/app/components/ConfirmDialog'
 
 type Activite = {
@@ -15,6 +17,7 @@ type Activite = {
   brancheType: string | null
   dateDebut: string
   lieu: string | null
+  creePar: string
   _count: { presences: number }
 }
 
@@ -44,7 +47,15 @@ function SkeletonCard() {
   )
 }
 
-function CarteActivite({ activite, onSupprimer }: { activite: Activite; onSupprimer: (id: string, titre: string) => void }) {
+function CarteActivite({
+  activite,
+  peutSupprimer,
+  onSupprimer,
+}: {
+  activite: Activite
+  peutSupprimer: boolean
+  onSupprimer: (id: string, titre: string) => void
+}) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2.5">
       <div className="flex items-start gap-3">
@@ -75,14 +86,19 @@ function CarteActivite({ activite, onSupprimer }: { activite: Activite; onSuppri
         <Link href={`/dashboard/activites/${activite.id}`} className="text-[#1a4731] font-medium text-xs hover:underline">Voir</Link>
         <span className="text-gray-200">|</span>
         <Link href={`/dashboard/activites/${activite.id}/modifier`} className="text-blue-600 font-medium text-xs hover:underline">Modifier</Link>
-        <span className="text-gray-200">|</span>
-        <button onClick={() => onSupprimer(activite.id, activite.titre)} className="text-red-600 font-medium text-xs hover:text-red-700 hover:underline">Supprimer</button>
+        {peutSupprimer && (
+          <>
+            <span className="text-gray-200">|</span>
+            <button onClick={() => onSupprimer(activite.id, activite.titre)} className="text-red-600 font-medium text-xs hover:text-red-700 hover:underline">Supprimer</button>
+          </>
+        )}
       </div>
     </div>
   )
 }
 
 export default function PageActivites() {
+  const { data: session } = useSession()
   const [page, setPage] = useState(1)
   const [recherche, setRecherche] = useState('')
   const [filtreType, setFiltreType] = useState('')
@@ -93,6 +109,10 @@ export default function PageActivites() {
 
   const activites: Activite[] = data?.activites ?? []
   const pagination = data?.pagination
+  const userId = session?.user?.id
+  const estChefGroupe = session?.user?.role === 'CHEF_GROUPE'
+  const estRoleBranche = ROLES_BRANCHE.includes(session?.user?.role ?? '')
+  const peutSupprimer = (activite: Activite) => estChefGroupe || activite.creePar === userId
 
   async function handleSupprimer(id: string, titre: string) {
     const ok = await confirmer({
@@ -138,16 +158,18 @@ export default function PageActivites() {
               <option key={val} value={val}>{label}</option>
             ))}
           </select>
-          <select
-            value={filtreBranche}
-            onChange={(e) => { setFiltreBranche(e.target.value); setPage(1) }}
-            className="flex-1 sm:flex-none sm:w-36 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a4731] bg-white"
-          >
-            <option value="">Toutes branches</option>
-            {Object.entries(LABELS_BRANCHES).map(([val, label]) => (
-              <option key={val} value={val}>{label}</option>
-            ))}
-          </select>
+          {!estRoleBranche && (
+            <select
+              value={filtreBranche}
+              onChange={(e) => { setFiltreBranche(e.target.value); setPage(1) }}
+              className="flex-1 sm:flex-none sm:w-36 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a4731] bg-white"
+            >
+              <option value="">Toutes branches</option>
+              {Object.entries(LABELS_BRANCHES).map(([val, label]) => (
+                <option key={val} value={val}>{label}</option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 
@@ -164,7 +186,7 @@ export default function PageActivites() {
             <p className="text-sm mt-1">Créez votre première activité pour commencer</p>
           </div>
         ) : (
-          activites.map((a) => <CarteActivite key={a.id} activite={a} onSupprimer={handleSupprimer} />)
+          activites.map((a) => <CarteActivite key={a.id} activite={a} peutSupprimer={peutSupprimer(a)} onSupprimer={handleSupprimer} />)
         )}
       </div>
 
@@ -209,7 +231,9 @@ export default function PageActivites() {
                       <div className="flex items-center justify-end gap-2">
                         <Link href={`/dashboard/activites/${activite.id}`} className="text-[#1a4731] hover:text-[#15392a] font-medium text-xs">Voir</Link>
                         <Link href={`/dashboard/activites/${activite.id}/modifier`} className="text-blue-600 hover:text-blue-800 font-medium text-xs">Modifier</Link>
-                        <button onClick={() => handleSupprimer(activite.id, activite.titre)} className="text-red-600 hover:text-red-800 font-medium text-xs">Supprimer</button>
+                        {peutSupprimer(activite) && (
+                          <button onClick={() => handleSupprimer(activite.id, activite.titre)} className="text-red-600 hover:text-red-800 font-medium text-xs">Supprimer</button>
+                        )}
                       </div>
                     </td>
                   </tr>

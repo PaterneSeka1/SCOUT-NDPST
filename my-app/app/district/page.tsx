@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ApercuDistrictClient } from './ApercuDistrictClient'
 
-// Un ASSISTANT_DISTRICT chargé d'une branche précise (Utilisateur.brancheType
+// Un ASSISTANT_DISTRICT chargé d'une branche précise (brancheTypeDistrict
 // renseigné) n'a besoin que des données de SA branche à l'échelle du district
 // (déjà servies par /district/ma-branche) — pas de la vue d'ensemble
 // multi-branches de tout le district, réservée à la direction (Commissaire,

@@ -14,9 +14,12 @@ export async function GET() {
     select: { id: true },
   })
   if (!utilisateur) return NextResponse.json({ erreur: 'Utilisateur introuvable' }, { status: 404 })
+  if (!session.user.paroisseId) return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
+
+  const paroisseId = session.user.paroisseId
 
   const liens = await prisma.lienParentScout.findMany({
-    where: { parentId: utilisateur.id },
+    where: { parentId: utilisateur.id, scout: { paroisseId } },
     include: {
       scout: {
         include: {
@@ -52,7 +55,7 @@ export async function GET() {
   // Camps à venir concernant chaque enfant, avec le statut de signature (fiche médicale + autorisation)
   const campsAVenir = await prisma.activite.findMany({
     where: {
-      paroisseId: session.user.paroisseId ?? undefined,
+      paroisseId,
       type: 'CAMP',
       dateDebut: { gte: new Date() },
       OR: [{ brancheType: null }, { brancheType: { in: branches as never[] } }],
@@ -84,7 +87,7 @@ export async function GET() {
 
   const responsablesUtilisateurs = await prisma.utilisateur.findMany({
     where: {
-      paroisseId: session.user.paroisseId ?? undefined,
+      paroisseId,
       brancheType: { in: branches as never[] },
       role: { in: ROLES_BRANCHE as RoleUtilisateur[] },
     },
@@ -102,7 +105,7 @@ export async function GET() {
   // Prochaines activités de la paroisse
   const prochaines = await prisma.activite.findMany({
     where: {
-      paroisseId: session.user.paroisseId ?? undefined,
+      paroisseId,
       dateDebut: { gte: new Date() },
     },
     orderBy: { dateDebut: 'asc' },
@@ -113,7 +116,7 @@ export async function GET() {
   // Prochaines réunions
   const prochinesReunions = await prisma.jourReunion.findMany({
     where: {
-      paroisseId: session.user.paroisseId ?? undefined,
+      paroisseId,
       statut: { in: ['PLANIFIEE', 'REPORTEE'] },
       dateHeure: { gte: new Date() },
       ...(branches.length > 0 ? { OR: [{ brancheType: null }, { brancheType: { in: branches as never[] } }] } : {}),

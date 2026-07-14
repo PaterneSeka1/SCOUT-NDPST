@@ -23,13 +23,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (typeof consentement !== 'boolean') {
       return NextResponse.json({ erreur: 'Le champ consentement (booléen) est requis' }, { status: 400 })
     }
+    const paroisseId = paroisseIdRequise(session)
 
     // Le rôle du compte n'est jamais la condition d'accès : un membre du
     // staff ou un compte SCOUT (Ressources Adultes) peut être par ailleurs
     // parent d'un scout de la paroisse (voir LienParentScout). Seul le lien
     // réel fait foi — jamais un scout quelconque.
     const lien = await prisma.lienParentScout.findFirst({
-      where: { parentId: session.user.id, scoutId },
+      where: { parentId: session.user.id, scoutId, scout: { paroisseId } },
     })
     if (!lien) {
       return NextResponse.json({ erreur: 'Cet enfant n\'est pas rattaché à votre compte' }, { status: 403 })
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     })
 
     await enregistrerAudit({
-      paroisseId: paroisseIdRequise(session),
+      paroisseId,
       acteurId: session.user.id,
       action: 'SCOUT_CONSENTEMENT_IMAGE_MODIFIE',
       entite: 'Scout',

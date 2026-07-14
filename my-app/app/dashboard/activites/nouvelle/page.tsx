@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useCreerActivite } from '@/hooks/useActivites'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
 import { LABELS_BRANCHES } from '@/lib/branches'
+import { ROLES_BRANCHE } from '@/lib/roles'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -16,16 +18,32 @@ const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 export default function PageNouvelleActivite() {
   const router = useRouter()
+  const { data: session } = useSession()
   const creerActivite = useCreerActivite()
+  const estBranche = ROLES_BRANCHE.includes(session?.user?.role ?? '')
 
   const [titre, setTitre] = useState('')
   const [type, setType] = useState('REUNION')
   const [dateDebut, setDateDebut] = useState('')
   const [dateFin, setDateFin] = useState('')
   const [lieu, setLieu] = useState('')
+  const [brancheVerrouillee, setBrancheVerrouillee] = useState<string | null>(null)
   const [brancheType, setBrancheType] = useState('')
   const [description, setDescription] = useState('')
   const [erreursChamps, setErreursChamps] = useState<{ titre?: string; dateDebut?: string }>({})
+
+  useEffect(() => {
+    if (!estBranche) return
+    fetch('/api/me/branche')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.brancheType) {
+          setBrancheVerrouillee(data.brancheType)
+          setBrancheType(data.brancheType)
+        }
+      })
+      .catch(() => toast.error('Impossible de charger votre branche.'))
+  }, [estBranche])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -86,12 +104,21 @@ export default function PageNouvelleActivite() {
             </div>
             <div>
               <label className={CLS_LABEL}>Branche <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
-              <select value={brancheType} onChange={(e) => setBrancheType(e.target.value)} className={CLS_SELECT}>
-                <option value="">Toutes les branches</option>
-                {Object.entries(LABELS_BRANCHES).map(([val, label]) => (
-                  <option key={val} value={val}>{label}</option>
-                ))}
-              </select>
+              {estBranche ? (
+                <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
+                  <span className="text-sm text-gray-700 font-medium">
+                    {brancheVerrouillee ? LABELS_BRANCHES[brancheVerrouillee] ?? brancheVerrouillee : 'Chargement de votre branche…'}
+                  </span>
+                  <span className="text-xs text-gray-400 ml-auto">Votre branche</span>
+                </div>
+              ) : (
+                <select value={brancheType} onChange={(e) => setBrancheType(e.target.value)} className={CLS_SELECT}>
+                  <option value="">Toutes les branches</option>
+                  {Object.entries(LABELS_BRANCHES).map(([val, label]) => (
+                    <option key={val} value={val}>{label}</option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
 

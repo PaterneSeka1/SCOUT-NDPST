@@ -98,8 +98,22 @@ export async function POST(request: NextRequest) {
   const corps = await request.json()
   const { titre, description, dateDebut, dateFin, lieu, type, brancheType, paroisseId: paroisseIdCorps } = corps
 
-  if (!titre || !dateDebut) {
+  if (typeof titre !== 'string' || !titre.trim() || typeof dateDebut !== 'string' || !dateDebut) {
     return NextResponse.json({ error: 'Le titre et la date de début sont obligatoires' }, { status: 400 })
+  }
+  if (dateFin !== undefined && typeof dateFin !== 'string') {
+    return NextResponse.json({ error: 'La date de fin est invalide' }, { status: 400 })
+  }
+  const dateDebutObj = new Date(dateDebut)
+  if (Number.isNaN(dateDebutObj.getTime())) {
+    return NextResponse.json({ error: 'La date de début est invalide' }, { status: 400 })
+  }
+  const dateFinObj = dateFin ? new Date(dateFin) : null
+  if (dateFin && (!dateFinObj || Number.isNaN(dateFinObj.getTime()))) {
+    return NextResponse.json({ error: 'La date de fin est invalide' }, { status: 400 })
+  }
+  if (dateFinObj && dateFinObj <= dateDebutObj) {
+    return NextResponse.json({ error: 'La date de fin doit être après la date de début' }, { status: 400 })
   }
 
   if (type !== undefined && !TypeActiviteSchema.safeParse(type).success) {
@@ -144,11 +158,11 @@ export async function POST(request: NextRequest) {
 
   const activite = await prisma.activite.create({
     data: {
-      titre,
-      description: description ?? null,
-      dateDebut: new Date(dateDebut),
-      dateFin: dateFin ? new Date(dateFin) : null,
-      lieu: lieu ?? null,
+      titre: titre.trim(),
+      description: typeof description === 'string' ? description.trim() || null : null,
+      dateDebut: dateDebutObj,
+      dateFin: dateFinObj,
+      lieu: typeof lieu === 'string' ? lieu.trim() || null : null,
       type: type ?? 'REUNION',
       brancheType: brancheEffective,
       paroisseId,

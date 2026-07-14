@@ -36,6 +36,13 @@ export async function POST(req: NextRequest) {
   if (!detecte)
     return NextResponse.json({ erreur: 'Type de fichier non autorisé (JPEG, PNG, WebP, GIF, PDF)' }, { status: 400 })
 
+  if (visibilite === 'publique' && !detecte.mime.startsWith('image/')) {
+    return NextResponse.json(
+      { erreur: 'Les fichiers publics doivent être des images (JPEG, PNG, WebP ou GIF)' },
+      { status: 400 },
+    )
+  }
+
   const nomFichier = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${detecte.ext}`
 
   if (visibilite === 'publique') {

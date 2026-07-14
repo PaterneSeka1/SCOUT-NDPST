@@ -86,6 +86,19 @@ export async function PUT(
 
   const corps = await request.json()
   const { titre, description, dateDebut, dateFin, lieu, type, brancheType } = corps
+  if (titre !== undefined && typeof titre !== 'string') {
+    return NextResponse.json({ error: 'Le titre est invalide' }, { status: 400 })
+  }
+  const titreNettoye = typeof titre === 'string' ? titre.trim() : undefined
+  if (titre !== undefined && !titreNettoye) {
+    return NextResponse.json({ error: 'Le titre est requis' }, { status: 400 })
+  }
+  if (dateDebut !== undefined && typeof dateDebut !== 'string') {
+    return NextResponse.json({ error: 'La date de début est invalide' }, { status: 400 })
+  }
+  if (dateFin !== undefined && typeof dateFin !== 'string') {
+    return NextResponse.json({ error: 'La date de fin est invalide' }, { status: 400 })
+  }
 
   if (type !== undefined && !TypeActiviteSchema.safeParse(type).success) {
     return NextResponse.json({ error: "Type d'activité invalide" }, { status: 400 })
@@ -96,15 +109,26 @@ export async function PUT(
   if (brancheUtilisateur && brancheType !== undefined && (brancheType || null) !== existante.brancheType) {
     return NextResponse.json({ error: 'Le changement de branche est réservé au groupe' }, { status: 403 })
   }
+  const dateDebutFinale = dateDebut !== undefined ? new Date(dateDebut) : existante.dateDebut
+  if (dateDebut !== undefined && Number.isNaN(dateDebutFinale.getTime())) {
+    return NextResponse.json({ error: 'La date de début est invalide' }, { status: 400 })
+  }
+  const dateFinFinale = dateFin !== undefined ? (dateFin ? new Date(dateFin) : null) : existante.dateFin
+  if (dateFin !== undefined && dateFin && dateFinFinale && Number.isNaN(dateFinFinale.getTime())) {
+    return NextResponse.json({ error: 'La date de fin est invalide' }, { status: 400 })
+  }
+  if (dateFinFinale && dateFinFinale <= dateDebutFinale) {
+    return NextResponse.json({ error: 'La date de fin doit être après la date de début' }, { status: 400 })
+  }
 
   const activite = await prisma.activite.update({
     where: { id },
     data: {
-      ...(titre !== undefined && { titre }),
-      ...(description !== undefined && { description }),
-      ...(dateDebut !== undefined && { dateDebut: new Date(dateDebut) }),
-      ...(dateFin !== undefined && { dateFin: dateFin ? new Date(dateFin) : null }),
-      ...(lieu !== undefined && { lieu }),
+      ...(titre !== undefined && { titre: titreNettoye }),
+      ...(description !== undefined && { description: typeof description === 'string' ? description.trim() || null : null }),
+      ...(dateDebut !== undefined && { dateDebut: dateDebutFinale }),
+      ...(dateFin !== undefined && { dateFin: dateFinFinale }),
+      ...(lieu !== undefined && { lieu: typeof lieu === 'string' ? lieu.trim() || null : null }),
       ...(type !== undefined && { type }),
       ...(brancheType !== undefined && { brancheType: brancheType || null }),
     },

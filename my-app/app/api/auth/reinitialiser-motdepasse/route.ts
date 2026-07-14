@@ -8,8 +8,9 @@ import { logger } from '@/lib/logger'
 export async function POST(req: NextRequest) {
   try {
     const { token, motDePasse } = await req.json() as { token?: string; motDePasse?: string }
+    const tokenNettoye = token?.trim()
 
-    if (!token?.trim()) return NextResponse.json({ erreur: 'Token manquant' }, { status: 400 })
+    if (!tokenNettoye) return NextResponse.json({ erreur: 'Token manquant' }, { status: 400 })
     if (!motDePasse || !motDePasseValide(motDePasse)) {
       return NextResponse.json({ erreur: REGLE_MOT_DE_PASSE }, { status: 400 })
     }
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
     }
 
     const tokenRecord = await prisma.tokenReinitialisation.findUnique({
-      where: { token },
+      where: { token: tokenNettoye },
       include: { utilisateur: { select: { id: true } } },
     })
 
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
         data: { password: passwordHache },
       }),
       prisma.tokenReinitialisation.update({
-        where: { token },
+        where: { token: tokenNettoye },
         data: { utilise: true },
       }),
     ])
@@ -56,7 +57,7 @@ export async function POST(req: NextRequest) {
 // Vérifier la validité d'un token (GET)
 export async function GET(req: NextRequest) {
   try {
-    const token = new URL(req.url).searchParams.get('token')
+    const token = new URL(req.url).searchParams.get('token')?.trim()
     if (!token) return NextResponse.json({ valide: false })
 
     const record = await prisma.tokenReinitialisation.findUnique({

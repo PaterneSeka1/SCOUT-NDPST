@@ -22,7 +22,7 @@ const MENU_COMMISSAIRE: MenuItem[] = [
 ]
 
 function menuPour(role: string, brancheType: string | null): MenuItem[] {
-  // Un ASSISTANT_DISTRICT chargé d'une branche précise (Utilisateur.brancheType
+  // Un ASSISTANT_DISTRICT chargé d'une branche précise (brancheTypeDistrict
   // renseigné) n'a besoin que de "Ma branche" (voir /api/district/ma-branche) :
   // la vue d'ensemble et la liste des paroisses montrent des données
   // multi-branches de tout le district, hors de son périmètre. Un assistant

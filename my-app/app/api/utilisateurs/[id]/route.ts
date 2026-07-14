@@ -30,6 +30,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
         email: true, role: true, brancheType: true, actif: true, paroisseId: true,
         createdAt: true, updatedAt: true,
         liensParent: {
+          where: { scout: { paroisseId } },
           select: {
             scout: {
               select: { id: true, nom: true, prenom: true, brancheType: true, matricule: true, actif: true },
@@ -72,6 +73,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     if (role !== undefined && !(role in RoleUtilisateur))
       return NextResponse.json({ error: 'Rôle invalide' }, { status: 400 })
+    if (nom !== undefined && (typeof nom !== 'string' || !nom.trim()))
+      return NextResponse.json({ error: 'Le nom est invalide' }, { status: 400 })
+    if (prenom !== undefined && (typeof prenom !== 'string' || !prenom.trim()))
+      return NextResponse.json({ error: 'Le prénom est invalide' }, { status: 400 })
+    if (email !== undefined && email !== null && typeof email !== 'string')
+      return NextResponse.json({ error: 'L’adresse e-mail est invalide' }, { status: 400 })
 
     if (scoutIds !== undefined && !Array.isArray(scoutIds))
       return NextResponse.json({ error: 'La liste des enfants est invalide' }, { status: 400 })
@@ -109,9 +116,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Vous ne pouvez pas modifier votre propre rôle ou vous désactiver' }, { status: 403 })
     }
 
-    if (email !== undefined && email !== null && email !== '') {
+    const emailNettoye = email?.trim() ?? ''
+    if (email !== undefined && emailNettoye) {
       const doublon = await prisma.utilisateur.findFirst({
-        where: { email: { equals: email, mode: 'insensitive' }, NOT: { id } },
+        where: { email: { equals: emailNettoye, mode: 'insensitive' }, NOT: { id } },
         select: { id: true },
       })
       if (doublon) return NextResponse.json({ error: 'Cette adresse e-mail est déjà utilisée' }, { status: 400 })
@@ -137,9 +145,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       const u = await tx.utilisateur.update({
         where: { id },
         data: {
-          ...(nom !== undefined ? { nom } : {}),
-          ...(prenom !== undefined ? { prenom } : {}),
-          ...(email !== undefined ? { email } : {}),
+          ...(nom !== undefined ? { nom: nom.trim() } : {}),
+          ...(prenom !== undefined ? { prenom: prenom.trim() } : {}),
+          ...(email !== undefined ? { email: emailNettoye || null } : {}),
           ...(role !== undefined ? { role: role as RoleUtilisateur } : {}),
           ...(actif !== undefined ? { actif } : {}),
           brancheType: brancheTypeFinal,
@@ -154,7 +162,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       if (scoutIdsUniques !== undefined) {
         // Remplacement intégral de l'ensemble des enfants rattachés (pas un
         // simple ajout) : un tableau vide détache tous les enfants existants.
-        await tx.lienParentScout.deleteMany({ where: { parentId: id, scoutId: { notIn: scoutIdsUniques } } })
+        await tx.lienParentScout.deleteMany({
+          where: { parentId: id, scout: { paroisseId }, scoutId: { notIn: scoutIdsUniques } },
+        })
         if (scoutIdsUniques.length > 0) {
           await tx.lienParentScout.createMany({
             data: scoutIdsUniques.map((scoutId) => ({ parentId: id, scoutId })),
@@ -170,7 +180,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // React Query (qui remplace la donnée en place après un PUT réussi)
     // perdrait les enfants rattachés jusqu'au prochain rechargement complet.
     const liensParent = await prisma.lienParentScout.findMany({
-      where: { parentId: id },
+      where: { parentId: id, scout: { paroisseId } },
       select: { scout: { select: { id: true, nom: true, prenom: true, brancheType: true, matricule: true, actif: true } } },
     })
 

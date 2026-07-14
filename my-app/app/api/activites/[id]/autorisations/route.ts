@@ -31,7 +31,7 @@ async function peutAgirSurScout(
   // scout de la paroisse (LienParentScout) peut agir sur les autorisations
   // de camp de cet enfant, au même titre qu'un compte PARENT dédié.
   const lien = await prisma.lienParentScout.findFirst({
-    where: { parentId: userId, scoutId },
+    where: { parentId: userId, scoutId, scout: { paroisseId } },
   })
   return !!lien
 }
@@ -126,7 +126,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     const existante = await prisma.autorisationCamp.findFirst({
-      where: { activiteId, scoutId, type: type as TypeAutorisationCamp },
+      where: { activiteId, scoutId, type: type as TypeAutorisationCamp, scout: { paroisseId } },
       include: { scout: { select: { brancheType: true } } },
     })
     if (!existante) return NextResponse.json({ erreur: 'Autorisation introuvable' }, { status: 404 })

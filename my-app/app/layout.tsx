@@ -17,6 +17,19 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 })
 
+function getMetadataBase(): URL {
+  const urlConfiguree = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXTAUTH_URL
+  if (urlConfiguree) {
+    try {
+      return new URL(urlConfiguree)
+    } catch {
+      // Valeur d'environnement invalide : on garde un fallback stable pour
+      // éviter l'avertissement Next.js sans faire échouer le rendu.
+    }
+  }
+  return new URL('http://localhost:3000')
+}
+
 // Identité de la PLATEFORME (commune à toutes les paroisses, pas celle d'une
 // paroisse en particulier) : appliquée à toutes les pages, y compris avant
 // connexion. L'identité propre à chaque paroisse (logo + couleurs) est
@@ -37,6 +50,7 @@ async function getTheme(): Promise<{ theme: Theme; nomSite: string; logoSite: st
 export async function generateMetadata(): Promise<Metadata> {
   const { nomSite, logoSite } = await getTheme()
   return {
+    metadataBase: getMetadataBase(),
     title: `${nomSite} — Suivi pédagogique`,
     description: "Application de suivi pédagogique des scouts catholiques de Côte d'Ivoire",
     ...(logoSite

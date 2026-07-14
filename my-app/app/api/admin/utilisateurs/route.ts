@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
       brancheType?: string | null
     }
 
-    if (!paroisseId || !nom || !prenom || !role || !password) {
+    if (!paroisseId || typeof nom !== 'string' || !nom.trim() || typeof prenom !== 'string' || !prenom.trim() || !role || !password) {
       return NextResponse.json(
         { erreur: 'Les champs paroisseId, nom, prenom, role et password sont requis' },
         { status: 400 },
@@ -187,8 +187,8 @@ export async function POST(request: NextRequest) {
 
     const utilisateur = await prisma.utilisateur.create({
       data: {
-        nom,
-        prenom,
+        nom: nom.trim(),
+        prenom: prenom.trim(),
         email: email?.trim() || null,
         matricule: matricule?.trim() || null,
         telephone: telephone?.trim() || null,

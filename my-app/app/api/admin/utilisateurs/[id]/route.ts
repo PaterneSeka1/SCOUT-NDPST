@@ -89,6 +89,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (role !== undefined && !ROLES_ASSIGNABLES_PAROISSE.includes(role)) {
       return NextResponse.json({ erreur: 'Rôle invalide' }, { status: 400 })
     }
+    if (nom !== undefined && (typeof nom !== 'string' || !nom.trim())) {
+      return NextResponse.json({ erreur: 'Le nom est invalide' }, { status: 400 })
+    }
+    if (prenom !== undefined && (typeof prenom !== 'string' || !prenom.trim())) {
+      return NextResponse.json({ erreur: 'Le prénom est invalide' }, { status: 400 })
+    }
+    if (email !== undefined && email !== null && typeof email !== 'string') {
+      return NextResponse.json({ erreur: 'L’adresse e-mail est invalide' }, { status: 400 })
+    }
 
     if (brancheType != null && !BrancheTypeSchema.safeParse(brancheType).success) {
       return NextResponse.json({ erreur: 'Branche invalide' }, { status: 400 })
@@ -109,10 +118,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       ? ((brancheType !== undefined ? brancheType : existant.brancheType) as BrancheType)
       : null
     const fonctionFinal = fonction !== undefined ? fonction?.trim() || null : existant.fonction
+    const emailNettoye = email?.trim() ?? ''
 
-    if (email !== undefined && email !== null && email !== '') {
+    if (email !== undefined && emailNettoye) {
       const doublon = await prisma.utilisateur.findFirst({
-        where: { email: { equals: email, mode: 'insensitive' }, NOT: { id } },
+        where: { email: { equals: emailNettoye, mode: 'insensitive' }, NOT: { id } },
         select: { id: true },
       })
       if (doublon) return NextResponse.json({ erreur: 'Cette adresse e-mail est déjà utilisée' }, { status: 400 })
@@ -121,9 +131,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const { paroisseId: paroisseIdCible, ...utilisateur } = await prisma.utilisateur.update({
       where: { id },
       data: {
-        ...(nom !== undefined ? { nom } : {}),
-        ...(prenom !== undefined ? { prenom } : {}),
-        ...(email !== undefined ? { email } : {}),
+        ...(nom !== undefined ? { nom: nom.trim() } : {}),
+        ...(prenom !== undefined ? { prenom: prenom.trim() } : {}),
+        ...(email !== undefined ? { email: emailNettoye || null } : {}),
         ...(role !== undefined ? { role: role as RoleUtilisateur } : {}),
         ...(actif !== undefined ? { actif } : {}),
         fonction: fonctionFinal,
