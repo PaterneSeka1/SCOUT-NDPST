@@ -17,6 +17,7 @@ export const LABELS_ACTIONS_AUDIT: Record<string, string> = {
   COTISATION_CREEE: 'Création cotisation',
   COTISATION_STATUT_MODIFIE: 'Changement de statut de cotisation',
   COTISATION_SUPPRIMEE: 'Suppression cotisation',
+  COTISATIONS_EXPORTEES: 'Export des droits d\'adhésion',
   SCOUT_BRANCHE_MODIFIEE: 'Passage de branche',
   SCOUT_SORTIE_MOUVEMENT: 'Sortie du mouvement',
   REUNION_SUPPRIMEE: 'Suppression réunion',
@@ -31,4 +32,5 @@ export const LABELS_ACTIONS_AUDIT: Record<string, string> = {
   UTILISATEUR_ROLE_DISTRICT_AFFECTE: 'Affectation à l\'équipe de district',
   UTILISATEUR_ROLE_DISTRICT_MODIFIE: 'Changement de rôle dans l\'équipe de district',
   UTILISATEUR_ROLE_DISTRICT_RETIRE: 'Retrait de l\'équipe de district',
+  RAPPORT_DISTRICT_EXPORTE: 'Export rapport district',
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { LABELS_BRANCHES, COULEURS_BRANCHES, ORDRE_BRANCHES } from '@/lib/branches'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
+import { LABELS_STATUT_COTISATION } from '@/lib/cotisations'
 
 interface Activite {
   id: string; titre: string; dateDebut: string; type: string; brancheType: string | null
@@ -54,9 +55,16 @@ function JaugeTaux({ taux }: { taux: number }) {
   )
 }
 
+interface ParoisseOption { id: string; nom: string }
+
 export default function PageRapportsDistrict() {
   const [rapport, setRapport] = useState<Rapport | null>(null)
   const [chargement, setChargement] = useState(true)
+
+  const [paroisses, setParoisses] = useState<ParoisseOption[]>([])
+  const [filtreParoisse, setFiltreParoisse] = useState('')
+  const [filtreBranche, setFiltreBranche] = useState('')
+  const [filtreStatuts, setFiltreStatuts] = useState<string[]>([])
 
   useEffect(() => {
     fetch('/api/district/rapports')
@@ -64,7 +72,25 @@ export default function PageRapportsDistrict() {
       .then((data) => { if (data.erreur) { toast.error(data.erreur); return }; setRapport(data) })
       .catch(() => toast.error('Impossible de charger les rapports'))
       .finally(() => setChargement(false))
+
+    fetch('/api/district/paroisses')
+      .then((r) => r.json())
+      .then((data) => setParoisses((data.paroisses ?? []).map((p: ParoisseOption) => ({ id: p.id, nom: p.nom }))))
+      .catch(() => {})
   }, [])
+
+  const toggleStatut = (statut: string) => {
+    setFiltreStatuts((liste) => (liste.includes(statut) ? liste.filter((s) => s !== statut) : [...liste, statut]))
+  }
+
+  const urlExportCotisations = () => {
+    const params = new URLSearchParams()
+    if (filtreParoisse) params.set('paroisseId', filtreParoisse)
+    if (filtreBranche) params.set('branche', filtreBranche)
+    filtreStatuts.forEach((s) => params.append('statut', s))
+    const query = params.toString()
+    return `/api/district/rapports/export${query ? `?${query}` : ''}`
+  }
 
   if (chargement) return (
     <div className="flex items-center justify-center h-48">
@@ -219,6 +245,63 @@ export default function PageRapportsDistrict() {
             </table>
           </div>
         )}
+      </div>
+
+      {/* Export des droits d'adhésion */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
+        <div className="mb-3">
+          <h2 className="text-sm font-semibold text-gray-800">Droits d’adhésion</h2>
+          <p className="text-xs text-gray-400 mt-0.5">Qui a payé, par paroisse ou branche du district — export CSV filtrable</p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="text-xs font-medium text-gray-600">Paroisse</span>
+            <select
+              value={filtreParoisse}
+              onChange={(e) => setFiltreParoisse(e.target.value)}
+              className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731]"
+            >
+              <option value="">Toutes les paroisses du district</option>
+              {paroisses.map((p) => <option key={p.id} value={p.id}>{p.nom}</option>)}
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-xs font-medium text-gray-600">Branche</span>
+            <select
+              value={filtreBranche}
+              onChange={(e) => setFiltreBranche(e.target.value)}
+              className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731]"
+            >
+              <option value="">Toutes les branches</option>
+              {Object.entries(LABELS_BRANCHES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </label>
+        </div>
+
+        <div className="mt-3">
+          <span className="text-xs font-medium text-gray-600">Statuts (aucune case cochée = tous)</span>
+          <div className="mt-1.5 flex flex-wrap gap-2">
+            {Object.entries(LABELS_STATUT_COTISATION).map(([v, l]) => (
+              <label
+                key={v}
+                className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs cursor-pointer transition ${
+                  filtreStatuts.includes(v) ? 'border-[#1a4731] bg-[#1a4731]/5 text-[#1a4731]' : 'border-gray-200 text-gray-600'
+                }`}
+              >
+                <input type="checkbox" checked={filtreStatuts.includes(v)} onChange={() => toggleStatut(v)} className="sr-only" />
+                {l}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <a
+          href={urlExportCotisations()}
+          className="mt-4 inline-flex items-center justify-center rounded-lg bg-[#1a4731] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#163d29]"
+        >
+          Télécharger le CSV
+        </a>
       </div>
     </div>
   )

@@ -31,6 +31,7 @@ export async function GET() {
       nom: p.nom,
       ville: p.ville,
       diocese: p.diocese,
+      districtId: p.districtId,
       actif: p.actif,
       createdAt: p.createdAt,
       counts: p._count,

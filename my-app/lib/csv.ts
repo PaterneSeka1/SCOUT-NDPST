@@ -1,3 +1,5 @@
+import { NextResponse } from 'next/server'
+
 // Un champ commençant par =, +, -, @ (ou tabulation/retour chariot) est
 // interprété comme une formule par Excel/LibreOffice à l'ouverture du CSV —
 // classique vecteur d'injection de formule (OWASP CSV Injection) via un champ
@@ -36,4 +38,20 @@ function retirerAccents(texte: string): string {
 export function contentDispositionTelechargement(nomFichier: string): string {
   const ascii = retirerAccents(nomFichier)
   return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(nomFichier)}`
+}
+
+export function dateFichier(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+const BOM_UTF8 = '﻿'
+
+/** Réponse CSV Excel FR : BOM UTF-8, lignes déjà formées (`;` comme séparateur), en pièce jointe. */
+export function reponseCsv(nomFichier: string, lignes: string[]): NextResponse {
+  return new NextResponse(BOM_UTF8 + lignes.join('\r\n'), {
+    headers: {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': contentDispositionTelechargement(nomFichier),
+    },
+  })
 }

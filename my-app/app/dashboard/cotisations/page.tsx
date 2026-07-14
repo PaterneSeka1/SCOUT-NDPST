@@ -269,6 +269,13 @@ export default function PageCotisations() {
     }
   }
 
+  const urlExport = () => {
+    const params = new URLSearchParams({ anneeScolaire })
+    if (filtreStatut) params.set('statut', filtreStatut)
+    if (filtreBranche) params.set('branche', filtreBranche)
+    return `/api/cotisations/export?${params.toString()}`
+  }
+
   const ouvrirModal = () => {
     setFormGeneration((f) => ({ ...f, anneeScolaire }))
     setModalOuvert(true)
@@ -411,14 +418,22 @@ export default function PageCotisations() {
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Droits d’adhésion</h1>
           <p className="text-sm text-gray-500 mt-0.5">Année pastorale {anneeScolaire} · scouts et chefs</p>
         </div>
-        {estGroupe && (
-          <button
-            onClick={ouvrirModal}
-            className="bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium"
+        <div className="flex items-center gap-2">
+          <a
+            href={urlExport()}
+            className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
           >
-            + Générer
-          </button>
-        )}
+            Exporter CSV
+          </a>
+          {estGroupe && (
+            <button
+              onClick={ouvrirModal}
+              className="bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium"
+            >
+              + Générer
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

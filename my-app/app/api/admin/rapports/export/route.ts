@@ -2,15 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { BrancheType, StatutCotisation } from '@/app/generated/prisma/client'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
 import { LABELS_BRANCHES } from '@/lib/branches'
-import { LABELS_STATUT_COTISATION, LABELS_TYPE_COTISATION } from '@/lib/cotisations'
-import { champCsv as champ, contentDispositionTelechargement } from '@/lib/csv'
+import { LABELS_TYPE_COTISATION } from '@/lib/cotisations'
+import { ENTETE_COTISATION_CSV, ligneCotisationCsv } from '@/lib/cotisationsExport'
+import { champCsv as champ, dateFichier, reponseCsv } from '@/lib/csv'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 import { LABELS_ROLES, ROLES_PLATEFORME, libelleRoleAvecFonction } from '@/lib/roles'
 
-const BOM_UTF8 = '﻿'
 const TYPES_EXPORT = ['synthese', 'scouts', 'utilisateurs', 'activites', 'cotisations'] as const
 type TypeExport = (typeof TYPES_EXPORT)[number]
 
@@ -20,20 +21,7 @@ function estTypeExport(valeur: string | null): valeur is TypeExport {
   return TYPES_EXPORT.includes(valeur as TypeExport)
 }
 
-function dateFichier(): string {
-  return new Date().toISOString().slice(0, 10)
-}
-
-function reponseCsv(nomFichier: string, lignes: string[]): NextResponse {
-  return new NextResponse(BOM_UTF8 + lignes.join('\r\n'), {
-    headers: {
-      'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': contentDispositionTelechargement(nomFichier),
-    },
-  })
-}
-
-async function exporterSynthese() {
+async function exporterSynthese(_request: NextRequest) {
   const paroisses = await prisma.paroisse.findMany({
     include: {
       district: { select: { nom: true } },
@@ -65,7 +53,7 @@ async function exporterSynthese() {
   ])
 }
 
-async function exporterScouts() {
+async function exporterScouts(_request: NextRequest) {
   const scouts = await prisma.scout.findMany({
     select: {
       nom: true,
@@ -103,7 +91,7 @@ async function exporterScouts() {
   ])
 }
 
-async function exporterUtilisateurs() {
+async function exporterUtilisateurs(_request: NextRequest) {
   const utilisateurs = await prisma.utilisateur.findMany({
     where: { role: { not: 'ADMIN_PLATEFORME' } },
     select: {
@@ -142,7 +130,7 @@ async function exporterUtilisateurs() {
   ])
 }
 
-async function exporterActivites() {
+async function exporterActivites(_request: NextRequest) {
   const activites = await prisma.activite.findMany({
     select: {
       titre: true,
@@ -178,8 +166,39 @@ async function exporterActivites() {
   ])
 }
 
-async function exporterCotisations() {
+// Filtrable par district, paroisse, branche et statut — la direction plateforme
+// suit qui a réglé ses droits d'adhésion à n'importe quel niveau de la
+// hiérarchie (district > paroisse > branche), pas seulement paroisse par
+// paroisse. La branche n'est pas un champ propre à Cotisation : elle est
+// dérivée de scout.brancheType ou utilisateur.brancheType (voir CotisationCsv).
+async function exporterCotisations(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const districtId = searchParams.get('districtId') || undefined
+  const paroisseId = searchParams.get('paroisseId') || undefined
+  const branche = searchParams.get('branche') || undefined
+  const statuts = searchParams.getAll('statut')
+
+  if (branche !== undefined && !(branche in BrancheType)) {
+    return new NextResponse('Branche invalide', { status: 400 })
+  }
+  if (statuts.some((s) => !(s in StatutCotisation))) {
+    return new NextResponse('Statut invalide', { status: 400 })
+  }
+
   const cotisations = await prisma.cotisation.findMany({
+    where: {
+      ...(paroisseId ? { paroisseId } : {}),
+      ...(districtId ? { paroisse: { districtId } } : {}),
+      ...(statuts.length ? { statut: { in: statuts as StatutCotisation[] } } : {}),
+      ...(branche
+        ? {
+            OR: [
+              { scout: { brancheType: branche as BrancheType } },
+              { utilisateur: { brancheType: branche as BrancheType } },
+            ],
+          }
+        : {}),
+    },
     select: {
       type: true,
       libelle: true,
@@ -199,32 +218,10 @@ async function exporterCotisations() {
   })
 
   return reponseCsv(`rapport-cotisations_${dateFichier()}.csv`, [
-    '"District";"Paroisse";"Ville";"Participant";"Profil";"Matricule";"Branche";"Année scolaire";"Type";"Libellé";"Montant dû";"Montant reçu";"Reste à recevoir";"Statut";"Date mouvement";"Mode paiement";"Argent reçu par";"Dernière saisie par"',
-    ...cotisations.map((c) => {
-      const participant = c.scout ?? c.utilisateur
-      const profil = c.scout ? 'Scout' : c.utilisateur ? LABELS_ROLES[c.utilisateur.role] ?? c.utilisateur.role : ''
-      const branche = participant?.brancheType ? LABELS_BRANCHES[participant.brancheType] ?? participant.brancheType : ''
-      return [
-        champ(c.paroisse.district.nom),
-        champ(c.paroisse.nom),
-        champ(c.paroisse.ville),
-        champ(participant ? `${participant.prenom} ${participant.nom}` : ''),
-        champ(profil),
-        champ(participant?.matricule),
-        champ(branche),
-        champ(c.anneeScolaire),
-        champ(LABELS_TYPE_COTISATION[c.type] ?? c.type),
-        champ(c.libelle),
-        c.montant,
-        c.montantPaye,
-        Math.max(0, c.montant - c.montantPaye),
-        champ(LABELS_STATUT_COTISATION[c.statut] ?? c.statut),
-        champ(c.datePaiement ? new Date(c.datePaiement).toLocaleDateString('fr-FR') : ''),
-        champ(c.modePaiement),
-        champ(c.collectePar ? `${c.collectePar.prenom} ${c.collectePar.nom} (${LABELS_ROLES[c.collectePar.role] ?? c.collectePar.role})` : ''),
-        champ(c.enregistrePar ? `${c.enregistrePar.prenom} ${c.enregistrePar.nom} (${LABELS_ROLES[c.enregistrePar.role] ?? c.enregistrePar.role})` : ''),
-      ].join(';')
-    }),
+    `"District";"Paroisse";"Ville";${ENTETE_COTISATION_CSV}`,
+    ...cotisations.map(
+      (c) => `${champ(c.paroisse.district.nom)};${champ(c.paroisse.nom)};${champ(c.paroisse.ville)};${ligneCotisationCsv(c)}`,
+    ),
   ])
 }
 
@@ -244,7 +241,7 @@ export async function GET(request: NextRequest) {
       utilisateurs: exporterUtilisateurs,
       activites: exporterActivites,
       cotisations: exporterCotisations,
-    } satisfies Record<TypeExport, () => Promise<NextResponse>>)[type]()
+    } satisfies Record<TypeExport, (request: NextRequest) => Promise<NextResponse>>)[type](request)
 
     await enregistrerAudit({
       paroisseId: null,
@@ -252,7 +249,16 @@ export async function GET(request: NextRequest) {
       action: 'RAPPORT_PLATEFORME_EXPORTE',
       entite: 'RapportPlateforme',
       entiteId: type,
-      details: { type },
+      details:
+        type === 'cotisations'
+          ? {
+              type,
+              districtId: searchParams.get('districtId') || null,
+              paroisseId: searchParams.get('paroisseId') || null,
+              branche: searchParams.get('branche') || null,
+              statuts: searchParams.getAll('statut'),
+            }
+          : { type },
     })
 
     return reponse
