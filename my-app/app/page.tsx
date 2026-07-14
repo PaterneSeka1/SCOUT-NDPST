@@ -103,7 +103,12 @@ export default async function Home() {
   const { hero, stats, logoUrl } = config
   const nomSite = config.nomSite ?? 'SCOUT ASCCI'
   const sousTitreSite = config.sousTitreSite ?? "Côte d'Ivoire"
+  // L'optimiseur d'images intégré de Next refuse les hôtes distants non
+  // whitelistés (aucun configuré ici par choix, voir next.config.ts) : une
+  // image héro hébergée sur le stockage S3/Supabase (URL absolue) doit donc
+  // toujours passer en "unoptimized", pas seulement les SVG.
   const isSvg = hero.imageUrl.endsWith('.svg')
+  const estDistante = /^https?:\/\//.test(hero.imageUrl)
 
   return (
     <main className="min-h-screen bg-[#f7faf7] text-[#15241b]">
@@ -113,7 +118,7 @@ export default async function Home() {
           alt={hero.imageAlt}
           fill
           priority
-          unoptimized={isSvg}
+          unoptimized={isSvg || estDistante}
           sizes="100vw"
           className="object-cover object-center"
         />

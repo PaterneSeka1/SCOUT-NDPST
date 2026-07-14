@@ -1,8 +1,9 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import { Providers } from './providers'
 import { ConfirmDialogHost } from '@/app/components/ConfirmDialog'
+import { InstallationPwa } from '@/app/components/InstallationPwa'
 import { prisma } from '@/lib/prisma'
 import { THEME_DEFAUT, couleurSure, hexToRgb, type Theme } from '@/lib/theme'
 
@@ -47,6 +48,14 @@ export async function generateMetadata(): Promise<Metadata> {
           },
         }
       : {}),
+    // iOS ignore manifest.webmanifest pour le mode standalone/le titre à
+    // l'écran d'accueil : ces balises meta apple-* sont le seul moyen de les
+    // couvrir sur Safari (voir app/manifest.ts pour Android/Chrome).
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: 'default',
+      title: nomSite,
+    },
     openGraph: {
       title: `${nomSite} — Suivi pédagogique`,
       description: "Application de suivi pédagogique des scouts catholiques de Côte d'Ivoire",
@@ -55,12 +64,21 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
+export async function generateViewport(): Promise<Viewport> {
+  const { theme } = await getTheme()
+  return {
+    width: 'device-width',
+    initialScale: 1,
+    themeColor: theme.couleurPrimaire,
+  }
+}
+
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const { theme } = await getTheme()
+  const { theme, nomSite, logoSite } = await getTheme()
   const { couleurPrimaire: cp, couleurAccent: ca, couleurFond: cf, couleurHover: ch } = theme
 
   const caRgb = hexToRgb(ca)
@@ -92,6 +110,7 @@ export default async function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <Providers>{children}</Providers>
         <ConfirmDialogHost />
+        <InstallationPwa nomSite={nomSite} logoSite={logoSite} />
       </body>
     </html>
   )
