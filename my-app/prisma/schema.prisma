@@ -82,13 +82,16 @@ enum TypeCotisation {
   AUTRE
 }
 
+// Volontairement réduit à 3 valeurs (simplifié depuis une version à 6 valeurs
+// EN_ATTENTE/PARTIELLEMENT_PAYEE/ARGENT_RECU/PAYE_SITE/PAYEE/EXONEREE — voir
+// prisma/migrations/*_statut_cotisation_simplifie) : la distinction PAYE_SITE/
+// PAYEE n'apportait rien de concret (aucun déclencheur métier clair entre les
+// deux), et EN_ATTENTE/PARTIELLEMENT_PAYEE/EXONEREE se distinguent déjà
+// pleinement via `montantPaye`, pas besoin d'un statut dédié pour chacun.
 enum StatutCotisation {
-  EN_ATTENTE
-  PARTIELLEMENT_PAYEE // Argent reçu partiellement par un chef, pas encore suffisant.
+  NON_A_JOUR // Rien payé, ou payé partiellement (voir montantPaye) — jamais généré = même affichage (BadgeAdhesion).
   ARGENT_RECU // Montant complet remis au chef collecteur, pas encore payé sur le site externe.
-  PAYE_SITE // Paiement effectué sur le site externe, en attente de confirmation finale.
-  PAYEE // Adhésion confirmée/finalisée.
-  EXONEREE
+  A_JOUR // Adhésion réglée (montantPaye = montant) ou exonérée (montantPaye = 0, voir le flag `exonere` des routes).
 }
 
 // ---------------------------------------------------------------------------
@@ -707,7 +710,7 @@ model Cotisation {
   montant       Int // Montant dû, en FCFA
   montantPaye   Int              @default(0) // Argent reçu localement : 0, partiel ou montant complet selon le statut.
   anneeScolaire String // Ex : "2026-2027" (année pastorale/scoute)
-  statut        StatutCotisation @default(EN_ATTENTE)
+  statut        StatutCotisation @default(NON_A_JOUR)
   datePaiement  DateTime?
   modePaiement  String? // Ex : Espèces, Mobile Money, Virement… champ libre
   notes         String?

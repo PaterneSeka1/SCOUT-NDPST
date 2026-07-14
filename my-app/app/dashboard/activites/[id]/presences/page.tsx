@@ -93,7 +93,7 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-32">
       {/* En-tête */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-4">
           <Link
             href={`/dashboard/activites/${id}`}
@@ -115,7 +115,7 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
         </div>
 
         {/* Compteur + boutons tout cocher */}
-        <div className="flex items-center gap-3 flex-shrink-0">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="text-right">
             <p className="text-2xl font-bold text-[#1a4731]">{nbPresents}/{nbTotal}</p>
             <p className="text-xs text-gray-500">présent(s)</p>

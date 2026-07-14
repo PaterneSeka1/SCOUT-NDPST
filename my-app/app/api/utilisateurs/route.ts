@@ -79,6 +79,17 @@ export async function GET(request: NextRequest) {
             select: { statut: true },
             take: 1,
           },
+          // Un compte SCOUT n'a jamais sa propre Cotisation.utilisateurId — son
+          // adhésion est celle de sa fiche Scout liée (Cotisation.scoutId).
+          ficheScout: {
+            select: {
+              cotisations: {
+                where: { anneeScolaire: anneeScolaireCourante(), type: 'ADHESION_ANNUELLE' },
+                select: { statut: true },
+                take: 1,
+              },
+            },
+          },
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limite,
@@ -87,9 +98,10 @@ export async function GET(request: NextRequest) {
       prisma.utilisateur.count({ where }),
     ])
 
-    const utilisateurs = utilisateursBruts.map(({ cotisationsPersonnelles, ...u }) => ({
+    const utilisateurs = utilisateursBruts.map(({ cotisationsPersonnelles, ficheScout, ...u }) => ({
       ...u,
-      statutAdhesion: cotisationsPersonnelles[0]?.statut ?? null,
+      statutAdhesion:
+        u.role === 'SCOUT' ? ficheScout?.cotisations[0]?.statut ?? null : cotisationsPersonnelles[0]?.statut ?? null,
     }))
 
     const totalPages = Math.ceil(total / limite)

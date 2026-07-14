@@ -270,7 +270,7 @@ export default function PageMesEnfants() {
                                 {LABELS_ROLES[c.collectePar.role] ? ` (${LABELS_ROLES[c.collectePar.role]})` : ''}
                               </p>
                             )}
-                            {!c.collectePar && c.enregistrePar && c.statut !== 'EN_ATTENTE' && (
+                            {!c.collectePar && c.enregistrePar && c.statut !== 'NON_A_JOUR' && (
                               <p className="mt-1 text-xs text-gray-500">
                                 Mis à jour par {c.enregistrePar.prenom} {c.enregistrePar.nom}
                               </p>

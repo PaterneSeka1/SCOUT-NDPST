@@ -35,7 +35,7 @@ export default function CarteScoutPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between print:hidden">
+      <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
         <Link href={`/dashboard/scouts/${id}`} className="text-sm text-gray-500 hover:text-gray-700">
           ← Retour à la fiche
         </Link>

@@ -38,7 +38,7 @@ const cotisationExistante = (overrides: Record<string, unknown> = {}) => ({
   id: COTISATION_ID,
   montant: 5000,
   montantPaye: 0,
-  statut: 'EN_ATTENTE',
+  statut: 'NON_A_JOUR',
   collecteParId: null,
   ...overrides,
 })
@@ -50,13 +50,13 @@ beforeEach(() => {
 describe('PUT /api/cotisations/[id]', () => {
   it('401 si non authentifié', async () => {
     vi.mocked(getServerSession).mockResolvedValue(null)
-    const res = await PUT(putReq({ statut: 'PAYEE' }), params())
+    const res = await PUT(putReq({ statut: 'A_JOUR' }), params())
     expect(res.status).toBe(401)
   })
 
   it("403 pour un rôle hors ROLES_GESTION (ex: ADJOINT_GROUPE, qui peut voir la page mais pas modifier)", async () => {
     vi.mocked(getServerSession).mockResolvedValue(session('ADJOINT_GROUPE') as never)
-    const res = await PUT(putReq({ statut: 'PAYEE' }), params())
+    const res = await PUT(putReq({ statut: 'A_JOUR' }), params())
     expect(res.status).toBe(403)
     expect(prisma.cotisation.findFirst).not.toHaveBeenCalled()
   })
@@ -68,7 +68,7 @@ describe('PUT /api/cotisations/[id]', () => {
     // retrouve rien car la cotisation appartient à LOUVETEAUX.
     vi.mocked(prisma.cotisation.findFirst).mockResolvedValue(null)
 
-    const res = await PUT(putReq({ statut: 'PAYEE' }), params())
+    const res = await PUT(putReq({ statut: 'A_JOUR' }), params())
 
     expect(res.status).toBe(404)
     const where = vi.mocked(prisma.cotisation.findFirst).mock.calls[0][0]?.where
@@ -82,18 +82,31 @@ describe('PUT /api/cotisations/[id]', () => {
     expect(res.status).toBe(400)
   })
 
-  it('400 si PARTIELLEMENT_PAYEE avec un montantPaye invalide (>= montant dû)', async () => {
+  it('400 si NON_A_JOUR avec un montantPaye invalide (>= montant dû)', async () => {
     vi.mocked(getServerSession).mockResolvedValue(session('CHEF_GROUPE') as never)
     vi.mocked(prisma.cotisation.findFirst).mockResolvedValue(cotisationExistante({ montant: 5000 }) as never)
-    const res = await PUT(putReq({ statut: 'PARTIELLEMENT_PAYEE', montantPaye: 5000 }), params())
+    const res = await PUT(putReq({ statut: 'NON_A_JOUR', montantPaye: 5000 }), params())
     expect(res.status).toBe(400)
   })
 
-  it('400 si PARTIELLEMENT_PAYEE avec un montantPaye négatif ou non entier', async () => {
+  it('400 si NON_A_JOUR avec un montantPaye négatif ou non entier', async () => {
     vi.mocked(getServerSession).mockResolvedValue(session('CHEF_GROUPE') as never)
     vi.mocked(prisma.cotisation.findFirst).mockResolvedValue(cotisationExistante({ montant: 5000 }) as never)
-    const res = await PUT(putReq({ statut: 'PARTIELLEMENT_PAYEE', montantPaye: -100 }), params())
+    const res = await PUT(putReq({ statut: 'NON_A_JOUR', montantPaye: -100 }), params())
     expect(res.status).toBe(400)
+  })
+
+  it('NON_A_JOUR avec un montantPaye valide enregistre un paiement partiel sans changer le statut affiché', async () => {
+    vi.mocked(getServerSession).mockResolvedValue(session('CHEF_GROUPE') as never)
+    vi.mocked(prisma.cotisation.findFirst).mockResolvedValue(cotisationExistante({ montant: 5000 }) as never)
+    vi.mocked(prisma.cotisation.update).mockImplementation(
+      (({ data }: { data: Record<string, unknown> }) => Promise.resolve({ id: COTISATION_ID, ...data })) as never,
+    )
+
+    await PUT(putReq({ statut: 'NON_A_JOUR', montantPaye: 3000 }), params())
+
+    const data = vi.mocked(prisma.cotisation.update).mock.calls[0][0]?.data
+    expect(data).toMatchObject({ statut: 'NON_A_JOUR', montantPaye: 3000, collecteParId: 'user-1' })
   })
 
   it('ARGENT_RECU force montantPaye au montant complet, en ignorant toute valeur envoyée par le client', async () => {
@@ -113,20 +126,46 @@ describe('PUT /api/cotisations/[id]', () => {
     expect(data?.collecteParId).toBe('user-1')
   })
 
-  it('EN_ATTENTE réinitialise montantPaye et collecteParId', async () => {
+  it('NON_A_JOUR sans montantPaye réinitialise montantPaye et collecteParId', async () => {
     vi.mocked(getServerSession).mockResolvedValue(session('CHEF_GROUPE') as never)
     vi.mocked(prisma.cotisation.findFirst).mockResolvedValue(
-      cotisationExistante({ montant: 5000, montantPaye: 5000, statut: 'PAYEE', collecteParId: 'user-1' }) as never,
+      cotisationExistante({ montant: 5000, montantPaye: 5000, statut: 'A_JOUR', collecteParId: 'user-1' }) as never,
     )
     vi.mocked(prisma.cotisation.update).mockImplementation(
       (({ data }: { data: Record<string, unknown> }) => Promise.resolve({ id: COTISATION_ID, ...data })) as never,
     )
 
-    await PUT(putReq({ statut: 'EN_ATTENTE' }), params())
+    await PUT(putReq({ statut: 'NON_A_JOUR' }), params())
 
     const data = vi.mocked(prisma.cotisation.update).mock.calls[0][0]?.data
     expect(data?.montantPaye).toBe(0)
     expect(data?.collecteParId).toBeNull()
+  })
+
+  it('A_JOUR avec exonere=true met montantPaye à 0 et collecteParId à null', async () => {
+    vi.mocked(getServerSession).mockResolvedValue(session('CHEF_GROUPE') as never)
+    vi.mocked(prisma.cotisation.findFirst).mockResolvedValue(cotisationExistante({ montant: 5000 }) as never)
+    vi.mocked(prisma.cotisation.update).mockImplementation(
+      (({ data }: { data: Record<string, unknown> }) => Promise.resolve({ id: COTISATION_ID, ...data })) as never,
+    )
+
+    await PUT(putReq({ statut: 'A_JOUR', exonere: true }), params())
+
+    const data = vi.mocked(prisma.cotisation.update).mock.calls[0][0]?.data
+    expect(data).toMatchObject({ statut: 'A_JOUR', montantPaye: 0, datePaiement: null, collecteParId: null })
+  })
+
+  it('A_JOUR sans exonere considère le montant complet comme réglé', async () => {
+    vi.mocked(getServerSession).mockResolvedValue(session('CHEF_GROUPE') as never)
+    vi.mocked(prisma.cotisation.findFirst).mockResolvedValue(cotisationExistante({ montant: 5000, collecteParId: null }) as never)
+    vi.mocked(prisma.cotisation.update).mockImplementation(
+      (({ data }: { data: Record<string, unknown> }) => Promise.resolve({ id: COTISATION_ID, ...data })) as never,
+    )
+
+    await PUT(putReq({ statut: 'A_JOUR' }), params())
+
+    const data = vi.mocked(prisma.cotisation.update).mock.calls[0][0]?.data
+    expect(data).toMatchObject({ statut: 'A_JOUR', montantPaye: 5000, collecteParId: 'user-1' })
   })
 })
 

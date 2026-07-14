@@ -13,8 +13,7 @@ import {
   libelleRoleAvecFonction,
 } from '@/lib/roles'
 import { LABELS_BRANCHES } from '@/lib/branches'
-import { adhesionEstAJour } from '@/lib/cotisations'
-import { BadgeAdhesion } from '@/app/components/BadgeAdhesion'
+import { estAssujettiAdhesion, LABELS_STATUT_COTISATION, COULEURS_STATUT_COTISATION } from '@/lib/cotisations'
 
 interface UtilisateurListe {
   id: string
@@ -88,6 +87,35 @@ interface FormNominationErrors {
   brancheType?: string
   roleDistrict?: string
   brancheTypeDistrict?: string
+}
+
+function SelectStatutAdhesion({
+  statut,
+  enCours,
+  onChange,
+}: {
+  statut: string | null
+  enCours: boolean
+  onChange: (statut: string) => void
+}) {
+  // null (aucune cotisation générée) s'affiche et se pilote comme NON_A_JOUR —
+  // même sens pratique, voir BadgeAdhesion.
+  const valeur = statut ?? 'NON_A_JOUR'
+  return (
+    <select
+      value={valeur}
+      disabled={enCours}
+      onChange={(e) => onChange(e.target.value)}
+      onClick={(e) => e.stopPropagation()}
+      className={`text-xs font-medium rounded-full border-0 pl-2 pr-6 py-1 focus:outline-none focus:ring-2 focus:ring-[#1a4731] disabled:opacity-50 ${
+        COULEURS_STATUT_COTISATION[valeur] ?? 'bg-gray-100 text-gray-700'
+      }`}
+    >
+      {Object.entries(LABELS_STATUT_COTISATION).map(([v, l]) => (
+        <option key={v} value={v}>{l}</option>
+      ))}
+    </select>
+  )
 }
 
 function libelleAffectationDistrict(role: string, fonction?: string | null, brancheType?: string | null): string {
@@ -323,14 +351,13 @@ export default function UtilisateursPlateformePage() {
     }
   }
 
-  const basculerAdhesion = async (utilisateur: UtilisateurListe) => {
-    const aJour = !adhesionEstAJour(utilisateur.statutAdhesion)
+  const changerStatutAdhesion = async (utilisateur: UtilisateurListe, statut: string) => {
     setEnCoursAdhesion(utilisateur.id)
     try {
       const res = await fetch(`/api/admin/utilisateurs/${utilisateur.id}/adhesion`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ aJour }),
+        body: JSON.stringify({ statut }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -340,7 +367,7 @@ export default function UtilisateursPlateformePage() {
       setUtilisateurs((liste) =>
         liste.map((u) => (u.id === utilisateur.id ? { ...u, statutAdhesion: data.statutAdhesion } : u)),
       )
-      toast.success(aJour ? 'Adhésion marquée à jour.' : 'Adhésion marquée pas à jour.')
+      toast.success('Statut d’adhésion mis à jour.')
     } catch {
       toast.error('Une erreur est survenue')
     } finally {
@@ -776,17 +803,14 @@ export default function UtilisateursPlateformePage() {
               </div>
             </button>
 
-            {ROLES_TOUT_STAFF.includes(u.role) && (
+            {estAssujettiAdhesion(u.role) && (
               <div className="mt-3 flex items-center gap-2 border-t border-gray-50 pt-3">
-                <BadgeAdhesion statut={u.statutAdhesion} />
-                <button
-                  type="button"
-                  onClick={() => basculerAdhesion(u)}
-                  disabled={enCoursAdhesion === u.id}
-                  className="text-xs font-medium text-[#1a4731] hover:underline disabled:opacity-50"
-                >
-                  {enCoursAdhesion === u.id ? '…' : adhesionEstAJour(u.statutAdhesion) ? 'Marquer pas à jour' : 'Marquer à jour'}
-                </button>
+                <span className="text-xs text-gray-500">Adhésion :</span>
+                <SelectStatutAdhesion
+                  statut={u.statutAdhesion}
+                  enCours={enCoursAdhesion === u.id}
+                  onChange={(statut) => changerStatutAdhesion(u, statut)}
+                />
               </div>
             )}
 
@@ -858,23 +882,14 @@ export default function UtilisateursPlateformePage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    {ROLES_TOUT_STAFF.includes(u.role) ? (
-                      <div className="flex flex-col items-center gap-1">
-                        <BadgeAdhesion statut={u.statutAdhesion} />
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            basculerAdhesion(u)
-                          }}
-                          disabled={enCoursAdhesion === u.id}
-                          className="text-xs font-medium text-[#1a4731] hover:underline disabled:opacity-50"
-                        >
-                          {enCoursAdhesion === u.id ? '…' : adhesionEstAJour(u.statutAdhesion) ? 'Marquer pas à jour' : 'Marquer à jour'}
-                        </button>
-                      </div>
+                    {estAssujettiAdhesion(u.role) ? (
+                      <SelectStatutAdhesion
+                        statut={u.statutAdhesion}
+                        enCours={enCoursAdhesion === u.id}
+                        onChange={(statut) => changerStatutAdhesion(u, statut)}
+                      />
                     ) : (
-                      <span className="text-xs text-gray-400">—</span>
+                      <span className="text-xs text-gray-400 text-center">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -931,9 +946,9 @@ export default function UtilisateursPlateformePage() {
             <form onSubmit={soumettreNomination} noValidate>
               <div className="border-b border-gray-100 px-5 py-4">
                 <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900">Nommer {utilisateurNomination.prenom} {utilisateurNomination.nom}</h2>
-                    <p className="text-sm text-gray-500">
+                  <div className="min-w-0">
+                    <h2 className="break-words text-lg font-bold text-gray-900">Nommer {utilisateurNomination.prenom} {utilisateurNomination.nom}</h2>
+                    <p className="break-words text-sm text-gray-500">
                       {utilisateurNomination.paroisse.nom}
                       {utilisateurNomination.paroisse.district ? ` — District ${utilisateurNomination.paroisse.district.nom}` : ''}
                     </p>
@@ -942,7 +957,7 @@ export default function UtilisateursPlateformePage() {
                     type="button"
                     onClick={fermerNomination}
                     disabled={soumissionNomination}
-                    className="rounded-lg px-2 py-1 text-sm font-semibold text-gray-500 hover:bg-gray-100 hover:text-gray-800 disabled:opacity-50"
+                    className="flex-shrink-0 rounded-lg px-2 py-1 text-sm font-semibold text-gray-500 hover:bg-gray-100 hover:text-gray-800 disabled:opacity-50"
                   >
                     Fermer
                   </button>

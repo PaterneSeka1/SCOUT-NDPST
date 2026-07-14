@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
 
     // "Droit d'adhésion" désigne précisément le type ADHESION_ANNUELLE (pas les
     // frais de camp/autres) — null = aucune cotisation générée cette année,
-    // distinct de EN_ATTENTE (générée, pas encore réglée).
+    // distinct de NON_A_JOUR (générée, pas encore réglée).
     const scouts = scoutsBruts.map(({ cotisations, ...s }) => ({
       ...s,
       statutAdhesion: cotisations[0]?.statut ?? null,

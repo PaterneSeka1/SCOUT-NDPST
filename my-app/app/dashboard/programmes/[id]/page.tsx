@@ -179,7 +179,7 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-4">
           <Link href="/dashboard/programmes" className="text-gray-500 hover:text-gray-700 transition-colors">← Retour</Link>
           <div>
@@ -198,7 +198,7 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
         </div>
 
         {peutGerer && (
-          <div className="flex gap-2 flex-shrink-0">
+          <div className="flex flex-wrap gap-2">
             <button onClick={() => setModifierMeta((m) => !m)}
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
               Modifier

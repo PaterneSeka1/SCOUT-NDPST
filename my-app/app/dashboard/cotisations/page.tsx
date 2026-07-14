@@ -70,8 +70,6 @@ const CIBLES_GENERATION: { value: CibleGeneration; label: string; brancheRequise
   { value: 'TOUS_STAFF', label: 'Tous les chefs', brancheRequise: false },
 ]
 
-const STATUTS_FINAUX = ['PAYEE', 'EXONEREE']
-
 function optionsAnnees(): string[] {
   const [debut] = anneeScolaireCourante().split('-').map(Number)
   return [debut - 1, debut, debut + 1].map((a) => `${a}-${a + 1}`)
@@ -176,7 +174,7 @@ export default function PageCotisations() {
   }, [charger])
 
   const totaux = useMemo(() => {
-    const validees = cotisations.filter((c) => c.statut === 'PAYEE').length
+    const validees = cotisations.filter((c) => c.statut === 'A_JOUR').length
     const aFinaliser = cotisations.filter((c) => STATUTS_COTISATION_A_FINALISER.includes(c.statut)).length
     const argentRecu = cotisations
       .filter((c) => STATUTS_COTISATION_ARGENT_RECU.includes(c.statut))
@@ -185,13 +183,11 @@ export default function PageCotisations() {
     return { validees, aFinaliser, argentRecu, aPayerSite }
   }, [cotisations])
 
-  const changerStatut = async (id: string, statut: string) => {
+  const changerStatut = async (id: string, statut: string, options?: { exonere?: boolean }) => {
     const messages: Record<string, string> = {
-      EN_ATTENTE: 'Cotisation réinitialisée',
+      NON_A_JOUR: 'Cotisation réinitialisée',
       ARGENT_RECU: 'Argent reçu enregistré',
-      PAYE_SITE: 'Paiement sur le site enregistré',
-      PAYEE: 'Adhésion validée',
-      EXONEREE: 'Exonération enregistrée',
+      A_JOUR: 'Adhésion validée',
     }
 
     setEnCours(id)
@@ -199,14 +195,14 @@ export default function PageCotisations() {
       const res = await fetch(`/api/cotisations/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ statut }),
+        body: JSON.stringify({ statut, ...(options?.exonere ? { exonere: true } : {}) }),
       })
       const data = await res.json()
       if (!res.ok) {
         toast.error(data.erreur ?? 'Erreur')
         return
       }
-      toast.success(messages[statut] ?? 'Statut mis à jour')
+      toast.success(options?.exonere ? 'Exonération enregistrée' : messages[statut] ?? 'Statut mis à jour')
       charger()
     } finally {
       setEnCours(null)
@@ -227,7 +223,7 @@ export default function PageCotisations() {
       const res = await fetch(`/api/cotisations/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ statut: 'PARTIELLEMENT_PAYEE', montantPaye }),
+        body: JSON.stringify({ statut: 'NON_A_JOUR', montantPaye }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -341,10 +337,9 @@ export default function PageCotisations() {
 
   const rendreActions = (cotisation: Cotisation) => {
     const traitement = enCours === cotisation.id
-    const peutRecevoirPartiel = !['ARGENT_RECU', 'PAYE_SITE', ...STATUTS_FINAUX].includes(cotisation.statut)
-    const peutRecevoirComplet = !['ARGENT_RECU', 'PAYE_SITE', ...STATUTS_FINAUX].includes(cotisation.statut)
-    const peutPayerSite = cotisation.statut === 'ARGENT_RECU'
-    const peutValider = cotisation.statut === 'PAYE_SITE'
+    const peutRecevoirPartiel = cotisation.statut === 'NON_A_JOUR'
+    const peutRecevoirComplet = cotisation.statut === 'NON_A_JOUR'
+    const peutValider = cotisation.statut === 'ARGENT_RECU'
 
     return (
       <div className="flex flex-wrap items-center gap-2">
@@ -366,37 +361,28 @@ export default function PageCotisations() {
             Argent reçu
           </button>
         )}
-        {estGestion && peutPayerSite && (
-          <button
-            disabled={traitement}
-            onClick={() => changerStatut(cotisation.id, 'PAYE_SITE')}
-            className="text-xs text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-lg hover:bg-indigo-50 disabled:opacity-50"
-          >
-            Payé site
-          </button>
-        )}
         {estGestion && peutValider && (
           <button
             disabled={traitement}
-            onClick={() => changerStatut(cotisation.id, 'PAYEE')}
+            onClick={() => changerStatut(cotisation.id, 'A_JOUR')}
             className="text-xs text-green-700 border border-green-200 px-2.5 py-1 rounded-lg hover:bg-green-50 disabled:opacity-50"
           >
-            Valider
+            Marquer à jour
           </button>
         )}
-        {estGestion && cotisation.statut !== 'EXONEREE' && (
+        {estGestion && cotisation.statut !== 'A_JOUR' && (
           <button
             disabled={traitement}
-            onClick={() => changerStatut(cotisation.id, 'EXONEREE')}
+            onClick={() => changerStatut(cotisation.id, 'A_JOUR', { exonere: true })}
             className="text-xs text-gray-600 border border-gray-200 px-2.5 py-1 rounded-lg hover:bg-gray-50 disabled:opacity-50"
           >
             Exonérer
           </button>
         )}
-        {estGestion && cotisation.statut !== 'EN_ATTENTE' && (
+        {estGestion && cotisation.statut !== 'NON_A_JOUR' && (
           <button
             disabled={traitement}
-            onClick={() => changerStatut(cotisation.id, 'EN_ATTENTE')}
+            onClick={() => changerStatut(cotisation.id, 'NON_A_JOUR')}
             className="text-xs text-amber-700 border border-amber-200 px-2.5 py-1 rounded-lg hover:bg-amber-50 disabled:opacity-50"
           >
             Réinitialiser

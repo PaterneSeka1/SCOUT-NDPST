@@ -53,24 +53,23 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     if (!existante) return NextResponse.json({ erreur: 'Cotisation introuvable' }, { status: 404 })
 
     const body = await req.json()
-    const { statut, modePaiement, notes, montantPaye } = body as {
+    const { statut, modePaiement, notes, montantPaye, exonere } = body as {
       statut?: string
       modePaiement?: string | null
       notes?: string | null
       montantPaye?: number
+      exonere?: boolean
     }
 
     if (statut !== undefined && !(statut in StatutCotisation)) {
       return NextResponse.json({ erreur: 'Statut invalide' }, { status: 400 })
     }
 
-    if (statut === 'PARTIELLEMENT_PAYEE') {
-      if (
-        typeof montantPaye !== 'number' ||
-        !Number.isInteger(montantPaye) ||
-        montantPaye <= 0 ||
-        montantPaye >= existante.montant
-      ) {
+    // NON_A_JOUR couvre aussi bien "rien payé" (montantPaye omis/0) que "payé
+    // partiellement" (montantPaye fourni, entre 0 et le montant dû exclus) —
+    // c'est ce même champ qui distingue les deux, pas le statut.
+    if (statut === 'NON_A_JOUR' && montantPaye !== undefined) {
+      if (typeof montantPaye !== 'number' || !Number.isInteger(montantPaye) || montantPaye < 0 || montantPaye >= existante.montant) {
         return NextResponse.json(
           { erreur: 'Le montant reçu doit être un entier positif, inférieur au montant dû' },
           { status: 400 },
@@ -87,28 +86,19 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       const montantComplet = existante.montant
 
       switch (statutDemande) {
-        case 'EN_ATTENTE':
-          montantPayeAudit = 0
-          collecteParAudit = null
+        case 'NON_A_JOUR': {
+          const montantPayeFinal = typeof montantPaye === 'number' ? montantPaye : 0
+          montantPayeAudit = montantPayeFinal
+          collecteParAudit = montantPayeFinal > 0 ? session.user.id : null
           Object.assign(statutData, {
             statut: statutDemande,
-            montantPaye: 0,
-            datePaiement: null,
-            enregistreParId: null,
-            collecteParId: null,
+            montantPaye: montantPayeFinal,
+            datePaiement: montantPayeFinal > 0 ? new Date() : null,
+            enregistreParId: montantPayeFinal > 0 ? session.user.id : null,
+            collecteParId: collecteParAudit,
           })
           break
-        case 'PARTIELLEMENT_PAYEE':
-          montantPayeAudit = montantPaye ?? 0
-          collecteParAudit = session.user.id
-          Object.assign(statutData, {
-            statut: statutDemande,
-            montantPaye: montantPayeAudit,
-            datePaiement: new Date(),
-            enregistreParId: session.user.id,
-            collecteParId: session.user.id,
-          })
-          break
+        }
         case 'ARGENT_RECU':
           montantPayeAudit = montantComplet
           collecteParAudit = session.user.id
@@ -120,29 +110,21 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
             collecteParId: session.user.id,
           })
           break
-        case 'PAYE_SITE':
-        case 'PAYEE':
-          montantPayeAudit = montantComplet
-          collecteParAudit = existante.collecteParId ?? session.user.id
+        case 'A_JOUR': {
+          // `exonere` distingue "a réellement payé" (montant complet) de
+          // "exempté" (rien dû) — même statut final dans les deux cas.
+          const estExonere = exonere === true
+          montantPayeAudit = estExonere ? 0 : montantComplet
+          collecteParAudit = estExonere ? null : (existante.collecteParId ?? session.user.id)
           Object.assign(statutData, {
             statut: statutDemande,
-            montantPaye: montantComplet,
-            datePaiement: new Date(),
+            montantPaye: montantPayeAudit,
+            datePaiement: estExonere ? null : new Date(),
             enregistreParId: session.user.id,
             collecteParId: collecteParAudit,
           })
           break
-        case 'EXONEREE':
-          montantPayeAudit = 0
-          collecteParAudit = null
-          Object.assign(statutData, {
-            statut: statutDemande,
-            montantPaye: 0,
-            datePaiement: null,
-            enregistreParId: session.user.id,
-            collecteParId: null,
-          })
-          break
+        }
       }
     }
 
@@ -162,9 +144,9 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     })
 
     // Auditer tout changement de statut, mais aussi un complément de paiement
-    // partiel qui laisse le statut à PARTIELLEMENT_PAYEE (ex: 5000 puis 3000
-    // FCFA de plus) — sans quoi ce second mouvement d'argent ne laisserait
-    // aucune trace, alors que c'est justement ce que ce statut vise à tracer.
+    // partiel qui laisse le statut à NON_A_JOUR (ex: 5000 puis 3000 FCFA de
+    // plus) — sans quoi ce second mouvement d'argent ne laisserait aucune
+    // trace, alors que c'est justement ce que `montantPaye` vise à tracer.
     const statutInchange = statut !== undefined && statut === existante.statut
     const montantInchange = statutInchange && montantPayeAudit === existante.montantPaye
     const collecteurInchange = statutInchange && collecteParAudit === existante.collecteParId

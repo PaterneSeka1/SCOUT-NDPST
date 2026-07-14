@@ -69,7 +69,7 @@ export async function GET() {
     kpis: {
       activitesMois,
       tauxPresence,
-      cotisationsPayees: montantParStatut('PAYEE'),
+      cotisationsPayees: montantParStatut('A_JOUR'),
       cotisationsEnAttente: cotisationsAFinaliser,
       utilisateursParCategorie: { staff, parents, comptesScouts },
     },

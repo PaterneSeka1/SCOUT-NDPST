@@ -85,7 +85,7 @@ describe('GET /api/cotisations/export', () => {
         montant: 5000,
         montantPaye: 5000,
         anneeScolaire: '2025-2026',
-        statut: 'PAYEE',
+        statut: 'A_JOUR',
         datePaiement: new Date('2026-01-15'),
         modePaiement: 'Espèces',
         scout: { nom: 'Konan', prenom: 'Gervais', matricule: 'M001', brancheType: 'OISILLONS' },
@@ -101,6 +101,6 @@ describe('GET /api/cotisations/export', () => {
     expect(res.headers.get('Content-Type')).toContain('text/csv')
     expect(texte).toContain('Gervais Konan')
     expect(texte).toContain('5000')
-    expect(texte).toContain('Adhésion validée')
+    expect(texte).toContain('À jour')
   })
 })

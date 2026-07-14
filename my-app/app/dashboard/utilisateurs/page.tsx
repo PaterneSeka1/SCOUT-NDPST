@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { LABELS_ROLES, COULEURS_ROLES, ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT, ROLES_TOUT_STAFF } from '@/lib/roles'
+import { LABELS_ROLES, COULEURS_ROLES, ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT } from '@/lib/roles'
+import { estAssujettiAdhesion } from '@/lib/cotisations'
 import { useUtilisateurs, useModifierUtilisateur } from '@/hooks/useUtilisateurs'
 import type { Utilisateur } from '@/hooks/useUtilisateurs'
 import { BadgeAdhesion } from '@/app/components/BadgeAdhesion'
@@ -68,7 +69,7 @@ function CarteUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
         {utilisateur.matricule && (
           <span className="font-mono text-xs text-gray-500">{utilisateur.matricule}</span>
         )}
-        {ROLES_TOUT_STAFF.includes(utilisateur.role) && <BadgeAdhesion statut={utilisateur.statutAdhesion ?? null} />}
+        {estAssujettiAdhesion(utilisateur.role) && <BadgeAdhesion statut={utilisateur.statutAdhesion ?? null} />}
       </div>
 
       <div className="flex items-center gap-3 pt-1 border-t border-gray-50">
@@ -118,7 +119,7 @@ function LigneUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
         </span>
       </td>
       <td className="px-4 py-3">
-        {ROLES_TOUT_STAFF.includes(utilisateur.role) ? (
+        {estAssujettiAdhesion(utilisateur.role) ? (
           <BadgeAdhesion statut={utilisateur.statutAdhesion ?? null} />
         ) : (
           <span className="text-xs text-gray-400">—</span>

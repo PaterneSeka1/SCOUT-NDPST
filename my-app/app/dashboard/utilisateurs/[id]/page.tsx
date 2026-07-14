@@ -56,7 +56,7 @@ export default function FicheUtilisateurPage() {
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
       {/* En-tête */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="flex items-center gap-4">
           <Link
             href="/dashboard/utilisateurs"
@@ -68,7 +68,7 @@ export default function FicheUtilisateurPage() {
         </div>
 
         {utilisateur && (
-          <div className="flex flex-wrap gap-2 flex-shrink-0">
+          <div className="flex flex-wrap gap-2">
             <Link
               href={`/dashboard/utilisateurs/${utilisateur.id}/modifier`}
               className="bg-[#1a4731] text-white px-4 py-2 rounded-md hover:bg-[#163d29] transition-colors text-sm font-medium"
