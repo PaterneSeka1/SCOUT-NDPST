@@ -3,6 +3,12 @@ import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { ParoisseLogoImage } from '@/app/components/ParoisseLogoImage'
 
+// Sans ceci, Next.js prérend cette page une seule fois au build (aucune API
+// dynamique utilisée ici) et fige la config lue en base à cet instant : les
+// changements faits depuis /admin/apparence n'apparaîtraient qu'au prochain
+// build, jamais tout seuls.
+export const dynamic = 'force-dynamic'
+
 type SiteConfig = {
   nomSite?: string
   sousTitreSite?: string
