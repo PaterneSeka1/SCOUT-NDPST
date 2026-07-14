@@ -5,10 +5,10 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { confirmer } from '@/app/components/ConfirmDialog'
+import { SelecteurMembre } from '@/app/components/SelecteurMembre'
 import { LABELS_ROLES, libelleRoleAvecFonction } from '@/lib/roles'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
-const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 interface ParoisseDistrict {
   id: string
@@ -130,9 +130,19 @@ export default function FicheDistrictPage() {
 
   const handleCreerCommissaire = async (e: React.FormEvent) => {
     e.preventDefault()
+    const commissaireActuel = district?.equipe.find((m) => m.role === 'COMMISSAIRE_DISTRICT' && m.actif)
+      ?? district?.equipe.find((m) => m.role === 'COMMISSAIRE_DISTRICT')
     if (!chefChoisi) {
       toast.error('Le membre à désigner est requis.')
       return
+    }
+    if (commissaireActuel) {
+      const ok = await confirmer({
+        titre: 'Remplacer le Commissaire de District ?',
+        description: `${commissaireActuel.prenom} ${commissaireActuel.nom} perdra uniquement son affectation district. Son compte et son rôle paroissial resteront inchangés.`,
+        labelConfirmer: 'Remplacer',
+      })
+      if (!ok) return
     }
     setSoumissionCommissaire(true)
     try {
@@ -143,11 +153,38 @@ export default function FicheDistrictPage() {
       })
       const data = await res.json()
       if (!res.ok) { toast.error(data.erreur ?? 'Erreur serveur'); return }
-      toast.success('Commissaire de District désigné.')
+      toast.success(commissaireActuel ? 'Commissaire de District remplacé.' : 'Commissaire de District désigné.')
       setChefChoisi('')
       charger()
     } catch {
       toast.error('Erreur lors de la désignation')
+    } finally {
+      setSoumissionCommissaire(false)
+    }
+  }
+
+  const handleRetirerCommissaire = async () => {
+    if (!district) return
+    const commissaireActuel = district.equipe.find((m) => m.role === 'COMMISSAIRE_DISTRICT' && m.actif)
+      ?? district.equipe.find((m) => m.role === 'COMMISSAIRE_DISTRICT')
+    if (!commissaireActuel) return
+    const ok = await confirmer({
+      titre: 'Retirer le Commissaire de District ?',
+      description: `${commissaireActuel.prenom} ${commissaireActuel.nom} perdra uniquement son affectation district. Son compte et son rôle paroissial resteront inchangés.`,
+      labelConfirmer: 'Retirer',
+      danger: true,
+    })
+    if (!ok) return
+    setSoumissionCommissaire(true)
+    try {
+      const res = await fetch(`/api/admin/districts/${id}/commissaire`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { toast.error(data.erreur ?? 'Erreur serveur'); return }
+      toast.success('Commissaire de District retiré.')
+      setChefChoisi('')
+      charger()
+    } catch {
+      toast.error('Erreur lors du retrait')
     } finally {
       setSoumissionCommissaire(false)
     }
@@ -170,7 +207,9 @@ export default function FicheDistrictPage() {
     )
   }
 
-  const commissaire = district.equipe.find((m) => m.role === 'COMMISSAIRE_DISTRICT') ?? null
+  const commissaire = district.equipe.find((m) => m.role === 'COMMISSAIRE_DISTRICT' && m.actif)
+    ?? district.equipe.find((m) => m.role === 'COMMISSAIRE_DISTRICT')
+    ?? null
   const membresEquipe = district.equipe.filter((m) => m.role !== 'COMMISSAIRE_DISTRICT')
 
   return (
@@ -214,6 +253,72 @@ export default function FicheDistrictPage() {
         </p>
       </div>
 
+      <section id="commissaire" className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 scroll-mt-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+          <div>
+            <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500">Commissaire de District</h2>
+            <p className="text-sm text-gray-500 mt-1">Affectation district ajoutée au compte paroissial existant.</p>
+          </div>
+          {commissaire && (
+            <button
+              type="button"
+              onClick={handleRetirerCommissaire}
+              disabled={soumissionCommissaire}
+              className="self-start rounded-lg border border-red-200 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-50 transition"
+            >
+              Retirer
+            </button>
+          )}
+        </div>
+
+        {commissaire ? (
+          <div className="flex items-center justify-between gap-3 border border-gray-100 rounded-lg px-3 py-3 mb-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-gray-900">{commissaire.prenom} {commissaire.nom}</p>
+              <p className="text-xs text-gray-500">{commissaire.matricule ?? commissaire.telephone ?? commissaire.email ?? '—'}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{LABELS_ROLES[commissaire.roleParoisse] ?? commissaire.roleParoisse} — {commissaire.paroisse.nom}</p>
+            </div>
+            <span className={`flex-shrink-0 text-xs font-medium ${commissaire.actif ? 'text-green-700' : 'text-gray-400'}`}>
+              {commissaire.actif ? 'Actif' : 'Désactivé'}
+            </span>
+          </div>
+        ) : (
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
+            <p className="text-sm font-medium text-orange-700">Aucun Commissaire de District désigné.</p>
+          </div>
+        )}
+
+        <form onSubmit={handleCreerCommissaire} className="space-y-3">
+          <SelecteurMembre
+            id="commissaireId"
+            label={commissaire ? 'Remplacer par' : 'Membre du staff'}
+            required={!commissaire}
+            membres={district.personnelEligible}
+            value={chefChoisi}
+            onChange={setChefChoisi}
+            disabled={soumissionCommissaire || district.personnelEligible.length === 0}
+            placeholder={commissaire ? 'Rechercher le nouveau Commissaire…' : 'Rechercher le membre à nommer…'}
+            emptyMessage="Aucun membre du staff actif disponible dans ce district."
+          />
+          {district.personnelEligible.length === 0 && (
+            <p className="mt-1 text-xs text-orange-600">Aucun membre du staff actif disponible dans les paroisses de ce district.</p>
+          )}
+          <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
+            <button
+              type="submit"
+              disabled={soumissionCommissaire || !chefChoisi}
+              className="rounded-lg px-5 py-2 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50 transition flex items-center justify-center gap-2"
+              style={{ backgroundColor: 'var(--cp)' }}
+            >
+              {soumissionCommissaire && <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />}
+              {soumissionCommissaire
+                ? 'Enregistrement…'
+                : commissaire ? 'Remplacer le Commissaire' : 'Désigner le Commissaire'}
+            </button>
+          </div>
+        </form>
+      </section>
+
       <section className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
         <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-4">Paroisses du district</h2>
         <ul className="space-y-2">
@@ -251,64 +356,6 @@ export default function FicheDistrictPage() {
             </li>
           ))}
         </ul>
-      </section>
-
-      <section className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
-        <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-4">Commissaire de District</h2>
-
-        {commissaire ? (
-          <>
-            <div className="flex items-center justify-between border border-gray-100 rounded-lg px-3 py-2">
-              <div>
-                <p className="text-sm font-medium text-gray-900">{commissaire.prenom} {commissaire.nom}</p>
-                <p className="text-xs text-gray-500">{commissaire.matricule ?? commissaire.telephone ?? commissaire.email ?? '—'}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{LABELS_ROLES[commissaire.roleParoisse] ?? commissaire.roleParoisse} — {commissaire.paroisse.nom}</p>
-              </div>
-              <span className={`text-xs font-medium ${commissaire.actif ? 'text-green-700' : 'text-gray-400'}`}>{commissaire.actif ? 'Actif' : 'Désactivé'}</span>
-            </div>
-            <p className="text-xs text-gray-400 mt-3">
-              La modification du rôle paroissial de ce compte se fait depuis la gestion des utilisateurs.
-            </p>
-          </>
-        ) : (
-          <>
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
-              <p className="text-sm font-medium text-orange-700">Aucun Commissaire de District désigné.</p>
-              <p className="text-sm text-orange-600 mt-0.5">Désignez-en un ci-dessous parmi le staff des paroisses de ce district — il continuera d&apos;exercer son rôle paroissial normalement.</p>
-            </div>
-
-            <form onSubmit={handleCreerCommissaire} className="space-y-3">
-              <div>
-                <label className={CLS_LABEL}>Membre du staff *</label>
-                <select
-                  className={CLS_INPUT}
-                  value={chefChoisi}
-                  onChange={(e) => setChefChoisi(e.target.value)}
-                  disabled={district.personnelEligible.length === 0}
-                >
-                  <option value="">— Choisir un membre du staff —</option>
-                  {district.personnelEligible.map((c) => (
-                    <option key={c.id} value={c.id}>{c.prenom} {c.nom} — {LABELS_ROLES[c.role] ?? c.role} — {c.paroisse.nom}</option>
-                  ))}
-                </select>
-                {district.personnelEligible.length === 0 && (
-                  <p className="mt-1 text-xs text-orange-600">Aucun membre du staff actif disponible dans les paroisses de ce district.</p>
-                )}
-              </div>
-              <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
-                <button
-                  type="submit"
-                  disabled={soumissionCommissaire}
-                  className="rounded-lg px-5 py-2 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50 transition flex items-center justify-center gap-2"
-                  style={{ backgroundColor: 'var(--cp)' }}
-                >
-                  {soumissionCommissaire && <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />}
-                  {soumissionCommissaire ? 'Désignation…' : 'Désigner le Commissaire'}
-                </button>
-              </div>
-            </form>
-          </>
-        )}
       </section>
 
       <section className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">

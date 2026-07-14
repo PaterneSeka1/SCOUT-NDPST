@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { useScout, useModifierScout } from '@/hooks/useScouts'
 import { LABELS_BRANCHES } from '@/lib/branches'
 
@@ -23,9 +24,6 @@ export default function ModifierScoutPage() {
   const [photoPreview, setPhotoPreview] = useState('')
   const [consentementImage, setConsentementImage] = useState(false)
   const [uploadEnCours, setUploadEnCours] = useState(false)
-  const [erreurPhoto, setErreurPhoto] = useState('')
-  const [erreur, setErreur] = useState('')
-  const [succes, setSucces] = useState('')
 
   useEffect(() => {
     if (scout) {
@@ -52,7 +50,6 @@ export default function ModifierScoutPage() {
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fichier = e.target.files?.[0]
     if (!fichier) return
-    setErreurPhoto('')
     setPhotoPreview(URL.createObjectURL(fichier))
     setUploadEnCours(true)
     try {
@@ -60,10 +57,11 @@ export default function ModifierScoutPage() {
       fd.append('fichier', fichier)
       const res = await fetch('/api/upload', { method: 'POST', body: fd })
       const data = await res.json()
-      if (!res.ok) { setErreurPhoto(data.erreur ?? 'Erreur upload'); setPhotoPreview(scout?.photo ?? ''); return }
+      if (!res.ok) { toast.error(data.erreur ?? 'Erreur upload'); setPhotoPreview(scout?.photo ?? ''); return }
       setPhoto(data.url)
+      toast.success('Photo téléversée.')
     } catch {
-      setErreurPhoto("Erreur lors de l'envoi du fichier")
+      toast.error("Erreur lors de l'envoi du fichier")
       setPhotoPreview(scout?.photo ?? '')
     } finally {
       setUploadEnCours(false)
@@ -72,14 +70,12 @@ export default function ModifierScoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setErreur('')
-    setSucces('')
     try {
       await mutateAsync({ ...form, photo: photo ?? undefined, consentementImage })
-      setSucces('Modifications enregistrées.')
-      setTimeout(() => router.push(`/dashboard/scouts/${id}`), 1200)
+      toast.success('Modifications enregistrées.')
+      router.push(`/dashboard/scouts/${id}`)
     } catch (err) {
-      setErreur(err instanceof Error ? err.message : 'Une erreur est survenue')
+      toast.error(err instanceof Error ? err.message : 'Une erreur est survenue')
     }
   }
 
@@ -90,15 +86,12 @@ export default function ModifierScoutPage() {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6 px-1 sm:px-0">
       <Link href={`/dashboard/scouts/${id}`} className="text-sm text-gray-500 hover:text-gray-700">
         ← Retour à la fiche
       </Link>
 
       <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Modifier le scout</h1>
-
-      {succes && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">{succes}</div>}
-      {erreur && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreur}</div>}
 
       <form onSubmit={handleSubmit}>
         <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">
@@ -126,7 +119,6 @@ export default function ModifierScoutPage() {
                   <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handlePhoto} className="sr-only" disabled={uploadEnCours} />
                 </label>
                 <p className="mt-1.5 text-xs text-gray-400">JPEG, PNG, WebP · Max 5 Mo</p>
-                {erreurPhoto && <p className="mt-1 text-xs text-red-600">{erreurPhoto}</p>}
               </div>
             </div>
           </div>
@@ -193,11 +185,11 @@ export default function ModifierScoutPage() {
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={isPending || uploadEnCours}
-              className="sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
+              className="w-full sm:w-auto sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
               {isPending ? 'Enregistrement…' : 'Enregistrer les modifications'}
             </button>
             <Link href={`/dashboard/scouts/${id}`}
-              className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+              className="inline-flex w-full items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:w-auto">
               Annuler
             </Link>
           </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { useUtilisateur, useModifierUtilisateur, useResetPassword } from '@/hooks/useUtilisateurs'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
@@ -26,13 +27,9 @@ export default function ModifierParentPage() {
 
   const [formInfos, setFormInfos] = useState<FormInfos>({ nom: '', prenom: '', email: '', actif: true })
   const [erreursInfos, setErreursInfos] = useState<FormInfosErrors>({})
-  const [erreurServeurInfos, setErreurServeurInfos] = useState('')
-  const [succesInfos, setSuccesInfos] = useState(false)
 
   const [formMdp, setFormMdp] = useState<FormMdp>({ motDePasse: '', confirmation: '' })
   const [erreursMdp, setErreursMdp] = useState<FormMdpErrors>({})
-  const [erreurServeurMdp, setErreurServeurMdp] = useState('')
-  const [succesMdp, setSuccesMdp] = useState(false)
 
   useEffect(() => {
     if (parent) {
@@ -57,15 +54,13 @@ export default function ModifierParentPage() {
 
   const soumettreInfos = async (e: React.FormEvent) => {
     e.preventDefault()
-    setErreurServeurInfos('')
-    setSuccesInfos(false)
     if (!validerInfos()) return
     try {
       await modifier({ nom: formInfos.nom.trim(), prenom: formInfos.prenom.trim(), email: formInfos.email.trim() || null, actif: formInfos.actif })
-      setSuccesInfos(true)
-      setTimeout(() => router.push('/dashboard/parents'), 1500)
+      toast.success('Modifications enregistrées.')
+      router.push('/dashboard/parents')
     } catch (err) {
-      setErreurServeurInfos(err instanceof Error ? err.message : 'Une erreur est survenue')
+      toast.error(err instanceof Error ? err.message : 'Une erreur est survenue')
     }
   }
 
@@ -87,15 +82,13 @@ export default function ModifierParentPage() {
 
   const soumettreMdp = async (e: React.FormEvent) => {
     e.preventDefault()
-    setErreurServeurMdp('')
-    setSuccesMdp(false)
     if (!validerMdp()) return
     try {
       await resetPassword({ nouveauMotDePasse: formMdp.motDePasse })
-      setSuccesMdp(true)
+      toast.success('Mot de passe réinitialisé.')
       setFormMdp({ motDePasse: '', confirmation: '' })
     } catch (err) {
-      setErreurServeurMdp(err instanceof Error ? err.message : 'Une erreur est survenue')
+      toast.error(err instanceof Error ? err.message : 'Une erreur est survenue')
     }
   }
 
@@ -113,7 +106,7 @@ export default function ModifierParentPage() {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6 px-1 sm:px-0">
       <Link href="/dashboard/parents" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
         ← Retour à la liste
       </Link>
@@ -127,9 +120,6 @@ export default function ModifierParentPage() {
       <form onSubmit={soumettreInfos} noValidate>
         <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">
           <h2 className="text-sm font-semibold text-gray-800 border-b border-gray-100 pb-3">Informations générales</h2>
-
-          {succesInfos && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">Modifications enregistrées. Redirection…</div>}
-          {erreurServeurInfos && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreurServeurInfos}</div>}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -159,8 +149,8 @@ export default function ModifierParentPage() {
           </label>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <button type="submit" disabled={soumissionInfos || succesInfos}
-              className="sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
+            <button type="submit" disabled={soumissionInfos}
+              className="w-full sm:w-auto sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
               {soumissionInfos ? 'Enregistrement…' : 'Enregistrer les modifications'}
             </button>
           </div>
@@ -171,9 +161,6 @@ export default function ModifierParentPage() {
       <form onSubmit={soumettreMdp} noValidate>
         <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">
           <h2 className="text-sm font-semibold text-gray-800 border-b border-gray-100 pb-3">Réinitialiser le mot de passe</h2>
-
-          {succesMdp && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">Mot de passe réinitialisé avec succès.</div>}
-          {erreurServeurMdp && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreurServeurMdp}</div>}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -192,7 +179,7 @@ export default function ModifierParentPage() {
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={soumissionMdp}
-              className="sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
+              className="w-full sm:w-auto sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
               {soumissionMdp ? 'Réinitialisation…' : 'Réinitialiser le mot de passe'}
             </button>
           </div>

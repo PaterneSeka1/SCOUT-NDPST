@@ -47,16 +47,12 @@ export default function ModifierUtilisateurPlateformePage() {
 
   const [formInfos, setFormInfos] = useState<FormInfos>({ nom: '', prenom: '', email: '', role: '', brancheType: '', actif: true })
   const [erreursInfos, setErreursInfos] = useState<FormInfosErrors>({})
-  const [erreurServeurInfos, setErreurServeurInfos] = useState('')
-  const [succesInfos, setSuccesInfos] = useState(false)
   const [soumissionInfos, setSoumissionInfos] = useState(false)
 
   const estBranche = ROLES_BRANCHE.includes(formInfos.role)
 
   const [formMdp, setFormMdp] = useState<FormMdp>({ motDePasse: '', confirmation: '' })
   const [erreursMdp, setErreursMdp] = useState<FormMdpErrors>({})
-  const [erreurServeurMdp, setErreurServeurMdp] = useState('')
-  const [succesMdp, setSuccesMdp] = useState(false)
   const [soumissionMdp, setSoumissionMdp] = useState(false)
 
   const charger = useCallback(() => {
@@ -101,8 +97,6 @@ export default function ModifierUtilisateurPlateformePage() {
 
   const soumettreInfos = async (e: React.FormEvent) => {
     e.preventDefault()
-    setErreurServeurInfos('')
-    setSuccesInfos(false)
     if (!validerInfos()) return
     setSoumissionInfos(true)
     try {
@@ -119,11 +113,11 @@ export default function ModifierUtilisateurPlateformePage() {
         }),
       })
       const data = await res.json()
-      if (!res.ok) { setErreurServeurInfos(data.erreur ?? 'Erreur serveur'); return }
-      setSuccesInfos(true)
-      setTimeout(() => router.push('/admin/utilisateurs'), 1500)
+      if (!res.ok) { toast.error(data.erreur ?? 'Erreur serveur'); return }
+      toast.success('Modifications enregistrées.')
+      router.push('/admin/utilisateurs')
     } catch {
-      setErreurServeurInfos('Une erreur est survenue')
+      toast.error('Une erreur est survenue')
     } finally {
       setSoumissionInfos(false)
     }
@@ -147,8 +141,6 @@ export default function ModifierUtilisateurPlateformePage() {
 
   const soumettreMdp = async (e: React.FormEvent) => {
     e.preventDefault()
-    setErreurServeurMdp('')
-    setSuccesMdp(false)
     if (!validerMdp()) return
     setSoumissionMdp(true)
     try {
@@ -158,11 +150,11 @@ export default function ModifierUtilisateurPlateformePage() {
         body: JSON.stringify({ nouveauMotDePasse: formMdp.motDePasse }),
       })
       const data = await res.json()
-      if (!res.ok) { setErreurServeurMdp(data.erreur ?? 'Erreur serveur'); return }
-      setSuccesMdp(true)
+      if (!res.ok) { toast.error(data.erreur ?? 'Erreur serveur'); return }
+      toast.success('Mot de passe réinitialisé.')
       setFormMdp({ motDePasse: '', confirmation: '' })
     } catch {
-      setErreurServeurMdp('Une erreur est survenue')
+      toast.error('Une erreur est survenue')
     } finally {
       setSoumissionMdp(false)
     }
@@ -186,7 +178,7 @@ export default function ModifierUtilisateurPlateformePage() {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
+    <div className="mx-auto max-w-2xl space-y-6 px-1 sm:px-0">
       <Link href="/admin/utilisateurs" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
         ← Retour à la liste
       </Link>
@@ -200,9 +192,6 @@ export default function ModifierUtilisateurPlateformePage() {
       <form onSubmit={soumettreInfos} noValidate>
         <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">
           <h2 className="text-sm font-semibold text-gray-800 border-b border-gray-100 pb-3">Informations générales</h2>
-
-          {succesInfos && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">Modifications enregistrées. Redirection…</div>}
-          {erreurServeurInfos && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreurServeurInfos}</div>}
 
           {/* Paroisse — lecture seule, non réassignable depuis cette page */}
           <div>
@@ -269,8 +258,8 @@ export default function ModifierUtilisateurPlateformePage() {
           </label>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <button type="submit" disabled={soumissionInfos || succesInfos}
-              className="sm:flex-none rounded-lg px-5 py-2.5 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50 transition"
+            <button type="submit" disabled={soumissionInfos}
+              className="w-full rounded-lg px-5 py-2.5 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-50 sm:w-auto"
               style={{ backgroundColor: 'var(--cp)' }}>
               {soumissionInfos ? 'Enregistrement…' : 'Enregistrer les modifications'}
             </button>
@@ -282,9 +271,6 @@ export default function ModifierUtilisateurPlateformePage() {
       <form onSubmit={soumettreMdp} noValidate>
         <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">
           <h2 className="text-sm font-semibold text-gray-800 border-b border-gray-100 pb-3">Réinitialiser le mot de passe</h2>
-
-          {succesMdp && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">Mot de passe réinitialisé avec succès.</div>}
-          {erreurServeurMdp && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreurServeurMdp}</div>}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -303,7 +289,7 @@ export default function ModifierUtilisateurPlateformePage() {
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={soumissionMdp}
-              className="sm:flex-none rounded-lg px-5 py-2.5 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50 transition"
+              className="w-full rounded-lg px-5 py-2.5 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-50 sm:w-auto"
               style={{ backgroundColor: 'var(--cp)' }}>
               {soumissionMdp ? 'Réinitialisation…' : 'Réinitialiser le mot de passe'}
             </button>

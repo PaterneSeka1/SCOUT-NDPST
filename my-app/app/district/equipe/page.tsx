@@ -185,7 +185,7 @@ export default function EquipeDistrictPage() {
           href="/district/equipe/nouveau"
           className="inline-flex items-center justify-center bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium"
         >
-          + Nouveau membre
+          + Nommer un membre
         </Link>
       </div>
 
@@ -222,7 +222,15 @@ export default function EquipeDistrictPage() {
         {isLoading ? (
           Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
         ) : utilisateurs.length === 0 ? (
-          <p className="text-center text-gray-400 text-sm py-12">Aucun membre trouvé.</p>
+          <div className="bg-white rounded-xl border border-gray-200 px-4 py-10 text-center">
+            <p className="text-sm font-medium text-gray-700">Aucun membre dans l&apos;équipe.</p>
+            <Link
+              href="/district/equipe/nouveau"
+              className="mt-4 inline-flex items-center justify-center bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium"
+            >
+              Nommer un membre
+            </Link>
+          </div>
         ) : (
           utilisateurs.map((u) => <CarteUtilisateur key={u.id} utilisateur={u} />)
         )}
@@ -246,8 +254,14 @@ export default function EquipeDistrictPage() {
                 Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
               ) : utilisateurs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-16 text-gray-400 text-sm">
-                    Aucun membre trouvé.
+                  <td colSpan={5} className="text-center py-16">
+                    <p className="text-sm font-medium text-gray-700">Aucun membre dans l&apos;équipe.</p>
+                    <Link
+                      href="/district/equipe/nouveau"
+                      className="mt-4 inline-flex items-center justify-center bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium"
+                    >
+                      Nommer un membre
+                    </Link>
                   </td>
                 </tr>
               ) : (

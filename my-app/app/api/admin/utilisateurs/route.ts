@@ -5,7 +5,14 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { Prisma, RoleUtilisateur, BrancheType } from '@/app/generated/prisma/client'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
-import { ROLES_PLATEFORME, ROLES_ASSIGNABLES_PAROISSE, ROLES_BRANCHE, libelleRoleAvecFonction } from '@/lib/roles'
+import {
+  ROLES_PLATEFORME,
+  ROLES_ASSIGNABLES_PAROISSE,
+  ROLES_BRANCHE,
+  ROLES_TOUT_STAFF,
+  ROLES_DISTRICT_ETENDU,
+  libelleRoleAvecFonction,
+} from '@/lib/roles'
 import { BrancheTypeSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
@@ -26,24 +33,82 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
-    const limite = Math.max(1, parseInt(searchParams.get('limite') ?? '20', 10))
+    const limite = Math.min(100, Math.max(1, parseInt(searchParams.get('limite') ?? '20', 10)))
     const roleParam = searchParams.get('role')
     const role = roleParam && ROLES_ASSIGNABLES_PAROISSE.includes(roleParam) ? roleParam : undefined
-    const paroisseId = searchParams.get('paroisseId') ?? undefined
-    const recherche = searchParams.get('recherche') ?? undefined
+    const roleDistrictParam = searchParams.get('roleDistrict') ?? ''
+    const categorie = searchParams.get('categorie') ?? ''
+    const statut = searchParams.get('statut') ?? ''
+    const paroisseId = searchParams.get('paroisseId')?.trim() || undefined
+    const districtId = searchParams.get('districtId')?.trim() || undefined
+    const recherche = searchParams.get('recherche')?.trim() || undefined
+    const brancheParam = searchParams.get('brancheType')
+    const brancheType = brancheParam && BrancheTypeSchema.safeParse(brancheParam).success ? brancheParam : undefined
+
+    let roleWhere: Prisma.EnumRoleUtilisateurFilter<'Utilisateur'> | RoleUtilisateur = { not: 'ADMIN_PLATEFORME' }
+    if (categorie === 'staff' || categorie === 'nommables-district') {
+      roleWhere = { in: ROLES_TOUT_STAFF as RoleUtilisateur[] }
+    }
+    if (role) roleWhere = role as RoleUtilisateur
+
+    let roleDistrictWhere: Prisma.EnumRoleUtilisateurNullableFilter<'Utilisateur'> | RoleUtilisateur | null | undefined
+    let brancheDistrictRequise = false
+    if (categorie === 'equipe-district') {
+      roleDistrictWhere = { in: ROLES_DISTRICT_ETENDU as RoleUtilisateur[] }
+    }
+    if (categorie === 'commissaires-branche') {
+      roleDistrictWhere = 'ASSISTANT_DISTRICT' as RoleUtilisateur
+      brancheDistrictRequise = true
+    }
+    if (categorie === 'nommables-district') {
+      roleDistrictWhere = null
+    }
+
+    if (roleDistrictParam === 'AUCUNE') {
+      roleDistrictWhere = null
+      brancheDistrictRequise = false
+    } else if (roleDistrictParam === 'EQUIPE_DISTRICT') {
+      roleDistrictWhere = { in: ROLES_DISTRICT_ETENDU as RoleUtilisateur[] }
+      brancheDistrictRequise = false
+    } else if (roleDistrictParam === 'COMMISSAIRES_BRANCHE') {
+      roleDistrictWhere = 'ASSISTANT_DISTRICT' as RoleUtilisateur
+      brancheDistrictRequise = true
+    } else if (ROLES_DISTRICT_ETENDU.includes(roleDistrictParam)) {
+      roleDistrictWhere = roleDistrictParam as RoleUtilisateur
+      brancheDistrictRequise = false
+    }
+
+    const and: Prisma.UtilisateurWhereInput[] = []
+    if (recherche) {
+      and.push({
+        OR: [
+          { nom: { contains: recherche, mode: 'insensitive' } },
+          { prenom: { contains: recherche, mode: 'insensitive' } },
+          { matricule: { contains: recherche, mode: 'insensitive' } },
+          { telephone: { contains: recherche, mode: 'insensitive' } },
+          { email: { contains: recherche, mode: 'insensitive' } },
+        ],
+      })
+    }
+    if (brancheType) {
+      and.push({
+        OR: [
+          { brancheType: brancheType as BrancheType },
+          { brancheTypeDistrict: brancheType as BrancheType },
+        ],
+      })
+    }
 
     const where: Prisma.UtilisateurWhereInput = {
-      role: { not: 'ADMIN_PLATEFORME', ...(role ? { equals: role as RoleUtilisateur } : {}) },
+      role: roleWhere,
       ...(paroisseId ? { paroisseId } : {}),
-      ...(recherche
-        ? {
-            OR: [
-              { nom: { contains: recherche, mode: 'insensitive' } },
-              { prenom: { contains: recherche, mode: 'insensitive' } },
-              { matricule: { contains: recherche, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
+      ...(districtId ? { paroisse: { districtId } } : {}),
+      ...(statut === 'actifs' ? { actif: true } : {}),
+      ...(statut === 'inactifs' ? { actif: false } : {}),
+      ...(categorie === 'nommables-district' && statut !== 'inactifs' ? { actif: true } : {}),
+      ...(roleDistrictWhere !== undefined ? { roleDistrict: roleDistrictWhere } : {}),
+      ...(brancheDistrictRequise ? { brancheTypeDistrict: { not: null } } : {}),
+      ...(and.length > 0 ? { AND: and } : {}),
     }
 
     const [utilisateurs, total] = await Promise.all([
@@ -59,9 +124,12 @@ export async function GET(request: NextRequest) {
           role: true,
           fonction: true,
           brancheType: true,
+          roleDistrict: true,
+          fonctionDistrict: true,
+          brancheTypeDistrict: true,
           actif: true,
           createdAt: true,
-          paroisse: { select: { id: true, nom: true } },
+          paroisse: { select: { id: true, nom: true, district: { select: { id: true, nom: true } } } },
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limite,
@@ -70,7 +138,7 @@ export async function GET(request: NextRequest) {
       prisma.utilisateur.count({ where }),
     ])
 
-    const totalPages = Math.ceil(total / limite)
+    const totalPages = Math.max(1, Math.ceil(total / limite))
 
     return NextResponse.json({ utilisateurs, total, page, totalPages })
   } catch (error) {

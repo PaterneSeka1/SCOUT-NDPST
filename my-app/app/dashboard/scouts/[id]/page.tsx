@@ -36,6 +36,7 @@ export default function FicheScoutPage() {
     setBadgeEnCours(badgeId)
     try {
       await validerBadge({ badgeId })
+      toast.success('Badge validé.')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur')
     } finally {
@@ -46,7 +47,6 @@ export default function FicheScoutPage() {
   const [typeDocument, setTypeDocument] = useState('CERTIFICAT_MEDICAL')
   const [dateExpirationDocument, setDateExpirationDocument] = useState('')
   const [uploadDocumentEnCours, setUploadDocumentEnCours] = useState(false)
-  const [erreurDocument, setErreurDocument] = useState('')
 
   const changerTypeDocument = (type: string) => {
     setTypeDocument(type)
@@ -60,17 +60,13 @@ export default function FicheScoutPage() {
 
   const [afficherFormulaireMatricule, setAfficherFormulaireMatricule] = useState(false)
   const [nouveauMatricule, setNouveauMatricule] = useState('')
-  const [erreurMatricule, setErreurMatricule] = useState('')
 
   const [afficherFormulaireContact, setAfficherFormulaireContact] = useState(false)
   const [nouveauContact, setNouveauContact] = useState({ nom: '', prenom: '', telephone: '', relation: '', principal: false })
-  const [erreurContact, setErreurContact] = useState('')
 
   const [afficherFormulaireCompte, setAfficherFormulaireCompte] = useState(false)
   const [passwordCompte, setPasswordCompte] = useState('')
   const [telephoneCompte, setTelephoneCompte] = useState('')
-  const [erreurCompte, setErreurCompte] = useState('')
-  const [succesCompte, setSuccesCompte] = useState('')
   const [referenceDate] = useState(() => Date.now())
 
   if (isLoading) return (
@@ -89,48 +85,57 @@ export default function FicheScoutPage() {
 
   const handleAttribuerMatricule = async (e: React.FormEvent) => {
     e.preventDefault()
-    setErreurMatricule('')
     try {
       await attribuerMatricule(nouveauMatricule.trim())
+      toast.success('Matricule enregistré.')
       setAfficherFormulaireMatricule(false)
       setNouveauMatricule('')
     } catch (err) {
-      setErreurMatricule(err instanceof Error ? err.message : 'Erreur')
+      toast.error(err instanceof Error ? err.message : 'Erreur')
     }
   }
 
   const handleAjouterContact = async (e: React.FormEvent) => {
     e.preventDefault()
-    setErreurContact('')
     try {
       await ajouterContact(nouveauContact)
+      toast.success('Contact ajouté.')
       setAfficherFormulaireContact(false)
       setNouveauContact({ nom: '', prenom: '', telephone: '', relation: '', principal: false })
     } catch (err) {
-      setErreurContact(err instanceof Error ? err.message : 'Erreur')
+      toast.error(err instanceof Error ? err.message : 'Erreur')
+    }
+  }
+
+  const handleSupprimerContact = async (contactId: string) => {
+    try {
+      await supprimerContact(contactId)
+      toast.success('Contact supprimé.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur')
     }
   }
 
   const handleUploadDocument = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fichier = e.target.files?.[0]
     if (!fichier) return
-    setErreurDocument('')
     setUploadDocumentEnCours(true)
     try {
       const fd = new FormData()
       fd.append('fichier', fichier)
       const res = await fetch('/api/upload', { method: 'POST', body: fd })
       const data = await res.json()
-      if (!res.ok) { setErreurDocument(data.erreur ?? 'Erreur upload'); return }
+      if (!res.ok) { toast.error(data.erreur ?? 'Erreur upload'); return }
       await ajouterDocument({
         type: typeDocument,
         nomFichier: fichier.name,
         url: data.url,
         dateExpiration: dateExpirationDocument || null,
       })
+      toast.success('Document ajouté.')
       setDateExpirationDocument('')
     } catch (err) {
-      setErreurDocument(err instanceof Error ? err.message : "Erreur lors de l'envoi du document")
+      toast.error(err instanceof Error ? err.message : "Erreur lors de l'envoi du document")
     } finally {
       setUploadDocumentEnCours(false)
       e.target.value = ''
@@ -147,6 +152,7 @@ export default function FicheScoutPage() {
     if (!ok) return
     try {
       await supprimerDocument(doc.id)
+      toast.success('Document supprimé.')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur')
     }
@@ -154,16 +160,14 @@ export default function FicheScoutPage() {
 
   const handleCreerCompte = async (e: React.FormEvent) => {
     e.preventDefault()
-    setErreurCompte('')
-    setSuccesCompte('')
     try {
       await creerCompte({ password: passwordCompte, telephone: telephoneCompte || undefined })
-      setSuccesCompte('Compte créé avec succès.')
+      toast.success('Compte créé avec succès.')
       setAfficherFormulaireCompte(false)
       setPasswordCompte('')
       setTelephoneCompte('')
     } catch (err) {
-      setErreurCompte(err instanceof Error ? err.message : 'Erreur')
+      toast.error(err instanceof Error ? err.message : 'Erreur')
     }
   }
 
@@ -174,16 +178,16 @@ export default function FicheScoutPage() {
         <Link href="/dashboard/scouts" className="text-sm text-gray-500 hover:text-gray-700">
           ← Retour à la liste
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <Link
             href={`/dashboard/scouts/${id}/carte`}
-            className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50 transition-colors"
+            className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50 transition-colors"
           >
             Carte QR
           </Link>
           <Link
             href={`/dashboard/scouts/${id}/modifier`}
-            className="bg-[#1a4731] text-white px-4 py-2 rounded-md text-sm hover:bg-[#163d29] transition-colors"
+            className="inline-flex items-center justify-center bg-[#1a4731] text-white px-4 py-2 rounded-md text-sm hover:bg-[#163d29] transition-colors"
           >
             Modifier
           </Link>
@@ -258,14 +262,13 @@ export default function FicheScoutPage() {
         )}
 
         {afficherFormulaireMatricule && (
-          <form onSubmit={handleAttribuerMatricule} className="mt-3 flex gap-2 items-start">
-            <div>
+          <form onSubmit={handleAttribuerMatricule} className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-start">
+            <div className="w-full sm:w-auto">
               <input
                 type="text" value={nouveauMatricule} onChange={e => setNouveauMatricule(e.target.value)}
                 placeholder="Ex : 0545247O" required
-                className="border border-gray-300 rounded-md px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#1a4731]"
+                className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#1a4731] sm:w-auto"
               />
-              {erreurMatricule && <p className="text-xs text-red-600 mt-1">{erreurMatricule}</p>}
             </div>
             <button type="submit" disabled={matriculeEnCours} className="bg-[#1a4731] text-white px-3 py-1.5 rounded-md text-sm hover:bg-[#163d29] transition-colors disabled:opacity-60">
               {matriculeEnCours ? '…' : 'Enregistrer'}
@@ -280,7 +283,6 @@ export default function FicheScoutPage() {
       {/* Compte utilisateur */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-base font-semibold text-gray-900 mb-3">Espace personnel</h2>
-        {succesCompte && <div className="mb-3 bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded text-sm">{succesCompte}</div>}
 
         {scout.utilisateur ? (
           <div className="flex items-center gap-2">
@@ -313,8 +315,7 @@ export default function FicheScoutPage() {
                       <input type="tel" value={telephoneCompte} onChange={e => setTelephoneCompte(e.target.value)} placeholder="0712345678"
                         className="border border-gray-300 rounded-md px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#1a4731]" />
                     </div>
-                    {erreurCompte && <p className="text-xs text-red-600">{erreurCompte}</p>}
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row">
                       <button type="submit" disabled={compteEnCours} className="bg-[#1a4731] text-white px-3 py-1.5 rounded-md text-sm hover:bg-[#163d29] transition-colors disabled:opacity-60">
                         {compteEnCours ? 'Création…' : 'Créer le compte'}
                       </button>
@@ -354,7 +355,7 @@ export default function FicheScoutPage() {
               </div>
               {scout.contactsUrgence.length > 1 && (
                 <button
-                  onClick={() => supprimerContact(contact.id)}
+                  onClick={() => handleSupprimerContact(contact.id)}
                   className="text-xs text-red-500 hover:text-red-700 ml-2 mt-0.5"
                 >
                   Supprimer
@@ -397,8 +398,7 @@ export default function FicheScoutPage() {
               <input type="checkbox" checked={nouveauContact.principal} onChange={e => setNouveauContact(p => ({ ...p, principal: e.target.checked }))} />
               Contact principal
             </label>
-            {erreurContact && <p className="text-xs text-red-600">{erreurContact}</p>}
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <button type="submit" disabled={contactEnCours} className="bg-[#1a4731] text-white px-3 py-1.5 rounded-md text-sm hover:bg-[#163d29] transition-colors disabled:opacity-60">
                 {contactEnCours ? '…' : 'Ajouter'}
               </button>
@@ -471,7 +471,7 @@ export default function FicheScoutPage() {
 
         <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center border-t border-gray-100 pt-4">
           <select value={typeDocument} onChange={(e) => changerTypeDocument(e.target.value)}
-            className="border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731]">
+            className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] sm:w-auto">
             {Object.entries(LABELS_TYPE_DOCUMENT).map(([val, label]) => (
               <option key={val} value={val}>{label}</option>
             ))}
@@ -481,15 +481,14 @@ export default function FicheScoutPage() {
             value={dateExpirationDocument}
             onChange={(e) => setDateExpirationDocument(e.target.value)}
             title="Date d'expiration (optionnelle)"
-            className="border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731]"
+            className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] sm:w-auto"
           />
-          <label className="text-sm bg-[#1a4731] text-white px-3 py-1.5 rounded-md hover:bg-[#163d29] transition-colors cursor-pointer">
+          <label className="inline-flex w-full items-center justify-center text-sm bg-[#1a4731] text-white px-3 py-1.5 rounded-md hover:bg-[#163d29] transition-colors cursor-pointer sm:w-auto">
             {uploadDocumentEnCours ? 'Envoi…' : '+ Ajouter un fichier'}
             <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
               onChange={handleUploadDocument} disabled={uploadDocumentEnCours} className="hidden" />
           </label>
         </div>
-        {erreurDocument && <p className="text-xs text-red-600 mt-2">{erreurDocument}</p>}
       </div>
 
       {/* Progression / Badges */}

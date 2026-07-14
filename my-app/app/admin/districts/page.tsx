@@ -156,7 +156,7 @@ export default function ListeDistricts() {
             {districtsFiltres.map((d) => (
               <Link
                 key={d.id}
-                href={`/admin/districts/${d.id}`}
+                href={`/admin/districts/${d.id}${d.commissaire ? '' : '#commissaire'}`}
                 className="block bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:border-gray-300 hover:shadow-md active:scale-[0.99] transition"
               >
                 <div className="min-w-0">
@@ -173,7 +173,9 @@ export default function ListeDistricts() {
                   </div>
                 </div>
 
-                <p className="mt-4 text-sm font-semibold" style={{ color: 'var(--cp)' }}>Voir le district →</p>
+                <p className="mt-4 text-sm font-semibold" style={{ color: 'var(--cp)' }}>
+                  {d.commissaire ? 'Gérer le district →' : 'Nommer le Commissaire →'}
+                </p>
               </Link>
             ))}
           </div>
@@ -186,6 +188,7 @@ export default function ListeDistricts() {
                     <th className="px-4 py-3">District</th>
                     <th className="px-4 py-3 text-center">Paroisses</th>
                     <th className="px-4 py-3">Commissaire de District</th>
+                    <th className="px-4 py-3 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -197,6 +200,16 @@ export default function ListeDistricts() {
                       <td className="px-4 py-3 text-center text-gray-700">{d.nbParoisses}</td>
                       <td className="px-4 py-3">
                         <CommissaireDistrict commissaire={d.commissaire} />
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Link
+                          href={`/admin/districts/${d.id}${d.commissaire ? '' : '#commissaire'}`}
+                          onClick={(event) => event.stopPropagation()}
+                          className="inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-bold text-white hover:brightness-110 transition"
+                          style={{ backgroundColor: 'var(--cp)' }}
+                        >
+                          {d.commissaire ? 'Gérer' : 'Nommer'}
+                        </Link>
                       </td>
                     </tr>
                   ))}

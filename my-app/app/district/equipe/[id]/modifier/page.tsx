@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { LABELS_ROLES, ROLES_ASSIGNABLES_DISTRICT } from '@/lib/roles'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { useDistrictUtilisateur, useModifierDistrictUtilisateur, useResetDistrictPassword } from '@/hooks/useDistrictUtilisateurs'
@@ -32,14 +33,10 @@ export default function ModifierMembreEquipePage() {
 
   const [formInfos, setFormInfos] = useState<FormInfos>({ role: '', fonction: '', brancheType: '' })
   const [erreursInfos, setErreursInfos] = useState<FormInfosErrors>({})
-  const [erreurServeurInfos, setErreurServeurInfos] = useState('')
-  const [succesInfos, setSuccesInfos] = useState(false)
   const [modeFonction, setModeFonction] = useState<'branche' | 'autre'>('autre')
 
   const [formMdp, setFormMdp] = useState<FormMdp>({ motDePasse: '', confirmation: '' })
   const [erreursMdp, setErreursMdp] = useState<FormMdpErrors>({})
-  const [erreurServeurMdp, setErreurServeurMdp] = useState('')
-  const [succesMdp, setSuccesMdp] = useState(false)
 
   useEffect(() => {
     if (utilisateur) {
@@ -69,8 +66,6 @@ export default function ModifierMembreEquipePage() {
 
   const soumettreInfos = async (e: React.FormEvent) => {
     e.preventDefault()
-    setErreurServeurInfos('')
-    setSuccesInfos(false)
     if (!validerInfos()) return
     try {
       await modifier({
@@ -78,10 +73,10 @@ export default function ModifierMembreEquipePage() {
         fonction: estAssistant && !modeBranche && formInfos.fonction.trim() ? formInfos.fonction.trim() : null,
         brancheType: estAssistant && modeBranche && formInfos.brancheType ? formInfos.brancheType : null,
       })
-      setSuccesInfos(true)
-      setTimeout(() => router.push('/district/equipe'), 1500)
+      toast.success('Modifications enregistrées.')
+      router.push('/district/equipe')
     } catch (err) {
-      setErreurServeurInfos(err instanceof Error ? err.message : 'Une erreur est survenue')
+      toast.error(err instanceof Error ? err.message : 'Une erreur est survenue')
     }
   }
 
@@ -103,15 +98,13 @@ export default function ModifierMembreEquipePage() {
 
   const soumettreMdp = async (e: React.FormEvent) => {
     e.preventDefault()
-    setErreurServeurMdp('')
-    setSuccesMdp(false)
     if (!validerMdp()) return
     try {
       await resetPassword({ nouveauMotDePasse: formMdp.motDePasse })
-      setSuccesMdp(true)
+      toast.success('Mot de passe réinitialisé.')
       setFormMdp({ motDePasse: '', confirmation: '' })
     } catch (err) {
-      setErreurServeurMdp(err instanceof Error ? err.message : 'Une erreur est survenue')
+      toast.error(err instanceof Error ? err.message : 'Une erreur est survenue')
     }
   }
 
@@ -129,7 +122,7 @@ export default function ModifierMembreEquipePage() {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-1 sm:px-0">
       <Link href="/district/equipe" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
         ← Retour à la liste
       </Link>
@@ -152,9 +145,6 @@ export default function ModifierMembreEquipePage() {
           <p className="text-xs text-gray-400 -mt-2">
             Le rôle paroissial de cette personne est affiché ici pour contexte et reste géré par sa paroisse.
           </p>
-
-          {succesInfos && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">Modifications enregistrées. Redirection…</div>}
-          {erreurServeurInfos && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreurServeurInfos}</div>}
 
           <div>
             <label className={CLS_LABEL}>Rôle de district <span className="text-red-500">*</span></label>
@@ -208,8 +198,8 @@ export default function ModifierMembreEquipePage() {
           )}
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <button type="submit" disabled={soumissionInfos || succesInfos}
-              className="sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
+            <button type="submit" disabled={soumissionInfos}
+              className="w-full rounded-lg bg-[#1a4731] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#163d29] disabled:opacity-60 sm:w-auto">
               {soumissionInfos ? 'Enregistrement…' : 'Enregistrer les modifications'}
             </button>
           </div>
@@ -220,9 +210,6 @@ export default function ModifierMembreEquipePage() {
       <form onSubmit={soumettreMdp} noValidate>
         <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">
           <h2 className="text-sm font-semibold text-gray-800 border-b border-gray-100 pb-3">Réinitialiser le mot de passe</h2>
-
-          {succesMdp && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">Mot de passe réinitialisé avec succès.</div>}
-          {erreurServeurMdp && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreurServeurMdp}</div>}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -241,7 +228,7 @@ export default function ModifierMembreEquipePage() {
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={soumissionMdp}
-              className="sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
+              className="w-full rounded-lg bg-[#1a4731] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#163d29] disabled:opacity-60 sm:w-auto">
               {soumissionMdp ? 'Réinitialisation…' : 'Réinitialiser le mot de passe'}
             </button>
           </div>

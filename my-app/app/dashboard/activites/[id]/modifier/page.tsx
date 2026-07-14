@@ -3,6 +3,7 @@
 import { use, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { useActivite, useModifierActivite } from '@/hooks/useActivites'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
 import { LABELS_BRANCHES } from '@/lib/branches'
@@ -25,7 +26,6 @@ export default function PageModifierActivite({ params }: { params: Promise<{ id:
   const [lieu, setLieu] = useState('')
   const [brancheType, setBrancheType] = useState('')
   const [description, setDescription] = useState('')
-  const [erreur, setErreur] = useState('')
 
   useEffect(() => {
     if (activite) {
@@ -41,9 +41,8 @@ export default function PageModifierActivite({ params }: { params: Promise<{ id:
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setErreur('')
     if (!titre.trim() || !dateDebut) {
-      setErreur('Le titre et la date de début sont obligatoires.')
+      toast.error('Le titre et la date de début sont obligatoires.')
       return
     }
     try {
@@ -56,9 +55,10 @@ export default function PageModifierActivite({ params }: { params: Promise<{ id:
         type,
         brancheType: brancheType || undefined,
       })
+      toast.success('Activité mise à jour.')
       router.push(`/dashboard/activites/${id}`)
     } catch (err) {
-      setErreur((err as Error).message)
+      toast.error((err as Error).message)
     }
   }
 
@@ -73,7 +73,7 @@ export default function PageModifierActivite({ params }: { params: Promise<{ id:
   )
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6 px-1 sm:px-0">
       <Link href={`/dashboard/activites/${id}`} className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
         ← Retour à l&apos;activité
       </Link>
@@ -85,8 +85,6 @@ export default function PageModifierActivite({ params }: { params: Promise<{ id:
 
       <form onSubmit={handleSubmit}>
         <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">
-
-          {erreur && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreur}</div>}
 
           {/* Titre */}
           <div>
@@ -144,11 +142,11 @@ export default function PageModifierActivite({ params }: { params: Promise<{ id:
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={modifierActivite.isPending}
-              className="sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#15392a] transition-colors text-sm font-medium disabled:opacity-60">
+              className="w-full sm:w-auto sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#15392a] transition-colors text-sm font-medium disabled:opacity-60">
               {modifierActivite.isPending ? 'Enregistrement…' : 'Enregistrer les modifications'}
             </button>
             <Link href={`/dashboard/activites/${id}`}
-              className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+              className="inline-flex w-full items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:w-auto">
               Annuler
             </Link>
           </div>

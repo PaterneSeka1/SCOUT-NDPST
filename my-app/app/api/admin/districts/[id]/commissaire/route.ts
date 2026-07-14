@@ -47,27 +47,31 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ erreur: "Cette personne n'appartient pas à une paroisse de ce district" }, { status: 400 })
     }
 
-    const commissaireExistant = await prisma.utilisateur.findFirst({
-      where: { roleDistrict: 'COMMISSAIRE_DISTRICT', actif: true, paroisse: { districtId } },
+    const commissairesExistants = await prisma.utilisateur.findMany({
+      where: { roleDistrict: 'COMMISSAIRE_DISTRICT', paroisse: { districtId } },
       select: { id: true },
     })
-    if (commissaireExistant) {
-      return NextResponse.json(
-        { erreur: 'Un Commissaire de District actif existe déjà pour ce district. Retirez-le de l\'équipe avant d\'en désigner un nouveau.' },
-        { status: 409 },
-      )
-    }
+    const idsCommissairesExistants = commissairesExistants.map((u) => u.id).filter((id) => id !== membre.id)
 
     // Ne touche jamais à `role` (rôle paroissial) : la personne continue de
     // l'exercer normalement dans sa paroisse, l'affectation district s'ajoute
     // simplement à son compte existant.
-    const commissaire = await prisma.utilisateur.update({
-      where: { id: membre.id },
-      data: { roleDistrict: 'COMMISSAIRE_DISTRICT' as RoleUtilisateur },
-      select: {
-        id: true, nom: true, prenom: true, matricule: true, telephone: true, email: true, actif: true, createdAt: true,
-        role: true, roleDistrict: true, paroisseId: true,
-      },
+    const commissaire = await prisma.$transaction(async (tx) => {
+      if (idsCommissairesExistants.length > 0) {
+        await tx.utilisateur.updateMany({
+          where: { id: { in: idsCommissairesExistants } },
+          data: { roleDistrict: null, fonctionDistrict: null, brancheTypeDistrict: null },
+        })
+      }
+
+      return tx.utilisateur.update({
+        where: { id: membre.id },
+        data: { roleDistrict: 'COMMISSAIRE_DISTRICT' as RoleUtilisateur, fonctionDistrict: null, brancheTypeDistrict: null },
+        select: {
+          id: true, nom: true, prenom: true, matricule: true, telephone: true, email: true, actif: true, createdAt: true,
+          role: true, roleDistrict: true, paroisseId: true,
+        },
+      })
     })
 
     await enregistrerAudit({
@@ -76,7 +80,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       action: 'UTILISATEUR_ROLE_DISTRICT_AFFECTE',
       entite: 'Utilisateur',
       entiteId: commissaire.id,
-      details: { roleParoisse: commissaire.role, roleDistrict: commissaire.roleDistrict },
+      details: {
+        roleParoisse: commissaire.role,
+        roleDistrict: commissaire.roleDistrict,
+        remplace: idsCommissairesExistants,
+      },
     })
 
     return NextResponse.json(
@@ -96,6 +104,47 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     )
   } catch (error) {
     logger.error('POST /api/admin/districts/[id]/commissaire', error)
+    return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
+  }
+}
+
+export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
+    if (!ROLES_PLATEFORME.includes(session.user.role)) {
+      return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
+    }
+
+    const { id: districtId } = await params
+    const district = await prisma.district.findUnique({ where: { id: districtId }, select: { id: true } })
+    if (!district) return NextResponse.json({ erreur: 'District introuvable' }, { status: 404 })
+
+    const commissaires = await prisma.utilisateur.findMany({
+      where: { roleDistrict: 'COMMISSAIRE_DISTRICT', paroisse: { districtId } },
+      select: { id: true, paroisseId: true },
+    })
+    if (commissaires.length === 0) {
+      return NextResponse.json({ erreur: 'Aucun Commissaire de District à retirer' }, { status: 404 })
+    }
+
+    await prisma.utilisateur.updateMany({
+      where: { id: { in: commissaires.map((u) => u.id) } },
+      data: { roleDistrict: null, fonctionDistrict: null, brancheTypeDistrict: null },
+    })
+
+    await enregistrerAudit({
+      paroisseId: commissaires[0]?.paroisseId ?? null,
+      acteurId: session.user.id,
+      action: 'UTILISATEUR_ROLE_DISTRICT_RETIRE',
+      entite: 'District',
+      entiteId: districtId,
+      details: { commissairesRetires: commissaires.map((u) => u.id) },
+    })
+
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    logger.error('DELETE /api/admin/districts/[id]/commissaire', error)
     return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
   }
 }

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { SelecteurMembre } from '@/app/components/SelecteurMembre'
 import { LABELS_ROLES, ROLES_ASSIGNABLES_DISTRICT } from '@/lib/roles'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { useCreerDistrictUtilisateur, useDistrictPersonnelEligible } from '@/hooks/useDistrictUtilisateurs'
@@ -46,6 +47,11 @@ export default function NouveauMembreEquipePage() {
     if (erreurs[name as keyof FormErrors]) setErreurs((p) => ({ ...p, [name]: undefined }))
   }
 
+  const handleMembreChange = (utilisateurId: string) => {
+    setForm((p) => ({ ...p, utilisateurId }))
+    if (erreurs.utilisateurId) setErreurs((p) => ({ ...p, utilisateurId: undefined }))
+  }
+
   const valider = (): boolean => {
     const e: FormErrors = {}
     if (!form.utilisateurId) e.utilisateurId = 'Le membre du staff à désigner est requis'
@@ -77,7 +83,7 @@ export default function NouveauMembreEquipePage() {
         ← Retour à la liste
       </Link>
 
-      <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Nouveau membre de l&apos;équipe</h1>
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Nommer un membre de l&apos;équipe</h1>
       <p className="text-sm text-gray-500 -mt-4">
         Choisi parmi le staff des paroisses du district — il continue d&apos;exercer son rôle paroissial normalement en plus de sa charge de district.
       </p>
@@ -93,19 +99,21 @@ export default function NouveauMembreEquipePage() {
           <h2 className="text-sm font-semibold text-gray-800 border-b border-gray-100 pb-3">Informations générales</h2>
 
           <div>
-            <label className={CLS_LABEL}>Membre du staff <span className="text-red-500">*</span></label>
-            <select id="utilisateurId" name="utilisateurId" value={form.utilisateurId} onChange={handleChange}
+            <SelecteurMembre
+              id="utilisateurId"
+              label="Membre du staff"
+              required
+              membres={personnel}
+              value={form.utilisateurId}
+              onChange={handleMembreChange}
               disabled={chargementPersonnel || personnel.length === 0}
-              className={erreurs.utilisateurId ? CLS_SELECT_ERR : CLS_SELECT}>
-              <option value="">{chargementPersonnel ? 'Chargement…' : '— Choisir un membre du staff —'}</option>
-              {personnel.map((p) => (
-                <option key={p.id} value={p.id}>{p.prenom} {p.nom} — {LABELS_ROLES[p.role] ?? p.role} — {p.paroisse?.nom}</option>
-              ))}
-            </select>
+              placeholder={chargementPersonnel ? 'Chargement…' : 'Rechercher le membre à nommer…'}
+              emptyMessage="Aucun membre du staff disponible."
+              error={erreurs.utilisateurId}
+            />
             {!chargementPersonnel && personnel.length === 0 && (
               <p className="mt-1 text-xs text-orange-600">Aucun membre du staff disponible dans les paroisses de ce district.</p>
             )}
-            {erreurs.utilisateurId && <p className="mt-1 text-xs text-red-600">{erreurs.utilisateurId}</p>}
           </div>
 
           {/* Rôle */}
@@ -163,7 +171,7 @@ export default function NouveauMembreEquipePage() {
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={isPending}
               className="sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
-              {isPending ? 'Enregistrement…' : 'Ajouter à l’équipe'}
+              {isPending ? 'Enregistrement…' : 'Nommer dans l’équipe'}
             </button>
             <Link href="/district/equipe"
               className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm">

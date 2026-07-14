@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
+import Link from 'next/link'
 import { toast } from 'sonner'
 
 interface ChefGroupe {
@@ -41,6 +43,7 @@ function StatutParoisse({ actif }: { actif: boolean }) {
 }
 
 export function ApercuDistrictClient() {
+  const { data: session } = useSession()
   const [apercu, setApercu] = useState<Apercu | null>(null)
   const [chargement, setChargement] = useState(true)
 
@@ -72,6 +75,7 @@ export function ApercuDistrictClient() {
   }
 
   const { nomDistrict, totaux, paroisses } = apercu
+  const estCommissaire = session?.user?.roleDistrict === 'COMMISSAIRE_DISTRICT'
 
   const cartes = [
     { label: 'Paroisses actives', value: `${totaux.paroissesActives} / ${totaux.paroisses}`, couleur: '#1a4731' },
@@ -82,9 +86,20 @@ export function ApercuDistrictClient() {
 
   return (
     <div className="space-y-5 sm:space-y-6">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Vue d&apos;ensemble</h1>
-        <p className="text-sm text-gray-500 mt-0.5">District {nomDistrict}</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Vue d&apos;ensemble</h1>
+          <p className="text-sm text-gray-500 mt-0.5">District {nomDistrict}</p>
+        </div>
+        {estCommissaire && (
+          <Link
+            href="/district/equipe/nouveau"
+            className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white hover:brightness-110 transition"
+            style={{ backgroundColor: 'var(--cp)' }}
+          >
+            + Nommer un membre
+          </Link>
+        )}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
