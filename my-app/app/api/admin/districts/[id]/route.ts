@@ -61,6 +61,31 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     orderBy: [{ roleDistrict: 'asc' }, { nom: 'asc' }, { prenom: 'asc' }],
   })
 
+  const membres = await prisma.utilisateur.findMany({
+    where: {
+      role: { not: 'ADMIN_PLATEFORME' },
+      paroisse: { districtId: id },
+    },
+    select: {
+      id: true,
+      nom: true,
+      prenom: true,
+      matricule: true,
+      telephone: true,
+      email: true,
+      actif: true,
+      role: true,
+      fonction: true,
+      brancheType: true,
+      roleDistrict: true,
+      fonctionDistrict: true,
+      brancheTypeDistrict: true,
+      createdAt: true,
+      paroisse: { select: { id: true, nom: true, ville: true } },
+    },
+    orderBy: [{ paroisse: { nom: 'asc' } }, { role: 'asc' }, { nom: 'asc' }, { prenom: 'asc' }],
+  })
+
   // Tout membre de l'équipe du district (y compris le Commissaire) est
   // désigné en affectant roleDistrict à un membre du staff (ROLES_TOUT_STAFF)
   // déjà en poste et actif dans l'une des paroisses du district — jamais en
@@ -99,6 +124,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       createdAt: m.createdAt,
       paroisse: m.paroisse,
     })),
+    membres,
   })
 }
 

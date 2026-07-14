@@ -25,17 +25,33 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       district: { select: { id: true, nom: true } },
       _count: { select: { scouts: true, utilisateurs: true, activites: true } },
       utilisateurs: {
-        where: { role: 'CHEF_GROUPE' },
-        select: { id: true, nom: true, prenom: true, matricule: true, telephone: true, email: true, actif: true },
-        orderBy: { createdAt: 'asc' },
+        where: { role: { not: 'ADMIN_PLATEFORME' } },
+        select: {
+          id: true,
+          nom: true,
+          prenom: true,
+          matricule: true,
+          telephone: true,
+          email: true,
+          actif: true,
+          role: true,
+          fonction: true,
+          brancheType: true,
+          roleDistrict: true,
+          fonctionDistrict: true,
+          brancheTypeDistrict: true,
+          createdAt: true,
+        },
+        orderBy: [{ role: 'asc' }, { nom: 'asc' }, { prenom: 'asc' }],
       },
     },
   })
 
   if (!paroisse) return NextResponse.json({ erreur: 'Paroisse introuvable' }, { status: 404 })
 
-  const { utilisateurs: chefsGroupe, _count: counts, ...infos } = paroisse
-  return NextResponse.json({ ...infos, counts, chefsGroupe })
+  const { utilisateurs: membres, _count: counts, ...infos } = paroisse
+  const chefsGroupe = membres.filter((membre) => membre.role === 'CHEF_GROUPE')
+  return NextResponse.json({ ...infos, counts, chefsGroupe, membres })
 }
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {

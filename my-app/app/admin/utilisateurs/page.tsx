@@ -111,6 +111,7 @@ export default function UtilisateursPlateformePage() {
   const [roleDistrictFiltre, setRoleDistrictFiltre] = useState('')
   const [brancheFiltre, setBrancheFiltre] = useState('')
   const [paroisseFiltre, setParoisseFiltre] = useState('')
+  const [filtresMobilesOuverts, setFiltresMobilesOuverts] = useState(false)
   const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
   const [utilisateurNomination, setUtilisateurNomination] = useState<UtilisateurListe | null>(null)
   const [formNomination, setFormNomination] = useState<FormNomination>({
@@ -129,7 +130,7 @@ export default function UtilisateursPlateformePage() {
   const nominationEstAssistantDistrict = formNomination.roleDistrict === 'ASSISTANT_DISTRICT'
   const nominationModeBranche = formNomination.modeDistrict === 'branche'
   const nbFiltresActifs = [
-    rechercheDebounce,
+    recherche.trim() || rechercheDebounce,
     categorieFiltre,
     statutFiltre,
     districtFiltre,
@@ -138,6 +139,17 @@ export default function UtilisateursPlateformePage() {
     roleDistrictFiltre,
     brancheFiltre,
   ].filter(Boolean).length
+  const libelleStatutActif = statutFiltre === 'actifs' ? 'Actifs' : statutFiltre === 'inactifs' ? 'Inactifs' : ''
+  const etiquettesFiltresActifs = [
+    recherche.trim() ? `Recherche : ${recherche.trim()}` : '',
+    categorieFiltre ? CATEGORIES_FILTRE.find((categorie) => categorie.value === categorieFiltre)?.label : '',
+    libelleStatutActif ? `Statut : ${libelleStatutActif}` : '',
+    districtFiltre ? `District : ${districts.find((district) => district.id === districtFiltre)?.nom ?? 'sélectionné'}` : '',
+    paroisseFiltre ? `Paroisse : ${paroisses.find((paroisse) => paroisse.id === paroisseFiltre)?.nom ?? 'sélectionnée'}` : '',
+    roleFiltre ? `Rôle : ${LABELS_ROLES[roleFiltre] ?? roleFiltre}` : '',
+    roleDistrictFiltre ? AFFECTATIONS_DISTRICT_FILTRE.find((option) => option.value === roleDistrictFiltre)?.label : '',
+    brancheFiltre ? `Branche : ${LABELS_BRANCHES[brancheFiltre] ?? brancheFiltre}` : '',
+  ].filter(Boolean)
 
   const handleRechercheChange = (valeur: string) => {
     setRecherche(valeur)
@@ -331,7 +343,218 @@ export default function UtilisateursPlateformePage() {
         </Link>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-4">
+      <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm md:hidden">
+        <label className={CLS_LABEL}>Recherche</label>
+        <input
+          type="text"
+          placeholder="Nom, matricule, téléphone…"
+          value={recherche}
+          onChange={(e) => handleRechercheChange(e.target.value)}
+          className={CLS_INPUT}
+        />
+
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setFiltresMobilesOuverts(true)}
+            className="flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-800 active:bg-gray-50"
+          >
+            Filtres
+            {nbFiltresActifs > 0 && (
+              <span
+                className="inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-bold text-white"
+                style={{ backgroundColor: 'var(--cp)' }}
+              >
+                {nbFiltresActifs}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={reinitialiserFiltres}
+            disabled={nbFiltresActifs === 0}
+            className="h-11 rounded-lg border border-gray-300 px-3 text-sm font-semibold text-gray-700 active:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Effacer
+          </button>
+        </div>
+
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          {etiquettesFiltresActifs.length > 0 ? (
+            etiquettesFiltresActifs.map((etiquette) => (
+              <span
+                key={etiquette}
+                className="inline-flex shrink-0 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700"
+              >
+                {etiquette}
+              </span>
+            ))
+          ) : (
+            <span className="text-xs text-gray-500">Aucun filtre actif</span>
+          )}
+        </div>
+      </div>
+
+      {filtresMobilesOuverts && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/30 md:hidden">
+          <div className="max-h-[88vh] w-full overflow-y-auto rounded-t-2xl border border-gray-200 bg-white shadow-xl">
+            <div className="sticky top-0 z-10 border-b border-gray-100 bg-white px-4 py-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-bold text-gray-900">Filtres</h2>
+                  <p className="text-xs text-gray-500">
+                    {nbFiltresActifs > 0
+                      ? `${nbFiltresActifs} filtre${nbFiltresActifs > 1 ? 's' : ''} actif${nbFiltresActifs > 1 ? 's' : ''}`
+                      : 'Affinez la liste des utilisateurs'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFiltresMobilesOuverts(false)}
+                  className="rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-500 active:bg-gray-100"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4 px-4 py-4 pb-24">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={CLS_LABEL}>Statut</label>
+                  <select
+                    value={statutFiltre}
+                    onChange={(e) => changerFiltre(setStatutFiltre)(e.target.value)}
+                    className={CLS_SELECT}
+                  >
+                    <option value="">Tous</option>
+                    <option value="actifs">Actifs</option>
+                    <option value="inactifs">Inactifs</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={CLS_LABEL}>Affichage</label>
+                  <select
+                    value={limite}
+                    onChange={(e) => {
+                      setLimite(Number(e.target.value))
+                      setPage(1)
+                    }}
+                    className={CLS_SELECT}
+                  >
+                    {LIMITES_PAGE.map((valeur) => (
+                      <option key={valeur} value={valeur}>{valeur} / page</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className={CLS_LABEL}>Profil rapide</label>
+                <select
+                  value={categorieFiltre}
+                  onChange={(e) => changerFiltre(setCategorieFiltre)(e.target.value)}
+                  className={CLS_SELECT}
+                >
+                  {CATEGORIES_FILTRE.map((categorie) => (
+                    <option key={categorie.value} value={categorie.value}>{categorie.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className={CLS_LABEL}>District</label>
+                <select
+                  value={districtFiltre}
+                  onChange={(e) => changerFiltre(setDistrictFiltre)(e.target.value)}
+                  className={CLS_SELECT}
+                >
+                  <option value="">Tous les districts</option>
+                  {districts.map((district) => (
+                    <option key={district.id} value={district.id}>{district.nom}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className={CLS_LABEL}>Paroisse</label>
+                <select
+                  value={paroisseFiltre}
+                  onChange={(e) => changerFiltre(setParoisseFiltre)(e.target.value)}
+                  className={CLS_SELECT}
+                >
+                  <option value="">Toutes les paroisses</option>
+                  {paroisses.map((p) => (
+                    <option key={p.id} value={p.id}>{p.nom}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className={CLS_LABEL}>Rôle paroissial</label>
+                <select
+                  value={roleFiltre}
+                  onChange={(e) => changerFiltre(setRoleFiltre)(e.target.value)}
+                  className={CLS_SELECT}
+                >
+                  <option value="">Tous les rôles</option>
+                  {ROLES_FILTRE.map((role) => (
+                    <option key={role} value={role}>{LABELS_ROLES[role]}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className={CLS_LABEL}>Affectation district</label>
+                <select
+                  value={roleDistrictFiltre}
+                  onChange={(e) => changerFiltre(setRoleDistrictFiltre)(e.target.value)}
+                  className={CLS_SELECT}
+                >
+                  {AFFECTATIONS_DISTRICT_FILTRE.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className={CLS_LABEL}>Branche</label>
+                <select
+                  value={brancheFiltre}
+                  onChange={(e) => changerFiltre(setBrancheFiltre)(e.target.value)}
+                  className={CLS_SELECT}
+                >
+                  <option value="">Toutes les branches</option>
+                  {Object.entries(LABELS_BRANCHES).map(([valeur, libelle]) => (
+                    <option key={valeur} value={valeur}>{libelle}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 flex gap-2 border-t border-gray-100 bg-white px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+              <button
+                type="button"
+                onClick={reinitialiserFiltres}
+                disabled={nbFiltresActifs === 0}
+                className="h-11 flex-1 rounded-lg border border-gray-300 px-3 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Effacer
+              </button>
+              <button
+                type="button"
+                onClick={() => setFiltresMobilesOuverts(false)}
+                className="h-11 flex-[1.4] rounded-lg px-3 text-sm font-bold text-white"
+                style={{ backgroundColor: 'var(--cp)' }}
+              >
+                Voir les résultats
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="hidden rounded-xl border border-gray-200 bg-white p-4 md:block">
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
           <div className="lg:col-span-5">
             <label className={CLS_LABEL}>Recherche</label>
