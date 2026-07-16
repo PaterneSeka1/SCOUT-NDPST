@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { LABELS_ROLES, ROLES_ASSIGNABLES_PAROISSE, ROLES_BRANCHE } from '@/lib/roles'
+import { LABELS_ROLES, ROLES_ASSIGNABLES_PAROISSE_SANS_CHEF, ROLES_BRANCHE } from '@/lib/roles'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
@@ -15,7 +15,7 @@ const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm t
 const CLS_SELECT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
-const ROLES_LISTE = ROLES_ASSIGNABLES_PAROISSE
+const ROLES_LISTE = ROLES_ASSIGNABLES_PAROISSE_SANS_CHEF
 
 interface UtilisateurDetail {
   id: string
@@ -50,6 +50,13 @@ export default function ModifierUtilisateurPlateformePage() {
   const [soumissionInfos, setSoumissionInfos] = useState(false)
 
   const estBranche = ROLES_BRANCHE.includes(formInfos.role)
+  // Le Chef de Groupe en exercice n'est pas dans ROLES_LISTE (sa nomination
+  // passe par /admin/paroisses/[id], pas par ce formulaire générique) : on
+  // l'ajoute quand même comme option pour que le rôle actuel s'affiche
+  // correctement au chargement, sans quoi le select semblerait vide.
+  const optionsRole = formInfos.role && !ROLES_LISTE.includes(formInfos.role)
+    ? [formInfos.role, ...ROLES_LISTE]
+    : ROLES_LISTE
 
   const [formMdp, setFormMdp] = useState<FormMdp>({ motDePasse: '', confirmation: '' })
   const [erreursMdp, setErreursMdp] = useState<FormMdpErrors>({})
@@ -231,9 +238,17 @@ export default function ModifierUtilisateurPlateformePage() {
             <select id="role" name="role" value={formInfos.role} onChange={handleInfosChange}
               className={erreursInfos.role ? CLS_SELECT_ERR : CLS_SELECT}>
               <option value="">Sélectionner un rôle</option>
-              {ROLES_LISTE.map((r) => <option key={r} value={r}>{LABELS_ROLES[r]}</option>)}
+              {optionsRole.map((r) => <option key={r} value={r}>{LABELS_ROLES[r]}</option>)}
             </select>
             {erreursInfos.role && <p className="mt-1 text-xs text-red-600">{erreursInfos.role}</p>}
+            {utilisateur.role === 'CHEF_GROUPE' && (
+              <p className="mt-1 text-xs text-gray-400">
+                Pour désigner un autre Chef de Groupe, utilisez la fiche{' '}
+                <Link href={`/admin/paroisses/${utilisateur.paroisse.id}`} className="underline hover:text-gray-600">
+                  de la paroisse
+                </Link>.
+              </p>
+            )}
           </div>
 
           {/* Branche — requise pour l'encadrement de branche paroissial */}

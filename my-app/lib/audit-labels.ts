@@ -33,4 +33,5 @@ export const LABELS_ACTIONS_AUDIT: Record<string, string> = {
   UTILISATEUR_ROLE_DISTRICT_MODIFIE: 'Changement de rôle dans l\'équipe de district',
   UTILISATEUR_ROLE_DISTRICT_RETIRE: 'Retrait de l\'équipe de district',
   RAPPORT_DISTRICT_EXPORTE: 'Export rapport district',
+  CHEF_GROUPE_DESIGNE: 'Désignation du Chef de Groupe',
 }

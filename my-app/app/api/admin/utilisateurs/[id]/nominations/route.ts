@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { RoleUtilisateur, BrancheType } from '@/app/generated/prisma/client'
 import {
   ROLES_PLATEFORME,
-  ROLES_ASSIGNABLES_PAROISSE,
+  ROLES_ASSIGNABLES_PAROISSE_SANS_CHEF,
   ROLES_BRANCHE,
   ROLES_TOUT_STAFF,
   ROLES_DISTRICT_ETENDU,
@@ -96,7 +96,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (fonctionDistrictCorps !== undefined && fonctionDistrictCorps !== null && typeof fonctionDistrictCorps !== 'string') {
       return NextResponse.json({ erreur: 'Fonction de district invalide' }, { status: 400 })
     }
-    if (role !== undefined && !ROLES_ASSIGNABLES_PAROISSE.includes(role)) {
+    // Promouvoir vers CHEF_GROUPE est exclu ici SAUF si le rôle ne change pas :
+    // cette nomination passe par le flux dédié
+    // /api/admin/paroisses/[id]/chef-groupe/designer, qui gère l'unicité du
+    // chef actif par paroisse de façon atomique (contrainte SQL, voir
+    // prisma/schema.prisma) — une promotion via cette route provoquerait une
+    // erreur de contrainte brute s'il existe déjà un chef actif.
+    if (role !== undefined && role !== existant.role && !ROLES_ASSIGNABLES_PAROISSE_SANS_CHEF.includes(role)) {
       return NextResponse.json({ erreur: 'Rôle invalide' }, { status: 400 })
     }
 

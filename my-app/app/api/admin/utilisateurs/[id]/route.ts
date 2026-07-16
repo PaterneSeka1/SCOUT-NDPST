@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { RoleUtilisateur, BrancheType } from '@/app/generated/prisma/client'
-import { ROLES_PLATEFORME, ROLES_ASSIGNABLES_PAROISSE, ROLES_BRANCHE } from '@/lib/roles'
+import { ROLES_PLATEFORME, ROLES_ASSIGNABLES_PAROISSE_SANS_CHEF, ROLES_BRANCHE } from '@/lib/roles'
 import { BrancheTypeSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
@@ -83,10 +83,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Pas de réaffectation de paroisse dans cette itération : seuls nom, prenom,
     // email, role, actif, fonction et brancheType sont modifiables via cette route.
     // `role` est toujours un rôle PAROISSIAL, jamais une valeur de district —
-    // ROLES_ASSIGNABLES_PAROISSE les exclut (voir lib/roles.ts) : une affectation
-    // district (roleDistrict) se gère exclusivement via /admin/districts/[id]/commissaire
-    // ou /district/utilisateurs.
-    if (role !== undefined && !ROLES_ASSIGNABLES_PAROISSE.includes(role)) {
+    // ROLES_ASSIGNABLES_PAROISSE_SANS_CHEF les exclut (voir lib/roles.ts) : une
+    // affectation district (roleDistrict) se gère exclusivement via
+    // /admin/districts/[id]/commissaire ou /district/utilisateurs. CHEF_GROUPE
+    // est également exclu SAUF s'il ne change pas (resoumission du formulaire
+    // pour un chef existant) — cette PROMOTION-là passe par le flux dédié
+    // /api/admin/paroisses/[id]/chef-groupe/designer, qui gère l'unicité du
+    // chef actif de façon atomique ; une rétrogradation ou un rôle inchangé
+    // n'a pas ce risque.
+    if (role !== undefined && role !== existant.role && !ROLES_ASSIGNABLES_PAROISSE_SANS_CHEF.includes(role)) {
       return NextResponse.json({ erreur: 'Rôle invalide' }, { status: 400 })
     }
     if (nom !== undefined && (typeof nom !== 'string' || !nom.trim())) {

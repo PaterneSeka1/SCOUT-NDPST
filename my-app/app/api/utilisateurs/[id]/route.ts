@@ -106,7 +106,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // depuis cette route, quel que soit qui l'appelle. Les rôles de district
     // ne sont pas non plus assignables ici : gérés par ADMIN_PLATEFORME (création)
     // puis par le Commissaire de District lui-même via /district/equipe.
-    if (role === 'ADMIN_PLATEFORME' || (role !== undefined && ROLES_DISTRICT_ETENDU.includes(role)))
+    // Promouvoir quelqu'un vers CHEF_GROUPE ici est bloqué aussi : ça
+    // provoquerait une erreur de contrainte SQL brute s'il existe déjà un chef
+    // actif, sans rétrograder l'ancien — cette nomination passe exclusivement
+    // par la passation dédiée (POST /api/utilisateurs/chef-groupe/ceder), qui
+    // gère l'atomicité du remplacement. Un rôle CHEF_GROUPE inchangé (ou une
+    // rétrogradation depuis CHEF_GROUPE) reste autorisé : ce n'est pas la
+    // promotion qui est dangereuse.
+    if (role === 'ADMIN_PLATEFORME' || (role === 'CHEF_GROUPE' && role !== existant.role) || (role !== undefined && ROLES_DISTRICT_ETENDU.includes(role)))
       return NextResponse.json({ error: 'Rôle invalide' }, { status: 400 })
 
     // Personne ne peut changer son propre rôle ou se désactiver soi-même —

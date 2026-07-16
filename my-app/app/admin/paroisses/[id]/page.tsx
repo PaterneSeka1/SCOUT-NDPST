@@ -9,6 +9,12 @@ import { PasswordInput } from '@/app/components/PasswordInput'
 import { confirmer } from '@/app/components/ConfirmDialog'
 import { COULEURS_ROLES, LABELS_ROLES, ROLES_BRANCHE, ROLES_TOUT_STAFF, libelleRoleAvecFonction } from '@/lib/roles'
 
+// Un membre ne peut être désigné Chef de Groupe que s'il fait déjà partie du
+// staff paroissial (encadrement de groupe ou de branche) — un parent ou un
+// scout ne peut pas être désigné directement, cohérent avec la validation de
+// POST /api/admin/paroisses/[id]/chef-groupe/designer.
+const ROLES_ELIGIBLES_CHEF = ROLES_TOUT_STAFF.filter((r) => r !== 'CHEF_GROUPE')
+
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
@@ -82,6 +88,9 @@ export default function FicheParoissePage() {
   const [formChef, setFormChef] = useState<FormChefGroupe>(CHEF_VIDE)
   const [soumissionChef, setSoumissionChef] = useState(false)
   const [afficherFormChef, setAfficherFormChef] = useState(false)
+  const [afficherDesignation, setAfficherDesignation] = useState(false)
+  const [utilisateurDesigne, setUtilisateurDesigne] = useState('')
+  const [soumissionDesignation, setSoumissionDesignation] = useState(false)
   const [erreurChargement, setErreurChargement] = useState(false)
   const [districts, setDistricts] = useState<DistrictOption[]>([])
   const [suppression, setSuppression] = useState(false)
@@ -228,6 +237,47 @@ export default function FicheParoissePage() {
     }
   }
 
+  const membresEligiblesChef = useMemo(() => {
+    if (!paroisse) return []
+    return paroisse.membres.filter((m) => m.actif && ROLES_ELIGIBLES_CHEF.includes(m.role))
+  }, [paroisse])
+
+  const handleDesignerChef = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!paroisse) return
+    const membre = membresEligiblesChef.find((m) => m.id === utilisateurDesigne)
+    if (!membre) { toast.error('Sélectionnez un membre à désigner.'); return }
+
+    const chefActuel = paroisse.chefsGroupe.find((c) => c.actif)
+    const ok = await confirmer({
+      titre: 'Désigner ce membre comme Chef de Groupe ?',
+      description: chefActuel
+        ? `${membre.prenom} ${membre.nom} deviendra Chef de Groupe de "${paroisse.nom}". ${chefActuel.prenom} ${chefActuel.nom}, chef actuel, deviendra automatiquement Assistant de Groupe.`
+        : `${membre.prenom} ${membre.nom} deviendra Chef de Groupe de "${paroisse.nom}".`,
+      labelConfirmer: 'Désigner',
+    })
+    if (!ok) return
+
+    setSoumissionDesignation(true)
+    try {
+      const res = await fetch(`/api/admin/paroisses/${id}/chef-groupe/designer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ utilisateurId: membre.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.erreur ?? 'Erreur serveur'); return }
+      toast.success('Chef de Groupe désigné.')
+      setUtilisateurDesigne('')
+      setAfficherDesignation(false)
+      charger()
+    } catch {
+      toast.error('Erreur lors de la désignation')
+    } finally {
+      setSoumissionDesignation(false)
+    }
+  }
+
   const statistiques = useMemo(() => {
     if (!paroisse) {
       return { scouts: 0, utilisateurs: 0, activites: 0, staff: 0, equipeDistrict: 0, inactifs: 0 }
@@ -368,14 +418,19 @@ export default function FicheParoissePage() {
               <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500">Chef de Groupe</h2>
               <p className="mt-1 text-sm text-gray-500">Compte de référence pour piloter la paroisse.</p>
             </div>
-            {!afficherFormChef && (
-              <button onClick={() => setAfficherFormChef(true)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
-                {paroisse.chefsGroupe.length > 0 ? 'Désigner un autre' : 'Désigner un Chef'}
-              </button>
+            {!afficherFormChef && !afficherDesignation && (
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <button onClick={() => setAfficherDesignation(true)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+                  Désigner un membre existant
+                </button>
+                <button onClick={() => setAfficherFormChef(true)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+                  Créer un compte
+                </button>
+              </div>
             )}
           </div>
 
-          {paroisse.chefsGroupe.length === 0 && !afficherFormChef && (
+          {paroisse.chefsGroupe.length === 0 && !afficherFormChef && !afficherDesignation && (
             <div className="mt-4 rounded-lg border border-orange-200 bg-orange-50 p-3">
               <p className="text-sm font-medium text-orange-700">Aucun Chef de Groupe désigné pour cette paroisse.</p>
             </div>
@@ -399,6 +454,43 @@ export default function FicheParoissePage() {
                 </Link>
               ))}
             </div>
+          )}
+
+          {afficherDesignation && (
+            <form onSubmit={handleDesignerChef} className="mt-5 border-t border-gray-100 pt-5">
+              <div>
+                <label className={CLS_LABEL}>Membre de la paroisse *</label>
+                <select
+                  className={CLS_INPUT}
+                  value={utilisateurDesigne}
+                  onChange={(e) => setUtilisateurDesigne(e.target.value)}
+                >
+                  <option value="">— Choisir un membre —</option>
+                  {membresEligiblesChef.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.prenom} {m.nom} — {LABELS_ROLES[m.role] ?? m.role}
+                    </option>
+                  ))}
+                </select>
+                {membresEligiblesChef.length === 0 && (
+                  <p className="mt-1 text-xs text-gray-400">Aucun membre du staff éligible dans cette paroisse.</p>
+                )}
+              </div>
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <button type="button" onClick={() => { setAfficherDesignation(false); setUtilisateurDesigne('') }} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={soumissionDesignation || !utilisateurDesigne}
+                  className="flex items-center justify-center gap-2 rounded-lg px-5 py-2 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-50"
+                  style={{ backgroundColor: 'var(--cp)' }}
+                >
+                  {soumissionDesignation && <span className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" />}
+                  {soumissionDesignation ? 'Désignation…' : 'Désigner'}
+                </button>
+              </div>
+            </form>
           )}
 
           {afficherFormChef && (

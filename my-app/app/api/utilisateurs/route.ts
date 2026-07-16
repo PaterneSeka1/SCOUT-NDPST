@@ -157,7 +157,11 @@ export async function POST(request: NextRequest) {
     // cette route — uniquement via la bascule de compte ou un accès base directe.
     // Les rôles de district non plus : gérés par ADMIN_PLATEFORME (création du
     // Commissaire de District) puis par lui-même via /district/equipe.
-    if (role === 'ADMIN_PLATEFORME' || ROLES_DISTRICT_ETENDU.includes(role)) {
+    // CHEF_GROUPE non plus : un second compte avec ce rôle violerait la
+    // contrainte SQL d'unicité (un seul chef actif par paroisse) — cette
+    // nomination passe exclusivement par la passation dédiée
+    // (POST /api/utilisateurs/chef-groupe/ceder), jamais par une création.
+    if (role === 'ADMIN_PLATEFORME' || role === 'CHEF_GROUPE' || ROLES_DISTRICT_ETENDU.includes(role)) {
       return NextResponse.json({ error: 'Rôle invalide' }, { status: 400 })
     }
 

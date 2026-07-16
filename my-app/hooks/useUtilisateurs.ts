@@ -55,6 +55,7 @@ export interface FiltresUtilisateurs {
   page?: number
   recherche?: string
   role?: string
+  limite?: number
 }
 
 export interface DonneesCreerUtilisateur {
@@ -102,6 +103,7 @@ async function fetchUtilisateurs(
   if (filtres.page) params.set('page', String(filtres.page))
   if (filtres.recherche) params.set('recherche', filtres.recherche)
   if (filtres.role) params.set('role', filtres.role)
+  if (filtres.limite) params.set('limite', String(filtres.limite))
 
   const res = await fetch(`/api/utilisateurs?${params.toString()}`)
   if (!res.ok) {

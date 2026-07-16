@@ -2,9 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
+import { LABELS_ROLES, ROLES_TOUT_STAFF } from '@/lib/roles'
+import { confirmer } from '@/app/components/ConfirmDialog'
+
+// Successeurs éligibles à la passation : tout le staff sauf le Chef de Groupe
+// en exercice lui-même (il n'y en a qu'un, l'appelant) — cohérent avec la
+// validation de POST /api/utilisateurs/chef-groupe/ceder.
+const ROLES_SUCCESSEUR = ROLES_TOUT_STAFF.filter((r) => r !== 'CHEF_GROUPE').join(',')
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
@@ -27,8 +35,13 @@ interface FormParoisse {
   adresse: string; telephone: string; email: string
 }
 
+interface MembreEquipe {
+  id: string; nom: string; prenom: string; role: string; actif: boolean
+}
+
 export default function PageParoisse() {
   const { data: session } = useSession()
+  const router = useRouter()
   const role = session?.user?.role
   const estChefGroupe = role === 'CHEF_GROUPE'
   const estParent = role === 'PARENT'
@@ -45,6 +58,10 @@ export default function PageParoisse() {
 
   const [logoPreview, setLogoPreview] = useState('')
   const [uploadLogo, setUploadLogo] = useState(false)
+
+  const [successeurs, setSuccesseurs] = useState<MembreEquipe[]>([])
+  const [successeurId, setSuccesseurId] = useState('')
+  const [soumissionPassation, setSoumissionPassation] = useState(false)
 
   useEffect(() => {
     if (!session?.user) return
@@ -75,6 +92,44 @@ export default function PageParoisse() {
     }).catch(() => { toast.error('Impossible de charger les informations'); setChargementErreur(true) })
       .finally(() => setChargement(false))
   }, [session, role])
+
+  useEffect(() => {
+    if (!estChefGroupe) return
+    fetch(`/api/utilisateurs?role=${ROLES_SUCCESSEUR}&limite=200`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { utilisateurs?: MembreEquipe[] } | null) => {
+        if (data?.utilisateurs) setSuccesseurs(data.utilisateurs.filter((u) => u.actif))
+      })
+      .catch(() => {})
+  }, [estChefGroupe])
+
+  const handleCederPlace = async () => {
+    const successeur = successeurs.find((u) => u.id === successeurId)
+    if (!successeur) { toast.error('Sélectionnez un successeur.'); return }
+    const ok = await confirmer({
+      titre: 'Céder votre place de Chef de Groupe ?',
+      description: `${successeur.prenom} ${successeur.nom} deviendra Chef de Groupe. Vous deviendrez Assistant de Groupe et perdrez l'accès à la gestion de l'équipe.`,
+      labelConfirmer: 'Céder ma place',
+      danger: true,
+    })
+    if (!ok) return
+    setSoumissionPassation(true)
+    try {
+      const res = await fetch('/api/utilisateurs/chef-groupe/ceder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ successeurId: successeur.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error ?? 'Erreur serveur'); return }
+      toast.success('Passation effectuée. Vous êtes désormais Assistant de Groupe.')
+      router.push('/dashboard')
+    } catch {
+      toast.error('Erreur lors de la passation')
+    } finally {
+      setSoumissionPassation(false)
+    }
+  }
 
   const handleChangeLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fichier = e.target.files?.[0]
@@ -297,6 +352,42 @@ export default function PageParoisse() {
             </div>
           </div>
         </form>
+      )}
+
+      {/* Passation du Chef de Groupe — céder sa place à un membre de l'équipe */}
+      {estChefGroupe && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-800">Passation du Chef de Groupe</h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Céder votre place à un membre de votre équipe. Vous deviendrez Assistant de Groupe.
+            </p>
+          </div>
+          {successeurs.length === 0 ? (
+            <p className="text-sm text-gray-400 italic">Aucun membre de l&apos;équipe éligible pour l&apos;instant.</p>
+          ) : (
+            <div className="flex flex-col sm:flex-row gap-3">
+              <select
+                value={successeurId}
+                onChange={(e) => setSuccesseurId(e.target.value)}
+                className={`${CLS_INPUT} sm:max-w-xs`}
+              >
+                <option value="">— Choisir un successeur —</option>
+                {successeurs.map((u) => (
+                  <option key={u.id} value={u.id}>{u.prenom} {u.nom} — {LABELS_ROLES[u.role] ?? u.role}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={handleCederPlace}
+                disabled={!successeurId || soumissionPassation}
+                className="sm:flex-none border border-red-300 text-red-600 px-4 py-2.5 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium disabled:opacity-50"
+              >
+                {soumissionPassation ? 'Passation…' : 'Céder ma place'}
+              </button>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Activités à venir — visible pour tous les rôles */}

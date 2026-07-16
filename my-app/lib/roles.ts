@@ -115,3 +115,27 @@ export const ROLES_ASSIGNABLES_PAROISSE: string[] = Object.keys(LABELS_ROLES).fi
 export const ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT: string[] = ROLES_ASSIGNABLES_PAROISSE.filter(
   (r) => r !== 'PARENT',
 )
+
+/**
+ * ROLES_ASSIGNABLES_PAROISSE sans CHEF_GROUPE — pour les formulaires génériques
+ * d'édition de rôle (admin plateforme). La nomination d'un Chef de Groupe passe
+ * toujours par un flux dédié qui gère l'unicité (un seul chef actif par
+ * paroisse, contrainte SQL — voir prisma/schema.prisma) de façon atomique :
+ * /api/admin/paroisses/[id]/chef-groupe/designer (désignation) ou
+ * /api/admin/paroisses/[id]/chef-groupe (création). Un simple changement de
+ * rôle via le formulaire générique provoquerait une erreur de contrainte SQL
+ * brute s'il existe déjà un chef actif.
+ */
+export const ROLES_ASSIGNABLES_PAROISSE_SANS_CHEF: string[] = ROLES_ASSIGNABLES_PAROISSE.filter(
+  (r) => r !== 'CHEF_GROUPE',
+)
+
+/**
+ * ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT sans CHEF_GROUPE — pour les formulaires
+ * self-service du Chef de Groupe (/dashboard/utilisateurs). La passation de la
+ * direction de groupe passe exclusivement par /api/utilisateurs/chef-groupe/ceder,
+ * qui rétrograde l'ancien chef et promeut le nouveau dans la même transaction.
+ */
+export const ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT_SANS_CHEF: string[] = ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT.filter(
+  (r) => r !== 'CHEF_GROUPE',
+)
