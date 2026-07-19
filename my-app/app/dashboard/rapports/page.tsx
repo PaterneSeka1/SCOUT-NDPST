@@ -59,9 +59,10 @@ export default function PageRapports() {
   const [rapport, setRapport] = useState<Rapport | null>(null)
   const [chargement, setChargement] = useState(true)
   const [erreur, setErreur] = useState<string | null>(null)
+  const [periode, setPeriode] = useState('6')
 
   useEffect(() => {
-    fetch('/api/rapports')
+    fetch(`/api/rapports?periode=${periode}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.erreur) { setErreur(data.erreur); toast.error(data.erreur); return }
@@ -69,7 +70,7 @@ export default function PageRapports() {
       })
       .catch(() => { setErreur('Impossible de charger les rapports.'); toast.error('Impossible de charger les rapports') })
       .finally(() => setChargement(false))
-  }, [])
+  }, [periode])
 
   if (chargement) return (
     <div className="flex items-center justify-center h-48">
@@ -88,9 +89,23 @@ export default function PageRapports() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Rapports</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Vue d&apos;ensemble statistique du groupe scout</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Rapports</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Vue d&apos;ensemble statistique du groupe scout</p>
+        </div>
+        <label className="flex items-center gap-2 text-sm text-gray-600">
+          Période
+          <select
+            value={periode}
+            onChange={(e) => setPeriode(e.target.value)}
+            className="rounded-md border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#1a4731]"
+          >
+            <option value="3">3 derniers mois</option>
+            <option value="6">6 derniers mois</option>
+            <option value="12">12 derniers mois</option>
+          </select>
+        </label>
       </div>
 
       {/* KPIs */}
@@ -98,8 +113,8 @@ export default function PageRapports() {
         {[
           { label: 'Scouts actifs', valeur: rapport.scoutsActifs, couleur: 'bg-[#1a4731]', icone: '⚜️' },
           { label: 'Scouts inactifs', valeur: rapport.scoutsInactifs, couleur: 'bg-gray-500', icone: '⏸️' },
-          { label: 'Activités ce mois', valeur: rapport.activitesMois, couleur: 'bg-[#27ae60]', icone: '📅' },
-          { label: 'Réunions ce mois', valeur: rapport.reunionsMois, couleur: 'bg-blue-600', icone: '🗓️' },
+          { label: `Activités (${periode} mois)`, valeur: rapport.activitesMois, couleur: 'bg-[#27ae60]', icone: '📅' },
+          { label: `Réunions (${periode} mois)`, valeur: rapport.reunionsMois, couleur: 'bg-blue-600', icone: '🗓️' },
         ].map(({ label, valeur, couleur, icone }) => (
           <div key={label} className={`${couleur} text-white rounded-xl p-4`}>
             <div className="text-2xl mb-1">{icone}</div>

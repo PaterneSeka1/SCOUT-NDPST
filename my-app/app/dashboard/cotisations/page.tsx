@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { confirmer } from '@/app/components/ConfirmDialog'
+import { ModalPaiementPartiel } from '@/app/components/ModalPaiementPartiel'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import {
   LABELS_TYPE_COTISATION,
@@ -150,6 +151,9 @@ export default function PageCotisations() {
   const [formGeneration, setFormGeneration] = useState(formulaireInitial())
   const [generationEnCours, setGenerationEnCours] = useState(false)
 
+  const [modalPaiementOuvert, setModalPaiementOuvert] = useState(false)
+  const [cotisationCourante, setCotisationCourante] = useState<{ id: string; montantDu: number } | null>(null)
+
   const charger = useCallback(() => {
     setChargement(true)
     const params = new URLSearchParams({ anneeScolaire })
@@ -209,21 +213,30 @@ export default function PageCotisations() {
     }
   }
 
-  const enregistrerPaiementPartiel = async (id: string, montantDu: number) => {
-    const saisie = window.prompt(`Montant reçu (sur ${formatMontantFCFA(montantDu)}) :`)
-    if (saisie === null) return
-    const montantPaye = Number(saisie)
-    if (!Number.isInteger(montantPaye) || montantPaye <= 0 || montantPaye >= montantDu) {
-      toast.error('Montant invalide : doit être un entier positif, inférieur au montant dû')
-      return
-    }
+  const ouvrirPaiementPartiel = (id: string, montantDu: number) => {
+    setCotisationCourante({ id, montantDu })
+    setModalPaiementOuvert(true)
+  }
+
+  const fermerPaiementPartiel = () => {
+    setModalPaiementOuvert(false)
+    setCotisationCourante(null)
+  }
+
+  const confirmerPaiementPartiel = async (montantPaye: number, commentaire: string) => {
+    if (!cotisationCourante) return
+    const { id } = cotisationCourante
 
     setEnCours(id)
     try {
       const res = await fetch(`/api/cotisations/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ statut: 'NON_A_JOUR', montantPaye }),
+        body: JSON.stringify({
+          statut: 'NON_A_JOUR',
+          montantPaye,
+          ...(commentaire ? { notes: commentaire } : {}),
+        }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -231,6 +244,7 @@ export default function PageCotisations() {
         return
       }
       toast.success('Montant partiel enregistré')
+      fermerPaiementPartiel()
       charger()
     } finally {
       setEnCours(null)
@@ -346,7 +360,7 @@ export default function PageCotisations() {
         {estGestion && peutRecevoirPartiel && (
           <button
             disabled={traitement}
-            onClick={() => enregistrerPaiementPartiel(cotisation.id, cotisation.montant)}
+            onClick={() => ouvrirPaiementPartiel(cotisation.id, cotisation.montant)}
             className="text-xs text-blue-700 border border-blue-200 px-2.5 py-1 rounded-lg hover:bg-blue-50 disabled:opacity-50"
           >
             Partiel
@@ -678,6 +692,13 @@ export default function PageCotisations() {
           </div>
         </div>
       )}
+
+      <ModalPaiementPartiel
+        montantDu={cotisationCourante?.montantDu ?? 0}
+        ouvert={modalPaiementOuvert}
+        onFermer={fermerPaiementPartiel}
+        onConfirmer={confirmerPaiementPartiel}
+      />
     </div>
   )
 }

@@ -1,23 +1,42 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_PLATEFORME, ROLES_TOUT_STAFF } from '@/lib/roles'
 import { STATUTS_COTISATION_A_FINALISER } from '@/lib/cotisations'
 
-export async function GET() {
+// Fenêtre du KPI "activités" : par défaut le mois calendaire en cours
+// (comportement historique, préservé si le paramètre est absent), ou une
+// fenêtre glissante de N mois si `periode` vaut '3', '6' ou '12'.
+const PERIODES_VALIDES = ['3', '6', '12'] as const
+
+export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
   if (!ROLES_PLATEFORME.includes(session.user.role)) {
     return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
   }
 
+  const { searchParams } = new URL(request.url)
+  const periodeParam = searchParams.get('periode')
+  const nbMoisFenetre = (PERIODES_VALIDES as readonly string[]).includes(periodeParam ?? '')
+    ? Number(periodeParam)
+    : null
+
   // Une activité pas encore passée ne doit pas compter dans un rapport
   // (rétrospectif par nature) — seul le décompte des activités est concerné
   // ici, scouts/utilisateurs/cotisations n'ont pas de notion de date future.
   const maintenant = new Date()
-  const debutMois = new Date(maintenant.getFullYear(), maintenant.getMonth(), 1)
-  const finMois = new Date(maintenant.getFullYear(), maintenant.getMonth() + 1, 0, 23, 59, 59)
+  let debutMois: Date
+  let finMois: Date
+  if (nbMoisFenetre) {
+    debutMois = new Date(maintenant)
+    debutMois.setMonth(debutMois.getMonth() - nbMoisFenetre)
+    finMois = maintenant
+  } else {
+    debutMois = new Date(maintenant.getFullYear(), maintenant.getMonth(), 1)
+    finMois = new Date(maintenant.getFullYear(), maintenant.getMonth() + 1, 0, 23, 59, 59)
+  }
 
   const [paroisses, activitesMois, totalPresences, presencesPositives, cotisationsParStatut, utilisateursParRole] =
     await Promise.all([

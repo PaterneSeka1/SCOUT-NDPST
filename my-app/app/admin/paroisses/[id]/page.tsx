@@ -3,11 +3,14 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { toast } from 'sonner'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { confirmer } from '@/app/components/ConfirmDialog'
-import { COULEURS_ROLES, LABELS_ROLES, ROLES_BRANCHE, ROLES_TOUT_STAFF, libelleRoleAvecFonction } from '@/lib/roles'
+import { TableauMembres, normaliser } from '@/app/components/TableauMembres'
+import { LABELS_ROLES, ROLES_BRANCHE, ROLES_TOUT_STAFF } from '@/lib/roles'
+import { useGardeModifications } from '@/hooks/useGardeModifications'
 
 // Un membre ne peut être désigné Chef de Groupe que s'il fait déjà partie du
 // staff paroissial (encadrement de groupe ou de branche) — un parent ou un
@@ -43,6 +46,8 @@ interface Paroisse {
   id: string; nom: string; ville: string; diocese: string
   ocean: string | null; district: { id: string; nom: string }
   adresse: string | null; telephone: string | null; email: string | null
+  logo: string | null
+  couleurPrimaire: string | null; couleurAccent: string | null; couleurFond: string | null; couleurHover: string | null
   actif: boolean
   counts: { scouts: number; utilisateurs: number; activites: number }
   chefsGroupe: ChefGroupe[]
@@ -54,6 +59,22 @@ interface DistrictOption { id: string; nom: string }
 interface FormParoisse {
   nom: string; ville: string; diocese: string; ocean: string; districtId: string
   adresse: string; telephone: string; email: string
+  logo: string; couleurPrimaire: string; couleurAccent: string; couleurFond: string; couleurHover: string
+}
+
+// Construit l'état du formulaire d'édition à partir de la paroisse chargée —
+// utilisé au chargement initial ET pour réinitialiser le formulaire quand
+// l'utilisateur clique sur "Annuler" (évite de laisser des champs modifiés
+// mais non sauvegardés visibles la prochaine fois qu'il rouvre l'édition).
+function construireForm(data: Paroisse): FormParoisse {
+  return {
+    nom: data.nom, ville: data.ville, diocese: data.diocese,
+    ocean: data.ocean ?? '', districtId: data.district.id,
+    adresse: data.adresse ?? '', telephone: data.telephone ?? '', email: data.email ?? '',
+    logo: data.logo ?? '',
+    couleurPrimaire: data.couleurPrimaire ?? '', couleurAccent: data.couleurAccent ?? '',
+    couleurFond: data.couleurFond ?? '', couleurHover: data.couleurHover ?? '',
+  }
 }
 
 interface FormChefGroupe {
@@ -61,7 +82,6 @@ interface FormChefGroupe {
 }
 
 const CHEF_VIDE: FormChefGroupe = { nom: '', prenom: '', matricule: '', telephone: '', email: '', motDePasse: '' }
-const OPTIONS_MEMBRES_PAR_PAGE = [10, 20, 50]
 const PROFILS_MEMBRES = [
   { value: '', label: 'Tous les membres' },
   { value: 'staff', label: 'Staff paroissial' },
@@ -73,8 +93,52 @@ const PROFILS_MEMBRES = [
   { value: 'inactifs', label: 'Comptes inactifs' },
 ]
 
-function normaliser(valeur: string): string {
-  return valeur.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+// Couleurs d'identité visuelle propres à la paroisse — nullables (contrairement
+// à ConfigurationPlateforme) : un champ vide n'impose pas de couleur par défaut,
+// il signifie simplement "pas personnalisé, utilise le thème de la plateforme".
+type ChampCouleurParoisse = 'couleurPrimaire' | 'couleurAccent' | 'couleurFond' | 'couleurHover'
+interface CouleurDefParoisse { key: ChampCouleurParoisse; label: string; hint: string }
+
+const COULEURS_PAROISSE: CouleurDefParoisse[] = [
+  { key: 'couleurPrimaire', label: 'Couleur primaire', hint: 'Sidebar, boutons, avatar' },
+  { key: 'couleurHover', label: 'Couleur des hovers', hint: 'Liens actifs, survol menu' },
+  { key: 'couleurAccent', label: "Couleur d'accentuation", hint: 'Badges, détails secondaires' },
+  { key: 'couleurFond', label: 'Couleur de fond', hint: 'Arrière-plan pages auth' },
+]
+
+// Couleur affichée dans le sélecteur natif <input type="color"> quand le champ
+// est vide (le widget exige une valeur hexadécimale valide) — purement pour
+// l'affichage du picker, jamais enregistrée tant que l'utilisateur ne choisit
+// pas explicitement une couleur.
+const COULEUR_APERCU_DEFAUT = '#1a4731'
+
+// Contraste WCAG (relative luminance), dupliqué depuis app/admin/apparence/page.tsx
+// — pas assez de réutilisation ailleurs pour justifier une extraction partagée.
+function luminanceCanal(c: number): number {
+  const cs = c / 255
+  return cs <= 0.03928 ? cs / 12.92 : Math.pow((cs + 0.055) / 1.055, 2.4)
+}
+
+function luminance(hex: string): number {
+  const h = hex.replace('#', '')
+  if (h.length !== 6) return 0
+  const r = parseInt(h.slice(0, 2), 16)
+  const g = parseInt(h.slice(2, 4), 16)
+  const b = parseInt(h.slice(4, 6), 16)
+  return 0.2126 * luminanceCanal(r) + 0.7152 * luminanceCanal(g) + 0.0722 * luminanceCanal(b)
+}
+
+function ratioContraste(hex1: string, hex2: string): number {
+  const l1 = luminance(hex1)
+  const l2 = luminance(hex2)
+  const [clair, sombre] = l1 > l2 ? [l1, l2] : [l2, l1]
+  return (clair + 0.05) / (sombre + 0.05)
+}
+
+function niveauContraste(ratio: number): { label: string; classe: string } {
+  if (ratio >= 4.5) return { label: `${ratio.toFixed(1)}:1 — conforme AA`, classe: 'text-emerald-600' }
+  if (ratio >= 3) return { label: `${ratio.toFixed(1)}:1 — limite (grand texte)`, classe: 'text-amber-600' }
+  return { label: `${ratio.toFixed(1)}:1 — contraste insuffisant`, classe: 'text-red-600' }
 }
 
 export default function FicheParoissePage() {
@@ -100,6 +164,8 @@ export default function FicheParoissePage() {
   const [pageMembres, setPageMembres] = useState(1)
   const [membresParPage, setMembresParPage] = useState(10)
 
+  const { estModifie, definirReference, partirVers } = useGardeModifications(form)
+
   useEffect(() => {
     fetch('/api/admin/districts')
       .then((r) => (r.ok ? r.json() : null))
@@ -118,17 +184,16 @@ export default function FicheParoissePage() {
       })
       .then((data: Paroisse) => {
         setParoisse(data)
-        setForm({
-          nom: data.nom, ville: data.ville, diocese: data.diocese,
-          ocean: data.ocean ?? '', districtId: data.district.id,
-          adresse: data.adresse ?? '', telephone: data.telephone ?? '', email: data.email ?? '',
-        })
+        const formCharge = construireForm(data)
+        setForm(formCharge)
+        definirReference(formCharge)
       })
       .catch(() => {
         setErreurChargement(true)
         toast.error('Impossible de charger cette paroisse.')
       })
       .finally(() => setChargement(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   useEffect(() => { charger() }, [charger])
@@ -146,6 +211,7 @@ export default function FicheParoissePage() {
       const data = await res.json()
       if (!res.ok) { toast.error(data.erreur ?? 'Erreur serveur'); return }
       toast.success('Paroisse mise à jour.')
+      definirReference(form)
       setModeEdition(false)
       charger()
     } catch {
@@ -325,13 +391,6 @@ export default function FicheParoissePage() {
     })
   }, [paroisse, rechercheMembre, profilMembre, statutMembre])
 
-  const totalPagesMembres = Math.max(1, Math.ceil(membresFiltres.length / membresParPage))
-  const pageMembresCourante = Math.min(pageMembres, totalPagesMembres)
-  const indexDebutMembres = (pageMembresCourante - 1) * membresParPage
-  const indexFinMembres = Math.min(indexDebutMembres + membresParPage, membresFiltres.length)
-  const membresPage = membresFiltres.slice(indexDebutMembres, indexFinMembres)
-  const premierMembreAffiche = membresFiltres.length === 0 ? 0 : indexDebutMembres + 1
-
   if (chargement) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -344,7 +403,7 @@ export default function FicheParoissePage() {
     return (
       <div className="max-w-3xl mx-auto space-y-4">
         <p className="text-sm text-gray-600">Impossible de charger cette paroisse.</p>
-        <Link href="/admin/paroisses" className="text-sm text-gray-500 hover:text-gray-800">← Retour aux paroisses</Link>
+        <button type="button" onClick={() => partirVers('/admin/paroisses')} className="text-sm text-gray-500 hover:text-gray-800">← Retour aux paroisses</button>
       </div>
     )
   }
@@ -354,7 +413,7 @@ export default function FicheParoissePage() {
       <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <Link href="/admin/paroisses" className="text-sm text-gray-500 hover:text-gray-800">← Retour aux paroisses</Link>
+            <button type="button" onClick={() => partirVers('/admin/paroisses')} className="text-sm text-gray-500 hover:text-gray-800">← Retour aux paroisses</button>
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Paroisse</p>
               <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${paroisse.actif ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
@@ -570,11 +629,98 @@ export default function FicheParoissePage() {
                 <div><label className={CLS_LABEL}>E-mail</label><input type="email" className={CLS_INPUT} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
                 <div className="sm:col-span-2"><label className={CLS_LABEL}>Adresse</label><input className={CLS_INPUT} value={form.adresse} onChange={(e) => setForm({ ...form, adresse: e.target.value })} /></div>
               </div>
+
+              <div className="border-t border-gray-100 pt-4">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500">Identité visuelle de la paroisse</h3>
+                <p className="mt-1 text-xs text-gray-400">
+                  Optionnel — un champ laissé vide n&apos;impose rien : la paroisse utilise alors le thème de la plateforme.
+                </p>
+
+                <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-start">
+                  <div className="flex-shrink-0 w-16 h-16 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50">
+                    {form.logo ? (
+                      <Image src={form.logo} alt="Logo de la paroisse" width={60} height={60} unoptimized className="w-full h-full object-contain" />
+                    ) : (
+                      <span className="text-2xl text-gray-300">🖼</span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <label className={CLS_LABEL}>Logo de la paroisse</label>
+                    <input
+                      type="text"
+                      value={form.logo}
+                      onChange={(e) => setForm({ ...form, logo: e.target.value })}
+                      className={CLS_INPUT}
+                      placeholder="/uploads/logo-paroisse.png (vide = logo de la plateforme)"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                  {COULEURS_PAROISSE.map(({ key, label, hint }) => (
+                    <div key={key}>
+                      <label className="text-xs font-semibold text-gray-600 mb-2 block">
+                        {label}
+                        <span className="ml-1 font-normal text-gray-400">({hint})</span>
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="color"
+                          value={form[key] || COULEUR_APERCU_DEFAUT}
+                          onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                          className="h-10 w-12 cursor-pointer rounded-lg border border-gray-300 p-0.5 flex-shrink-0"
+                        />
+                        <input
+                          type="text"
+                          value={form[key]}
+                          onChange={(e) => {
+                            const v = e.target.value
+                            if (/^#[0-9A-Fa-f]{0,6}$/.test(v)) setForm({ ...form, [key]: v })
+                          }}
+                          placeholder="Non personnalisé"
+                          className="flex-1 rounded-lg border border-gray-300 px-2 py-2 text-xs font-mono focus:outline-none focus:ring-1 text-gray-900 placeholder:text-gray-400"
+                          maxLength={7}
+                        />
+                        {form[key] && (
+                          <button
+                            type="button"
+                            onClick={() => setForm({ ...form, [key]: '' })}
+                            className="shrink-0 text-xs text-red-500 hover:text-red-700"
+                          >
+                            Réinitialiser
+                          </button>
+                        )}
+                      </div>
+                      <p className="mt-1 text-[11px] text-gray-400">
+                        {form[key] ? 'Couleur personnalisée pour cette paroisse.' : 'Non personnalisé — utilise le thème de la plateforme.'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {(form.couleurPrimaire || form.couleurHover) && (
+                  <div className="mt-5 grid gap-2 sm:grid-cols-2">
+                    {[
+                      { label: 'Texte blanc sur couleur primaire', bg: form.couleurPrimaire },
+                      { label: 'Texte blanc sur couleur hover', bg: form.couleurHover },
+                    ].filter((c) => !!c.bg).map(({ label, bg }) => {
+                      const niveau = niveauContraste(ratioContraste(bg, '#ffffff'))
+                      return (
+                        <div key={label} className="flex items-center justify-between gap-3 rounded-lg bg-gray-50 px-3 py-2">
+                          <span className="text-xs text-gray-500">{label}</span>
+                          <span className={`text-xs font-semibold whitespace-nowrap ${niveau.classe}`}>{niveau.label}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
               <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-                <button type="button" onClick={() => setModeEdition(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
+                <button type="button" onClick={() => { setForm(construireForm(paroisse)); setModeEdition(false) }} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
                   Annuler
                 </button>
-                <button type="submit" disabled={soumission} className="flex items-center justify-center gap-2 rounded-lg px-5 py-2 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-50" style={{ backgroundColor: 'var(--cp)' }}>
+                <button type="submit" disabled={soumission || !estModifie} className="flex items-center justify-center gap-2 rounded-lg px-5 py-2 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-50" style={{ backgroundColor: 'var(--cp)' }}>
                   {soumission && <span className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" />}
                   {soumission ? 'Sauvegarde…' : 'Sauvegarder'}
                 </button>
@@ -598,184 +744,31 @@ export default function FicheParoissePage() {
       </div>
 
       <section className="space-y-4">
-        <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500">Membres de la paroisse</h2>
-              <p className="mt-1 text-sm text-gray-500">
-                {membresFiltres.length} résultat{membresFiltres.length > 1 ? 's' : ''} sur {paroisse.membres.length} compte{paroisse.membres.length > 1 ? 's' : ''}
-                {membresFiltres.length > 0 && (
-                  <> · {premierMembreAffiche}-{indexFinMembres} affiché{membresPage.length > 1 ? 's' : ''}</>
-                )}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => { setRechercheMembre(''); setProfilMembre(''); setStatutMembre(''); setPageMembres(1) }}
-              disabled={!rechercheMembre && !profilMembre && !statutMembre}
-              className="h-10 rounded-lg border border-gray-300 px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Réinitialiser
-            </button>
-          </div>
-
-          <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_170px_150px]">
-            <input
-              type="search"
-              value={rechercheMembre}
-              onChange={(e) => { setRechercheMembre(e.target.value); setPageMembres(1) }}
-              placeholder="Rechercher nom, matricule, téléphone, rôle…"
-              className={CLS_INPUT}
-            />
-            <select value={profilMembre} onChange={(e) => { setProfilMembre(e.target.value); setPageMembres(1) }} className={CLS_INPUT}>
-              {PROFILS_MEMBRES.map((profil) => (
-                <option key={profil.value} value={profil.value}>{profil.label}</option>
-              ))}
-            </select>
-            <select value={statutMembre} onChange={(e) => { setStatutMembre(e.target.value); setPageMembres(1) }} className={CLS_INPUT}>
-              <option value="">Tous les statuts</option>
-              <option value="actifs">Actifs</option>
-              <option value="inactifs">Inactifs</option>
-            </select>
-            <select
-              value={membresParPage}
-              onChange={(e) => { setMembresParPage(Number(e.target.value)); setPageMembres(1) }}
-              aria-label="Nombre de membres par page"
-              className={CLS_INPUT}
-            >
-              {OPTIONS_MEMBRES_PAR_PAGE.map((option) => (
-                <option key={option} value={option}>{option} / page</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="hidden overflow-hidden rounded-xl border border-gray-200 bg-white md:block">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  <th className="px-4 py-3">Membre</th>
-                  <th className="px-4 py-3">Rôle paroissial</th>
-                  <th className="px-4 py-3">Affectation district</th>
-                  <th className="px-4 py-3">Contact</th>
-                  <th className="px-4 py-3 text-center">Statut</th>
-                  <th className="px-4 py-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {membresPage.map((membre) => (
-                  <tr key={membre.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-gray-900">{membre.prenom} {membre.nom}</p>
-                      <p className="text-xs text-gray-500">{membre.matricule ?? membre.telephone ?? '—'}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex max-w-xs rounded-full px-2 py-0.5 text-xs font-medium ${COULEURS_ROLES[membre.role] ?? 'bg-gray-100 text-gray-700'}`}>
-                        {libelleRoleAvecFonction(membre.role, membre.fonction, membre.brancheType)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {membre.roleDistrict ? (
-                        <span className={`inline-flex max-w-xs rounded-full px-2 py-0.5 text-xs font-medium ${COULEURS_ROLES[membre.roleDistrict] ?? 'bg-gray-100 text-gray-700'}`}>
-                          {libelleRoleAvecFonction(membre.roleDistrict, membre.fonctionDistrict, membre.brancheTypeDistrict)}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      <p>{membre.email ?? '—'}</p>
-                      {membre.telephone && <p className="text-xs text-gray-500">{membre.telephone}</p>}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${membre.actif ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
-                        {membre.actif ? 'Actif' : 'Inactif'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Link href={`/admin/utilisateurs/${membre.id}`} className="text-xs font-semibold text-[#1a4731] hover:underline">
-                        Fiche
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-                {membresFiltres.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-gray-400">Aucun membre ne correspond aux filtres.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="space-y-3 md:hidden">
-          {membresPage.map((membre) => (
-            <article key={membre.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h3 className="break-words text-base font-semibold text-gray-900">{membre.prenom} {membre.nom}</h3>
-                  <p className="mt-1 text-sm text-gray-500">{membre.matricule ?? membre.telephone ?? '—'}</p>
-                </div>
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${membre.actif ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
-                  {membre.actif ? 'Actif' : 'Inactif'}
-                </span>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                <span className={`inline-flex max-w-full rounded-full px-2 py-0.5 text-xs font-medium ${COULEURS_ROLES[membre.role] ?? 'bg-gray-100 text-gray-700'}`}>
-                  <span className="break-words">{libelleRoleAvecFonction(membre.role, membre.fonction, membre.brancheType)}</span>
-                </span>
-                {membre.roleDistrict && (
-                  <span className={`inline-flex max-w-full rounded-full px-2 py-0.5 text-xs font-medium ${COULEURS_ROLES[membre.roleDistrict] ?? 'bg-gray-100 text-gray-700'}`}>
-                    <span className="break-words">{libelleRoleAvecFonction(membre.roleDistrict, membre.fonctionDistrict, membre.brancheTypeDistrict)}</span>
-                  </span>
-                )}
-              </div>
-              <div className="mt-3 grid gap-1 text-sm text-gray-600">
-                <p><span className="text-gray-400">E-mail : </span>{membre.email ?? '—'}</p>
-                <p><span className="text-gray-400">Téléphone : </span>{membre.telephone ?? '—'}</p>
-              </div>
-              <Link href={`/admin/utilisateurs/${membre.id}`} className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50">
-                Ouvrir la fiche
-              </Link>
-            </article>
-          ))}
-          {membresFiltres.length === 0 && (
-            <div className="rounded-xl border border-gray-200 bg-white px-4 py-8 text-center text-sm text-gray-400">
-              Aucun membre ne correspond aux filtres.
-            </div>
-          )}
-        </div>
-
-        {membresFiltres.length > 0 && (
-          <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-gray-500">
-              {premierMembreAffiche}-{indexFinMembres} sur {membresFiltres.length} membre{membresFiltres.length > 1 ? 's' : ''}
-            </p>
-            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:flex">
-              <button
-                type="button"
-                onClick={() => setPageMembres(Math.max(1, pageMembresCourante - 1))}
-                disabled={pageMembresCourante <= 1}
-                className="h-10 rounded-lg border border-gray-300 px-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Précédent
-              </button>
-              <span className="min-w-24 text-center text-sm font-semibold text-gray-700">
-                {pageMembresCourante} / {totalPagesMembres}
-              </span>
-              <button
-                type="button"
-                onClick={() => setPageMembres(Math.min(totalPagesMembres, pageMembresCourante + 1))}
-                disabled={pageMembresCourante >= totalPagesMembres}
-                className="h-10 rounded-lg border border-gray-300 px-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Suivant
-              </button>
-            </div>
-          </div>
-        )}
+        <TableauMembres
+          titre="Membres de la paroisse"
+          membresFiltres={membresFiltres}
+          totalMembres={paroisse.membres.length}
+          recherche={rechercheMembre}
+          onChangeRecherche={(v) => { setRechercheMembre(v); setPageMembres(1) }}
+          profil={profilMembre}
+          onChangeProfil={(v) => { setProfilMembre(v); setPageMembres(1) }}
+          profils={PROFILS_MEMBRES}
+          filtreSupplementaire={{
+            value: statutMembre,
+            onChange: (v) => { setStatutMembre(v); setPageMembres(1) },
+            options: [
+              { value: 'actifs', label: 'Actifs' },
+              { value: 'inactifs', label: 'Inactifs' },
+            ],
+            labelParDefaut: 'Tous les statuts',
+          }}
+          classeGrilleFiltres="lg:grid-cols-[minmax(0,1fr)_220px_170px_150px]"
+          page={pageMembres}
+          onChangePage={setPageMembres}
+          parPage={membresParPage}
+          onChangeParPage={(v) => { setMembresParPage(v); setPageMembres(1) }}
+          onReinitialiser={() => { setRechercheMembre(''); setProfilMembre(''); setStatutMembre(''); setPageMembres(1) }}
+        />
       </section>
 
       <section className="rounded-xl border border-red-100 bg-white p-5 sm:p-6">

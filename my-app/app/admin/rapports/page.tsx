@@ -44,9 +44,10 @@ export default function RapportsPlateforme() {
   const [filtreParoisse, setFiltreParoisse] = useState('')
   const [filtreBranche, setFiltreBranche] = useState('')
   const [filtreStatuts, setFiltreStatuts] = useState<string[]>([])
+  const [periode, setPeriode] = useState('')
 
   useEffect(() => {
-    fetch('/api/admin/rapports')
+    fetch(`/api/admin/rapports${periode ? `?periode=${periode}` : ''}`)
       .then((r) => {
         if (!r.ok) throw new Error('Erreur serveur')
         return r.json()
@@ -54,7 +55,9 @@ export default function RapportsPlateforme() {
       .then((data) => { setTotaux(data.totaux); setKpis(data.kpis); setParoisses(data.paroisses) })
       .catch(() => toast.error('Impossible de charger les rapports.'))
       .finally(() => setChargement(false))
+  }, [periode])
 
+  useEffect(() => {
     fetch('/api/admin/districts')
       .then((r) => r.json())
       .then((data) => setDistricts((data.districts ?? []).map((d: District) => ({ id: d.id, nom: d.nom }))))
@@ -211,7 +214,21 @@ export default function RapportsPlateforme() {
       {kpis && (
         <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Ce mois</p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                {periode ? `${periode} derniers mois` : 'Ce mois'}
+              </p>
+              <select
+                value={periode}
+                onChange={(e) => setPeriode(e.target.value)}
+                className="rounded-md border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-xs text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#1a4731]"
+              >
+                <option value="">Ce mois</option>
+                <option value="3">3 mois</option>
+                <option value="6">6 mois</option>
+                <option value="12">12 mois</option>
+              </select>
+            </div>
             <p className="mt-2 text-2xl font-bold text-gray-900">{kpis.activitesMois}</p>
             <p className="text-sm text-gray-500">activité{kpis.activitesMois > 1 ? 's' : ''} enregistrée{kpis.activitesMois > 1 ? 's' : ''}</p>
           </div>

@@ -225,3 +225,68 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }
+
+export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+    }
+
+    if (!ROLES_AUTORISES.includes(session.user.role)) {
+      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+    }
+
+    const { id } = await params
+
+    const paroisseId = paroisseIdRequise(session)
+
+    // Un responsable de branche ne peut désactiver que les scouts de sa propre branche.
+    let brancheUtilisateur: string | undefined
+    if (ROLES_BRANCHE.includes(session.user.role)) {
+      const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
+      if (!bt) return NextResponse.json({ error: 'Scout introuvable' }, { status: 404 })
+      brancheUtilisateur = bt
+    }
+
+    const existant = await prisma.scout.findFirst({
+      where: {
+        id,
+        paroisseId,
+        ...(brancheUtilisateur ? { brancheType: brancheUtilisateur as BrancheType } : {}),
+      },
+      select: { id: true },
+    })
+
+    if (!existant) {
+      return NextResponse.json({ error: 'Scout introuvable' }, { status: 404 })
+    }
+
+    // Désactivation (soft-delete) : jamais de suppression réelle en base, le
+    // scout conserve tout son historique (présences, progression, documents,
+    // cotisations) — cohérent avec le mécanisme déjà utilisé pour la sortie du
+    // mouvement (voir app/api/scouts/passage-branche/route.ts).
+    const scout = await prisma.scout.update({
+      where: { id },
+      data: { actif: false },
+      select: {
+        id: true, nom: true, prenom: true, matricule: true, actif: true,
+        brancheType: true, paroisseId: true, createdAt: true, updatedAt: true,
+      },
+    })
+
+    await enregistrerAudit({
+      paroisseId,
+      acteurId: session.user.id,
+      action: 'SCOUT_DESACTIVE',
+      entite: 'Scout',
+      entiteId: id,
+    })
+
+    return NextResponse.json(scout)
+  } catch (error) {
+    logger.error('DELETE /api/scouts/[id]', error)
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+  }
+}

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -6,7 +6,12 @@ import { ROLES_DISTRICT } from '@/lib/roles'
 import { paroisseIdRequise } from '@/lib/session'
 import { getParoissesDuDistrict } from '@/lib/district'
 
-export async function GET() {
+// Fenêtre glissante utilisée pour les statistiques rétrospectives du rapport
+// (taux de présence, dernières activités/réunions). Par défaut 6 mois, pour
+// ne pas changer le comportement des appels existants sans le paramètre.
+const PERIODES_VALIDES = ['3', '6', '12'] as const
+
+export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return NextResponse.json({ erreur: 'Non autorisé' }, { status: 401 })
   if (!session.user.roleDistrict || !ROLES_DISTRICT.includes(session.user.roleDistrict)) {
@@ -17,11 +22,17 @@ export async function GET() {
   const { paroisses } = await getParoissesDuDistrict(paroisseId)
   const paroisseIds = paroisses.map((p) => p.id)
 
+  const { searchParams } = new URL(request.url)
+  const periodeParam = searchParams.get('periode')
+  const nbMois = (PERIODES_VALIDES as readonly string[]).includes(periodeParam ?? '')
+    ? Number(periodeParam)
+    : 6
+
   const debutMois = new Date()
   debutMois.setDate(1)
   debutMois.setHours(0, 0, 0, 0)
 
-  const il6mois = new Date(Date.now() - 180 * 86400000)
+  const il6mois = new Date(Date.now() - nbMois * 30 * 86400000)
   // Un rapport est par nature rétrospectif : une activité ou réunion pas
   // encore passée ne doit jamais compter dans les statistiques (elle
   // n'a encore aucune présence à comptabiliser et fausserait les taux).

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { confirmer } from '@/app/components/ConfirmDialog'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
 import {
   LABELS_TYPE_COTISATION,
@@ -96,7 +97,16 @@ export default function PageMesEnfants() {
 
   useEffect(() => { charger() }, [])
 
-  async function basculerConsentementImage(scoutId: string, nouvelleValeur: boolean) {
+  async function basculerConsentementImage(scoutId: string, nouvelleValeur: boolean, prenom: string) {
+    if (!nouvelleValeur) {
+      const ok = await confirmer({
+        titre: "Révoquer le consentement à l'image ?",
+        description: `Cette action empêchera l'utilisation des photos de ${prenom} dans l'application et les publications de la paroisse (réseaux sociaux, affichages). Vous pourrez autoriser à nouveau à tout moment.`,
+        labelConfirmer: 'Révoquer',
+        danger: true,
+      })
+      if (!ok) return
+    }
     setEnCours(`consentement-${scoutId}`)
     try {
       const res = await fetch(`/api/mes-enfants/${scoutId}/consentement-image`, {
@@ -219,7 +229,7 @@ export default function PageMesEnfants() {
                     </p>
                   </div>
                   <button
-                    onClick={() => basculerConsentementImage(scout.id, !scout.consentementImage)}
+                    onClick={() => basculerConsentementImage(scout.id, !scout.consentementImage, scout.prenom)}
                     disabled={enCours === `consentement-${scout.id}`}
                     className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60 ${
                       scout.consentementImage

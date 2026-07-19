@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -17,6 +17,7 @@ import { confirmer } from '@/app/components/ConfirmDialog'
 
 export default function FicheScoutPage() {
   const { id } = useParams<{ id: string }>()
+  const router = useRouter()
   const { data: session } = useSession()
   const { data: scout, isLoading, isError } = useScout(id)
   const { data: progressions } = useProgressionsScout(id)
@@ -68,6 +69,7 @@ export default function FicheScoutPage() {
   const [passwordCompte, setPasswordCompte] = useState('')
   const [telephoneCompte, setTelephoneCompte] = useState('')
   const [referenceDate] = useState(() => Date.now())
+  const [suppressionEnCours, setSuppressionEnCours] = useState(false)
 
   if (isLoading) return (
     <div className="flex items-center justify-center h-48">
@@ -168,6 +170,29 @@ export default function FicheScoutPage() {
       setTelephoneCompte('')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur')
+    }
+  }
+
+  const handleSupprimerScout = async () => {
+    if (!scout) return
+    const ok = await confirmer({
+      titre: 'Supprimer cette fiche scout ?',
+      description: `La fiche de ${scout.prenom} ${scout.nom} sera désactivée. Aucune donnée n'est perdue : l'historique de présences, la progression/les badges et les documents restent conservés, et la fiche pourra être réactivée plus tard si besoin.`,
+      labelConfirmer: 'Supprimer',
+      danger: true,
+    })
+    if (!ok) return
+    setSuppressionEnCours(true)
+    try {
+      const res = await fetch(`/api/scouts/${id}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { toast.error(data.error ?? 'Erreur serveur'); return }
+      toast.success('Fiche scout supprimée.')
+      router.push('/dashboard/scouts')
+    } catch {
+      toast.error('Erreur lors de la suppression')
+    } finally {
+      setSuppressionEnCours(false)
     }
   }
 
@@ -559,6 +584,23 @@ export default function FicheScoutPage() {
           </ul>
         </div>
       )}
+
+      {/* Zone sensible */}
+      <div className="rounded-lg border border-red-100 bg-white p-6 shadow-sm">
+        <h2 className="text-sm font-bold uppercase tracking-widest text-red-500">Zone sensible</h2>
+        <div className="mt-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <p className="text-sm text-gray-600">
+            La fiche sera désactivée, pas supprimée définitivement : l&apos;historique de présences, la progression/les badges et les documents restent conservés.
+          </p>
+          <button
+            onClick={handleSupprimerScout}
+            disabled={suppressionEnCours}
+            className="shrink-0 rounded-md border border-red-300 px-4 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
+          >
+            {suppressionEnCours ? 'Suppression…' : 'Supprimer la fiche'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

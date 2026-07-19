@@ -65,14 +65,17 @@ export default function PageRapportsDistrict() {
   const [filtreParoisse, setFiltreParoisse] = useState('')
   const [filtreBranche, setFiltreBranche] = useState('')
   const [filtreStatuts, setFiltreStatuts] = useState<string[]>([])
+  const [periode, setPeriode] = useState('6')
 
   useEffect(() => {
-    fetch('/api/district/rapports')
+    fetch(`/api/district/rapports?periode=${periode}`)
       .then((r) => r.json())
       .then((data) => { if (data.erreur) { toast.error(data.erreur); return }; setRapport(data) })
       .catch(() => toast.error('Impossible de charger les rapports'))
       .finally(() => setChargement(false))
+  }, [periode])
 
+  useEffect(() => {
     fetch('/api/district/paroisses')
       .then((r) => r.json())
       .then((data) => setParoisses((data.paroisses ?? []).map((p: ParoisseOption) => ({ id: p.id, nom: p.nom }))))
@@ -104,9 +107,23 @@ export default function PageRapportsDistrict() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Rapports</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Vue d&apos;ensemble statistique du district</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Rapports</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Vue d&apos;ensemble statistique du district</p>
+        </div>
+        <label className="flex items-center gap-2 text-sm text-gray-600">
+          Période
+          <select
+            value={periode}
+            onChange={(e) => setPeriode(e.target.value)}
+            className="rounded-md border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#1a4731]"
+          >
+            <option value="3">3 derniers mois</option>
+            <option value="6">6 derniers mois</option>
+            <option value="12">12 derniers mois</option>
+          </select>
+        </label>
       </div>
 
       {/* KPIs */}
@@ -114,8 +131,8 @@ export default function PageRapportsDistrict() {
         {[
           { label: 'Scouts actifs', valeur: rapport.scoutsActifs, couleur: 'bg-[#1a4731]', icone: '⚜️' },
           { label: 'Scouts inactifs', valeur: rapport.scoutsInactifs, couleur: 'bg-gray-500', icone: '⏸️' },
-          { label: 'Activités ce mois', valeur: rapport.activitesMois, couleur: 'bg-[#27ae60]', icone: '📅' },
-          { label: 'Réunions ce mois', valeur: rapport.reunionsMois, couleur: 'bg-blue-600', icone: '🗓️' },
+          { label: `Activités (${periode} mois)`, valeur: rapport.activitesMois, couleur: 'bg-[#27ae60]', icone: '📅' },
+          { label: `Réunions (${periode} mois)`, valeur: rapport.reunionsMois, couleur: 'bg-blue-600', icone: '🗓️' },
         ].map(({ label, valeur, couleur, icone }) => (
           <div key={label} className={`${couleur} text-white rounded-xl p-4`}>
             <div className="text-2xl mb-1">{icone}</div>

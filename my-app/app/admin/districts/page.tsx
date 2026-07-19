@@ -104,15 +104,24 @@ export default function ListeDistricts() {
             {districts.length} district{districts.length > 1 ? 's' : ''}
           </p>
         </div>
-        {!creation && (
-          <button
-            onClick={() => setCreation(true)}
-            className="sm:flex-shrink-0 rounded-lg px-4 py-2 text-sm font-bold text-white hover:brightness-110 transition"
-            style={{ backgroundColor: 'var(--cp)' }}
+        <div className="flex flex-col sm:flex-row gap-2 sm:flex-shrink-0">
+          <a
+            href={`/api/admin/districts/export`}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
           >
-            + Nouveau district
-          </button>
-        )}
+            <span aria-hidden="true">↓</span>
+            Exporter (CSV)
+          </a>
+          {!creation && (
+            <button
+              onClick={() => setCreation(true)}
+              className="rounded-lg px-4 py-2 text-sm font-bold text-white hover:brightness-110 transition"
+              style={{ backgroundColor: 'var(--cp)' }}
+            >
+              + Nouveau district
+            </button>
+          )}
+        </div>
       </div>
 
       {creation && (

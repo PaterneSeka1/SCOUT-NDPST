@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { confirmer } from '@/app/components/ConfirmDialog'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { useProgressionsScout, useValiderBadge } from '@/hooks/useProgressions'
 
@@ -14,6 +15,12 @@ export default function ProgressionScoutBranchePage() {
   const [badgeEnCours, setBadgeEnCours] = useState<string | null>(null)
 
   const handleValiderBadge = async (badgeId: string) => {
+    const ok = await confirmer({
+      titre: 'Valider ce badge ?',
+      description: 'Cette validation sera enregistrée avec la date du jour et votre nom, comme indiqué dans l\'historique de progression du scout.',
+      labelConfirmer: 'Valider',
+    })
+    if (!ok) return
     setBadgeEnCours(badgeId)
     try {
       await validerBadge({ badgeId })
