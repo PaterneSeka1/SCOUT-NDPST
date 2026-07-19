@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_ROLES, ROLES_ASSIGNABLES_PAROISSE, ROLES_BRANCHE } from '@/lib/roles'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
+import { useGardeModifications } from '@/hooks/useGardeModifications'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -63,6 +63,8 @@ export default function NouvelUtilisateurPlateformePage() {
   })
   const [erreurs, setErreurs] = useState<FormErrors>({})
 
+  const { estModifie, definirReference, partirVers } = useGardeModifications(form)
+
   const estParent = form.role === 'PARENT'
   const estBranche = ROLES_BRANCHE.includes(form.role)
 
@@ -75,6 +77,11 @@ export default function NouvelUtilisateurPlateformePage() {
       .then(setParoisses)
       .catch(() => toast.error('Impossible de charger la liste des paroisses.'))
       .finally(() => setChargementParoisses(false))
+  }, [])
+
+  useEffect(() => {
+    definirReference(form)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -136,7 +143,7 @@ export default function NouvelUtilisateurPlateformePage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <Link href="/admin/utilisateurs" className="text-sm text-gray-500 hover:text-gray-800">← Retour aux utilisateurs</Link>
+      <button type="button" onClick={() => partirVers('/admin/utilisateurs')} className="text-sm text-gray-500 hover:text-gray-800">← Retour aux utilisateurs</button>
 
       <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Nouvel utilisateur</h1>
 
@@ -251,16 +258,16 @@ export default function NouvelUtilisateurPlateformePage() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <button type="submit" disabled={soumission}
+            <button type="submit" disabled={soumission || !estModifie}
               className="sm:flex-none rounded-lg px-5 py-2.5 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50 transition flex items-center justify-center gap-2"
               style={{ backgroundColor: 'var(--cp)' }}>
               {soumission && <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />}
               {soumission ? 'Enregistrement…' : "Créer l'utilisateur"}
             </button>
-            <Link href="/admin/utilisateurs"
+            <button type="button" onClick={() => partirVers('/admin/utilisateurs')}
               className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm">
               Annuler
-            </Link>
+            </button>
           </div>
         </div>
       </form>

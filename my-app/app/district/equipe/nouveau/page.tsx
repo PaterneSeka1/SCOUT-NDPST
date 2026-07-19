@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { toast } from 'sonner'
 import { SelecteurMembre } from '@/app/components/SelecteurMembre'
 import { LABELS_ROLES, ROLES_ASSIGNABLES_DISTRICT } from '@/lib/roles'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { useCreerDistrictUtilisateur, useDistrictPersonnelEligible } from '@/hooks/useDistrictUtilisateurs'
+import { useGardeModifications } from '@/hooks/useGardeModifications'
 
 const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_SELECT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -36,6 +36,13 @@ export default function NouveauMembreEquipePage() {
   const [form, setForm] = useState<FormData>({ utilisateurId: '', role: '', fonction: '', brancheType: '' })
   const [erreurs, setErreurs] = useState<FormErrors>({})
   const [modeFonction, setModeFonction] = useState<'branche' | 'autre'>('autre')
+
+  const { estModifie, definirReference, partirVers } = useGardeModifications({ form, modeFonction })
+
+  useEffect(() => {
+    definirReference({ form, modeFonction })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const estAssistant = form.role === 'ASSISTANT_DISTRICT'
   const modeBranche = modeFonction === 'branche'
@@ -79,9 +86,9 @@ export default function NouveauMembreEquipePage() {
 
   return (
     <div className="space-y-6">
-      <Link href="/district/equipe" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+      <button type="button" onClick={() => partirVers('/district/equipe')} className="text-sm text-gray-500 hover:text-gray-700 transition-colors cursor-pointer">
         ← Retour à la liste
-      </Link>
+      </button>
 
       <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Nommer un membre de l&apos;équipe</h1>
       <p className="text-sm text-gray-500 -mt-4">
@@ -169,14 +176,14 @@ export default function NouveauMembreEquipePage() {
           )}
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <button type="submit" disabled={isPending}
+            <button type="submit" disabled={isPending || !estModifie}
               className="sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
               {isPending ? 'Enregistrement…' : 'Nommer dans l’équipe'}
             </button>
-            <Link href="/district/equipe"
-              className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+            <button type="button" onClick={() => partirVers('/district/equipe')}
+              className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm cursor-pointer">
               Annuler
-            </Link>
+            </button>
           </div>
         </div>
       </form>

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_ROLES, ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT_SANS_CHEF, ROLES_BRANCHE } from '@/lib/roles'
 import { LABELS_BRANCHES } from '@/lib/branches'
@@ -10,6 +9,7 @@ import { useUtilisateur, useModifierUtilisateur, useResetPassword } from '@/hook
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { SelecteurEnfants } from '@/app/components/SelecteurEnfants'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
+import { useGardeModifications } from '@/hooks/useGardeModifications'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -42,11 +42,17 @@ export default function ModifierUtilisateurPage() {
   const [formMdp, setFormMdp] = useState<FormMdp>({ motDePasse: '', confirmation: '' })
   const [erreursMdp, setErreursMdp] = useState<FormMdpErrors>({})
 
+  const { estModifie, definirReference, partirVers } = useGardeModifications({ ...formInfos, scoutIds })
+
   useEffect(() => {
     if (utilisateur) {
-      setFormInfos({ nom: utilisateur.nom, prenom: utilisateur.prenom, email: utilisateur.email ?? '', role: utilisateur.role, brancheType: utilisateur.brancheType ?? '', actif: utilisateur.actif })
-      setScoutIds((utilisateur.enfants ?? []).map((e) => e.id))
+      const infosInitiales: FormInfos = { nom: utilisateur.nom, prenom: utilisateur.prenom, email: utilisateur.email ?? '', role: utilisateur.role, brancheType: utilisateur.brancheType ?? '', actif: utilisateur.actif }
+      const scoutIdsInitiaux = (utilisateur.enfants ?? []).map((e) => e.id)
+      setFormInfos(infosInitiales)
+      setScoutIds(scoutIdsInitiaux)
+      definirReference({ ...infosInitiales, scoutIds: scoutIdsInitiaux })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [utilisateur])
 
   const estBranche = ROLES_BRANCHE.includes(formInfos.role)
@@ -73,6 +79,7 @@ export default function ModifierUtilisateurPage() {
     if (!validerInfos()) return
     try {
       await modifier({ nom: formInfos.nom.trim(), prenom: formInfos.prenom.trim(), email: formInfos.email.trim() || null, role: formInfos.role, brancheType: estBranche ? formInfos.brancheType : null, actif: formInfos.actif, scoutIds })
+      definirReference({ ...formInfos, scoutIds })
       toast.success('Modifications enregistrées.')
       router.push('/dashboard/utilisateurs')
     } catch (err) {
@@ -116,16 +123,16 @@ export default function ModifierUtilisateurPage() {
 
   if (isError || !utilisateur) return (
     <div className="space-y-4">
-      <Link href="/dashboard/utilisateurs" className="text-sm text-gray-500 hover:text-gray-700">← Retour</Link>
+      <button type="button" onClick={() => partirVers('/dashboard/utilisateurs')} className="text-sm text-gray-500 hover:text-gray-700">← Retour</button>
       <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">Membre introuvable.</div>
     </div>
   )
 
   return (
     <div className="space-y-6 px-1 sm:px-0">
-      <Link href="/dashboard/utilisateurs" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+      <button type="button" onClick={() => partirVers('/dashboard/utilisateurs')} className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
         ← Retour à la liste
-      </Link>
+      </button>
 
       <div>
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Modifier le membre</h1>
@@ -192,7 +199,7 @@ export default function ModifierUtilisateurPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <button type="submit" disabled={soumissionInfos}
+            <button type="submit" disabled={soumissionInfos || !estModifie}
               className="w-full rounded-lg bg-[#1a4731] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#163d29] disabled:opacity-60 sm:w-auto">
               {soumissionInfos ? 'Enregistrement…' : 'Enregistrer les modifications'}
             </button>

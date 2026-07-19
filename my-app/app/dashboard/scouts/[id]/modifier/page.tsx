@@ -2,16 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { toast } from 'sonner'
 import { useScout, useModifierScout } from '@/hooks/useScouts'
 import { LABELS_BRANCHES } from '@/lib/branches'
+import { useGardeModifications } from '@/hooks/useGardeModifications'
+import { CompteurCaracteres } from '@/app/components/CompteurCaracteres'
 
 const BRANCHES = Object.keys(LABELS_BRANCHES)
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
+const CLS_LABEL_COMPTEUR = 'flex items-center justify-between text-sm font-medium text-gray-700 mb-1'
 
 export default function ModifierScoutPage() {
   const { id } = useParams<{ id: string }>()
@@ -25,9 +27,12 @@ export default function ModifierScoutPage() {
   const [consentementImage, setConsentementImage] = useState(false)
   const [uploadEnCours, setUploadEnCours] = useState(false)
 
+  const etatFormulaire = { ...form, photo, consentementImage }
+  const { estModifie, definirReference, partirVers } = useGardeModifications(etatFormulaire)
+
   useEffect(() => {
     if (scout) {
-      setForm({
+      const donneesForm = {
         nom: scout.nom,
         prenom: scout.prenom,
         dateNaissance: scout.dateNaissance.split('T')[0],
@@ -35,13 +40,16 @@ export default function ModifierScoutPage() {
         brancheType: scout.brancheType,
         allergies: scout.allergies ?? '',
         traitementsMedicaux: scout.traitementsMedicaux ?? '',
-      })
+      }
+      setForm(donneesForm)
       if (scout.photo) {
         setPhoto(scout.photo)
         setPhotoPreview(scout.photo)
       }
       setConsentementImage(scout.consentementImage)
+      definirReference({ ...donneesForm, photo: scout.photo, consentementImage: scout.consentementImage })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scout])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
@@ -72,6 +80,7 @@ export default function ModifierScoutPage() {
     e.preventDefault()
     try {
       await mutateAsync({ ...form, photo: photo ?? undefined, consentementImage })
+      definirReference({ ...form, photo, consentementImage })
       toast.success('Modifications enregistrées.')
       router.push(`/dashboard/scouts/${id}`)
     } catch (err) {
@@ -87,9 +96,9 @@ export default function ModifierScoutPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-1 sm:px-0">
-      <Link href={`/dashboard/scouts/${id}`} className="text-sm text-gray-500 hover:text-gray-700">
+      <button type="button" onClick={() => partirVers(`/dashboard/scouts/${id}`)} className="text-sm text-gray-500 hover:text-gray-700 cursor-pointer">
         ← Retour à la fiche
-      </Link>
+      </button>
 
       <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Modifier le scout</h1>
 
@@ -159,12 +168,18 @@ export default function ModifierScoutPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-gray-100 pt-4">
             <div>
-              <label className={CLS_LABEL}>Allergies <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
+              <label className={CLS_LABEL_COMPTEUR}>
+                <span>Allergies <span className="text-xs text-gray-400 font-normal">(optionnel)</span></span>
+                <CompteurCaracteres valeur={form.allergies} max={500} />
+              </label>
               <textarea name="allergies" value={form.allergies} onChange={handleChange} rows={2}
                 placeholder="Ex : arachides, pénicilline…" className={CLS_INPUT} />
             </div>
             <div>
-              <label className={CLS_LABEL}>Traitements en cours <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
+              <label className={CLS_LABEL_COMPTEUR}>
+                <span>Traitements en cours <span className="text-xs text-gray-400 font-normal">(optionnel)</span></span>
+                <CompteurCaracteres valeur={form.traitementsMedicaux} max={500} />
+              </label>
               <textarea name="traitementsMedicaux" value={form.traitementsMedicaux} onChange={handleChange} rows={2}
                 placeholder="Ex : inhalateur pour asthme, à prendre matin et soir" className={CLS_INPUT} />
             </div>
@@ -184,14 +199,14 @@ export default function ModifierScoutPage() {
           )}
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <button type="submit" disabled={isPending || uploadEnCours}
+            <button type="submit" disabled={isPending || uploadEnCours || !estModifie}
               className="w-full sm:w-auto sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
               {isPending ? 'Enregistrement…' : 'Enregistrer les modifications'}
             </button>
-            <Link href={`/dashboard/scouts/${id}`}
-              className="inline-flex w-full items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:w-auto">
+            <button type="button" onClick={() => partirVers(`/dashboard/scouts/${id}`)}
+              className="inline-flex w-full items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:w-auto cursor-pointer">
               Annuler
-            </Link>
+            </button>
           </div>
         </div>
       </form>

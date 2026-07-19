@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { toast } from 'sonner'
 import { useUtilisateur, useModifierUtilisateur, useResetPassword } from '@/hooks/useUtilisateurs'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
+import { useGardeModifications } from '@/hooks/useGardeModifications'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -31,10 +31,15 @@ export default function ModifierParentPage() {
   const [formMdp, setFormMdp] = useState<FormMdp>({ motDePasse: '', confirmation: '' })
   const [erreursMdp, setErreursMdp] = useState<FormMdpErrors>({})
 
+  const { estModifie, definirReference, partirVers } = useGardeModifications(formInfos)
+
   useEffect(() => {
     if (parent) {
-      setFormInfos({ nom: parent.nom, prenom: parent.prenom, email: parent.email ?? '', actif: parent.actif })
+      const infos: FormInfos = { nom: parent.nom, prenom: parent.prenom, email: parent.email ?? '', actif: parent.actif }
+      setFormInfos(infos)
+      definirReference(infos)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parent])
 
   const handleInfosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -58,6 +63,7 @@ export default function ModifierParentPage() {
     try {
       await modifier({ nom: formInfos.nom.trim(), prenom: formInfos.prenom.trim(), email: formInfos.email.trim() || null, actif: formInfos.actif })
       toast.success('Modifications enregistrées.')
+      definirReference(formInfos)
       router.push('/dashboard/parents')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Une erreur est survenue')
@@ -100,16 +106,16 @@ export default function ModifierParentPage() {
 
   if (isError || !parent) return (
     <div className="space-y-4">
-      <Link href="/dashboard/parents" className="text-sm text-gray-500 hover:text-gray-700">← Retour</Link>
+      <button type="button" onClick={() => partirVers('/dashboard/parents')} className="text-sm text-gray-500 hover:text-gray-700">← Retour</button>
       <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">Parent introuvable.</div>
     </div>
   )
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-1 sm:px-0">
-      <Link href="/dashboard/parents" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+      <button type="button" onClick={() => partirVers('/dashboard/parents')} className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
         ← Retour à la liste
-      </Link>
+      </button>
 
       <div>
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Modifier le parent</h1>
@@ -149,7 +155,7 @@ export default function ModifierParentPage() {
           </label>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <button type="submit" disabled={soumissionInfos}
+            <button type="submit" disabled={soumissionInfos || !estModifie}
               className="w-full sm:w-auto sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
               {soumissionInfos ? 'Enregistrement…' : 'Enregistrer les modifications'}
             </button>

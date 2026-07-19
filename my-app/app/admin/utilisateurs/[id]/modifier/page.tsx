@@ -8,6 +8,7 @@ import { LABELS_ROLES, ROLES_ASSIGNABLES_PAROISSE_SANS_CHEF, ROLES_BRANCHE } fro
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
+import { useGardeModifications } from '@/hooks/useGardeModifications'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -49,6 +50,8 @@ export default function ModifierUtilisateurPlateformePage() {
   const [erreursInfos, setErreursInfos] = useState<FormInfosErrors>({})
   const [soumissionInfos, setSoumissionInfos] = useState(false)
 
+  const { estModifie, definirReference, partirVers } = useGardeModifications(formInfos)
+
   const estBranche = ROLES_BRANCHE.includes(formInfos.role)
   // Le Chef de Groupe en exercice n'est pas dans ROLES_LISTE (sa nomination
   // passe par /admin/paroisses/[id], pas par ce formulaire générique) : on
@@ -71,16 +74,19 @@ export default function ModifierUtilisateurPlateformePage() {
       })
       .then((data: UtilisateurDetail) => {
         setUtilisateur(data)
-        setFormInfos({
+        const infos: FormInfos = {
           nom: data.nom, prenom: data.prenom, email: data.email ?? '', role: data.role,
           brancheType: data.brancheType ?? '', actif: data.actif,
-        })
+        }
+        setFormInfos(infos)
+        definirReference(infos)
       })
       .catch(() => {
         setErreurChargement(true)
         toast.error('Impossible de charger cet utilisateur.')
       })
       .finally(() => setChargement(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   useEffect(() => { charger() }, [charger])
@@ -122,6 +128,7 @@ export default function ModifierUtilisateurPlateformePage() {
       const data = await res.json()
       if (!res.ok) { toast.error(data.erreur ?? 'Erreur serveur'); return }
       toast.success('Modifications enregistrées.')
+      definirReference(formInfos)
       router.push('/admin/utilisateurs')
     } catch {
       toast.error('Une erreur est survenue')
@@ -178,7 +185,7 @@ export default function ModifierUtilisateurPlateformePage() {
   if (erreurChargement || !utilisateur) {
     return (
       <div className="space-y-4">
-        <Link href="/admin/utilisateurs" className="text-sm text-gray-500 hover:text-gray-700">← Retour</Link>
+        <button type="button" onClick={() => partirVers('/admin/utilisateurs')} className="text-sm text-gray-500 hover:text-gray-700">← Retour</button>
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">Utilisateur introuvable.</div>
       </div>
     )
@@ -186,9 +193,9 @@ export default function ModifierUtilisateurPlateformePage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-1 sm:px-0">
-      <Link href="/admin/utilisateurs" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+      <button type="button" onClick={() => partirVers('/admin/utilisateurs')} className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
         ← Retour à la liste
-      </Link>
+      </button>
 
       <div>
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Modifier l&apos;utilisateur</h1>
@@ -273,7 +280,7 @@ export default function ModifierUtilisateurPlateformePage() {
           </label>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <button type="submit" disabled={soumissionInfos}
+            <button type="submit" disabled={soumissionInfos || !estModifie}
               className="w-full rounded-lg px-5 py-2.5 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-50 sm:w-auto"
               style={{ backgroundColor: 'var(--cp)' }}>
               {soumissionInfos ? 'Enregistrement…' : 'Enregistrer les modifications'}

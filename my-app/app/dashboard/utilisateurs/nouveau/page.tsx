@@ -1,14 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_ROLES, ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT_SANS_CHEF, ROLES_BRANCHE } from '@/lib/roles'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { useCreerUtilisateur } from '@/hooks/useUtilisateurs'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
+import { useGardeModifications } from '@/hooks/useGardeModifications'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -41,14 +41,29 @@ interface FormErrors {
 
 const ROLES_LISTE = ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT_SANS_CHEF
 
+const FORM_INITIAL: FormData = {
+  nom: '', prenom: '', email: '', matricule: '', telephone: '', role: '', brancheType: '', motDePasse: '', confirmation: '',
+}
+
+// Sous-ensemble "informations" du formulaire suivi par la garde de
+// modifications — le mot de passe n'en fait pas partie.
+function extraireInfos(f: FormData) {
+  return { nom: f.nom, prenom: f.prenom, email: f.email, matricule: f.matricule, telephone: f.telephone, role: f.role, brancheType: f.brancheType }
+}
+
 export default function NouvelUtilisateurPage() {
   const router = useRouter()
   const { mutateAsync, isPending } = useCreerUtilisateur()
 
-  const [form, setForm] = useState<FormData>({
-    nom: '', prenom: '', email: '', matricule: '', telephone: '', role: '', brancheType: '', motDePasse: '', confirmation: '',
-  })
+  const [form, setForm] = useState<FormData>(FORM_INITIAL)
   const [erreurs, setErreurs] = useState<FormErrors>({})
+
+  const { estModifie, definirReference, partirVers } = useGardeModifications(extraireInfos(form))
+
+  useEffect(() => {
+    definirReference(extraireInfos(FORM_INITIAL))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const estParent = form.role === 'PARENT'
   const estBranche = ROLES_BRANCHE.includes(form.role)
@@ -92,6 +107,7 @@ export default function NouvelUtilisateurPage() {
         brancheType: estBranche ? form.brancheType : null,
         password: form.motDePasse,
       })
+      definirReference(extraireInfos(form))
       router.push('/dashboard/utilisateurs')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Une erreur est survenue')
@@ -100,9 +116,9 @@ export default function NouvelUtilisateurPage() {
 
   return (
     <div className="space-y-6">
-      <Link href="/dashboard/utilisateurs" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+      <button type="button" onClick={() => partirVers('/dashboard/utilisateurs')} className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
         ← Retour à la liste
-      </Link>
+      </button>
 
       <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Nouveau membre</h1>
 
@@ -199,14 +215,14 @@ export default function NouvelUtilisateurPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <button type="submit" disabled={isPending}
+            <button type="submit" disabled={isPending || !estModifie}
               className="sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
               {isPending ? 'Enregistrement…' : 'Créer le membre'}
             </button>
-            <Link href="/dashboard/utilisateurs"
+            <button type="button" onClick={() => partirVers('/dashboard/utilisateurs')}
               className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm">
               Annuler
-            </Link>
+            </button>
           </div>
         </div>
       </form>

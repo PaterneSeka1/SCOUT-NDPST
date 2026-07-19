@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { toast } from 'sonner'
+import { useGardeModifications } from '@/hooks/useGardeModifications'
+import { CompteurCaracteres } from '@/app/components/CompteurCaracteres'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -27,6 +28,13 @@ export default function PageNouveauProgrammeBranche() {
   const [periodeFin, setPeriodeFin] = useState('')
   const [erreursChamps, setErreursChamps] = useState<{ paroisseId?: string }>({})
   const [soumission, setSoumission] = useState(false)
+
+  const { estModifie, definirReference, partirVers } = useGardeModifications({ paroisseId, titre, description, periodeDebut, periodeFin })
+
+  useEffect(() => {
+    definirReference({ paroisseId, titre, description, periodeDebut, periodeFin })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     fetch('/api/district/paroisses')
@@ -68,11 +76,11 @@ export default function PageNouveauProgrammeBranche() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Link href="/district/ma-branche" className="text-gray-400 hover:text-gray-600">
+        <button type="button" onClick={() => partirVers('/district/ma-branche')} className="text-gray-400 hover:text-gray-600 cursor-pointer">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-        </Link>
+        </button>
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Nouveau programme de branche</h1>
       </div>
 
@@ -112,21 +120,24 @@ export default function PageNouveauProgrammeBranche() {
           </div>
 
           <div>
-            <label className={CLS_LABEL}>Description / objectifs <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
+            <label className={`${CLS_LABEL} flex items-center justify-between`}>
+              <span>Description / objectifs <span className="text-xs text-gray-400 font-normal">(optionnel)</span></span>
+              <CompteurCaracteres valeur={description} max={500} />
+            </label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
               placeholder="Objectifs pédagogiques généraux de ce programme…"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] resize-none" />
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <button type="submit" disabled={soumission}
+            <button type="submit" disabled={soumission || !estModifie}
               className="sm:flex-none bg-[#1a4731] text-white px-6 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
               {soumission ? 'Création…' : 'Créer le programme'}
             </button>
-            <Link href="/district/ma-branche"
-              className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+            <button type="button" onClick={() => partirVers('/district/ma-branche')}
+              className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm cursor-pointer">
               Annuler
-            </Link>
+            </button>
           </div>
         </div>
       </form>

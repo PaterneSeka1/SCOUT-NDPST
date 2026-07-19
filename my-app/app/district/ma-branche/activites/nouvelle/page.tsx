@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
+import { useGardeModifications } from '@/hooks/useGardeModifications'
+import { CompteurCaracteres } from '@/app/components/CompteurCaracteres'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -32,6 +33,13 @@ export default function PageNouvelleActiviteBranche() {
   const [erreursChamps, setErreursChamps] = useState<{ titre?: string; dateDebut?: string; paroisseId?: string }>({})
   const [soumission, setSoumission] = useState(false)
 
+  const { estModifie, definirReference, partirVers } = useGardeModifications({ paroisseId, titre, type, dateDebut, dateFin, lieu, description })
+
+  useEffect(() => {
+    definirReference({ paroisseId, titre, type, dateDebut, dateFin, lieu, description })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     fetch('/api/district/paroisses')
       .then((r) => r.json())
@@ -46,6 +54,10 @@ export default function PageNouvelleActiviteBranche() {
     if (!dateDebut) errs.dateDebut = 'La date de début est requise'
     if (!paroisseId) errs.paroisseId = 'La paroisse est requise'
     if (Object.keys(errs).length) { setErreursChamps(errs); return }
+    if (dateFin && new Date(dateFin) <= new Date(dateDebut)) {
+      toast.error('La date de fin doit être après la date de début')
+      return
+    }
     setErreursChamps({})
 
     setSoumission(true)
@@ -75,9 +87,9 @@ export default function PageNouvelleActiviteBranche() {
 
   return (
     <div className="space-y-6">
-      <Link href="/district/ma-branche" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+      <button type="button" onClick={() => partirVers('/district/ma-branche')} className="text-sm text-gray-500 hover:text-gray-700 transition-colors cursor-pointer">
         ← Retour à ma branche
-      </Link>
+      </button>
 
       <div>
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Nouvelle activité de branche</h1>
@@ -146,20 +158,23 @@ export default function PageNouvelleActiviteBranche() {
 
           {/* Description */}
           <div>
-            <label className={CLS_LABEL}>Description <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
+            <label className={`${CLS_LABEL} flex items-center justify-between`}>
+              <span>Description <span className="text-xs text-gray-400 font-normal">(optionnel)</span></span>
+              <CompteurCaracteres valeur={description} max={500} />
+            </label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)}
               placeholder="Détails supplémentaires sur l'activité…" rows={3} className={CLS_TEXTAREA} />
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <button type="submit" disabled={soumission}
+            <button type="submit" disabled={soumission || !estModifie}
               className="sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#15392a] transition-colors text-sm font-medium disabled:opacity-60">
               {soumission ? 'Création…' : "Créer l'activité"}
             </button>
-            <Link href="/district/ma-branche"
-              className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+            <button type="button" onClick={() => partirVers('/district/ma-branche')}
+              className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm cursor-pointer">
               Annuler
-            </Link>
+            </button>
           </div>
         </div>
       </form>

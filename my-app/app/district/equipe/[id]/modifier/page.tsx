@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_ROLES, ROLES_ASSIGNABLES_DISTRICT } from '@/lib/roles'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { useDistrictUtilisateur, useModifierDistrictUtilisateur, useResetDistrictPassword } from '@/hooks/useDistrictUtilisateurs'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
+import { useGardeModifications } from '@/hooks/useGardeModifications'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -38,13 +38,19 @@ export default function ModifierMembreEquipePage() {
   const [formMdp, setFormMdp] = useState<FormMdp>({ motDePasse: '', confirmation: '' })
   const [erreursMdp, setErreursMdp] = useState<FormMdpErrors>({})
 
+  const { estModifie, definirReference, partirVers } = useGardeModifications({ formInfos, modeFonction })
+
   useEffect(() => {
     if (utilisateur) {
-      setFormInfos({
+      const infos: FormInfos = {
         role: utilisateur.role, fonction: utilisateur.fonction ?? '', brancheType: utilisateur.brancheType ?? '',
-      })
-      setModeFonction(utilisateur.brancheType ? 'branche' : 'autre')
+      }
+      const mode: 'branche' | 'autre' = utilisateur.brancheType ? 'branche' : 'autre'
+      setFormInfos(infos)
+      setModeFonction(mode)
+      definirReference({ formInfos: infos, modeFonction: mode })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [utilisateur])
 
   const estAssistant = formInfos.role === 'ASSISTANT_DISTRICT'
@@ -73,6 +79,7 @@ export default function ModifierMembreEquipePage() {
         fonction: estAssistant && !modeBranche && formInfos.fonction.trim() ? formInfos.fonction.trim() : null,
         brancheType: estAssistant && modeBranche && formInfos.brancheType ? formInfos.brancheType : null,
       })
+      definirReference({ formInfos, modeFonction })
       toast.success('Modifications enregistrées.')
       router.push('/district/equipe')
     } catch (err) {
@@ -116,16 +123,16 @@ export default function ModifierMembreEquipePage() {
 
   if (isError || !utilisateur) return (
     <div className="space-y-4">
-      <Link href="/district/equipe" className="text-sm text-gray-500 hover:text-gray-700">← Retour</Link>
+      <button type="button" onClick={() => partirVers('/district/equipe')} className="text-sm text-gray-500 hover:text-gray-700 cursor-pointer">← Retour</button>
       <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">Membre introuvable.</div>
     </div>
   )
 
   return (
     <div className="space-y-6 px-1 sm:px-0">
-      <Link href="/district/equipe" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+      <button type="button" onClick={() => partirVers('/district/equipe')} className="text-sm text-gray-500 hover:text-gray-700 transition-colors cursor-pointer">
         ← Retour à la liste
-      </Link>
+      </button>
 
       <div>
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Modifier le membre</h1>
@@ -198,7 +205,7 @@ export default function ModifierMembreEquipePage() {
           )}
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <button type="submit" disabled={soumissionInfos}
+            <button type="submit" disabled={soumissionInfos || !estModifie}
               className="w-full rounded-lg bg-[#1a4731] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#163d29] disabled:opacity-60 sm:w-auto">
               {soumissionInfos ? 'Enregistrement…' : 'Enregistrer les modifications'}
             </button>

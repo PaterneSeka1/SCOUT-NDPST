@@ -1,14 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import Link from 'next/link'
 import { toast } from 'sonner'
 import { useCreerActivite } from '@/hooks/useActivites'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { ROLES_BRANCHE } from '@/lib/roles'
+import { useGardeModifications } from '@/hooks/useGardeModifications'
+import { CompteurCaracteres } from '@/app/components/CompteurCaracteres'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -31,6 +32,15 @@ export default function PageNouvelleActivite() {
   const [brancheType, setBrancheType] = useState('')
   const [description, setDescription] = useState('')
   const [erreursChamps, setErreursChamps] = useState<{ titre?: string; dateDebut?: string }>({})
+
+  const etatFormulaire = { titre, type, dateDebut, dateFin, lieu, brancheType, description }
+  const { estModifie, definirReference, partirVers } = useGardeModifications(etatFormulaire)
+  const etatInitialRef = useRef(etatFormulaire)
+
+  useEffect(() => {
+    definirReference(etatInitialRef.current)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (!estBranche) return
@@ -63,6 +73,7 @@ export default function PageNouvelleActivite() {
         type,
         brancheType: brancheType || undefined,
       })
+      definirReference(etatFormulaire)
       router.push('/dashboard/activites')
     } catch (err) {
       toast.error((err as Error).message)
@@ -71,9 +82,9 @@ export default function PageNouvelleActivite() {
 
   return (
     <div className="space-y-6">
-      <Link href="/dashboard/activites" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+      <button type="button" onClick={() => partirVers('/dashboard/activites')} className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
         ← Retour aux activités
-      </Link>
+      </button>
 
       <div>
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Nouvelle activité</h1>
@@ -146,20 +157,23 @@ export default function PageNouvelleActivite() {
 
           {/* Description */}
           <div>
-            <label className={CLS_LABEL}>Description <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
+            <label className="flex items-center justify-between text-sm font-medium text-gray-700 mb-1">
+              <span>Description <span className="text-xs text-gray-400 font-normal">(optionnel)</span></span>
+              <CompteurCaracteres valeur={description} max={500} />
+            </label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)}
               placeholder="Détails supplémentaires sur l'activité…" rows={3} className={CLS_TEXTAREA} />
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <button type="submit" disabled={creerActivite.isPending}
+            <button type="submit" disabled={creerActivite.isPending || !estModifie}
               className="sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#15392a] transition-colors text-sm font-medium disabled:opacity-60">
               {creerActivite.isPending ? 'Création…' : "Créer l'activité"}
             </button>
-            <Link href="/dashboard/activites"
+            <button type="button" onClick={() => partirVers('/dashboard/activites')}
               className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm">
               Annuler
-            </Link>
+            </button>
           </div>
         </div>
       </form>

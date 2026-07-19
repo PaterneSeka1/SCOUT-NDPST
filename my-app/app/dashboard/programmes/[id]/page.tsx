@@ -8,6 +8,8 @@ import { toast } from 'sonner'
 import { confirmer } from '@/app/components/ConfirmDialog'
 import { ROLES_GROUPE, ROLES_BRANCHE } from '@/lib/roles'
 import { LABELS_BRANCHES as BRANCHES, COULEURS_BRANCHES as COULEURS_BRANCHE } from '@/lib/branches'
+import { useGardeModifications } from '@/hooks/useGardeModifications'
+import { CompteurCaracteres } from '@/app/components/CompteurCaracteres'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_LABEL = 'block text-xs font-medium text-gray-600 mb-1'
@@ -53,6 +55,9 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
   const [periodeDebut, setPeriodeDebut] = useState('')
   const [periodeFin, setPeriodeFin] = useState('')
 
+  const etatMeta = { titre, description, periodeDebut, periodeFin }
+  const { estModifie, definirReference } = useGardeModifications(etatMeta)
+
   // Formulaire nouvelle ligne
   const [theme, setTheme] = useState('')
   const [objectif, setObjectif] = useState('')
@@ -63,12 +68,20 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
     fetch(`/api/programmes/${id}`).then((r) => r.json()).then((data) => {
       if (data.erreur) { toast.error(data.erreur); return }
       setProgramme(data)
-      setTitre(data.titre)
-      setDescription(data.description ?? '')
-      setPeriodeDebut(data.periodeDebut.slice(0, 10))
-      setPeriodeFin(data.periodeFin.slice(0, 10))
+      const meta = {
+        titre: data.titre,
+        description: data.description ?? '',
+        periodeDebut: data.periodeDebut.slice(0, 10),
+        periodeFin: data.periodeFin.slice(0, 10),
+      }
+      setTitre(meta.titre)
+      setDescription(meta.description)
+      setPeriodeDebut(meta.periodeDebut)
+      setPeriodeFin(meta.periodeFin)
+      definirReference(meta)
     }).catch(() => toast.error('Impossible de charger le programme'))
       .finally(() => setChargement(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   useEffect(() => { charger() }, [charger])
@@ -228,12 +241,15 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
             </div>
           </div>
           <div>
-            <label className={CLS_LABEL}>Description / objectifs</label>
+            <label className="flex items-center justify-between text-xs font-medium text-gray-600 mb-1">
+              <span>Description / objectifs</span>
+              <CompteurCaracteres valeur={description} max={500} />
+            </label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] resize-none" />
           </div>
-          <button onClick={handleEnregistrerMeta}
-            className="bg-[#1a4731] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#163d29] transition-colors">
+          <button onClick={handleEnregistrerMeta} disabled={!estModifie}
+            className="bg-[#1a4731] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#163d29] transition-colors disabled:opacity-60">
             Enregistrer
           </button>
         </div>

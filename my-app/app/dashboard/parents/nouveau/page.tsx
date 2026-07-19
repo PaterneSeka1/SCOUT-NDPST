@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { toast } from 'sonner'
 import { useCreerUtilisateur } from '@/hooks/useUtilisateurs'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { SelecteurEnfants } from '@/app/components/SelecteurEnfants'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
+import { useGardeModifications } from '@/hooks/useGardeModifications'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -31,14 +31,23 @@ interface FormErrors {
   confirmation?: string
 }
 
+const FORM_VIDE: FormData = {
+  nom: '', prenom: '', email: '', telephone: '', motDePasse: '', confirmation: '', scoutIds: [],
+}
+
 export default function NouveauParentPage() {
   const router = useRouter()
   const { mutateAsync, isPending } = useCreerUtilisateur()
 
-  const [form, setForm] = useState<FormData>({
-    nom: '', prenom: '', email: '', telephone: '', motDePasse: '', confirmation: '', scoutIds: [],
-  })
+  const [form, setForm] = useState<FormData>(FORM_VIDE)
   const [erreurs, setErreurs] = useState<FormErrors>({})
+
+  const { estModifie, definirReference, partirVers } = useGardeModifications(form)
+
+  useEffect(() => {
+    definirReference(FORM_VIDE)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -73,6 +82,7 @@ export default function NouveauParentPage() {
         password: form.motDePasse,
         scoutIds: form.scoutIds,
       })
+      definirReference(form)
       router.push('/dashboard/parents')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Une erreur est survenue')
@@ -81,9 +91,9 @@ export default function NouveauParentPage() {
 
   return (
     <div className="space-y-6">
-      <Link href="/dashboard/parents" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+      <button type="button" onClick={() => partirVers('/dashboard/parents')} className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
         ← Retour à la liste
-      </Link>
+      </button>
 
       <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Nouveau parent</h1>
 
@@ -150,14 +160,14 @@ export default function NouveauParentPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <button type="submit" disabled={isPending}
+            <button type="submit" disabled={isPending || !estModifie}
               className="sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
               {isPending ? 'Enregistrement…' : 'Créer le parent'}
             </button>
-            <Link href="/dashboard/parents"
+            <button type="button" onClick={() => partirVers('/dashboard/parents')}
               className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm">
               Annuler
-            </Link>
+            </button>
           </div>
         </div>
       </form>

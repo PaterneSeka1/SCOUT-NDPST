@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { useCreerScout } from '@/hooks/useScouts'
 import type { DonneesContact } from '@/hooks/useScouts'
+import { useGardeModifications } from '@/hooks/useGardeModifications'
+import { CompteurCaracteres } from '@/app/components/CompteurCaracteres'
 
 const BRANCHES_LISTE = Object.keys(LABELS_BRANCHES)
 
@@ -15,6 +16,7 @@ const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm
 const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_SELECT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
+const CLS_LABEL_COMPTEUR = 'flex items-center justify-between text-sm font-medium text-gray-700 mb-1'
 
 interface ContactForm {
   nom: string
@@ -53,6 +55,14 @@ export default function NouveauScoutPage() {
   const [erreurPhoto, setErreurPhoto] = useState('')
   const [contacts, setContacts] = useState<ContactForm[]>([contactVide()])
   const [erreurs, setErreurs] = useState<FormErrors>({})
+
+  const etatFormulaire = { nom, prenom, dateNaissance, sexe, brancheType, photo, allergies, traitementsMedicaux, contacts }
+  const { estModifie, definirReference, partirVers } = useGardeModifications(etatFormulaire)
+
+  useEffect(() => {
+    definirReference(etatFormulaire)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fichier = e.target.files?.[0]
@@ -144,9 +154,9 @@ export default function NouveauScoutPage() {
 
   return (
     <div className="space-y-6">
-      <Link href="/dashboard/scouts" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+      <button type="button" onClick={() => partirVers('/dashboard/scouts')} className="text-sm text-gray-500 hover:text-gray-700 transition-colors cursor-pointer">
         ← Retour à la liste
-      </Link>
+      </button>
 
       <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Inscrire un scout</h1>
 
@@ -241,12 +251,18 @@ export default function NouveauScoutPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className={CLS_LABEL}>Allergies <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
+              <label className={CLS_LABEL_COMPTEUR}>
+                <span>Allergies <span className="text-xs text-gray-400 font-normal">(optionnel)</span></span>
+                <CompteurCaracteres valeur={allergies} max={500} />
+              </label>
               <textarea value={allergies} onChange={(e) => setAllergies(e.target.value)} rows={2}
                 placeholder="Ex : arachides, pénicilline…" className={CLS_INPUT} />
             </div>
             <div>
-              <label className={CLS_LABEL}>Traitements en cours <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
+              <label className={CLS_LABEL_COMPTEUR}>
+                <span>Traitements en cours <span className="text-xs text-gray-400 font-normal">(optionnel)</span></span>
+                <CompteurCaracteres valeur={traitementsMedicaux} max={500} />
+              </label>
               <textarea value={traitementsMedicaux} onChange={(e) => setTraitementsMedicaux(e.target.value)} rows={2}
                 placeholder="Ex : inhalateur pour asthme, à prendre matin et soir" className={CLS_INPUT} />
             </div>
@@ -316,14 +332,14 @@ export default function NouveauScoutPage() {
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3">
-          <button type="submit" disabled={isPending}
+          <button type="submit" disabled={isPending || !estModifie}
             className="sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
             {isPending ? 'Enregistrement…' : 'Inscrire le scout'}
           </button>
-          <Link href="/dashboard/scouts"
-            className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+          <button type="button" onClick={() => partirVers('/dashboard/scouts')}
+            className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm cursor-pointer">
             Annuler
-          </Link>
+          </button>
         </div>
       </form>
     </div>
