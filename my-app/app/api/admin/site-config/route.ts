@@ -19,6 +19,7 @@ type SiteConfigJSON = {
   theme: { couleurPrimaire: string; couleurAccent: string; couleurFond: string; couleurHover: string }
   hero: { imageUrl: string; imageAlt: string; badge: string; titre: string; sousTitre: string }
   stats: { value: string; label: string }[]
+  seo: { metaDescription: string; ogImageUrl: string }
 }
 
 async function chargerConfig() {
@@ -48,6 +49,10 @@ function versJSON(cfg: Awaited<ReturnType<typeof chargerConfig>>): SiteConfigJSO
       sousTitre: cfg.heroSousTitre ?? '',
     },
     stats: (cfg.stats as SiteConfigJSON['stats'] | null) ?? [],
+    seo: {
+      metaDescription: cfg.metaDescription ?? '',
+      ogImageUrl: cfg.ogImageUrl ?? '',
+    },
   }
 }
 
@@ -84,10 +89,37 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ erreur: 'hero.imageUrl doit être un chemin local (ex : /uploads/…) ou une URL de stockage autorisée' }, { status: 400 })
   }
 
+  if (data.seo?.ogImageUrl && !estUrlFichierValide(data.seo.ogImageUrl, origineStockage)) {
+    return NextResponse.json({ erreur: 'seo.ogImageUrl doit être un chemin local (ex : /uploads/…) ou une URL de stockage autorisée' }, { status: 400 })
+  }
+
+  // 300 caractères : marge large au-delà des ~160 recommandés pour l'affichage
+  // dans les résultats de recherche — juste un garde-fou contre un texte
+  // massif collé par erreur, la limite de lisibilité réelle est indiquée par
+  // le compteur côté formulaire.
+  if (data.seo?.metaDescription && data.seo.metaDescription.length > 300) {
+    return NextResponse.json({ erreur: 'seo.metaDescription ne doit pas dépasser 300 caractères' }, { status: 400 })
+  }
+
   if (data.theme) {
     for (const [champ, valeur] of Object.entries(data.theme)) {
       if (!estCouleurHexValide(valeur)) {
         return NextResponse.json({ erreur: `${champ} doit être une couleur hexadécimale valide (ex : #1a4731)` }, { status: 400 })
+      }
+    }
+  }
+
+  if (data.stats !== undefined) {
+    if (!Array.isArray(data.stats) || data.stats.length > 8) {
+      return NextResponse.json({ erreur: 'stats doit être un tableau d’au maximum 8 éléments' }, { status: 400 })
+    }
+    for (const stat of data.stats) {
+      if (
+        typeof stat !== 'object' || stat === null ||
+        typeof stat.value !== 'string' || stat.value.length > 20 ||
+        typeof stat.label !== 'string' || stat.label.length > 60
+      ) {
+        return NextResponse.json({ erreur: 'Chaque statistique doit avoir "value" (≤ 20 car.) et "label" (≤ 60 car.)' }, { status: 400 })
       }
     }
   }
@@ -106,6 +138,8 @@ export async function PUT(req: NextRequest) {
     ...(data.hero?.imageUrl !== undefined ? { heroImageUrl: data.hero.imageUrl || null } : {}),
     ...(data.hero?.imageAlt !== undefined ? { heroImageAlt: data.hero.imageAlt || null } : {}),
     ...(data.stats !== undefined ? { stats: data.stats } : {}),
+    ...(data.seo?.metaDescription !== undefined ? { metaDescription: data.seo.metaDescription || null } : {}),
+    ...(data.seo?.ogImageUrl !== undefined ? { ogImageUrl: data.seo.ogImageUrl || null } : {}),
   }
 
   const updated = await prisma.configurationPlateforme.upsert({

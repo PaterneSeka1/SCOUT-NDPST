@@ -1,33 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useUtilisateurs, useModifierUtilisateur } from '@/hooks/useUtilisateurs'
 import type { Utilisateur } from '@/hooks/useUtilisateurs'
-
-function SkeletonCard() {
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse space-y-3">
-      <div className="flex justify-between">
-        <div className="h-4 bg-gray-200 rounded w-32" />
-        <div className="h-5 bg-gray-100 rounded-full w-12" />
-      </div>
-      <div className="h-3 bg-gray-100 rounded w-24" />
-    </div>
-  )
-}
-
-function SkeletonRow() {
-  return (
-    <tr>
-      {Array.from({ length: 4 }).map((_, i) => (
-        <td key={i} className="px-4 py-3">
-          <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
-        </td>
-      ))}
-    </tr>
-  )
-}
+import { SkeletonCard, SkeletonRow } from '@/app/components/Skeletons'
+import { useRechercheDebounce } from '@/hooks/useRechercheDebounce'
 
 function CarteParent({ parent }: { parent: Utilisateur }) {
   const { mutateAsync, isPending } = useModifierUtilisateur(parent.id)
@@ -126,17 +104,12 @@ function LigneParent({ parent }: { parent: Utilisateur }) {
 }
 
 export default function ParentsPage() {
-  const [recherche, setRecherche] = useState('')
-  const [rechercheDebounce, setRechercheDebounce] = useState('')
+  const { recherche, setRecherche, rechercheDebounce } = useRechercheDebounce()
   const [page, setPage] = useState(1)
-  const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
 
-  const handleRechercheChange = (valeur: string) => {
-    setRecherche(valeur)
-    if (debounceTimer) clearTimeout(debounceTimer)
-    const timer = setTimeout(() => { setRechercheDebounce(valeur); setPage(1) }, 300)
-    setDebounceTimer(timer)
-  }
+  useEffect(() => {
+    setPage(1)
+  }, [rechercheDebounce])
 
   const { data, isLoading, isError, error } = useUtilisateurs({
     page,
@@ -170,7 +143,7 @@ export default function ParentsPage() {
           type="text"
           placeholder="Rechercher…"
           value={recherche}
-          onChange={(e) => handleRechercheChange(e.target.value)}
+          onChange={(e) => setRecherche(e.target.value)}
           className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1a4731] bg-white"
         />
       </div>
@@ -208,7 +181,7 @@ export default function ParentsPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
+                Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} colonnes={4} />)
               ) : parents.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="text-center py-16 text-gray-400 text-sm">

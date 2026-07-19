@@ -181,6 +181,11 @@ model ConfigurationPlateforme {
   heroImageUrl    String?
   heroImageAlt    String?
   stats           Json?
+  // SEO (balise <meta description>) et image de partage Open Graph/Twitter —
+  // distincte du logo (souvent carré) car les réseaux sociaux attendent un
+  // format ~1200x630 pour un aperçu de lien correct.
+  metaDescription String?
+  ogImageUrl      String?
   updatedAt       DateTime @updatedAt
 }
 

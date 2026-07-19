@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { LABELS_ROLES } from '@/lib/roles'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
+import { useGardeModifications } from '@/hooks/useGardeModifications'
 
 const CLS_INPUT = 'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 text-gray-900 placeholder:text-gray-400'
 const CLS_INPUT_ERR = 'w-full rounded-lg border border-red-400 px-3 py-2 text-sm focus:outline-none focus:ring-1 text-gray-900 placeholder:text-gray-400'
@@ -42,6 +43,8 @@ export default function MonProfilAdminPage() {
   const [erreursMdp, setErreursMdp] = useState<FormMdpErrors>({})
   const [soumissionMdp, setSoumissionMdp] = useState(false)
 
+  const { estModifie, definirReference } = useGardeModifications(formInfos)
+
   useEffect(() => {
     fetch('/api/me')
       .then((r) => {
@@ -50,15 +53,18 @@ export default function MonProfilAdminPage() {
       })
       .then((data: Profil) => {
         setProfil(data)
-        setFormInfos({
+        const infos: FormInfos = {
           nom: data.nom,
           prenom: data.prenom,
           email: data.email ?? '',
           telephone: data.telephone ?? '',
-        })
+        }
+        setFormInfos(infos)
+        definirReference(infos)
       })
       .catch(() => setErreurChargement(true))
       .finally(() => setChargement(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleInfosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -93,7 +99,9 @@ export default function MonProfilAdminPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.erreur ?? 'Une erreur est survenue')
       setProfil(data)
-      setFormInfos({ nom: data.nom, prenom: data.prenom, email: data.email ?? '', telephone: data.telephone ?? '' })
+      const infos: FormInfos = { nom: data.nom, prenom: data.prenom, email: data.email ?? '', telephone: data.telephone ?? '' }
+      setFormInfos(infos)
+      definirReference(infos)
       toast.success('Profil mis à jour avec succès.')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Une erreur est survenue')
@@ -162,7 +170,14 @@ export default function MonProfilAdminPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-black text-gray-900">Mon profil</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-2xl font-black text-gray-900">Mon profil</h1>
+          {estModifie && (
+            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+              Modifications non enregistrées
+            </span>
+          )}
+        </div>
         <p className="mt-1 text-sm text-gray-500">{profil.prenom} {profil.nom}</p>
       </div>
 
@@ -213,12 +228,12 @@ export default function MonProfilAdminPage() {
           <div className="flex justify-end pt-2">
             <button
               type="submit"
-              disabled={soumissionInfos}
+              disabled={soumissionInfos || !estModifie}
               className="rounded-lg px-6 py-2.5 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50 transition flex items-center gap-2"
               style={{ backgroundColor: 'var(--cp)' }}
             >
               {soumissionInfos && <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />}
-              {soumissionInfos ? 'Enregistrement…' : 'Enregistrer les modifications'}
+              {soumissionInfos ? 'Enregistrement…' : estModifie ? 'Enregistrer les modifications' : 'Aucune modification'}
             </button>
           </div>
         </section>

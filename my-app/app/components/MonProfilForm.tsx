@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { libelleRoleAvecFonction } from '@/lib/roles'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
+import { useGardeModifications } from '@/hooks/useGardeModifications'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -52,6 +53,8 @@ export function MonProfilForm() {
   const [erreursMdp, setErreursMdp] = useState<FormMdpErrors>({})
   const [soumissionMdp, setSoumissionMdp] = useState(false)
 
+  const { estModifie, definirReference } = useGardeModifications(formInfos)
+
   useEffect(() => {
     fetch('/api/me')
       .then((r) => {
@@ -60,15 +63,18 @@ export function MonProfilForm() {
       })
       .then((data: Profil) => {
         setProfil(data)
-        setFormInfos({
+        const infos: FormInfos = {
           nom: data.nom,
           prenom: data.prenom,
           email: data.email ?? '',
           telephone: data.telephone ?? '',
-        })
+        }
+        setFormInfos(infos)
+        definirReference(infos)
       })
       .catch(() => setErreurChargement(true))
       .finally(() => setChargement(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleInfosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,7 +109,9 @@ export function MonProfilForm() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.erreur ?? 'Une erreur est survenue')
       setProfil(data)
-      setFormInfos({ nom: data.nom, prenom: data.prenom, email: data.email ?? '', telephone: data.telephone ?? '' })
+      const infos: FormInfos = { nom: data.nom, prenom: data.prenom, email: data.email ?? '', telephone: data.telephone ?? '' }
+      setFormInfos(infos)
+      definirReference(infos)
       toast.success('Profil mis à jour avec succès.')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Une erreur est survenue')
@@ -168,7 +176,14 @@ export function MonProfilForm() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Mon profil</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Mon profil</h1>
+          {estModifie && (
+            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+              Modifications non enregistrées
+            </span>
+          )}
+        </div>
         <p className="text-sm text-gray-500 mt-0.5">{profil.prenom} {profil.nom}</p>
       </div>
 
@@ -231,9 +246,9 @@ export function MonProfilForm() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <button type="submit" disabled={soumissionInfos}
+            <button type="submit" disabled={soumissionInfos || !estModifie}
               className="sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
-              {soumissionInfos ? 'Enregistrement…' : 'Enregistrer les modifications'}
+              {soumissionInfos ? 'Enregistrement…' : estModifie ? 'Enregistrer les modifications' : 'Aucune modification'}
             </button>
           </div>
         </div>

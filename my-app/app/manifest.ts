@@ -19,11 +19,12 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const couleurPrimaire = couleurSure(cfg?.couleurPrimaire, THEME_DEFAUT.couleurPrimaire)
   const couleurFond = couleurSure(cfg?.couleurFond, THEME_DEFAUT.couleurFond)
   const logo = cfg?.logoUrl || '/favicon.ico'
+  const description = cfg?.metaDescription || "Application de suivi pédagogique des scouts catholiques de Côte d'Ivoire"
 
   return {
     name: `${nomSite} — Suivi pédagogique`,
     short_name: nomSite,
-    description: "Application de suivi pédagogique des scouts catholiques de Côte d'Ivoire",
+    description,
     start_url: '/',
     display: 'standalone',
     background_color: couleurFond,

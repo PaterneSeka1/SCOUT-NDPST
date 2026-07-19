@@ -2,11 +2,11 @@
 
 import { useState, useEffect, use } from 'react'
 import { useSession } from 'next-auth/react'
-import Link from 'next/link'
 import { toast } from 'sonner'
 import { ScannerQR } from '@/app/components/ScannerQR'
 import { decoderQrScout } from '@/lib/qr'
 import { LABELS_BRANCHES as BRANCHES } from '@/lib/branches'
+import { useGardeModifications } from '@/hooks/useGardeModifications'
 
 const STATUTS = [
   { value: 'PRESENT', label: 'Présent', cls: 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200', active: 'bg-green-500 text-white border-green-500 hover:bg-green-600' },
@@ -35,8 +35,11 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
   const [statuts, setStatuts] = useState<StatutMap>({})
   const [chargement, setChargement] = useState(true)
   const [sauvegarde, setSauvegarde] = useState(false)
-  const [modifie, setModifie] = useState(false)
   const [scannerOuvert, setScannerOuvert] = useState(false)
+
+  const { estModifie, definirReference, partirVers } = useGardeModifications(statuts, {
+    descriptionConfirmation: 'Les présences non enregistrées seront perdues si vous quittez cette page.',
+  })
 
   useEffect(() => {
     fetch(`/api/reunions/${id}/presences`)
@@ -50,13 +53,14 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
           init[s.id] = (data.presencesMap as PresenceMap)[s.id]?.statut as any ?? 'ABSENT'
         })
         setStatuts(init)
+        definirReference(init)
       })
       .catch(() => toast.error('Impossible de charger la feuille de présences'))
       .finally(() => setChargement(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   const toggleStatut = (scoutId: string) => {
-    setModifie(true)
     setStatuts((prev) => {
       const actuel = prev[scoutId] ?? 'ABSENT'
       const suivant: Record<string, 'PRESENT' | 'ABSENT' | 'EXCUSE'> = {
@@ -67,12 +71,10 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
   }
 
   const setStatut = (scoutId: string, val: 'PRESENT' | 'ABSENT' | 'EXCUSE') => {
-    setModifie(true)
     setStatuts((prev) => ({ ...prev, [scoutId]: val }))
   }
 
   const marquerTous = (val: 'PRESENT' | 'ABSENT') => {
-    setModifie(true)
     const next: StatutMap = {}
     scouts.forEach((s) => { next[s.id] = val })
     setStatuts(next)
@@ -98,7 +100,7 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
       })
       if (res.ok) {
         toast.success('Présences enregistrées.')
-        setModifie(false)
+        definirReference(statuts)
       } else {
         const d = await res.json()
         toast.error(d.erreur ?? 'Erreur lors de la sauvegarde')
@@ -134,11 +136,12 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
     <div className="space-y-5">
       {/* En-tête */}
       <div className="flex items-start gap-3">
-        <Link href="/dashboard/reunions" className="text-gray-400 hover:text-gray-600 mt-1 flex-shrink-0">
+        <button type="button" onClick={() => partirVers('/dashboard/reunions')}
+          className="text-gray-400 hover:text-gray-600 mt-1 flex-shrink-0">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-        </Link>
+        </button>
         <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold text-gray-900">
             {reunion.titre || `Réunion ${reunion.brancheType ? BRANCHES[reunion.brancheType] : ''}`}
@@ -251,7 +254,7 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
       {/* Bouton enregistrer — sticky en bas */}
       {scouts.length > 0 && (
         <div className="sticky bottom-4">
-          <button onClick={handleSauvegarder} disabled={sauvegarde || !modifie}
+          <button onClick={handleSauvegarder} disabled={sauvegarde || !estModifie}
             className="w-full bg-[#1a4731] text-white py-3.5 rounded-xl font-medium text-sm hover:bg-[#163d29] transition-colors disabled:opacity-60 shadow-lg shadow-[#1a4731]/20">
             {sauvegarde ? 'Enregistrement…' : `Enregistrer les présences (${stats.present} présent${stats.present > 1 ? 's' : ''})`}
           </button>

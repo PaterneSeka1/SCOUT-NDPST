@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { LABELS_ROLES, COULEURS_ROLES, ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT } from '@/lib/roles'
 import { estAssujettiAdhesion } from '@/lib/cotisations'
 import { useUtilisateurs, useModifierUtilisateur } from '@/hooks/useUtilisateurs'
 import type { Utilisateur } from '@/hooks/useUtilisateurs'
 import { BadgeAdhesion } from '@/app/components/BadgeAdhesion'
+import { SkeletonCard, SkeletonRow } from '@/app/components/Skeletons'
+import { useRechercheDebounce } from '@/hooks/useRechercheDebounce'
 
 // Page "Membres" = équipe d'encadrement, jamais les parents (page dédiée
 // /dashboard/parents). Sans filtre de rôle actif, on demande explicitement
@@ -14,34 +16,6 @@ import { BadgeAdhesion } from '@/app/components/BadgeAdhesion'
 // quoi l'API renverrait aussi les parents.
 const ROLES_FILTRE = ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT
 const ROLES_PAR_DEFAUT = ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT.join(',')
-
-function SkeletonCard() {
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse space-y-3">
-      <div className="flex justify-between">
-        <div className="h-4 bg-gray-200 rounded w-32" />
-        <div className="h-5 bg-gray-100 rounded-full w-12" />
-      </div>
-      <div className="h-3 bg-gray-100 rounded w-24" />
-      <div className="flex gap-3 pt-1">
-        <div className="h-3 bg-gray-100 rounded w-14" />
-        <div className="h-3 bg-gray-100 rounded w-16" />
-      </div>
-    </div>
-  )
-}
-
-function SkeletonRow() {
-  return (
-    <tr>
-      {Array.from({ length: 6 }).map((_, i) => (
-        <td key={i} className="px-4 py-3">
-          <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
-        </td>
-      ))}
-    </tr>
-  )
-}
 
 function CarteUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
   const { mutateAsync, isPending } = useModifierUtilisateur(utilisateur.id)
@@ -150,18 +124,13 @@ function LigneUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
 }
 
 export default function UtilisateursPage() {
-  const [recherche, setRecherche] = useState('')
-  const [rechercheDebounce, setRechercheDebounce] = useState('')
+  const { recherche, setRecherche, rechercheDebounce } = useRechercheDebounce()
   const [roleFiltre, setRoleFiltre] = useState('')
   const [page, setPage] = useState(1)
-  const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
 
-  const handleRechercheChange = (valeur: string) => {
-    setRecherche(valeur)
-    if (debounceTimer) clearTimeout(debounceTimer)
-    const timer = setTimeout(() => { setRechercheDebounce(valeur); setPage(1) }, 300)
-    setDebounceTimer(timer)
-  }
+  useEffect(() => {
+    setPage(1)
+  }, [rechercheDebounce])
 
   const { data, isLoading, isError, error } = useUtilisateurs({
     page,
@@ -195,7 +164,7 @@ export default function UtilisateursPage() {
           type="text"
           placeholder="Rechercher…"
           value={recherche}
-          onChange={(e) => handleRechercheChange(e.target.value)}
+          onChange={(e) => setRecherche(e.target.value)}
           className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1a4731] bg-white"
         />
         <select

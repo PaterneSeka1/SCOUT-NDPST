@@ -34,9 +34,17 @@ function getMetadataBase(): URL {
 // paroisse en particulier) : appliquée à toutes les pages, y compris avant
 // connexion. L'identité propre à chaque paroisse (logo + couleurs) est
 // appliquée en surcharge dans le tableau de bord une fois connecté.
-async function getTheme(): Promise<{ theme: Theme; nomSite: string; logoSite: string | null }> {
+const DESCRIPTION_DEFAUT = "Application de suivi pédagogique des scouts catholiques de Côte d'Ivoire"
+
+async function getTheme(): Promise<{
+  theme: Theme
+  nomSite: string
+  logoSite: string | null
+  description: string
+  ogImage: string | null
+}> {
   const cfg = await prisma.configurationPlateforme.findUnique({ where: { id: 'platform' } })
-  if (!cfg) return { theme: THEME_DEFAUT, nomSite: 'SCOUT ASCCI', logoSite: null }
+  if (!cfg) return { theme: THEME_DEFAUT, nomSite: 'SCOUT ASCCI', logoSite: null, description: DESCRIPTION_DEFAUT, ogImage: null }
 
   const theme: Theme = {
     couleurPrimaire: couleurSure(cfg.couleurPrimaire, THEME_DEFAUT.couleurPrimaire),
@@ -44,15 +52,24 @@ async function getTheme(): Promise<{ theme: Theme; nomSite: string; logoSite: st
     couleurFond: couleurSure(cfg.couleurFond, THEME_DEFAUT.couleurFond),
     couleurHover: couleurSure(cfg.couleurHover, THEME_DEFAUT.couleurHover),
   }
-  return { theme, nomSite: cfg.nomSite, logoSite: cfg.logoUrl }
+  return {
+    theme,
+    nomSite: cfg.nomSite,
+    logoSite: cfg.logoUrl,
+    description: cfg.metaDescription || DESCRIPTION_DEFAUT,
+    // Image de partage Open Graph/Twitter dédiée (format ~1200x630) si
+    // configurée, sinon on retombe sur le logo (souvent carré, moins lisible
+    // dans un aperçu de lien mais toujours mieux qu'aucune image).
+    ogImage: cfg.ogImageUrl || cfg.logoUrl,
+  }
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { nomSite, logoSite } = await getTheme()
+  const { nomSite, logoSite, description, ogImage } = await getTheme()
   return {
     metadataBase: getMetadataBase(),
     title: `${nomSite} — Suivi pédagogique`,
-    description: "Application de suivi pédagogique des scouts catholiques de Côte d'Ivoire",
+    description,
     ...(logoSite
       ? {
           icons: {
@@ -72,8 +89,14 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     openGraph: {
       title: `${nomSite} — Suivi pédagogique`,
-      description: "Application de suivi pédagogique des scouts catholiques de Côte d'Ivoire",
-      ...(logoSite ? { images: [{ url: logoSite }] } : {}),
+      description,
+      ...(ogImage ? { images: [{ url: ogImage }] } : {}),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${nomSite} — Suivi pédagogique`,
+      description,
+      ...(ogImage ? { images: [ogImage] } : {}),
     },
   }
 }
