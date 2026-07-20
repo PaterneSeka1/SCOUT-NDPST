@@ -18,6 +18,7 @@ interface UtilisateurDetail {
   role: string
   fonction: string | null
   brancheType: string | null
+  dateNaissance: string | null
   actif: boolean
   createdAt: string
   updatedAt: string
@@ -224,6 +225,15 @@ export default function FicheUtilisateurPlateformePage() {
             <dd className="text-sm text-gray-900 col-span-2">
               {utilisateur.email ?? (
                 <span className="italic text-gray-400">Non renseigné</span>
+              )}
+            </dd>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <dt className="text-sm font-medium text-gray-500 col-span-1">Date de naissance</dt>
+            <dd className="text-sm text-gray-900 col-span-2">
+              {utilisateur.dateNaissance ? formaterDateFrancaise(utilisateur.dateNaissance) : (
+                <span className="italic text-gray-400">Non renseignée</span>
               )}
             </dd>
           </div>

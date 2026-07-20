@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { formaterProgressionsAffichables, calculerAvancementDepuisBrut } from '@/lib/parcoursCompagnon'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -24,10 +25,38 @@ export async function GET() {
         take: 10,
       },
       _count: { select: { presences: true } },
+      // Parcours de progression individuelle (branche Compagnons) — lecture
+      // seule ici : le scout suit son propre parcours, il ne le fait pas
+      // progresser lui-même (déclaration/validation restent réservées au staff).
+      parcoursCompagnon: {
+        include: {
+          progressions: { include: { etapeActivite: true } },
+          attributsObtenus: true,
+        },
+      },
     },
   })
 
   if (!scout) return NextResponse.json({ erreur: 'Aucun profil scout associé à ce compte' }, { status: 404 })
+
+  const maintenant = new Date()
+  const { parcoursCompagnon, ...scoutSansParcours } = scout
+  const parcoursCompagnonReponse = parcoursCompagnon
+    ? {
+        parcours: {
+          id: parcoursCompagnon.id,
+          dateEntreeParcours: parcoursCompagnon.dateEntreeParcours.toISOString(),
+          ageEntree: parcoursCompagnon.ageEntree,
+          trancheAge: parcoursCompagnon.trancheAge,
+          dateFinPrevue: parcoursCompagnon.dateFinPrevue.toISOString(),
+          dateFinReelle: parcoursCompagnon.dateFinReelle?.toISOString() ?? null,
+          statut: parcoursCompagnon.statut,
+        },
+        progressions: formaterProgressionsAffichables(parcoursCompagnon.progressions, maintenant),
+        avancement: calculerAvancementDepuisBrut(parcoursCompagnon.progressions, maintenant),
+        attributsObtenus: parcoursCompagnon.attributsObtenus,
+      }
+    : null
 
   // Tous les badges de la branche pour calculer la progression
   const badgesBranche = await prisma.badge.findMany({
@@ -59,5 +88,11 @@ export async function GET() {
     take: 10,
   })
 
-  return NextResponse.json({ scout, badgesBranche, prochainesActivites, dernieresReunions })
+  return NextResponse.json({
+    scout: scoutSansParcours,
+    badgesBranche,
+    prochainesActivites,
+    dernieresReunions,
+    parcoursCompagnon: parcoursCompagnonReponse,
+  })
 }

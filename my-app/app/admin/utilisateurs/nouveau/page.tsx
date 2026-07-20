@@ -33,6 +33,7 @@ interface FormData {
   telephone: string
   role: string
   brancheType: string
+  dateNaissance: string
   motDePasse: string
   confirmation: string
 }
@@ -60,7 +61,7 @@ export default function NouvelUtilisateurPlateformePage() {
 
   const [form, setForm] = useState<FormData>({
     paroisseId: '', nom: '', prenom: '', email: '', matricule: '', telephone: '', role: '',
-    brancheType: '', motDePasse: '', confirmation: '',
+    brancheType: '', dateNaissance: '', motDePasse: '', confirmation: '',
   })
   const [erreurs, setErreurs] = useState<FormErrors>({})
 
@@ -134,6 +135,7 @@ export default function NouvelUtilisateurPlateformePage() {
           telephone: form.telephone.trim() || undefined,
           role: form.role,
           brancheType: estBranche && form.brancheType ? form.brancheType : null,
+          dateNaissance: form.dateNaissance.trim() || undefined,
           password: form.motDePasse,
         }),
       })
@@ -243,6 +245,13 @@ export default function NouvelUtilisateurPlateformePage() {
             <label className={CLS_LABEL}>Email <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
             <input id="email" name="email" type="email" value={form.email} onChange={handleChange}
               placeholder="exemple@email.com" className={CLS_INPUT} />
+          </div>
+
+          {/* Date de naissance — nécessaire au calcul du parcours de progression individuelle */}
+          <div>
+            <label className={CLS_LABEL}>Date de naissance <span className="text-xs text-gray-400 font-normal">(optionnelle)</span></label>
+            <input id="dateNaissance" name="dateNaissance" type="date" value={form.dateNaissance} onChange={handleChange}
+              className={CLS_INPUT} />
           </div>
 
           <div className="border-t border-gray-100 pt-4 space-y-4">

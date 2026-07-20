@@ -9,6 +9,10 @@ import {
   calculerStatutAffiche,
   calculerAvancement,
   dejaAlerteRecemment,
+  LABELS_ETAPE_COMPAGNON,
+  LABELS_TRANCHE_AGE_COMPAGNON,
+  LABELS_STATUT_PROGRESSION_COMPAGNON,
+  COULEURS_STATUT_PROGRESSION_COMPAGNON,
   type EtapeReferentiel,
   type ProgressionPourAvancement,
 } from './parcoursCompagnon'
@@ -227,5 +231,27 @@ describe('dejaAlerteRecemment', () => {
 
   it('alerté il y a plus de 24h → false', () => {
     expect(dejaAlerteRecemment(new Date('2026-07-18T08:00:00'), new Date('2026-07-20T08:00:00'))).toBe(false)
+  })
+})
+
+// Non-régression : évite qu'une évolution future des enums oublie un
+// libellé/couleur pour l'une des valeurs (même esprit que lib/cotisations.test.ts).
+describe('constantes d\'affichage', () => {
+  it('LABELS_ETAPE_COMPAGNON couvre les 4 étapes', () => {
+    expect(Object.keys(LABELS_ETAPE_COMPAGNON).sort()).toEqual(
+      ['APPRENTISSAGE', 'COMPAGNONNAGE', 'DEPART_ROUTIER', 'NOVICIAT'].sort(),
+    )
+  })
+
+  it('LABELS_TRANCHE_AGE_COMPAGNON couvre les 3 tranches', () => {
+    expect(Object.keys(LABELS_TRANCHE_AGE_COMPAGNON).sort()).toEqual(
+      ['DIX_HUIT_ANS', 'DIX_NEUF_ANS', 'VINGT_ANS'].sort(),
+    )
+  })
+
+  it('LABELS_STATUT_PROGRESSION_COMPAGNON et COULEURS_STATUT_PROGRESSION_COMPAGNON couvrent les 7 statuts', () => {
+    const STATUTS = ['A_VENIR', 'EN_COURS', 'EN_RETARD', 'SOUMISE', 'VALIDEE', 'REJETEE', 'ANNULEE']
+    expect(Object.keys(LABELS_STATUT_PROGRESSION_COMPAGNON).sort()).toEqual([...STATUTS].sort())
+    expect(Object.keys(COULEURS_STATUT_PROGRESSION_COMPAGNON).sort()).toEqual([...STATUTS].sort())
   })
 })

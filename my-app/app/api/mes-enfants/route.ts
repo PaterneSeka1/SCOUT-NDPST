@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_BRANCHE } from '@/lib/roles'
 import { RoleUtilisateur } from '@/app/generated/prisma/client'
+import { formaterProgressionsAffichables, calculerAvancementDepuisBrut } from '@/lib/parcoursCompagnon'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -53,12 +54,43 @@ export async function GET() {
               enregistrePar: { select: { id: true, nom: true, prenom: true, role: true } },
             },
           },
+          // Parcours de progression individuelle (branche Compagnons) — lecture
+          // seule : un parent suit le parcours de son enfant, il n'agit jamais
+          // dessus (déclaration/validation restent réservées au staff).
+          parcoursCompagnon: {
+            include: {
+              progressions: { include: { etapeActivite: true } },
+              attributsObtenus: true,
+            },
+          },
         },
       },
     },
   })
 
-  const enfants = liens.map((l) => l.scout)
+  const maintenant = new Date()
+  const enfants = liens.map((l) => {
+    const { parcoursCompagnon, ...scoutSansParcours } = l.scout
+    return {
+      ...scoutSansParcours,
+      parcoursCompagnon: parcoursCompagnon
+        ? {
+            parcours: {
+              id: parcoursCompagnon.id,
+              dateEntreeParcours: parcoursCompagnon.dateEntreeParcours.toISOString(),
+              ageEntree: parcoursCompagnon.ageEntree,
+              trancheAge: parcoursCompagnon.trancheAge,
+              dateFinPrevue: parcoursCompagnon.dateFinPrevue.toISOString(),
+              dateFinReelle: parcoursCompagnon.dateFinReelle?.toISOString() ?? null,
+              statut: parcoursCompagnon.statut,
+            },
+            progressions: formaterProgressionsAffichables(parcoursCompagnon.progressions, maintenant),
+            avancement: calculerAvancementDepuisBrut(parcoursCompagnon.progressions, maintenant),
+            attributsObtenus: parcoursCompagnon.attributsObtenus,
+          }
+        : null,
+    }
+  })
 
   // Responsables de chaque branche représentée
   const branches = [...new Set(enfants.map((s) => s.brancheType))]

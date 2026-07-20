@@ -20,7 +20,7 @@ const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 const ROLES_LISTE = ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT_SANS_CHEF
 
-interface FormInfos { nom: string; prenom: string; email: string; role: string; brancheType: string; actif: boolean }
+interface FormInfos { nom: string; prenom: string; email: string; role: string; brancheType: string; dateNaissance: string; actif: boolean }
 interface FormInfosErrors { nom?: string; prenom?: string; role?: string; brancheType?: string }
 interface FormMdp { motDePasse: string; confirmation: string }
 interface FormMdpErrors { motDePasse?: string; confirmation?: string }
@@ -33,7 +33,7 @@ export default function ModifierUtilisateurPage() {
   const { mutateAsync: modifier, isPending: soumissionInfos } = useModifierUtilisateur(id)
   const { mutateAsync: resetPassword, isPending: soumissionMdp } = useResetPassword(id)
 
-  const [formInfos, setFormInfos] = useState<FormInfos>({ nom: '', prenom: '', email: '', role: '', brancheType: '', actif: true })
+  const [formInfos, setFormInfos] = useState<FormInfos>({ nom: '', prenom: '', email: '', role: '', brancheType: '', dateNaissance: '', actif: true })
   const [erreursInfos, setErreursInfos] = useState<FormInfosErrors>({})
   // Enfants rattachés : indépendant du rôle — un membre du staff (Chef de
   // Groupe, encadrement de branche, Ressources Adultes…) peut tout autant
@@ -47,7 +47,10 @@ export default function ModifierUtilisateurPage() {
 
   useEffect(() => {
     if (utilisateur) {
-      const infosInitiales: FormInfos = { nom: utilisateur.nom, prenom: utilisateur.prenom, email: utilisateur.email ?? '', role: utilisateur.role, brancheType: utilisateur.brancheType ?? '', actif: utilisateur.actif }
+      const infosInitiales: FormInfos = {
+        nom: utilisateur.nom, prenom: utilisateur.prenom, email: utilisateur.email ?? '', role: utilisateur.role,
+        brancheType: utilisateur.brancheType ?? '', dateNaissance: utilisateur.dateNaissance?.slice(0, 10) ?? '', actif: utilisateur.actif,
+      }
       const scoutIdsInitiaux = (utilisateur.enfants ?? []).map((e) => e.id)
       setFormInfos(infosInitiales)
       setScoutIds(scoutIdsInitiaux)
@@ -85,7 +88,11 @@ export default function ModifierUtilisateurPage() {
     })
     if (!ok) return
     try {
-      await modifier({ nom: formInfos.nom.trim(), prenom: formInfos.prenom.trim(), email: formInfos.email.trim() || null, role: formInfos.role, brancheType: estBranche ? formInfos.brancheType : null, actif: formInfos.actif, scoutIds })
+      await modifier({
+        nom: formInfos.nom.trim(), prenom: formInfos.prenom.trim(), email: formInfos.email.trim() || null,
+        role: formInfos.role, brancheType: estBranche ? formInfos.brancheType : null,
+        dateNaissance: formInfos.dateNaissance || null, actif: formInfos.actif, scoutIds,
+      })
       definirReference({ ...formInfos, scoutIds })
       toast.success('Modifications enregistrées.')
       router.push('/dashboard/utilisateurs')
@@ -177,6 +184,13 @@ export default function ModifierUtilisateurPage() {
             <label className={CLS_LABEL}>Email <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
             <input id="email" name="email" type="email" value={formInfos.email} onChange={handleInfosChange}
               placeholder="exemple@email.com" className={CLS_INPUT} />
+          </div>
+
+          {/* Date de naissance — nécessaire au calcul du parcours de progression individuelle */}
+          <div>
+            <label className={CLS_LABEL}>Date de naissance <span className="text-xs text-gray-400 font-normal">(optionnelle)</span></label>
+            <input id="dateNaissance" name="dateNaissance" type="date" value={formInfos.dateNaissance} onChange={handleInfosChange}
+              className={CLS_INPUT} />
           </div>
 
           <div>

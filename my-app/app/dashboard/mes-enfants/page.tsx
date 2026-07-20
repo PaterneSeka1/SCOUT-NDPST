@@ -13,6 +13,18 @@ import {
 } from '@/lib/cotisations'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
 import { LABELS_ROLES } from '@/lib/roles'
+import {
+  LABELS_ETAPE_COMPAGNON,
+  LABELS_TRANCHE_AGE_COMPAGNON,
+  LABELS_STATUT_PROGRESSION_COMPAGNON,
+  COULEURS_STATUT_PROGRESSION_COMPAGNON,
+} from '@/lib/parcoursCompagnon'
+import type {
+  ParcoursCompagnonInfo,
+  ProgressionCompagnonItem,
+  AttributCompagnonItem,
+  ResumeAvancementParcours,
+} from '@/hooks/useParcoursCompagnon'
 
 const LABELS_STATUT_REUNION: Record<string, { label: string; cls: string; dot: string }> = {
   PRESENT: { label: 'Présent', cls: 'text-green-700 bg-green-50', dot: 'bg-green-500' },
@@ -36,6 +48,13 @@ interface CotisationEnfant {
   enregistrePar: { id: string; nom: string; prenom: string; role: string } | null
 }
 
+interface ParcoursCompagnonAffichage {
+  parcours: ParcoursCompagnonInfo
+  progressions: ProgressionCompagnonItem[]
+  avancement: ResumeAvancementParcours
+  attributsObtenus: AttributCompagnonItem[]
+}
+
 interface Scout {
   id: string; nom: string; prenom: string; brancheType: string
   photo: string | null; actif: boolean; matricule: string | null
@@ -44,6 +63,7 @@ interface Scout {
   presences: { activite: { titre: string; dateDebut: string; type: string } }[]
   presencesReunion: PresenceReunion[]
   cotisations: CotisationEnfant[]
+  parcoursCompagnon: ParcoursCompagnonAffichage | null
 }
 
 interface Activite {
@@ -253,6 +273,52 @@ export default function PageMesEnfants() {
                     {enCours === `consentement-${scout.id}` ? '…' : scout.consentementImage ? 'Révoquer' : 'Autoriser'}
                   </button>
                 </div>
+
+                {/* Progression individuelle — parcours Route (branche Compagnons uniquement) */}
+                {scout.parcoursCompagnon && (
+                  <div className="border-t border-gray-100 px-5 py-4">
+                    <p className="text-xs font-medium text-gray-700 mb-1">Progression individuelle</p>
+                    <p className="text-xs text-gray-400 mb-3">
+                      {LABELS_TRANCHE_AGE_COMPAGNON[scout.parcoursCompagnon.parcours.trancheAge] ?? scout.parcoursCompagnon.parcours.trancheAge}
+                      {scout.parcoursCompagnon.parcours.statut === 'TERMINE' ? ' · Parcours terminé 🎉' : ''}
+                    </p>
+
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                        <span>
+                          {scout.parcoursCompagnon.avancement.activitesValidees} / {scout.parcoursCompagnon.avancement.totalActivitesObligatoires} étapes validées
+                        </span>
+                        <span className="font-semibold text-gray-800">{scout.parcoursCompagnon.avancement.pourcentageAvancement}%</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-[#1a4731]" style={{ width: `${scout.parcoursCompagnon.avancement.pourcentageAvancement}%` }} />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      {scout.parcoursCompagnon.progressions.map((p) => (
+                        <div key={p.id} className="flex items-center justify-between gap-2 text-xs">
+                          <span className="text-gray-400 flex-shrink-0">{p.etapeActivite.ordre}.</span>
+                          <span className="flex-1 text-gray-700 truncate">{p.etapeActivite.nom}</span>
+                          <span className="text-gray-400 flex-shrink-0">{LABELS_ETAPE_COMPAGNON[p.etapeActivite.etape] ?? p.etapeActivite.etape}</span>
+                          <span className={`flex-shrink-0 px-2 py-0.5 rounded-full font-medium ${COULEURS_STATUT_PROGRESSION_COMPAGNON[p.statut] ?? 'bg-gray-100 text-gray-600'}`}>
+                            {LABELS_STATUT_PROGRESSION_COMPAGNON[p.statut] ?? p.statut}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {scout.parcoursCompagnon.attributsObtenus.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {scout.parcoursCompagnon.attributsObtenus.map((a) => (
+                          <span key={a.id} className="text-xs bg-[#1a4731]/10 text-[#1a4731] px-2 py-0.5 rounded-full font-medium">
+                            {a.nom}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Cotisations */}
                 {scout.cotisations.length > 0 && (

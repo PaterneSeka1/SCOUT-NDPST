@@ -237,22 +237,27 @@ model ConfigurationPlateforme {
 // ---------------------------------------------------------------------------
 
 model Utilisateur {
-  id          String          @id @default(cuid())
-  nom         String
-  prenom      String
-  matricule   String?         @unique // Requis pour chefs/scouts, absent pour parents
-  telephone   String?         @unique // Requis pour parents, optionnel pour les autres
-  email       String?         @unique
-  password    String
-  role        RoleUtilisateur // Rôle PAROISSIAL (direction de groupe ou encadrement de branche) —
+  id            String          @id @default(cuid())
+  nom           String
+  prenom        String
+  matricule     String?         @unique // Requis pour chefs/scouts, absent pour parents
+  telephone     String?         @unique // Requis pour parents, optionnel pour les autres
+  email         String?         @unique
+  password      String
+  role          RoleUtilisateur // Rôle PAROISSIAL (direction de groupe ou encadrement de branche) —
   // jamais une valeur de district, même si ce compte sert aussi le
   // district (voir roleDistrict) : les deux sont indépendants, une
   // personne désignée au district continue d'exercer son rôle paroissial.
-  fonction    String? // Champ libre pour un rôle paroissial sans fonction structurée (non
+  fonction      String? // Champ libre pour un rôle paroissial sans fonction structurée (non
   // utilisé actuellement, réservé pour un futur rôle de ce type)
-  brancheType BrancheType? // Branche gérée par ce compte au niveau PAROISSIAL : RESPONSABLE_BRANCHE/
+  brancheType   BrancheType? // Branche gérée par ce compte au niveau PAROISSIAL : RESPONSABLE_BRANCHE/
   // ADJOINT_BRANCHE/ASSISTANT_BRANCHE (voir lib/brancheUtilisateur.ts)
-  actif       Boolean         @default(true)
+  dateNaissance DateTime? // Optionnelle (comptes existants, ADMIN_PLATEFORME…) — nécessaire pour
+  // tout calcul de parcours de progression individuelle rattaché directement à
+  // un compte plutôt qu'à une fiche Scout (ex. Ressources Adultes). Pour un
+  // compte SCOUT, la date de référence reste Scout.dateNaissance, copiée ici à
+  // la création (voir POST /api/scouts/[id]/compte).
+  actif         Boolean         @default(true)
 
   // Affectation district — additive au rôle paroissial ci-dessus, jamais un
   // remplacement : un Chef de Groupe désigné Commissaire de District reste

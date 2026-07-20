@@ -25,6 +25,7 @@ interface FormData {
   telephone: string
   role: string
   brancheType: string
+  dateNaissance: string
   motDePasse: string
   confirmation: string
 }
@@ -43,13 +44,13 @@ interface FormErrors {
 const ROLES_LISTE = ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT_SANS_CHEF
 
 const FORM_INITIAL: FormData = {
-  nom: '', prenom: '', email: '', matricule: '', telephone: '', role: '', brancheType: '', motDePasse: '', confirmation: '',
+  nom: '', prenom: '', email: '', matricule: '', telephone: '', role: '', brancheType: '', dateNaissance: '', motDePasse: '', confirmation: '',
 }
 
 // Sous-ensemble "informations" du formulaire suivi par la garde de
 // modifications — le mot de passe n'en fait pas partie.
 function extraireInfos(f: FormData) {
-  return { nom: f.nom, prenom: f.prenom, email: f.email, matricule: f.matricule, telephone: f.telephone, role: f.role, brancheType: f.brancheType }
+  return { nom: f.nom, prenom: f.prenom, email: f.email, matricule: f.matricule, telephone: f.telephone, role: f.role, brancheType: f.brancheType, dateNaissance: f.dateNaissance }
 }
 
 export default function NouvelUtilisateurPage() {
@@ -112,6 +113,7 @@ export default function NouvelUtilisateurPage() {
         telephone: form.telephone.trim() || null,
         role: form.role,
         brancheType: estBranche ? form.brancheType : null,
+        dateNaissance: form.dateNaissance || null,
         password: form.motDePasse,
       })
       definirReference(extraireInfos(form))
@@ -200,6 +202,13 @@ export default function NouvelUtilisateurPage() {
             <label className={CLS_LABEL}>Email <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
             <input id="email" name="email" type="email" value={form.email} onChange={handleChange}
               placeholder="exemple@email.com" className={CLS_INPUT} />
+          </div>
+
+          {/* Date de naissance — nécessaire au calcul du parcours de progression individuelle */}
+          <div>
+            <label className={CLS_LABEL}>Date de naissance <span className="text-xs text-gray-400 font-normal">(optionnelle)</span></label>
+            <input id="dateNaissance" name="dateNaissance" type="date" value={form.dateNaissance} onChange={handleChange}
+              className={CLS_INPUT} />
           </div>
 
           <div className="border-t border-gray-100 pt-4 space-y-4">

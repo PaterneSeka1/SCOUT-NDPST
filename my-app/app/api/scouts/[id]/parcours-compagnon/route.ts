@@ -12,7 +12,11 @@ import {
   ParcoursDejaExistantError,
   ReferentielVideError,
 } from '@/lib/parcoursCompagnonService'
-import { calculerAvancement, calculerStatutAffiche, AgeEntreeInvalideError } from '@/lib/parcoursCompagnon'
+import {
+  formaterProgressionsAffichables,
+  calculerAvancementDepuisBrut,
+  AgeEntreeInvalideError,
+} from '@/lib/parcoursCompagnon'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -61,46 +65,8 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     }
 
     const maintenant = new Date()
-    const progressionsTriees = [...parcours.progressions].sort((a, b) => a.etapeActivite.ordre - b.etapeActivite.ordre)
-
-    const progressionsReponse = progressionsTriees.map((p) => ({
-      id: p.id,
-      etapeActiviteId: p.etapeActiviteId,
-      etapeActivite: {
-        code: p.etapeActivite.code,
-        nom: p.etapeActivite.nom,
-        etape: p.etapeActivite.etape,
-        ordre: p.etapeActivite.ordre,
-        type: p.etapeActivite.type,
-        nomAttribut: p.etapeActivite.nomAttribut,
-        obligatoire: p.etapeActivite.obligatoire,
-      },
-      dateDebutTheorique: p.dateDebutTheorique.toISOString(),
-      dateLimiteTheorique: p.dateLimiteTheorique.toISOString(),
-      dateRealisationDeclaree: p.dateRealisationDeclaree?.toISOString() ?? null,
-      statut: calculerStatutAffiche(p, maintenant),
-      commentaireDeclaration: p.commentaireDeclaration,
-      motifRejet: p.motifRejet,
-      preuveUrl: p.preuveUrl,
-      numeroSoumission: p.numeroSoumission,
-      soumisLe: p.soumisLe?.toISOString() ?? null,
-      valideLe: p.valideLe?.toISOString() ?? null,
-      rejeteLe: p.rejeteLe?.toISOString() ?? null,
-    }))
-
-    const avancement = calculerAvancement(
-      progressionsTriees.map((p) => ({
-        statut: calculerStatutAffiche(p, maintenant),
-        dateLimiteTheorique: p.dateLimiteTheorique,
-        etapeActivite: {
-          id: p.etapeActivite.id,
-          nom: p.etapeActivite.nom,
-          etape: p.etapeActivite.etape,
-          obligatoire: p.etapeActivite.obligatoire,
-          ordre: p.etapeActivite.ordre,
-        },
-      })),
-    )
+    const progressionsReponse = formaterProgressionsAffichables(parcours.progressions, maintenant)
+    const avancement = calculerAvancementDepuisBrut(parcours.progressions, maintenant)
 
     return NextResponse.json({
       scout: scoutReponse,

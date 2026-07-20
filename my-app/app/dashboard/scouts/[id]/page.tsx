@@ -7,13 +7,28 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { useScout, useAttribuerMatricule, useAjouterContact, useSupprimerContact, useCreerCompteScout, useAjouterDocument, useSupprimerDocument, type DocumentScout } from '@/hooks/useScouts'
 import { useProgressionsScout, useValiderBadge } from '@/hooks/useProgressions'
+import {
+  useParcoursCompagnon,
+  useCreerParcoursCompagnon,
+  useSoumettreProgressionCompagnon,
+  useValiderProgressionCompagnon,
+  useRejeterProgressionCompagnon,
+} from '@/hooks/useParcoursCompagnon'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
 import { LABELS_TYPE_DOCUMENT, ICONES_TYPE_DOCUMENT } from '@/lib/documents'
 import { LABELS_TYPE_COTISATION, LABELS_STATUT_COTISATION, COULEURS_STATUT_COTISATION, formatMontantFCFA } from '@/lib/cotisations'
-import { LABELS_ROLES, ROLES_BRANCHE } from '@/lib/roles'
+import {
+  LABELS_ETAPE_COMPAGNON,
+  LABELS_TRANCHE_AGE_COMPAGNON,
+  LABELS_STATUT_PROGRESSION_COMPAGNON,
+  COULEURS_STATUT_PROGRESSION_COMPAGNON,
+} from '@/lib/parcoursCompagnon'
+import { LABELS_ROLES, ROLES_BRANCHE, ROLES_DISTRICT_ETENDU, ROLES_PLATEFORME } from '@/lib/roles'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { confirmer } from '@/app/components/ConfirmDialog'
+
+const STATUTS_PROGRESSION_SOUMISSIBLES = ['A_VENIR', 'EN_COURS', 'EN_RETARD', 'REJETEE']
 
 export default function FicheScoutPage() {
   const { id } = useParams<{ id: string }>()
@@ -31,7 +46,32 @@ export default function FicheScoutPage() {
   const { mutateAsync: validerBadge, isPending: validationEnCours } = useValiderBadge(id)
   const [badgeEnCours, setBadgeEnCours] = useState<string | null>(null)
 
+  const { data: parcoursCompagnon } = useParcoursCompagnon(id)
+  const { mutateAsync: creerParcoursCompagnon, isPending: creationParcoursEnCours } = useCreerParcoursCompagnon(id)
+  const { mutateAsync: soumettreProgression, isPending: soumissionEnCours } = useSoumettreProgressionCompagnon(id)
+  const { mutateAsync: validerProgression } = useValiderProgressionCompagnon(id)
+  const { mutateAsync: rejeterProgression, isPending: rejetEnCours } = useRejeterProgressionCompagnon(id)
+
   const peutValiderBadges = Boolean(session?.user?.role && ROLES_BRANCHE.includes(session.user.role))
+  // Contrôle serveur faisant foi (lib/parcoursCompagnonPermissions.ts) — cette
+  // vérification côté client ne fait qu'afficher ou masquer les actions.
+  const peutDeclarerProgression = Boolean(
+    session?.user?.role && (ROLES_BRANCHE.includes(session.user.role) || ROLES_PLATEFORME.includes(session.user.role)),
+  )
+  const peutValiderOuRejeterProgression = Boolean(
+    session?.user &&
+      ((session.user.roleDistrict && ROLES_DISTRICT_ETENDU.includes(session.user.roleDistrict)) ||
+        ROLES_PLATEFORME.includes(session.user.role)),
+  )
+
+  const [afficherFormulaireParcours, setAfficherFormulaireParcours] = useState(false)
+  const [dateEntreeParcours, setDateEntreeParcours] = useState('')
+  const [progressionEnDeclaration, setProgressionEnDeclaration] = useState<string | null>(null)
+  const [dateRealisation, setDateRealisation] = useState('')
+  const [commentaireRealisation, setCommentaireRealisation] = useState('')
+  const [progressionEnRejet, setProgressionEnRejet] = useState<string | null>(null)
+  const [motifRejetSaisi, setMotifRejetSaisi] = useState('')
+  const [progressionEnValidation, setProgressionEnValidation] = useState<string | null>(null)
 
   const handleValiderBadge = async (badgeId: string) => {
     const badge = progressions?.badges.find((b) => b.id === badgeId)
@@ -49,6 +89,71 @@ export default function FicheScoutPage() {
       toast.error(err instanceof Error ? err.message : 'Erreur')
     } finally {
       setBadgeEnCours(null)
+    }
+  }
+
+  const handleCreerParcoursCompagnon = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const ok = await confirmer({
+      titre: 'Créer le parcours de progression ?',
+      description: `Toutes les étapes théoriques du parcours seront générées automatiquement pour ${scout?.prenom ?? 'ce scout'} ${scout?.nom ?? ''}, à partir d'une entrée le ${dateEntreeParcours ? new Date(dateEntreeParcours).toLocaleDateString('fr-FR') : ''}.`,
+      labelConfirmer: 'Créer',
+    })
+    if (!ok) return
+    try {
+      await creerParcoursCompagnon({ dateEntreeParcours })
+      toast.success('Parcours de progression créé.')
+      setAfficherFormulaireParcours(false)
+      setDateEntreeParcours('')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur')
+    }
+  }
+
+  const handleSoumettreProgression = async (e: React.FormEvent, progressionId: string) => {
+    e.preventDefault()
+    try {
+      await soumettreProgression({
+        progressionId,
+        dateRealisationDeclaree: dateRealisation,
+        commentaire: commentaireRealisation.trim() || undefined,
+      })
+      toast.success('Activité soumise à validation.')
+      setProgressionEnDeclaration(null)
+      setDateRealisation('')
+      setCommentaireRealisation('')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur')
+    }
+  }
+
+  const handleValiderProgression = async (progressionId: string, nomActivite: string) => {
+    const ok = await confirmer({
+      titre: 'Valider cette activité ?',
+      description: `L'activité "${nomActivite}" sera marquée comme validée pour ${scout?.prenom ?? 'ce scout'} ${scout?.nom ?? ''}.`,
+      labelConfirmer: 'Valider',
+    })
+    if (!ok) return
+    setProgressionEnValidation(progressionId)
+    try {
+      await validerProgression(progressionId)
+      toast.success('Activité validée.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur')
+    } finally {
+      setProgressionEnValidation(null)
+    }
+  }
+
+  const handleRejeterProgression = async (e: React.FormEvent, progressionId: string) => {
+    e.preventDefault()
+    try {
+      await rejeterProgression({ progressionId, motifRejet: motifRejetSaisi })
+      toast.success('Activité rejetée.')
+      setProgressionEnRejet(null)
+      setMotifRejetSaisi('')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur')
     }
   }
 
@@ -603,6 +708,217 @@ export default function FicheScoutPage() {
                 </li>
               ))}
             </ul>
+          )}
+        </div>
+      )}
+
+      {/* Progression individuelle — parcours Route (branche Compagnons uniquement) */}
+      {parcoursCompagnon?.brancheCompatible && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-base font-semibold text-gray-900 mb-1">Progression individuelle — Parcours Route</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Suivi individuel des étapes du parcours Compagnons, en plus des badges de la branche.
+          </p>
+
+          {!parcoursCompagnon.parcours ? (
+            <div>
+              <p className="text-sm text-gray-500 mb-2">Aucun parcours créé pour l&apos;instant.</p>
+              {peutDeclarerProgression && (
+                afficherFormulaireParcours ? (
+                  <form onSubmit={handleCreerParcoursCompagnon} className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <div className="w-full sm:w-auto">
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Date d&apos;entrée dans le parcours <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date" value={dateEntreeParcours} onChange={e => setDateEntreeParcours(e.target.value)} required
+                        className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a4731] sm:w-auto"
+                      />
+                    </div>
+                    <button type="submit" disabled={creationParcoursEnCours} className="bg-[#1a4731] text-white px-3 py-1.5 rounded-md text-sm hover:bg-[#163d29] transition-colors disabled:opacity-60">
+                      {creationParcoursEnCours ? 'Création…' : 'Créer le parcours'}
+                    </button>
+                    <button type="button" onClick={() => setAfficherFormulaireParcours(false)} className="text-sm text-gray-500 px-2 py-1.5 hover:text-gray-700">
+                      Annuler
+                    </button>
+                  </form>
+                ) : (
+                  <button
+                    onClick={() => setAfficherFormulaireParcours(true)}
+                    className="mt-2 text-sm bg-[#1a4731] text-white px-3 py-1.5 rounded-md hover:bg-[#163d29] transition-colors"
+                  >
+                    Créer le parcours
+                  </button>
+                )
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <span className="text-sm text-gray-700">
+                  {LABELS_TRANCHE_AGE_COMPAGNON[parcoursCompagnon.parcours.trancheAge] ?? parcoursCompagnon.parcours.trancheAge}
+                </span>
+                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                  parcoursCompagnon.parcours.statut === 'TERMINE' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                }`}>
+                  {parcoursCompagnon.parcours.statut === 'TERMINE' ? 'Parcours terminé' : 'Parcours actif'}
+                </span>
+                <span className="text-xs text-gray-400">
+                  Fin prévue : {new Date(parcoursCompagnon.parcours.dateFinPrevue).toLocaleDateString('fr-FR')}
+                </span>
+              </div>
+
+              {parcoursCompagnon.avancement && (
+                <div className="mb-4">
+                  <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
+                    <span>
+                      {parcoursCompagnon.avancement.activitesValidees} / {parcoursCompagnon.avancement.totalActivitesObligatoires} activités validées
+                    </span>
+                    <span className="font-semibold text-gray-900">{parcoursCompagnon.avancement.pourcentageAvancement}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#1a4731] transition-all"
+                      style={{ width: `${parcoursCompagnon.avancement.pourcentageAvancement}%` }}
+                    />
+                  </div>
+                  {parcoursCompagnon.avancement.activitesEnRetard > 0 && (
+                    <p className="text-xs text-red-600 mt-1">
+                      {parcoursCompagnon.avancement.activitesEnRetard} activité(s) en retard
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <ul className="space-y-2">
+                {parcoursCompagnon.progressions.map((p) => (
+                  <li key={p.id} className="border border-gray-100 rounded-md p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs text-gray-400">{p.etapeActivite.ordre}.</span>
+                          <span className="text-sm font-medium text-gray-900">{p.etapeActivite.nom}</span>
+                          <span className="text-xs text-gray-400">
+                            {LABELS_ETAPE_COMPAGNON[p.etapeActivite.etape] ?? p.etapeActivite.etape}
+                          </span>
+                          {p.etapeActivite.nomAttribut && (
+                            <span className="text-xs text-gray-400">— {p.etapeActivite.nomAttribut}</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(p.dateDebutTheorique).toLocaleDateString('fr-FR')} → {new Date(p.dateLimiteTheorique).toLocaleDateString('fr-FR')}
+                        </p>
+                        {p.dateRealisationDeclaree && (
+                          <p className="text-xs text-gray-500">
+                            Réalisée le {new Date(p.dateRealisationDeclaree).toLocaleDateString('fr-FR')}
+                          </p>
+                        )}
+                        {p.commentaireDeclaration && (
+                          <p className="text-xs text-gray-500 italic mt-0.5">« {p.commentaireDeclaration} »</p>
+                        )}
+                        {p.motifRejet && (
+                          <p className="text-xs text-red-600 mt-0.5">Rejetée : {p.motifRejet}</p>
+                        )}
+                      </div>
+                      <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full ${COULEURS_STATUT_PROGRESSION_COMPAGNON[p.statut] ?? 'bg-gray-100 text-gray-600'}`}>
+                        {LABELS_STATUT_PROGRESSION_COMPAGNON[p.statut] ?? p.statut}
+                      </span>
+                    </div>
+
+                    {peutDeclarerProgression && STATUTS_PROGRESSION_SOUMISSIBLES.includes(p.statut) && (
+                      progressionEnDeclaration === p.id ? (
+                        <form onSubmit={(e) => handleSoumettreProgression(e, p.id)} className="mt-3 space-y-2 border-t border-gray-100 pt-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Date de réalisation <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="date" value={dateRealisation} onChange={e => setDateRealisation(e.target.value)} required
+                              max={new Date().toISOString().slice(0, 10)}
+                              className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a4731]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Commentaire <span className="text-gray-400">(optionnel)</span>
+                            </label>
+                            <input
+                              type="text" value={commentaireRealisation} onChange={e => setCommentaireRealisation(e.target.value)}
+                              className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a4731]"
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <button type="submit" disabled={soumissionEnCours} className="bg-[#1a4731] text-white px-3 py-1.5 rounded-md text-sm hover:bg-[#163d29] transition-colors disabled:opacity-60">
+                              {soumissionEnCours ? '…' : 'Soumettre'}
+                            </button>
+                            <button type="button" onClick={() => setProgressionEnDeclaration(null)} className="text-sm text-gray-500 px-2 hover:text-gray-700">
+                              Annuler
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <button
+                          onClick={() => { setProgressionEnDeclaration(p.id); setDateRealisation(''); setCommentaireRealisation('') }}
+                          className="mt-2 text-sm text-[#1a4731] font-medium hover:underline"
+                        >
+                          {p.statut === 'REJETEE' ? 'Corriger et resoumettre' : 'Déclarer réalisée'}
+                        </button>
+                      )
+                    )}
+
+                    {peutValiderOuRejeterProgression && p.statut === 'SOUMISE' && (
+                      progressionEnRejet === p.id ? (
+                        <form onSubmit={(e) => handleRejeterProgression(e, p.id)} className="mt-3 space-y-2 border-t border-gray-100 pt-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Motif du rejet <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="text" value={motifRejetSaisi} onChange={e => setMotifRejetSaisi(e.target.value)} required
+                              className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a4731]"
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <button type="submit" disabled={rejetEnCours} className="bg-red-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-red-700 transition-colors disabled:opacity-60">
+                              {rejetEnCours ? '…' : 'Confirmer le rejet'}
+                            </button>
+                            <button type="button" onClick={() => setProgressionEnRejet(null)} className="text-sm text-gray-500 px-2 hover:text-gray-700">
+                              Annuler
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <div className="mt-2 flex gap-3">
+                          <button
+                            onClick={() => handleValiderProgression(p.id, p.etapeActivite.nom)}
+                            disabled={progressionEnValidation === p.id}
+                            className="text-sm bg-[#1a4731] text-white px-3 py-1.5 rounded-md hover:bg-[#163d29] transition-colors disabled:opacity-60"
+                          >
+                            {progressionEnValidation === p.id ? '…' : 'Valider'}
+                          </button>
+                          <button onClick={() => setProgressionEnRejet(p.id)} className="text-sm text-red-600 font-medium hover:underline">
+                            Rejeter
+                          </button>
+                        </div>
+                      )
+                    )}
+                  </li>
+                ))}
+              </ul>
+
+              {parcoursCompagnon.attributsObtenus.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Attributs obtenus</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {parcoursCompagnon.attributsObtenus.map((a) => (
+                      <span key={a.id} className="text-xs bg-[#1a4731]/10 text-[#1a4731] px-2 py-1 rounded-full font-medium">
+                        {a.nom}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

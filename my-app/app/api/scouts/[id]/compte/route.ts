@@ -28,7 +28,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const scout = await prisma.scout.findFirst({
       where: { id, paroisseId },
-      select: { id: true, nom: true, prenom: true, matricule: true, utilisateurId: true },
+      select: { id: true, nom: true, prenom: true, matricule: true, utilisateurId: true, dateNaissance: true },
     })
 
     if (!scout) {
@@ -76,6 +76,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           nom: scout.nom,
           prenom: scout.prenom,
           matricule: scout.matricule,
+          // Même date de naissance que la fiche Scout : garde les deux
+          // synchronisées sans dépendre d'une nouvelle saisie manuelle.
+          dateNaissance: scout.dateNaissance,
           telephone: telephone?.trim() || null,
           role: 'SCOUT',
           password: passwordHache,

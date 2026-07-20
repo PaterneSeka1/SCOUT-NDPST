@@ -42,6 +42,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
         role: true,
         fonction: true,
         brancheType: true,
+        dateNaissance: true,
         actif: true,
         createdAt: true,
         updatedAt: true,
@@ -70,7 +71,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (!existant) return NextResponse.json({ erreur: 'Utilisateur introuvable' }, { status: 404 })
 
     const body = await request.json()
-    const { nom, prenom, email, role, actif, fonction, brancheType } = body as {
+    const { nom, prenom, email, role, actif, fonction, brancheType, dateNaissance } = body as {
       nom?: string
       prenom?: string
       email?: string
@@ -78,6 +79,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       actif?: boolean
       fonction?: string | null
       brancheType?: string | null
+      dateNaissance?: string | null
     }
 
     // Pas de réaffectation de paroisse dans cette itération : seuls nom, prenom,
@@ -102,6 +104,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
     if (email !== undefined && email !== null && typeof email !== 'string') {
       return NextResponse.json({ erreur: 'L’adresse e-mail est invalide' }, { status: 400 })
+    }
+    if (dateNaissance != null && Number.isNaN(Date.parse(dateNaissance))) {
+      return NextResponse.json({ erreur: 'La date de naissance est invalide' }, { status: 400 })
     }
 
     if (brancheType != null && !BrancheTypeSchema.safeParse(brancheType).success) {
@@ -141,6 +146,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         ...(email !== undefined ? { email: emailNettoye || null } : {}),
         ...(role !== undefined ? { role: role as RoleUtilisateur } : {}),
         ...(actif !== undefined ? { actif } : {}),
+        ...(dateNaissance !== undefined ? { dateNaissance: dateNaissance ? new Date(dateNaissance) : null } : {}),
         fonction: fonctionFinal,
         brancheType: brancheTypeFinal,
       },
@@ -154,6 +160,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         role: true,
         fonction: true,
         brancheType: true,
+        dateNaissance: true,
         actif: true,
         createdAt: true,
         updatedAt: true,

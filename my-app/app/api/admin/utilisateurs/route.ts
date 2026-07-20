@@ -125,6 +125,7 @@ export async function GET(request: NextRequest) {
           role: true,
           fonction: true,
           brancheType: true,
+          dateNaissance: true,
           roleDistrict: true,
           fonctionDistrict: true,
           brancheTypeDistrict: true,
@@ -179,7 +180,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { paroisseId, nom, prenom, email, matricule, telephone, role, password, fonction, brancheType } = body as {
+    const { paroisseId, nom, prenom, email, matricule, telephone, role, password, fonction, brancheType, dateNaissance } = body as {
       paroisseId?: string
       nom?: string
       prenom?: string
@@ -190,6 +191,7 @@ export async function POST(request: NextRequest) {
       password?: string
       fonction?: string | null
       brancheType?: string | null
+      dateNaissance?: string | null
     }
 
     if (!paroisseId || typeof nom !== 'string' || !nom.trim() || typeof prenom !== 'string' || !prenom.trim() || !role || !password) {
@@ -201,6 +203,10 @@ export async function POST(request: NextRequest) {
 
     if (!motDePasseValide(password)) {
       return NextResponse.json({ erreur: REGLE_MOT_DE_PASSE }, { status: 400 })
+    }
+
+    if (dateNaissance != null && Number.isNaN(Date.parse(dateNaissance))) {
+      return NextResponse.json({ erreur: 'La date de naissance est invalide' }, { status: 400 })
     }
 
     const paroisse = await prisma.paroisse.findUnique({ where: { id: paroisseId }, select: { id: true } })
@@ -286,6 +292,7 @@ export async function POST(request: NextRequest) {
         role: role as RoleUtilisateur,
         fonction: fonctionValeur,
         brancheType: brancheTypeValeur,
+        dateNaissance: dateNaissance ? new Date(dateNaissance) : null,
         password: passwordHache,
         paroisseId,
       },
@@ -299,6 +306,7 @@ export async function POST(request: NextRequest) {
         role: true,
         fonction: true,
         brancheType: true,
+        dateNaissance: true,
         actif: true,
         createdAt: true,
         paroisseId: true,

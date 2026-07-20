@@ -72,6 +72,7 @@ export async function GET(request: NextRequest) {
           email: true,
           role: true,
           brancheType: true,
+          dateNaissance: true,
           actif: true,
           createdAt: true,
           cotisationsPersonnelles: {
@@ -126,7 +127,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { nom, prenom, email, matricule, telephone, role, password, scoutIds, brancheType } = body as {
+    const { nom, prenom, email, matricule, telephone, role, password, scoutIds, brancheType, dateNaissance } = body as {
       nom?: string
       prenom?: string
       email?: string
@@ -136,6 +137,7 @@ export async function POST(request: NextRequest) {
       password?: string
       scoutIds?: unknown
       brancheType?: string | null
+      dateNaissance?: string | null
     }
 
     if (typeof nom !== 'string' || !nom.trim() || typeof prenom !== 'string' || !prenom.trim() || !role || !password) {
@@ -143,6 +145,10 @@ export async function POST(request: NextRequest) {
         { error: 'Les champs nom, prenom, role et password sont requis' },
         { status: 400 },
       )
+    }
+
+    if (dateNaissance != null && Number.isNaN(Date.parse(dateNaissance))) {
+      return NextResponse.json({ error: 'La date de naissance est invalide' }, { status: 400 })
     }
 
     if (!motDePasseValide(password)) {
@@ -262,6 +268,7 @@ export async function POST(request: NextRequest) {
           telephone: telephone?.trim() || null,
           role: role as RoleUtilisateur,
           brancheType: brancheTypeFinal,
+          dateNaissance: dateNaissance ? new Date(dateNaissance) : null,
           password: passwordHache,
           paroisseId,
         },
@@ -274,6 +281,7 @@ export async function POST(request: NextRequest) {
           email: true,
           role: true,
           brancheType: true,
+          dateNaissance: true,
           actif: true,
           createdAt: true,
         },

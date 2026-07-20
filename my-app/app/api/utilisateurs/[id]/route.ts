@@ -27,7 +27,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       where: { id, paroisseId },
       select: {
         id: true, nom: true, prenom: true, matricule: true, telephone: true,
-        email: true, role: true, brancheType: true, actif: true, paroisseId: true,
+        email: true, role: true, brancheType: true, dateNaissance: true, actif: true, paroisseId: true,
         createdAt: true, updatedAt: true,
         liensParent: {
           where: { scout: { paroisseId } },
@@ -66,9 +66,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (!existant) return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 })
 
     const body = await request.json()
-    const { nom, prenom, email, role, actif, brancheType, scoutIds } = body as {
+    const { nom, prenom, email, role, actif, brancheType, scoutIds, dateNaissance } = body as {
       nom?: string; prenom?: string; email?: string; role?: string; actif?: boolean; brancheType?: string | null
       scoutIds?: unknown
+      dateNaissance?: string | null
     }
 
     if (role !== undefined && !(role in RoleUtilisateur))
@@ -79,6 +80,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Le prénom est invalide' }, { status: 400 })
     if (email !== undefined && email !== null && typeof email !== 'string')
       return NextResponse.json({ error: 'L’adresse e-mail est invalide' }, { status: 400 })
+    if (dateNaissance != null && Number.isNaN(Date.parse(dateNaissance)))
+      return NextResponse.json({ error: 'La date de naissance est invalide' }, { status: 400 })
 
     if (scoutIds !== undefined && !Array.isArray(scoutIds))
       return NextResponse.json({ error: 'La liste des enfants est invalide' }, { status: 400 })
@@ -157,11 +160,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           ...(email !== undefined ? { email: emailNettoye || null } : {}),
           ...(role !== undefined ? { role: role as RoleUtilisateur } : {}),
           ...(actif !== undefined ? { actif } : {}),
+          ...(dateNaissance !== undefined ? { dateNaissance: dateNaissance ? new Date(dateNaissance) : null } : {}),
           brancheType: brancheTypeFinal,
         },
         select: {
           id: true, nom: true, prenom: true, matricule: true, telephone: true,
-          email: true, role: true, brancheType: true, actif: true, paroisseId: true,
+          email: true, role: true, brancheType: true, dateNaissance: true, actif: true, paroisseId: true,
           createdAt: true, updatedAt: true,
         },
       })

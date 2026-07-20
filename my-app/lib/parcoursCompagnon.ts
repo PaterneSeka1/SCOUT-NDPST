@@ -16,6 +16,44 @@ export type StatutProgressionCompagnon =
 export type EtapeCompagnon = 'NOVICIAT' | 'APPRENTISSAGE' | 'COMPAGNONNAGE' | 'DEPART_ROUTIER'
 export type TypeActiviteParcours = 'DUREE' | 'EVENEMENT'
 
+// ---- Libellés et couleurs d'affichage ---------------------------------------
+// Constantes de présentation (pas de calcul) — regroupées ici avec le moteur
+// de calcul plutôt que dans un fichier séparé, comme lib/cotisations.ts qui
+// mélange déjà calcul et libellés d'affichage pour le même domaine métier.
+
+export const LABELS_ETAPE_COMPAGNON: Record<string, string> = {
+  NOVICIAT: 'Noviciat',
+  APPRENTISSAGE: 'Apprentissage',
+  COMPAGNONNAGE: 'Compagnonnage',
+  DEPART_ROUTIER: 'Départ routier',
+}
+
+export const LABELS_TRANCHE_AGE_COMPAGNON: Record<string, string> = {
+  DIX_HUIT_ANS: 'Entrée à 18 ans',
+  DIX_NEUF_ANS: 'Entrée à 19 ans',
+  VINGT_ANS: 'Entrée à 20 ans',
+}
+
+export const LABELS_STATUT_PROGRESSION_COMPAGNON: Record<string, string> = {
+  A_VENIR: 'À venir',
+  EN_COURS: 'En cours',
+  EN_RETARD: 'En retard',
+  SOUMISE: 'En attente de validation',
+  VALIDEE: 'Validée',
+  REJETEE: 'Rejetée',
+  ANNULEE: 'Annulée',
+}
+
+export const COULEURS_STATUT_PROGRESSION_COMPAGNON: Record<string, string> = {
+  A_VENIR: 'bg-gray-100 text-gray-600',
+  EN_COURS: 'bg-blue-100 text-blue-800',
+  EN_RETARD: 'bg-red-100 text-red-800',
+  SOUMISE: 'bg-amber-100 text-amber-800',
+  VALIDEE: 'bg-green-100 text-green-800',
+  REJETEE: 'bg-red-100 text-red-800',
+  ANNULEE: 'bg-gray-100 text-gray-500',
+}
+
 // ---------------------------------------------------------------------------
 // 1. Âge d'entrée dans le parcours
 // ---------------------------------------------------------------------------
@@ -232,7 +270,112 @@ export function calculerAvancement(progressions: ProgressionPourAvancement[]): R
 }
 
 // ---------------------------------------------------------------------------
-// 6. Anti-spam des alertes de retard (job de recalcul, voir route cron)
+// 6. Mise en forme pour l'API — factorisé ici pour éviter de dupliquer le
+// même mapping (statut recalculé + sérialisation des dates) dans chacune des
+// routes qui affichent une progression : fiche scout (staff), liste de suivi,
+// espace scout ("ma progression"), espace parent ("mes enfants").
+// ---------------------------------------------------------------------------
+
+interface EtapeActiviteBrute {
+  id: string
+  code: string
+  nom: string
+  etape: EtapeCompagnon
+  ordre: number
+  type: TypeActiviteParcours
+  nomAttribut: string | null
+  obligatoire: boolean
+}
+
+export interface ProgressionCompagnonBrute {
+  id: string
+  etapeActiviteId: string
+  etapeActivite: EtapeActiviteBrute
+  dateDebutTheorique: Date
+  dateLimiteTheorique: Date
+  dateRealisationDeclaree: Date | null
+  statut: StatutProgressionCompagnon
+  commentaireDeclaration: string | null
+  motifRejet: string | null
+  preuveUrl: string | null
+  numeroSoumission: number
+  soumisLe: Date | null
+  valideLe: Date | null
+  rejeteLe: Date | null
+}
+
+export interface ProgressionCompagnonAffichable {
+  id: string
+  etapeActiviteId: string
+  etapeActivite: Omit<EtapeActiviteBrute, 'id'>
+  dateDebutTheorique: string
+  dateLimiteTheorique: string
+  dateRealisationDeclaree: string | null
+  statut: StatutProgressionCompagnon
+  commentaireDeclaration: string | null
+  motifRejet: string | null
+  preuveUrl: string | null
+  numeroSoumission: number
+  soumisLe: string | null
+  valideLe: string | null
+  rejeteLe: string | null
+}
+
+/** Trie par ordre du référentiel et sérialise les dates, avec statut recalculé à la volée. */
+export function formaterProgressionsAffichables(
+  progressions: ProgressionCompagnonBrute[],
+  maintenant: Date,
+): ProgressionCompagnonAffichable[] {
+  return [...progressions]
+    .sort((a, b) => a.etapeActivite.ordre - b.etapeActivite.ordre)
+    .map((p) => ({
+      id: p.id,
+      etapeActiviteId: p.etapeActiviteId,
+      etapeActivite: {
+        code: p.etapeActivite.code,
+        nom: p.etapeActivite.nom,
+        etape: p.etapeActivite.etape,
+        ordre: p.etapeActivite.ordre,
+        type: p.etapeActivite.type,
+        nomAttribut: p.etapeActivite.nomAttribut,
+        obligatoire: p.etapeActivite.obligatoire,
+      },
+      dateDebutTheorique: p.dateDebutTheorique.toISOString(),
+      dateLimiteTheorique: p.dateLimiteTheorique.toISOString(),
+      dateRealisationDeclaree: p.dateRealisationDeclaree?.toISOString() ?? null,
+      statut: calculerStatutAffiche(p, maintenant),
+      commentaireDeclaration: p.commentaireDeclaration,
+      motifRejet: p.motifRejet,
+      preuveUrl: p.preuveUrl,
+      numeroSoumission: p.numeroSoumission,
+      soumisLe: p.soumisLe?.toISOString() ?? null,
+      valideLe: p.valideLe?.toISOString() ?? null,
+      rejeteLe: p.rejeteLe?.toISOString() ?? null,
+    }))
+}
+
+/** Recalcule le statut de chaque ligne avant de calculer l'avancement — voir calculerAvancement. */
+export function calculerAvancementDepuisBrut(
+  progressions: ProgressionCompagnonBrute[],
+  maintenant: Date,
+): ResumeAvancementParcours {
+  return calculerAvancement(
+    progressions.map((p) => ({
+      statut: calculerStatutAffiche(p, maintenant),
+      dateLimiteTheorique: p.dateLimiteTheorique,
+      etapeActivite: {
+        id: p.etapeActivite.id,
+        nom: p.etapeActivite.nom,
+        etape: p.etapeActivite.etape,
+        obligatoire: p.etapeActivite.obligatoire,
+        ordre: p.etapeActivite.ordre,
+      },
+    })),
+  )
+}
+
+// ---------------------------------------------------------------------------
+// 7. Anti-spam des alertes de retard (job de recalcul, voir route cron)
 // ---------------------------------------------------------------------------
 
 const DELAI_MINIMUM_ENTRE_ALERTES_MS = 24 * 60 * 60 * 1000

@@ -26,6 +26,7 @@ export interface Utilisateur {
   prenom: string
   role: string
   brancheType?: string | null
+  dateNaissance?: string | null
   actif: boolean
   email: string | null
   paroisseId?: string
@@ -66,6 +67,7 @@ export interface DonneesCreerUtilisateur {
   telephone?: string | null
   role: string
   brancheType?: string | null
+  dateNaissance?: string | null
   password: string
   scoutIds?: string[]
 }
@@ -78,6 +80,7 @@ export interface DonneesModifierUtilisateur {
   telephone?: string | null
   role?: string
   brancheType?: string | null
+  dateNaissance?: string | null
   actif?: boolean
   scoutIds?: string[]
 }

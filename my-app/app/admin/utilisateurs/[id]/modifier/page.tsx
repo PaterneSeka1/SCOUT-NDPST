@@ -28,13 +28,14 @@ interface UtilisateurDetail {
   email: string | null
   role: string
   brancheType: string | null
+  dateNaissance: string | null
   actif: boolean
   createdAt: string
   updatedAt?: string
   paroisse: { id: string; nom: string }
 }
 
-interface FormInfos { nom: string; prenom: string; email: string; role: string; brancheType: string; actif: boolean }
+interface FormInfos { nom: string; prenom: string; email: string; role: string; brancheType: string; dateNaissance: string; actif: boolean }
 interface FormInfosErrors { nom?: string; prenom?: string; role?: string; brancheType?: string }
 interface FormMdp { motDePasse: string; confirmation: string }
 interface FormMdpErrors { motDePasse?: string; confirmation?: string }
@@ -47,7 +48,7 @@ export default function ModifierUtilisateurPlateformePage() {
   const [chargement, setChargement] = useState(true)
   const [erreurChargement, setErreurChargement] = useState(false)
 
-  const [formInfos, setFormInfos] = useState<FormInfos>({ nom: '', prenom: '', email: '', role: '', brancheType: '', actif: true })
+  const [formInfos, setFormInfos] = useState<FormInfos>({ nom: '', prenom: '', email: '', role: '', brancheType: '', dateNaissance: '', actif: true })
   const [erreursInfos, setErreursInfos] = useState<FormInfosErrors>({})
   const [soumissionInfos, setSoumissionInfos] = useState(false)
 
@@ -77,7 +78,7 @@ export default function ModifierUtilisateurPlateformePage() {
         setUtilisateur(data)
         const infos: FormInfos = {
           nom: data.nom, prenom: data.prenom, email: data.email ?? '', role: data.role,
-          brancheType: data.brancheType ?? '', actif: data.actif,
+          brancheType: data.brancheType ?? '', dateNaissance: data.dateNaissance?.slice(0, 10) ?? '', actif: data.actif,
         }
         setFormInfos(infos)
         definirReference(infos)
@@ -129,6 +130,7 @@ export default function ModifierUtilisateurPlateformePage() {
           email: formInfos.email.trim() || null,
           role: formInfos.role,
           brancheType: estBranche && formInfos.brancheType ? formInfos.brancheType : null,
+          dateNaissance: formInfos.dateNaissance.trim() || null,
           actif: formInfos.actif,
         }),
       })
@@ -253,6 +255,13 @@ export default function ModifierUtilisateurPlateformePage() {
             <label className={CLS_LABEL}>Email <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
             <input id="email" name="email" type="email" value={formInfos.email} onChange={handleInfosChange}
               placeholder="exemple@email.com" className={CLS_INPUT} />
+          </div>
+
+          {/* Date de naissance — nécessaire au calcul du parcours de progression individuelle */}
+          <div>
+            <label className={CLS_LABEL}>Date de naissance <span className="text-xs text-gray-400 font-normal">(optionnelle)</span></label>
+            <input id="dateNaissance" name="dateNaissance" type="date" value={formInfos.dateNaissance} onChange={handleInfosChange}
+              className={CLS_INPUT} />
           </div>
 
           <div>

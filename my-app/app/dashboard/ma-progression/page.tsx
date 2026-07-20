@@ -4,6 +4,18 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
+import {
+  LABELS_ETAPE_COMPAGNON,
+  LABELS_TRANCHE_AGE_COMPAGNON,
+  LABELS_STATUT_PROGRESSION_COMPAGNON,
+  COULEURS_STATUT_PROGRESSION_COMPAGNON,
+} from '@/lib/parcoursCompagnon'
+import type {
+  ParcoursCompagnonInfo,
+  ProgressionCompagnonItem,
+  AttributCompagnonItem,
+  ResumeAvancementParcours,
+} from '@/hooks/useParcoursCompagnon'
 
 const LABELS_STATUT_REUNION: Record<string, { label: string; cls: string; dot: string }> = {
   PRESENT: { label: 'Présent', cls: 'text-green-700 bg-green-50', dot: 'bg-green-500' },
@@ -31,11 +43,19 @@ interface Scout {
   _count: { presences: number }
 }
 
+interface ParcoursCompagnonAffichage {
+  parcours: ParcoursCompagnonInfo
+  progressions: ProgressionCompagnonItem[]
+  avancement: ResumeAvancementParcours
+  attributsObtenus: AttributCompagnonItem[]
+}
+
 export default function PageMaProgression() {
   const [scout, setScout] = useState<Scout | null>(null)
   const [badgesBranche, setBadgesBranche] = useState<Badge[]>([])
   const [prochainesActivites, setProchainesActivites] = useState<ProchaineActivite[]>([])
   const [dernieresReunions, setDernieresReunions] = useState<DerniereReunion[]>([])
+  const [parcoursCompagnon, setParcoursCompagnon] = useState<ParcoursCompagnonAffichage | null>(null)
   const [chargement, setChargement] = useState(true)
   const [erreur, setErreur] = useState('')
 
@@ -48,6 +68,7 @@ export default function PageMaProgression() {
         setBadgesBranche(data.badgesBranche ?? [])
         setProchainesActivites(data.prochainesActivites ?? [])
         setDernieresReunions(data.dernieresReunions ?? [])
+        setParcoursCompagnon(data.parcoursCompagnon ?? null)
       })
       .catch(() => setErreur('Impossible de charger votre progression'))
       .finally(() => setChargement(false))
@@ -152,6 +173,62 @@ export default function PageMaProgression() {
           </>
         )}
       </div>
+
+      {/* Progression individuelle — parcours Route (branche Compagnons uniquement) */}
+      {parcoursCompagnon && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
+          <h2 className="text-sm font-semibold text-gray-800 mb-1">Mon parcours de progression individuelle</h2>
+          <p className="text-xs text-gray-400 mb-4">
+            {LABELS_TRANCHE_AGE_COMPAGNON[parcoursCompagnon.parcours.trancheAge] ?? parcoursCompagnon.parcours.trancheAge}
+            {parcoursCompagnon.parcours.statut === 'TERMINE' ? ' · Parcours terminé 🎉' : ''}
+          </p>
+
+          <div className="mb-4">
+            <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
+              <span>
+                {parcoursCompagnon.avancement.activitesValidees} / {parcoursCompagnon.avancement.totalActivitesObligatoires} étapes validées
+              </span>
+              <span className="font-semibold text-gray-900">{parcoursCompagnon.avancement.pourcentageAvancement}%</span>
+            </div>
+            <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-full bg-[#1a4731] transition-all" style={{ width: `${parcoursCompagnon.avancement.pourcentageAvancement}%` }} />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {parcoursCompagnon.progressions.map((p) => (
+              <div key={p.id} className={`flex items-start justify-between gap-2 p-3 rounded-lg ${p.statut === 'VALIDEE' ? 'bg-green-50 border border-green-100' : 'bg-gray-50 border border-gray-100'}`}>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs text-gray-400">{p.etapeActivite.ordre}.</span>
+                    <span className={`text-sm font-medium ${p.statut === 'VALIDEE' ? 'text-green-800' : 'text-gray-700'}`}>{p.etapeActivite.nom}</span>
+                    <span className="text-xs text-gray-400">{LABELS_ETAPE_COMPAGNON[p.etapeActivite.etape] ?? p.etapeActivite.etape}</span>
+                  </div>
+                  {p.statut === 'VALIDEE' && p.valideLe && (
+                    <p className="text-xs text-green-600 mt-1">Validée le {new Date(p.valideLe).toLocaleDateString('fr-FR')}</p>
+                  )}
+                </div>
+                <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full ${COULEURS_STATUT_PROGRESSION_COMPAGNON[p.statut] ?? 'bg-gray-100 text-gray-600'}`}>
+                  {LABELS_STATUT_PROGRESSION_COMPAGNON[p.statut] ?? p.statut}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {parcoursCompagnon.attributsObtenus.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Attributs obtenus</p>
+              <div className="flex flex-wrap gap-2">
+                {parcoursCompagnon.attributsObtenus.map((a) => (
+                  <span key={a.id} className="text-xs bg-[#1a4731]/10 text-[#1a4731] px-2 py-1 rounded-full font-medium">
+                    {a.nom}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Prochaines activités */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
