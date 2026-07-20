@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { LABELS_BRANCHES } from '@/lib/branches'
+import { LABELS_BRANCHES, calculerAge, brancheSelonAge } from '@/lib/branches'
 import { useCreerScout } from '@/hooks/useScouts'
 import type { DonneesContact } from '@/hooks/useScouts'
 import { useGardeModifications } from '@/hooks/useGardeModifications'
@@ -47,6 +47,11 @@ export default function NouveauScoutPage() {
   const [dateNaissance, setDateNaissance] = useState('')
   const [sexe, setSexe] = useState('')
   const [brancheType, setBrancheType] = useState('')
+  // Tant que le responsable n'a pas choisi la branche lui-même, elle est
+  // suggérée automatiquement à partir de la date de naissance — modifiable à
+  // tout moment (ce n'est qu'une aide à la saisie, jamais une contrainte :
+  // voir la fonctionnalité "Passage de branche" pour les cas limites/dérogations).
+  const [brancheTypeTouchee, setBrancheTypeTouchee] = useState(false)
   const [photo, setPhoto] = useState('')
   const [photoPreview, setPhotoPreview] = useState('')
   const [allergies, setAllergies] = useState('')
@@ -185,7 +190,18 @@ export default function NouveauScoutPage() {
           <div>
             <label className={CLS_LABEL}>Date de naissance <span className="text-red-500">*</span></label>
             <input type="date" value={dateNaissance}
-              onChange={(e) => { setDateNaissance(e.target.value); setErreurs((p) => ({ ...p, dateNaissance: undefined })) }}
+              onChange={(e) => {
+                const valeur = e.target.value
+                setDateNaissance(valeur)
+                setErreurs((p) => ({ ...p, dateNaissance: undefined }))
+                if (!brancheTypeTouchee && valeur) {
+                  const suggestion = brancheSelonAge(calculerAge(new Date(valeur), new Date()))
+                  if (suggestion) {
+                    setBrancheType(suggestion)
+                    setErreurs((p) => ({ ...p, brancheType: undefined }))
+                  }
+                }
+              }}
               className={erreurs.dateNaissance ? CLS_INPUT_ERR : CLS_INPUT} />
             {erreurs.dateNaissance && <p className="mt-1 text-xs text-red-600">{erreurs.dateNaissance}</p>}
           </div>
@@ -203,11 +219,19 @@ export default function NouveauScoutPage() {
             </div>
             <div>
               <label className={CLS_LABEL}>Branche <span className="text-red-500">*</span></label>
-              <select value={brancheType} onChange={(e) => { setBrancheType(e.target.value); setErreurs((p) => ({ ...p, brancheType: undefined })) }}
+              <select value={brancheType}
+                onChange={(e) => {
+                  setBrancheType(e.target.value)
+                  setBrancheTypeTouchee(true)
+                  setErreurs((p) => ({ ...p, brancheType: undefined }))
+                }}
                 className={erreurs.brancheType ? CLS_SELECT_ERR : CLS_SELECT}>
                 <option value="">Sélectionner une branche</option>
                 {BRANCHES_LISTE.map((b) => <option key={b} value={b}>{LABELS_BRANCHES[b]}</option>)}
               </select>
+              {!erreurs.brancheType && !brancheTypeTouchee && brancheType && (
+                <p className="mt-1 text-xs text-gray-400">Suggérée à partir de la date de naissance — modifiable si besoin.</p>
+              )}
               {erreurs.brancheType && <p className="mt-1 text-xs text-red-600">{erreurs.brancheType}</p>}
             </div>
           </div>
