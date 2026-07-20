@@ -94,21 +94,64 @@ enum StatutCotisation {
   A_JOUR // Adhésion réglée (montantPaye = montant) ou exonérée (montantPaye = 0, voir le flag `exonere` des routes).
 }
 
+// Parcours de progression individuelle des Compagnons (18-20 ans, parcours
+// "Route" : Noviciat → Apprentissage → Compagnonnage → Départ routier). Vient
+// en plus du référentiel Badge/ProgressionScout générique par branche — ne le
+// remplace pas (voir prisma/PROMPT_INTEGRATION_PROGRESSION_ROUTIER.md).
+enum EtapeCompagnon {
+  NOVICIAT
+  APPRENTISSAGE
+  COMPAGNONNAGE
+  DEPART_ROUTIER
+}
+
+enum TypeActiviteParcours {
+  DUREE
+  EVENEMENT
+}
+
+// Tranche fixée une seule fois à l'entrée dans le parcours (âge exact à
+// dateEntreeParcours) et jamais recalculée automatiquement ensuite.
+enum TrancheAgeCompagnon {
+  DIX_HUIT_ANS
+  DIX_NEUF_ANS
+  VINGT_ANS
+}
+
+// SOUMISE/VALIDEE/REJETEE/ANNULEE sont des statuts métier : ne sont jamais
+// écrasés automatiquement par un recalcul temporel (A_VENIR/EN_COURS/EN_RETARD).
+enum StatutProgressionCompagnon {
+  A_VENIR
+  EN_COURS
+  EN_RETARD
+  SOUMISE
+  VALIDEE
+  REJETEE
+  ANNULEE
+}
+
+enum StatutParcoursCompagnon {
+  ACTIF
+  TERMINE
+  SUSPENDU
+  ABANDONNE
+}
+
 // ---------------------------------------------------------------------------
 // Paroisse
 // ---------------------------------------------------------------------------
 
 model Paroisse {
-  id        String   @id @default(cuid())
+  id        String  @id @default(cuid())
   nom       String
   ville     String
   diocese   String
   ocean     String?
   adresse   String?
   telephone String?
-  email     String?  @unique
+  email     String? @unique
   logo      String? // URL ou chemin vers le logo
-  actif     Boolean  @default(true) // Paroisse désactivée = accès bloqué pour ses utilisateurs
+  actif     Boolean @default(true) // Paroisse désactivée = accès bloqué pour ses utilisateurs
 
   // Identité visuelle propre à la paroisse, visible par ses utilisateurs connectés.
   // Null = pas personnalisée, on retombe sur les valeurs de ConfigurationPlateforme.
@@ -194,22 +237,22 @@ model ConfigurationPlateforme {
 // ---------------------------------------------------------------------------
 
 model Utilisateur {
-  id        String          @id @default(cuid())
-  nom       String
-  prenom    String
-  matricule String?         @unique // Requis pour chefs/scouts, absent pour parents
-  telephone String?         @unique // Requis pour parents, optionnel pour les autres
-  email     String?         @unique
-  password  String
-  role      RoleUtilisateur // Rôle PAROISSIAL (direction de groupe ou encadrement de branche) —
-                             // jamais une valeur de district, même si ce compte sert aussi le
-                             // district (voir roleDistrict) : les deux sont indépendants, une
-                             // personne désignée au district continue d'exercer son rôle paroissial.
-  fonction  String?         // Champ libre pour un rôle paroissial sans fonction structurée (non
-                             // utilisé actuellement, réservé pour un futur rôle de ce type)
-  brancheType BrancheType?  // Branche gérée par ce compte au niveau PAROISSIAL : RESPONSABLE_BRANCHE/
-                             // ADJOINT_BRANCHE/ASSISTANT_BRANCHE (voir lib/brancheUtilisateur.ts)
-  actif     Boolean         @default(true)
+  id          String          @id @default(cuid())
+  nom         String
+  prenom      String
+  matricule   String?         @unique // Requis pour chefs/scouts, absent pour parents
+  telephone   String?         @unique // Requis pour parents, optionnel pour les autres
+  email       String?         @unique
+  password    String
+  role        RoleUtilisateur // Rôle PAROISSIAL (direction de groupe ou encadrement de branche) —
+  // jamais une valeur de district, même si ce compte sert aussi le
+  // district (voir roleDistrict) : les deux sont indépendants, une
+  // personne désignée au district continue d'exercer son rôle paroissial.
+  fonction    String? // Champ libre pour un rôle paroissial sans fonction structurée (non
+  // utilisé actuellement, réservé pour un futur rôle de ce type)
+  brancheType BrancheType? // Branche gérée par ce compte au niveau PAROISSIAL : RESPONSABLE_BRANCHE/
+  // ADJOINT_BRANCHE/ASSISTANT_BRANCHE (voir lib/brancheUtilisateur.ts)
+  actif       Boolean         @default(true)
 
   // Affectation district — additive au rôle paroissial ci-dessus, jamais un
   // remplacement : un Chef de Groupe désigné Commissaire de District reste
@@ -217,13 +260,13 @@ model Utilisateur {
   // Éligible parmi ROLES_TOUT_STAFF (tout rôle non-PARENT/SCOUT) d'une des
   // paroisses du district (voir lib/roles.ts, app/api/district/utilisateurs).
   roleDistrict        RoleUtilisateur?
-  fonctionDistrict    String?          // Fonction libre de roleDistrict=ASSISTANT_DISTRICT quand
-                                        // brancheTypeDistrict est vide (ex. "Spiritualité")
-  brancheTypeDistrict BrancheType?     // Branche gérée à l'échelle du district par
-                                        // roleDistrict=ASSISTANT_DISTRICT
-  tokenCalendrier String?   @unique // Jeton d'abonnement au flux iCal personnel (généré à la demande)
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  fonctionDistrict    String? // Fonction libre de roleDistrict=ASSISTANT_DISTRICT quand
+  // brancheTypeDistrict est vide (ex. "Spiritualité")
+  brancheTypeDistrict BrancheType? // Branche gérée à l'échelle du district par
+  // roleDistrict=ASSISTANT_DISTRICT
+  tokenCalendrier     String?          @unique // Jeton d'abonnement au flux iCal personnel (généré à la demande)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
 
   // Clé étrangère — nulle uniquement pour ADMIN_PLATEFORME (rôle transverse, non
   // rattaché à une paroisse). Contrainte CHECK ajoutée en migration pour garantir
@@ -247,6 +290,13 @@ model Utilisateur {
   cotisationsEnregistrees     Cotisation[]            @relation("CotisationEnregistreePar")
   cotisationsPersonnelles     Cotisation[]            @relation("CotisationUtilisateur")
   cotisationsCollectees       Cotisation[]            @relation("CotisationCollecteePar")
+
+  // Parcours de progression individuelle des Compagnons
+  parcoursCompagnonResponsable  ParcoursCompagnon[]
+  progressionsCompagnonSoumises ProgressionCompagnon[] @relation("ProgressionCompagnonSoumisePar")
+  progressionsCompagnonValidees ProgressionCompagnon[] @relation("ProgressionCompagnonValideePar")
+  progressionsCompagnonRejetees ProgressionCompagnon[] @relation("ProgressionCompagnonRejeteePar")
+  attributsCompagnonAttribues   AttributCompagnon[]
 
   // Unicité "1 seul CHEF_GROUPE actif par paroisse" et "1 seul RESPONSABLE_BRANCHE
   // actif par (paroisse, brancheType)" : non exprimable en index partiel dans le
@@ -307,6 +357,9 @@ model Scout {
   documents         Document[]
   autorisationsCamp AutorisationCamp[]
   cotisations       Cotisation[]
+
+  // Parcours de progression individuelle — n'existe que pour brancheType = COMPAGNONS
+  parcoursCompagnon ParcoursCompagnon?
 
   @@index([paroisseId])
   @@index([brancheType])
@@ -750,4 +803,129 @@ model Cotisation {
   @@index([anneeScolaire])
   @@index([enregistreParId])
   @@index([collecteParId])
+}
+
+// ---------------------------------------------------------------------------
+// Parcours de progression individuelle des Compagnons (référentiel "Route" :
+// Noviciat → Apprentissage → Compagnonnage → Départ routier). Satellite de
+// Scout, distinct du référentiel Badge générique par branche déjà existant.
+// Voir PROMPT_INTEGRATION_PROGRESSION_ROUTIER.md pour le détail métier.
+// ---------------------------------------------------------------------------
+
+// Référentiel administrable des activités officielles du parcours (10 lignes
+// seedées, voir prisma/seed.ts). Les durées sont en mois calendaires et
+// varient selon la tranche d'âge d'entrée (18/19/20 ans).
+model EtapeParcoursCompagnon {
+  id              String               @id @default(cuid())
+  code            String               @unique // Ex : ROUTE_ACCUEIL — stable, utilisé par le seed
+  nom             String
+  description     String?
+  etape           EtapeCompagnon
+  ordre           Int
+  type            TypeActiviteParcours
+  dureeDixHuitAns Int // Durée en mois calendaires, tranche d'entrée 18 ans
+  dureeDixNeufAns Int
+  dureeVingtAns   Int
+  nomAttribut     String? // Ex : "Foulard", "Étoile blanche"… — null pour une étape sans attribut
+  obligatoire     Boolean              @default(true)
+  actif           Boolean              @default(true)
+
+  progressions ProgressionCompagnon[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([etape, ordre])
+  @@index([actif, ordre])
+}
+
+// Un seul parcours par Scout (brancheType = COMPAGNONS uniquement, vérifié
+// applicativement — pas de contrainte DB conditionnelle possible ici).
+model ParcoursCompagnon {
+  id                 String                  @id @default(cuid())
+  dateEntreeParcours DateTime
+  ageEntree          Int // Calculé une seule fois à la création, jamais recalculé automatiquement
+  trancheAge         TrancheAgeCompagnon
+  dateFinPrevue      DateTime
+  dateFinReelle      DateTime?
+  statut             StatutParcoursCompagnon @default(ACTIF)
+
+  scoutId String @unique
+  scout   Scout  @relation(fields: [scoutId], references: [id], onDelete: Cascade)
+
+  // Informationnel (cible de notification) — jamais utilisé pour autoriser une
+  // action : l'autorisation reste toujours calculée via paroisseIdRequise +
+  // getBrancheUtilisateur/getParoissesDuDistrict, comme le reste de l'app.
+  responsableId String?
+  responsable   Utilisateur? @relation(fields: [responsableId], references: [id], onDelete: SetNull)
+
+  progressions     ProgressionCompagnon[]
+  attributsObtenus AttributCompagnon[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([statut])
+  @@index([dateFinPrevue])
+  @@index([trancheAge])
+}
+
+model ProgressionCompagnon {
+  id                      String    @id @default(cuid())
+  dateDebutTheorique      DateTime
+  dateLimiteTheorique     DateTime
+  dateRealisationDeclaree DateTime?
+
+  statut                 StatutProgressionCompagnon @default(A_VENIR)
+  commentaireDeclaration String?
+  motifRejet             String?
+  preuveUrl              String? // URL renvoyée par POST /api/upload — jamais un chemin arbitraire
+  numeroSoumission       Int                        @default(0)
+
+  soumisLe               DateTime?
+  valideLe               DateTime?
+  rejeteLe               DateTime?
+  derniereAlerteRetardLe DateTime? // Anti-spam du job de recalcul quotidien des retards
+
+  parcoursId String
+  parcours   ParcoursCompagnon @relation(fields: [parcoursId], references: [id], onDelete: Cascade)
+
+  etapeActiviteId String
+  etapeActivite   EtapeParcoursCompagnon @relation(fields: [etapeActiviteId], references: [id])
+
+  soumisParId String?
+  soumisPar   Utilisateur? @relation("ProgressionCompagnonSoumisePar", fields: [soumisParId], references: [id], onDelete: SetNull)
+
+  valideParId String?
+  validePar   Utilisateur? @relation("ProgressionCompagnonValideePar", fields: [valideParId], references: [id], onDelete: SetNull)
+
+  rejeteParId String?
+  rejetePar   Utilisateur? @relation("ProgressionCompagnonRejeteePar", fields: [rejeteParId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([parcoursId, etapeActiviteId])
+  @@index([statut])
+  @@index([dateLimiteTheorique])
+}
+
+// Attribut pédagogique obtenu (foulard, étoiles, insigne…) — créé à la
+// validation de la ProgressionCompagnon correspondante quand nomAttribut est renseigné.
+model AttributCompagnon {
+  id       String   @id @default(cuid())
+  nom      String
+  obtenuLe DateTime
+
+  parcoursId String
+  parcours   ParcoursCompagnon @relation(fields: [parcoursId], references: [id], onDelete: Cascade)
+
+  etapeActiviteId String
+
+  obtenuParId String?
+  obtenuPar   Utilisateur? @relation(fields: [obtenuParId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@unique([parcoursId, etapeActiviteId])
 }

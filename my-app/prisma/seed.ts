@@ -45,6 +45,51 @@ async function upsert(table: string, columns: ColumnValue[]): Promise<Record<str
   return rows[0]
 }
 
+// Référentiel officiel du parcours de progression individuelle des Compagnons
+// (voir PROMPT_INTEGRATION_PROGRESSION_ROUTIER.md). Durées en mois calendaires,
+// variables selon la tranche d'âge d'entrée (18/19/20 ans). Id dérivé du code
+// (stable) plutôt que généré aléatoirement : le seed doit rester idempotent
+// sans dépendre du client Prisma (voir commentaire en tête de fichier).
+const REFERENTIEL_PARCOURS_COMPAGNON: Array<{
+  code: string
+  nom: string
+  etape: string
+  ordre: number
+  type: 'DUREE' | 'EVENEMENT'
+  dureeDixHuitAns: number
+  dureeDixNeufAns: number
+  dureeVingtAns: number
+  nomAttribut: string
+}> = [
+  { code: 'ROUTE_ACCUEIL', nom: 'Accueil', etape: 'NOVICIAT', ordre: 1, type: 'EVENEMENT', dureeDixHuitAns: 0, dureeDixNeufAns: 0, dureeVingtAns: 0, nomAttribut: 'Foulard' },
+  { code: 'ROUTE_ASPIRANT', nom: 'Aspirant routier', etape: 'NOVICIAT', ordre: 2, type: 'DUREE', dureeDixHuitAns: 1, dureeDixNeufAns: 1, dureeVingtAns: 1, nomAttribut: 'Flots gris' },
+  { code: 'ROUTE_ENGAGEMENT', nom: 'Engagement', etape: 'APPRENTISSAGE', ordre: 3, type: 'DUREE', dureeDixHuitAns: 3, dureeDixNeufAns: 3, dureeVingtAns: 1, nomAttribut: 'Insigne routier' },
+  { code: 'ROUTE_MINI_CAMP', nom: 'Mini-camp', etape: 'APPRENTISSAGE', ordre: 4, type: 'DUREE', dureeDixHuitAns: 3, dureeDixNeufAns: 3, dureeVingtAns: 1, nomAttribut: 'Étoile marron' },
+  { code: 'ROUTE_CEREMONIE_APPRENTISSAGE', nom: "Cérémonie de fin d'étape", etape: 'APPRENTISSAGE', ordre: 5, type: 'EVENEMENT', dureeDixHuitAns: 0, dureeDixNeufAns: 0, dureeVingtAns: 0, nomAttribut: 'Flots marrons' },
+  { code: 'ROUTE_RAID', nom: 'Raid', etape: 'COMPAGNONNAGE', ordre: 6, type: 'DUREE', dureeDixHuitAns: 2, dureeDixNeufAns: 2, dureeVingtAns: 1, nomAttribut: 'Étoile blanche' },
+  { code: 'ROUTE_ENTREPRISE', nom: 'Entreprise', etape: 'COMPAGNONNAGE', ordre: 7, type: 'DUREE', dureeDixHuitAns: 8, dureeDixNeufAns: 5, dureeVingtAns: 3, nomAttribut: "Label de domaine d'action" },
+  { code: 'ROUTE_CEREMONIE_COMPAGNONNAGE', nom: "Cérémonie de fin d'étape", etape: 'COMPAGNONNAGE', ordre: 8, type: 'EVENEMENT', dureeDixHuitAns: 0, dureeDixNeufAns: 0, dureeVingtAns: 0, nomAttribut: 'Flots routiers' },
+  { code: 'ROUTE_SERVICE', nom: 'Service', etape: 'DEPART_ROUTIER', ordre: 9, type: 'DUREE', dureeDixHuitAns: 6, dureeDixNeufAns: 3, dureeVingtAns: 1, nomAttribut: 'Étoile or' },
+  { code: 'ROUTE_ENVOI', nom: 'Envoi', etape: 'DEPART_ROUTIER', ordre: 10, type: 'DUREE', dureeDixHuitAns: 3, dureeDixNeufAns: 1, dureeVingtAns: 1, nomAttribut: 'Bible' },
+]
+
+async function seedReferentielParcoursCompagnon() {
+  for (const activite of REFERENTIEL_PARCOURS_COMPAGNON) {
+    await upsert('EtapeParcoursCompagnon', [
+      { name: 'id', value: `etape-${activite.code.toLowerCase().replaceAll('_', '-')}` },
+      { name: 'code', value: activite.code },
+      { name: 'nom', value: activite.nom },
+      { name: 'etape', value: activite.etape, cast: '"EtapeCompagnon"' },
+      { name: 'ordre', value: activite.ordre },
+      { name: 'type', value: activite.type, cast: '"TypeActiviteParcours"' },
+      { name: 'dureeDixHuitAns', value: activite.dureeDixHuitAns },
+      { name: 'dureeDixNeufAns', value: activite.dureeDixNeufAns },
+      { name: 'dureeVingtAns', value: activite.dureeVingtAns },
+      { name: 'nomAttribut', value: activite.nomAttribut },
+    ])
+  }
+}
+
 async function main() {
   await client.connect()
 
@@ -60,9 +105,12 @@ async function main() {
     { name: 'paroisseId', value: null },
   ])
 
+  await seedReferentielParcoursCompagnon()
+
   console.log('\nSeed terminé avec succès.')
   console.log(`  Admin plateforme → matricule: ${admin.matricule}  /  mot de passe: ${motDePasse}`)
   console.log('  Connectez-vous puis créez vos paroisses depuis /admin/paroisses.')
+  console.log(`  Référentiel parcours Compagnons : ${REFERENTIEL_PARCOURS_COMPAGNON.length} activités seedées.`)
 }
 
 main()
