@@ -36,4 +36,10 @@ export const LABELS_ACTIONS_AUDIT: Record<string, string> = {
   UTILISATEUR_ROLE_DISTRICT_RETIRE: 'Retrait de l\'équipe de district',
   RAPPORT_DISTRICT_EXPORTE: 'Export rapport district',
   CHEF_GROUPE_DESIGNE: 'Désignation du Chef de Groupe',
+  PARCOURS_COMPAGNON_GENERE: 'Génération du parcours Compagnon',
+  PARCOURS_COMPAGNON_TERMINE: 'Parcours Compagnon terminé',
+  PROGRESSION_COMPAGNON_SOUMISE: 'Activité de parcours soumise',
+  PROGRESSION_COMPAGNON_RESOUMISE: 'Activité de parcours resoumise après rejet',
+  PROGRESSION_COMPAGNON_VALIDEE: 'Activité de parcours validée',
+  PROGRESSION_COMPAGNON_REJETEE: 'Activité de parcours rejetée',
 }
