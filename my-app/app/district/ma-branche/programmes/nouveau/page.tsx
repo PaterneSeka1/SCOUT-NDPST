@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { confirmer } from '@/app/components/ConfirmDialog'
 import { useGardeModifications } from '@/hooks/useGardeModifications'
 import { CompteurCaracteres } from '@/app/components/CompteurCaracteres'
 
@@ -49,6 +50,13 @@ export default function PageNouveauProgrammeBranche() {
     if (!titre || !periodeDebut || !periodeFin) { toast.error('Le titre et la période sont obligatoires'); return }
     if (new Date(periodeFin) <= new Date(periodeDebut)) { toast.error('La date de fin doit être après la date de début'); return }
     setErreursChamps({})
+
+    const ok = await confirmer({
+      titre: 'Créer ce programme ?',
+      description: 'Ce programme sera créé pour la paroisse sélectionnée.',
+      labelConfirmer: 'Créer',
+    })
+    if (!ok) return
 
     setSoumission(true)
     try {

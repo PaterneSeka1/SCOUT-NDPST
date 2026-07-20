@@ -7,6 +7,7 @@ import { useScout, useModifierScout } from '@/hooks/useScouts'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { useGardeModifications } from '@/hooks/useGardeModifications'
 import { CompteurCaracteres } from '@/app/components/CompteurCaracteres'
+import { confirmer } from '@/app/components/ConfirmDialog'
 
 const BRANCHES = Object.keys(LABELS_BRANCHES)
 
@@ -78,6 +79,12 @@ export default function ModifierScoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const ok = await confirmer({
+      titre: 'Enregistrer ces modifications ?',
+      description: `Les informations de ${form.prenom} ${form.nom} seront mises à jour.`,
+      labelConfirmer: 'Enregistrer',
+    })
+    if (!ok) return
     try {
       await mutateAsync({ ...form, photo: photo ?? undefined, consentementImage })
       definirReference({ ...form, photo, consentementImage })

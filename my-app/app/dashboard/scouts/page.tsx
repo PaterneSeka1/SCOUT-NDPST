@@ -8,6 +8,7 @@ import type { Scout } from '@/hooks/useScouts'
 import { BadgeAdhesion } from '@/app/components/BadgeAdhesion'
 import { SkeletonCard, SkeletonRow } from '@/app/components/Skeletons'
 import { useRechercheDebounce } from '@/hooks/useRechercheDebounce'
+import { confirmer } from '@/app/components/ConfirmDialog'
 
 const BRANCHES_OPTIONS = [
   { valeur: '', label: 'Toutes les branches' },
@@ -16,7 +17,18 @@ const BRANCHES_OPTIONS = [
 
 function CarteScout({ scout }: { scout: Scout }) {
   const { mutateAsync, isPending } = useModifierScout(scout.id)
-  const handleToggle = async () => { await mutateAsync({ actif: !scout.actif }) }
+  const handleToggle = async () => {
+    const ok = await confirmer({
+      titre: scout.actif ? 'Désactiver ce scout ?' : 'Réactiver ce scout ?',
+      description: scout.actif
+        ? `${scout.prenom} ${scout.nom} sera désactivé(e) et n'apparaîtra plus comme actif(ve) dans la liste.`
+        : `${scout.prenom} ${scout.nom} sera réactivé(e).`,
+      labelConfirmer: scout.actif ? 'Désactiver' : 'Réactiver',
+      danger: scout.actif,
+    })
+    if (!ok) return
+    await mutateAsync({ actif: !scout.actif })
+  }
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2.5">
@@ -74,7 +86,18 @@ function CarteScout({ scout }: { scout: Scout }) {
 
 function LigneScout({ scout }: { scout: Scout }) {
   const { mutateAsync, isPending } = useModifierScout(scout.id)
-  const handleToggle = async () => { await mutateAsync({ actif: !scout.actif }) }
+  const handleToggle = async () => {
+    const ok = await confirmer({
+      titre: scout.actif ? 'Désactiver ce scout ?' : 'Réactiver ce scout ?',
+      description: scout.actif
+        ? `${scout.prenom} ${scout.nom} sera désactivé(e) et n'apparaîtra plus comme actif(ve) dans la liste.`
+        : `${scout.prenom} ${scout.nom} sera réactivé(e).`,
+      labelConfirmer: scout.actif ? 'Désactiver' : 'Réactiver',
+      danger: scout.actif,
+    })
+    if (!ok) return
+    await mutateAsync({ actif: !scout.actif })
+  }
 
   return (
     <tr className="hover:bg-gray-50 transition-colors">

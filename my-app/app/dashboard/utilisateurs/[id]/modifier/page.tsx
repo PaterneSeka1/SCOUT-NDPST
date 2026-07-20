@@ -10,6 +10,7 @@ import { PasswordInput } from '@/app/components/PasswordInput'
 import { SelecteurEnfants } from '@/app/components/SelecteurEnfants'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { useGardeModifications } from '@/hooks/useGardeModifications'
+import { confirmer } from '@/app/components/ConfirmDialog'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -77,6 +78,12 @@ export default function ModifierUtilisateurPage() {
   const soumettreInfos = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validerInfos()) return
+    const ok = await confirmer({
+      titre: 'Enregistrer ces modifications ?',
+      description: 'Les informations de ce membre seront mises à jour, y compris son rôle si celui-ci a été modifié.',
+      labelConfirmer: 'Enregistrer',
+    })
+    if (!ok) return
     try {
       await modifier({ nom: formInfos.nom.trim(), prenom: formInfos.prenom.trim(), email: formInfos.email.trim() || null, role: formInfos.role, brancheType: estBranche ? formInfos.brancheType : null, actif: formInfos.actif, scoutIds })
       definirReference({ ...formInfos, scoutIds })
@@ -106,6 +113,13 @@ export default function ModifierUtilisateurPage() {
   const soumettreMdp = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validerMdp()) return
+    const ok = await confirmer({
+      titre: 'Réinitialiser le mot de passe de ce membre ?',
+      description: 'Le mot de passe actuel de ce membre sera immédiatement remplacé par le nouveau mot de passe saisi.',
+      labelConfirmer: 'Réinitialiser',
+      danger: true,
+    })
+    if (!ok) return
     try {
       await resetPassword({ nouveauMotDePasse: formMdp.motDePasse })
       toast.success('Mot de passe réinitialisé.')

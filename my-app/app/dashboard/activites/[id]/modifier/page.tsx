@@ -8,6 +8,7 @@ import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { useGardeModifications } from '@/hooks/useGardeModifications'
 import { CompteurCaracteres } from '@/app/components/CompteurCaracteres'
+import { confirmer } from '@/app/components/ConfirmDialog'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -60,6 +61,14 @@ export default function PageModifierActivite({ params }: { params: Promise<{ id:
       toast.error('Le titre et la date de début sont obligatoires.')
       return
     }
+
+    const ok = await confirmer({
+      titre: 'Enregistrer ces modifications ?',
+      description: "Les informations de l'activité seront mises à jour avec les valeurs saisies.",
+      labelConfirmer: 'Enregistrer',
+    })
+    if (!ok) return
+
     try {
       await modifierActivite.mutateAsync({
         titre: titre.trim(),

@@ -134,6 +134,12 @@ export default function PageParoisse() {
   const handleChangeLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fichier = e.target.files?.[0]
     if (!fichier) return
+    const ok = await confirmer({
+      titre: 'Changer le logo de la paroisse ?',
+      description: 'Ce logo est visible publiquement par tous les membres de la paroisse. Il remplacera le logo actuel.',
+      labelConfirmer: 'Changer',
+    })
+    if (!ok) { e.target.value = ''; return }
     setLogoPreview(URL.createObjectURL(fichier))
     setUploadLogo(true)
     try {
@@ -159,6 +165,12 @@ export default function PageParoisse() {
       toast.error('Le nom, la ville et le diocèse sont obligatoires.')
       return
     }
+    const ok = await confirmer({
+      titre: 'Enregistrer ces modifications ?',
+      description: 'Les informations de la paroisse seront mises à jour.',
+      labelConfirmer: 'Enregistrer',
+    })
+    if (!ok) return
     setSoumission(true)
     try {
       const res = await fetch('/api/paroisse', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })

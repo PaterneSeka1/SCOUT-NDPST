@@ -10,6 +10,7 @@ import { LABELS_BRANCHES } from '@/lib/branches'
 import { ROLES_BRANCHE } from '@/lib/roles'
 import { useGardeModifications } from '@/hooks/useGardeModifications'
 import { CompteurCaracteres } from '@/app/components/CompteurCaracteres'
+import { confirmer } from '@/app/components/ConfirmDialog'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -62,6 +63,13 @@ export default function PageNouvelleActivite() {
     if (!dateDebut) errs.dateDebut = 'La date de début est requise'
     if (Object.keys(errs).length) { setErreursChamps(errs); return }
     setErreursChamps({})
+
+    const ok = await confirmer({
+      titre: 'Créer cette activité ?',
+      description: 'Une nouvelle activité sera créée avec les informations saisies.',
+      labelConfirmer: "Créer l'activité",
+    })
+    if (!ok) return
 
     try {
       await creerActivite.mutateAsync({

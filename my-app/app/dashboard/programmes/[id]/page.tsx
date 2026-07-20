@@ -102,6 +102,12 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
 
   async function handleEnregistrerMeta() {
     if (!titre || !periodeDebut || !periodeFin) { toast.error('Le titre et la période sont obligatoires'); return }
+    const ok = await confirmer({
+      titre: 'Enregistrer ces modifications ?',
+      description: 'Les métadonnées du programme (titre, période, description) seront mises à jour.',
+      labelConfirmer: 'Enregistrer',
+    })
+    if (!ok) return
     const res = await fetch(`/api/programmes/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -121,6 +127,12 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
   async function handleAjouterLigne(e: React.FormEvent) {
     e.preventDefault()
     if (!theme) { toast.error('Le thème est obligatoire'); return }
+    const ok = await confirmer({
+      titre: 'Ajouter cette ligne au programme ?',
+      description: `Le thème "${theme}" sera ajouté au programme.`,
+      labelConfirmer: 'Ajouter',
+    })
+    if (!ok) return
     setAjoutEnCours(true)
     const res = await fetch(`/api/programmes/${id}/lignes`, {
       method: 'POST',
@@ -156,6 +168,12 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
     const index = triees.findIndex((l) => l.id === ligne.id)
     const voisin = triees[index + direction]
     if (!voisin) return
+    const ok = await confirmer({
+      titre: 'Déplacer ce thème ?',
+      description: `"${ligne.theme}" sera déplacé dans l'ordre du programme.`,
+      labelConfirmer: 'Déplacer',
+    })
+    if (!ok) return
     await Promise.all([
       fetch(`/api/programmes/${id}/lignes/${ligne.id}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },

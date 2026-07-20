@@ -9,6 +9,7 @@ import { LABELS_BRANCHES } from '@/lib/branches'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { useGardeModifications } from '@/hooks/useGardeModifications'
+import { confirmer } from '@/app/components/ConfirmDialog'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -111,6 +112,12 @@ export default function ModifierUtilisateurPlateformePage() {
   const soumettreInfos = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validerInfos()) return
+    const ok = await confirmer({
+      titre: 'Enregistrer ces modifications ?',
+      description: 'Les informations de cet utilisateur seront mises à jour, y compris son rôle et son statut actif/inactif le cas échéant.',
+      labelConfirmer: 'Enregistrer',
+    })
+    if (!ok) return
     setSoumissionInfos(true)
     try {
       const res = await fetch(`/api/admin/utilisateurs/${id}`, {
@@ -156,6 +163,14 @@ export default function ModifierUtilisateurPlateformePage() {
   const soumettreMdp = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validerMdp()) return
+    if (!utilisateur) return
+    const ok = await confirmer({
+      titre: 'Réinitialiser le mot de passe de cet utilisateur ?',
+      description: `L'ancien mot de passe de ${utilisateur.prenom} ${utilisateur.nom} sera immédiatement invalidé et remplacé par le nouveau mot de passe saisi.`,
+      labelConfirmer: 'Réinitialiser',
+      danger: true,
+    })
+    if (!ok) return
     setSoumissionMdp(true)
     try {
       const res = await fetch(`/api/admin/utilisateurs/${id}/password`, {

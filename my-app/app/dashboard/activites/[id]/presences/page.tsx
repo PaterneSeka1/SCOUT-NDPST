@@ -7,6 +7,7 @@ import { useActivite, usePresencesActivite, useEnregistrerPresences } from '@/ho
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { ScannerQR } from '@/app/components/ScannerQR'
 import { decoderQrScout } from '@/lib/qr'
+import { confirmer } from '@/app/components/ConfirmDialog'
 
 interface EtatPresence {
   scoutId: string
@@ -74,6 +75,13 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
   }
 
   async function handleEnregistrer() {
+    const ok = await confirmer({
+      titre: 'Enregistrer les présences ?',
+      description: 'Cette action enregistre les présences de tous les scouts pour cette activité.',
+      labelConfirmer: 'Enregistrer',
+    })
+    if (!ok) return
+
     try {
       await enregistrerPresences.mutateAsync(
         presences.map((p) => ({

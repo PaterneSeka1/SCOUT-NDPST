@@ -194,6 +194,48 @@ export default function PageCotisations() {
       A_JOUR: 'Adhésion validée',
     }
 
+    const cotisation = cotisations.find((c) => c.id === id)
+    const nomCible = cotisation ? cibleCotisation(cotisation).nomComplet : null
+
+    let confirmation: { titre: string; description: string; labelConfirmer: string; danger?: boolean }
+    if (options?.exonere) {
+      confirmation = {
+        titre: "Exonérer ce membre de cotisation ?",
+        description: nomCible
+          ? `${nomCible} sera marqué(e) à jour sans paiement, en exonération de cotisation.`
+          : 'Ce membre sera marqué à jour sans paiement, en exonération de cotisation.',
+        labelConfirmer: 'Exonérer',
+      }
+    } else if (statut === 'ARGENT_RECU') {
+      confirmation = {
+        titre: "Marquer l'argent comme reçu ?",
+        description: nomCible
+          ? `La cotisation de ${nomCible} sera marquée comme réglée (argent reçu, en attente de dépôt).`
+          : 'Cette cotisation sera marquée comme réglée (argent reçu, en attente de dépôt).',
+        labelConfirmer: 'Marquer reçu',
+      }
+    } else if (statut === 'A_JOUR') {
+      confirmation = {
+        titre: 'Marquer cette cotisation à jour ?',
+        description: nomCible
+          ? `La cotisation de ${nomCible} sera validée comme à jour.`
+          : 'Cette cotisation sera validée comme à jour.',
+        labelConfirmer: 'Marquer à jour',
+      }
+    } else {
+      confirmation = {
+        titre: 'Réinitialiser le statut de cette cotisation ?',
+        description: nomCible
+          ? `Le paiement déjà enregistré pour ${nomCible} sera annulé et la cotisation repassera au statut « non à jour ».`
+          : 'Le paiement déjà enregistré sera annulé et la cotisation repassera au statut « non à jour ».',
+        labelConfirmer: 'Réinitialiser',
+        danger: true,
+      }
+    }
+
+    const ok = await confirmer(confirmation)
+    if (!ok) return
+
     setEnCours(id)
     try {
       const res = await fetch(`/api/cotisations/${id}`, {
@@ -226,6 +268,13 @@ export default function PageCotisations() {
   const confirmerPaiementPartiel = async (montantPaye: number, commentaire: string) => {
     if (!cotisationCourante) return
     const { id } = cotisationCourante
+
+    const ok = await confirmer({
+      titre: 'Confirmer ce paiement ?',
+      description: `Un paiement partiel de ${formatMontantFCFA(montantPaye)} sera enregistré pour cette cotisation.`,
+      labelConfirmer: 'Confirmer le paiement',
+    })
+    if (!ok) return
 
     setEnCours(id)
     try {
@@ -320,6 +369,17 @@ export default function PageCotisations() {
       toast.error('Aucun scout actif dans cette branche')
       return
     }
+
+    const description = formGeneration.cible === 'SCOUTS_BRANCHE'
+      ? `${scoutsBranche.length} cotisation(s) vont être créées en une fois, une pour chaque scout actif concerné.`
+      : 'Plusieurs cotisations vont être créées en une fois pour les membres concernés.'
+
+    const ok = await confirmer({
+      titre: 'Générer les cotisations ?',
+      description,
+      labelConfirmer: 'Générer',
+    })
+    if (!ok) return
 
     setGenerationEnCours(true)
     try {

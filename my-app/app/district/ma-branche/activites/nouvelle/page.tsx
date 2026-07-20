@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { confirmer } from '@/app/components/ConfirmDialog'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
 import { useGardeModifications } from '@/hooks/useGardeModifications'
 import { CompteurCaracteres } from '@/app/components/CompteurCaracteres'
@@ -59,6 +60,13 @@ export default function PageNouvelleActiviteBranche() {
       return
     }
     setErreursChamps({})
+
+    const ok = await confirmer({
+      titre: 'Créer cette activité ?',
+      description: 'Cette activité sera planifiée pour la paroisse sélectionnée.',
+      labelConfirmer: 'Créer',
+    })
+    if (!ok) return
 
     setSoumission(true)
     try {

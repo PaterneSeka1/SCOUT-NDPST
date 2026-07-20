@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { confirmer } from '@/app/components/ConfirmDialog'
 import { LABELS_BRANCHES } from '@/lib/branches'
 
 interface EvenementCalendrier {
@@ -70,6 +71,16 @@ export default function PageCalendrier() {
     : []
 
   const genererLien = async () => {
+    if (lienAbonnement) {
+      const ok = await confirmer({
+        titre: "Régénérer le lien d'abonnement ?",
+        description: "L'ancien lien cessera de fonctionner sur tous les appareils déjà abonnés.",
+        labelConfirmer: 'Régénérer',
+        danger: true,
+      })
+      if (!ok) return
+    }
+
     setGenereEnCours(true)
     try {
       const res = await fetch('/api/calendrier/token', { method: 'POST' })

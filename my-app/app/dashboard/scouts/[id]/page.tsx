@@ -34,6 +34,13 @@ export default function FicheScoutPage() {
   const peutValiderBadges = Boolean(session?.user?.role && ROLES_BRANCHE.includes(session.user.role))
 
   const handleValiderBadge = async (badgeId: string) => {
+    const badge = progressions?.badges.find((b) => b.id === badgeId)
+    const ok = await confirmer({
+      titre: 'Valider ce badge ?',
+      description: `Le badge "${badge?.nom ?? ''}" sera marqué comme validé pour ${scout?.prenom ?? 'ce scout'} ${scout?.nom ?? ''}. Cette action n'est pas réversible depuis cette page.`,
+      labelConfirmer: 'Valider',
+    })
+    if (!ok) return
     setBadgeEnCours(badgeId)
     try {
       await validerBadge({ badgeId })
@@ -87,6 +94,12 @@ export default function FicheScoutPage() {
 
   const handleAttribuerMatricule = async (e: React.FormEvent) => {
     e.preventDefault()
+    const ok = await confirmer({
+      titre: 'Attribuer ce matricule ?',
+      description: `Le matricule "${nouveauMatricule.trim()}" sera attribué à ${scout?.prenom ?? 'ce scout'} ${scout?.nom ?? ''}.`,
+      labelConfirmer: 'Attribuer',
+    })
+    if (!ok) return
     try {
       await attribuerMatricule(nouveauMatricule.trim())
       toast.success('Matricule enregistré.')
@@ -99,6 +112,12 @@ export default function FicheScoutPage() {
 
   const handleAjouterContact = async (e: React.FormEvent) => {
     e.preventDefault()
+    const ok = await confirmer({
+      titre: "Ajouter ce contact d'urgence ?",
+      description: `${nouveauContact.prenom ? `${nouveauContact.prenom} ` : ''}${nouveauContact.nom} sera ajouté(e) comme contact d'urgence de ${scout?.prenom ?? 'ce scout'} ${scout?.nom ?? ''}.`,
+      labelConfirmer: 'Ajouter',
+    })
+    if (!ok) return
     try {
       await ajouterContact(nouveauContact)
       toast.success('Contact ajouté.')
@@ -110,6 +129,14 @@ export default function FicheScoutPage() {
   }
 
   const handleSupprimerContact = async (contactId: string) => {
+    const contact = scout?.contactsUrgence.find((c) => c.id === contactId)
+    const ok = await confirmer({
+      titre: 'Supprimer ce contact ?',
+      description: `Le contact d'urgence ${contact ? `${contact.prenom} ${contact.nom}` : ''} sera définitivement supprimé de la fiche de ${scout?.prenom ?? 'ce scout'} ${scout?.nom ?? ''}.`,
+      labelConfirmer: 'Supprimer',
+      danger: true,
+    })
+    if (!ok) return
     try {
       await supprimerContact(contactId)
       toast.success('Contact supprimé.')
@@ -121,6 +148,12 @@ export default function FicheScoutPage() {
   const handleUploadDocument = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fichier = e.target.files?.[0]
     if (!fichier) return
+    const ok = await confirmer({
+      titre: 'Ajouter ce document ?',
+      description: `Le fichier "${fichier.name}" sera ajouté comme document de type "${LABELS_TYPE_DOCUMENT[typeDocument] ?? typeDocument}" sur la fiche de ${scout?.prenom ?? 'ce scout'} ${scout?.nom ?? ''}.`,
+      labelConfirmer: 'Ajouter',
+    })
+    if (!ok) { e.target.value = ''; return }
     setUploadDocumentEnCours(true)
     try {
       const fd = new FormData()
@@ -162,6 +195,12 @@ export default function FicheScoutPage() {
 
   const handleCreerCompte = async (e: React.FormEvent) => {
     e.preventDefault()
+    const ok = await confirmer({
+      titre: 'Créer un compte utilisateur pour ce scout ?',
+      description: `Un espace personnel sera créé pour ${scout?.prenom ?? 'ce scout'} ${scout?.nom ?? ''}, avec le matricule ${scout?.matricule ?? ''} comme identifiant.`,
+      labelConfirmer: 'Créer',
+    })
+    if (!ok) return
     try {
       await creerCompte({ password: passwordCompte, telephone: telephoneCompte || undefined })
       toast.success('Compte créé avec succès.')

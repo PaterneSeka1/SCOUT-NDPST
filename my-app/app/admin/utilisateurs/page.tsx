@@ -14,6 +14,7 @@ import {
 } from '@/lib/roles'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { estAssujettiAdhesion, LABELS_STATUT_COTISATION, COULEURS_STATUT_COTISATION } from '@/lib/cotisations'
+import { confirmer } from '@/app/components/ConfirmDialog'
 
 interface UtilisateurListe {
   id: string
@@ -316,6 +317,12 @@ export default function UtilisateursPlateformePage() {
   const soumettreNomination = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!utilisateurNomination || !validerNomination()) return
+    const ok = await confirmer({
+      titre: 'Enregistrer cette nomination ?',
+      description: `Le rôle paroissial et l'affectation district de ${utilisateurNomination.prenom} ${utilisateurNomination.nom} seront mis à jour.`,
+      labelConfirmer: 'Enregistrer',
+    })
+    if (!ok) return
     setSoumissionNomination(true)
     try {
       const res = await fetch(`/api/admin/utilisateurs/${utilisateurNomination.id}/nominations`, {
@@ -352,6 +359,21 @@ export default function UtilisateursPlateformePage() {
   }
 
   const changerStatutAdhesion = async (utilisateur: UtilisateurListe, statut: string) => {
+    const ok = await confirmer({
+      titre: 'Modifier le statut d’adhésion ?',
+      description: `Le statut d’adhésion de ${utilisateur.prenom} ${utilisateur.nom} passera à « ${LABELS_STATUT_COTISATION[statut] ?? statut} ».`,
+      labelConfirmer: 'Confirmer',
+    })
+    if (!ok) {
+      // Le <select> est un composant contrôlé (value dérivé de u.statutAdhesion,
+      // cf. SelectStatutAdhesion) : le DOM natif a déjà affiché la nouvelle
+      // option choisie par l'utilisateur avant l'ouverture de la confirmation.
+      // On force ici un re-render (nouvelle référence d'objet/array) pour que
+      // React réaffirme la valeur réelle et que le select revienne visuellement
+      // à son option précédente sans modification effective du state.
+      setUtilisateurs((liste) => liste.map((u) => (u.id === utilisateur.id ? { ...u } : u)))
+      return
+    }
     setEnCoursAdhesion(utilisateur.id)
     try {
       const res = await fetch(`/api/admin/utilisateurs/${utilisateur.id}/adhesion`, {

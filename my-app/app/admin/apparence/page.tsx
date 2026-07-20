@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { toast } from 'sonner'
+import { confirmer } from '@/app/components/ConfirmDialog'
 
 type Theme = {
   couleurPrimaire: string
@@ -235,6 +236,12 @@ export default function SiteConfigPage() {
 
   async function handleSauvegarder(e: React.FormEvent) {
     e.preventDefault()
+    const ok = await confirmer({
+      titre: 'Publier ces modifications ?',
+      description: 'La configuration (thème, couleurs, textes, SEO) sera visible immédiatement par tous les visiteurs du site public.',
+      labelConfirmer: 'Publier',
+    })
+    if (!ok) return
     setSauvegarde(true)
     try {
       const res = await fetch('/api/admin/site-config', {

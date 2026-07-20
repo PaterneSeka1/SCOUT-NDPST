@@ -9,6 +9,7 @@ import { useCreerUtilisateur } from '@/hooks/useUtilisateurs'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { useGardeModifications } from '@/hooks/useGardeModifications'
+import { confirmer } from '@/app/components/ConfirmDialog'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -96,6 +97,12 @@ export default function NouvelUtilisateurPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!valider()) return
+    const ok = await confirmer({
+      titre: 'Créer ce compte ?',
+      description: `Un compte sera créé pour ${form.prenom.trim() || 'ce membre'} ${form.nom.trim()}, avec le mot de passe renseigné ci-dessus.`,
+      labelConfirmer: 'Créer',
+    })
+    if (!ok) return
     try {
       await mutateAsync({
         nom: form.nom.trim(),

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useUtilisateur, useModifierUtilisateur, useResetPassword } from '@/hooks/useUtilisateurs'
+import { confirmer } from '@/app/components/ConfirmDialog'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { useGardeModifications } from '@/hooks/useGardeModifications'
@@ -60,6 +61,12 @@ export default function ModifierParentPage() {
   const soumettreInfos = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validerInfos()) return
+    const ok = await confirmer({
+      titre: 'Enregistrer ces modifications ?',
+      description: `Les informations de ${parent?.prenom} ${parent?.nom} seront mises à jour.`,
+      labelConfirmer: 'Enregistrer',
+    })
+    if (!ok) return
     try {
       await modifier({ nom: formInfos.nom.trim(), prenom: formInfos.prenom.trim(), email: formInfos.email.trim() || null, actif: formInfos.actif })
       toast.success('Modifications enregistrées.')
@@ -89,6 +96,13 @@ export default function ModifierParentPage() {
   const soumettreMdp = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validerMdp()) return
+    const ok = await confirmer({
+      titre: 'Réinitialiser le mot de passe de ce parent ?',
+      description: `L'ancien mot de passe de ${parent?.prenom} ${parent?.nom} sera immédiatement invalidé et remplacé par le nouveau mot de passe saisi.`,
+      labelConfirmer: 'Réinitialiser',
+      danger: true,
+    })
+    if (!ok) return
     try {
       await resetPassword({ nouveauMotDePasse: formMdp.motDePasse })
       toast.success('Mot de passe réinitialisé.')

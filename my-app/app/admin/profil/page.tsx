@@ -6,6 +6,7 @@ import { LABELS_ROLES } from '@/lib/roles'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { useGardeModifications } from '@/hooks/useGardeModifications'
+import { confirmer } from '@/app/components/ConfirmDialog'
 
 const CLS_INPUT = 'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 text-gray-900 placeholder:text-gray-400'
 const CLS_INPUT_ERR = 'w-full rounded-lg border border-red-400 px-3 py-2 text-sm focus:outline-none focus:ring-1 text-gray-900 placeholder:text-gray-400'
@@ -84,6 +85,12 @@ export default function MonProfilAdminPage() {
   const soumettreInfos = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validerInfos()) return
+    const ok = await confirmer({
+      titre: 'Enregistrer ces modifications ?',
+      description: 'Vos informations de profil seront mises à jour.',
+      labelConfirmer: 'Enregistrer',
+    })
+    if (!ok) return
     setSoumissionInfos(true)
     try {
       const res = await fetch('/api/me', {
@@ -130,6 +137,13 @@ export default function MonProfilAdminPage() {
   const soumettreMdp = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validerMdp()) return
+    const ok = await confirmer({
+      titre: 'Changer votre mot de passe ?',
+      description: 'Votre mot de passe sera immédiatement modifié. Vos autres sessions actives pourraient être déconnectées.',
+      labelConfirmer: 'Changer',
+      danger: true,
+    })
+    if (!ok) return
     setSoumissionMdp(true)
     try {
       const res = await fetch('/api/me/password', {

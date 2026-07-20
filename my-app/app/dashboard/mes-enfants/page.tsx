@@ -106,6 +106,13 @@ export default function PageMesEnfants() {
         danger: true,
       })
       if (!ok) return
+    } else {
+      const ok = await confirmer({
+        titre: "Autoriser l'utilisation de l'image de cet enfant ?",
+        description: `Vous autorisez l'utilisation des photos de ${prenom} dans l'application et les publications de la paroisse (réseaux sociaux, affichages). Vous pourrez révoquer cette autorisation à tout moment.`,
+        labelConfirmer: 'Autoriser',
+      })
+      if (!ok) return
     }
     setEnCours(`consentement-${scoutId}`)
     try {
@@ -123,6 +130,12 @@ export default function PageMesEnfants() {
   }
 
   async function confirmerDigitalement(activiteId: string, scoutId: string, type: 'FICHE_MEDICALE' | 'AUTORISATION_PARENTALE') {
+    const ok = await confirmer({
+      titre: 'Confirmer cette autorisation ?',
+      description: `Cette confirmation a valeur d'autorisation signée pour ${LABELS_TYPE_AUTORISATION[type].toLowerCase()} liée à l'activité ou au camp concerné.`,
+      labelConfirmer: 'Je confirme',
+    })
+    if (!ok) return
     const cle = `${activiteId}-${scoutId}-${type}`
     setEnCours(cle)
     try {
@@ -329,7 +342,19 @@ export default function PageMesEnfants() {
                                     ou déposer un document signé
                                     <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf" className="hidden"
                                       disabled={chargementLigne}
-                                      onChange={(e) => { const f = e.target.files?.[0]; if (f) deposerDocument(camp.id, scout.id, type, f); e.target.value = '' }} />
+                                      onChange={async (e) => {
+                                        const input = e.target
+                                        const f = input.files?.[0]
+                                        if (!f) return
+                                        const ok = await confirmer({
+                                          titre: 'Déposer ce document comme preuve d\'autorisation ?',
+                                          description: `Ce document sera enregistré comme preuve d'autorisation (${LABELS_TYPE_AUTORISATION[type].toLowerCase()}) pour ${scout.prenom}.`,
+                                          labelConfirmer: 'Déposer',
+                                        })
+                                        if (!ok) { input.value = ''; return }
+                                        deposerDocument(camp.id, scout.id, type, f)
+                                        input.value = ''
+                                      }} />
                                   </label>
                                 </div>
                               )}

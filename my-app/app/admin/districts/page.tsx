@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { confirmer } from '@/app/components/ConfirmDialog'
 
 interface District {
   id: string
@@ -62,6 +63,12 @@ export default function ListeDistricts() {
   const handleCreer = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!nomNouveauDistrict.trim()) { toast.error('Le nom du district est requis.'); return }
+    const ok = await confirmer({
+      titre: 'Créer ce district ?',
+      description: `Le district "${nomNouveauDistrict.trim()}" sera créé.`,
+      labelConfirmer: 'Créer',
+    })
+    if (!ok) return
     setSoumissionCreation(true)
     try {
       const res = await fetch('/api/admin/districts', {

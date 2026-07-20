@@ -7,6 +7,7 @@ import { ScannerQR } from '@/app/components/ScannerQR'
 import { decoderQrScout } from '@/lib/qr'
 import { LABELS_BRANCHES as BRANCHES } from '@/lib/branches'
 import { useGardeModifications } from '@/hooks/useGardeModifications'
+import { confirmer } from '@/app/components/ConfirmDialog'
 
 const STATUTS = [
   { value: 'PRESENT', label: 'Présent', cls: 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200', active: 'bg-green-500 text-white border-green-500 hover:bg-green-600' },
@@ -90,6 +91,13 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
   }
 
   const handleSauvegarder = async () => {
+    const ok = await confirmer({
+      titre: 'Enregistrer les présences ?',
+      description: `Les présences de ${scouts.length} scout${scouts.length > 1 ? 's' : ''} seront enregistrées pour cette réunion.`,
+      labelConfirmer: 'Enregistrer',
+    })
+    if (!ok) return
+
     setSauvegarde(true)
     try {
       const presences = scouts.map((s) => ({ scoutId: s.id, statut: statuts[s.id] ?? 'ABSENT' }))

@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_BRANCHES, ORDRE_BRANCHES } from '@/lib/branches'
+import { confirmer } from '@/app/components/ConfirmDialog'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -116,6 +117,21 @@ export default function PageNouvelleReunion() {
       if (dates.length === 0) { toast.error('Aucune date générée avec ces paramètres'); return }
       if (dates.length > 60) { toast.error('Maximum 60 réunions par création en série'); return }
     }
+
+    const ok = await confirmer(
+      mode === 'serie'
+        ? {
+            titre: `Créer ${dates.length} réunion${dates.length > 1 ? 's' : ''} ?`,
+            description: `${dates.length} réunion${dates.length > 1 ? 's' : ''} seront créée${dates.length > 1 ? 's' : ''} selon la périodicité définie.`,
+            labelConfirmer: 'Créer',
+          }
+        : {
+            titre: 'Créer cette réunion ?',
+            description: 'Une réunion sera planifiée à la date et l\'heure indiquées.',
+            labelConfirmer: 'Créer',
+          }
+    )
+    if (!ok) return
 
     setSoumission(true)
     try {

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useCreerUtilisateur } from '@/hooks/useUtilisateurs'
+import { confirmer } from '@/app/components/ConfirmDialog'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { SelecteurEnfants } from '@/app/components/SelecteurEnfants'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
@@ -71,6 +72,12 @@ export default function NouveauParentPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!valider()) return
+    const ok = await confirmer({
+      titre: 'Créer ce compte parent ?',
+      description: `Un compte sera créé pour ${form.prenom.trim()} ${form.nom.trim()} avec le mot de passe renseigné. Vous devrez le communiquer au nouveau parent.`,
+      labelConfirmer: 'Créer',
+    })
+    if (!ok) return
     try {
       await mutateAsync({
         nom: form.nom.trim(),

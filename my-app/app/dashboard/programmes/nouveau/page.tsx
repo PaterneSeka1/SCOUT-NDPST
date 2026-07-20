@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { confirmer } from '@/app/components/ConfirmDialog'
 import { LABELS_BRANCHES, ORDRE_BRANCHES } from '@/lib/branches'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
@@ -45,6 +46,13 @@ export default function PageNouveauProgramme() {
     e.preventDefault()
     if (!titre || !periodeDebut || !periodeFin) { toast.error('Le titre et la période sont obligatoires'); return }
     if (new Date(periodeFin) <= new Date(periodeDebut)) { toast.error('La date de fin doit être après la date de début'); return }
+
+    const ok = await confirmer({
+      titre: 'Créer ce programme ?',
+      description: `Le programme "${titre}" sera créé pour la période du ${periodeDebut} au ${periodeFin}.`,
+      labelConfirmer: 'Créer',
+    })
+    if (!ok) return
 
     setSoumission(true)
     try {

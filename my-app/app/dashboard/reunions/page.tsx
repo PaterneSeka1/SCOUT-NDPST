@@ -104,6 +104,12 @@ export default function PageReunions() {
 
   const handleReporter = async () => {
     if (!modalReport || !nouvelleDate) return
+    const ok = await confirmer({
+      titre: 'Reporter cette réunion ?',
+      description: `La réunion sera reportée au ${new Date(nouvelleDate).toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })} à ${new Date(nouvelleDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}.`,
+      labelConfirmer: 'Reporter',
+    })
+    if (!ok) return
     setSoumissionReport(true)
     const res = await fetch(`/api/reunions/${modalReport.id}`, {
       method: 'PATCH',
@@ -266,6 +272,13 @@ function CarteConfig({ branche, config, onSave }: {
   const [sauvegarde, setSauvegarde] = useState(false)
 
   const handleSave = async () => {
+    const ok = await confirmer({
+      titre: 'Enregistrer cette configuration horaire ?',
+      description: `Le jour, l'heure, la durée et le lieu habituels de réunion pour la branche seront mis à jour. Le formulaire de planification sera pré-rempli en conséquence.`,
+      labelConfirmer: 'Enregistrer',
+    })
+    if (!ok) return
+
     setSauvegarde(true)
     const res = await fetch('/api/reunions/config', {
       method: 'PUT',

@@ -201,6 +201,12 @@ export default function FicheParoissePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form) return
+    const ok = await confirmer({
+      titre: 'Enregistrer ces modifications ?',
+      description: `Les informations de "${form.nom}" seront mises à jour.`,
+      labelConfirmer: 'Enregistrer',
+    })
+    if (!ok) return
     setSoumission(true)
     try {
       const res = await fetch(`/api/admin/paroisses/${id}`, {
@@ -229,6 +235,13 @@ export default function FicheParoissePage() {
         description: `Tous les utilisateurs de "${paroisse.nom}" perdront immédiatement l'accès à leur compte. Aucune donnée (scouts, activités, historique) ne sera supprimée — vous pourrez réactiver la paroisse à tout moment.`,
         labelConfirmer: 'Désactiver',
         danger: true,
+      })
+      if (!ok) return
+    } else {
+      const ok = await confirmer({
+        titre: 'Réactiver cette paroisse ?',
+        description: `Tous les utilisateurs de "${paroisse.nom}" retrouveront l'accès à leur compte.`,
+        labelConfirmer: 'Réactiver',
       })
       if (!ok) return
     }
@@ -279,6 +292,12 @@ export default function FicheParoissePage() {
       toast.error(REGLE_MOT_DE_PASSE)
       return
     }
+    const ok = await confirmer({
+      titre: 'Créer ce compte Chef de Groupe ?',
+      description: `Un compte sera créé pour ${formChef.prenom} ${formChef.nom} avec le mot de passe temporaire renseigné ci-dessus. Vous devrez le communiquer au nouveau Chef de Groupe.`,
+      labelConfirmer: 'Créer le compte',
+    })
+    if (!ok) return
     setSoumissionChef(true)
     try {
       const res = await fetch(`/api/admin/paroisses/${id}/chef-groupe`, {

@@ -9,6 +9,7 @@ import type { Utilisateur } from '@/hooks/useUtilisateurs'
 import { BadgeAdhesion } from '@/app/components/BadgeAdhesion'
 import { SkeletonCard, SkeletonRow } from '@/app/components/Skeletons'
 import { useRechercheDebounce } from '@/hooks/useRechercheDebounce'
+import { confirmer } from '@/app/components/ConfirmDialog'
 
 // Page "Membres" = équipe d'encadrement, jamais les parents (page dédiée
 // /dashboard/parents). Sans filtre de rôle actif, on demande explicitement
@@ -19,7 +20,24 @@ const ROLES_PAR_DEFAUT = ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT.join(',')
 
 function CarteUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
   const { mutateAsync, isPending } = useModifierUtilisateur(utilisateur.id)
-  const handleToggle = async () => { await mutateAsync({ actif: !utilisateur.actif }) }
+  const handleToggle = async () => {
+    const ok = await confirmer(
+      utilisateur.actif
+        ? {
+            titre: 'Désactiver ce compte ?',
+            description: `${utilisateur.prenom} ${utilisateur.nom} perdra immédiatement l'accès à son compte. Aucune donnée ne sera supprimée — vous pourrez réactiver le compte à tout moment.`,
+            labelConfirmer: 'Désactiver',
+            danger: true,
+          }
+        : {
+            titre: 'Réactiver ce compte ?',
+            description: `${utilisateur.prenom} ${utilisateur.nom} retrouvera immédiatement l'accès à son compte.`,
+            labelConfirmer: 'Réactiver',
+          }
+    )
+    if (!ok) return
+    await mutateAsync({ actif: !utilisateur.actif })
+  }
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2.5">
@@ -70,7 +88,24 @@ function CarteUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
 
 function LigneUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
   const { mutateAsync, isPending } = useModifierUtilisateur(utilisateur.id)
-  const handleToggle = async () => { await mutateAsync({ actif: !utilisateur.actif }) }
+  const handleToggle = async () => {
+    const ok = await confirmer(
+      utilisateur.actif
+        ? {
+            titre: 'Désactiver ce compte ?',
+            description: `${utilisateur.prenom} ${utilisateur.nom} perdra immédiatement l'accès à son compte. Aucune donnée ne sera supprimée — vous pourrez réactiver le compte à tout moment.`,
+            labelConfirmer: 'Désactiver',
+            danger: true,
+          }
+        : {
+            titre: 'Réactiver ce compte ?',
+            description: `${utilisateur.prenom} ${utilisateur.nom} retrouvera immédiatement l'accès à son compte.`,
+            labelConfirmer: 'Réactiver',
+          }
+    )
+    if (!ok) return
+    await mutateAsync({ actif: !utilisateur.actif })
+  }
 
   return (
     <tr className="hover:bg-gray-50 transition-colors">

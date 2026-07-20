@@ -128,6 +128,12 @@ export default function FicheDistrictPage() {
   const handleRenommer = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!nouveauNom.trim()) { toast.error('Le nom du district est requis.'); return }
+    const ok = await confirmer({
+      titre: 'Renommer ce district ?',
+      description: `"${district?.nom}" sera renommé en "${nouveauNom.trim()}".`,
+      labelConfirmer: 'Enregistrer',
+    })
+    if (!ok) return
     setSoumissionRenommage(true)
     try {
       const res = await fetch(`/api/admin/districts/${id}`, {
@@ -184,6 +190,16 @@ export default function FicheDistrictPage() {
         titre: 'Remplacer le Commissaire de District ?',
         description: `${commissaireActuel.prenom} ${commissaireActuel.nom} perdra uniquement son affectation district. Son compte et son rôle paroissial resteront inchangés.`,
         labelConfirmer: 'Remplacer',
+      })
+      if (!ok) return
+    } else {
+      const membre = district?.personnelEligible.find((m) => m.id === chefChoisi)
+      const ok = await confirmer({
+        titre: 'Désigner ce Commissaire de District ?',
+        description: membre
+          ? `${membre.prenom} ${membre.nom} sera désigné Commissaire de District, en plus de son rôle paroissial actuel.`
+          : 'Le membre sélectionné sera désigné Commissaire de District, en plus de son rôle paroissial actuel.',
+        labelConfirmer: 'Désigner',
       })
       if (!ok) return
     }

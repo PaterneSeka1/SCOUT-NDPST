@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { confirmer } from '@/app/components/ConfirmDialog'
 import { LABELS_ROLES, ROLES_ASSIGNABLES_DISTRICT } from '@/lib/roles'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { useDistrictUtilisateur, useModifierDistrictUtilisateur, useResetDistrictPassword } from '@/hooks/useDistrictUtilisateurs'
@@ -73,6 +74,12 @@ export default function ModifierMembreEquipePage() {
   const soumettreInfos = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validerInfos()) return
+    const ok = await confirmer({
+      titre: 'Enregistrer ces modifications ?',
+      description: "Les informations d'affectation de ce membre au sein de l'équipe district seront mises à jour.",
+      labelConfirmer: 'Enregistrer',
+    })
+    if (!ok) return
     try {
       await modifier({
         role: formInfos.role,
@@ -106,6 +113,13 @@ export default function ModifierMembreEquipePage() {
   const soumettreMdp = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validerMdp()) return
+    const ok = await confirmer({
+      titre: 'Réinitialiser le mot de passe de ce membre ?',
+      description: 'Le mot de passe actuel de ce membre sera immédiatement remplacé par le nouveau mot de passe saisi.',
+      labelConfirmer: 'Réinitialiser',
+      danger: true,
+    })
+    if (!ok) return
     try {
       await resetPassword({ nouveauMotDePasse: formMdp.motDePasse })
       toast.success('Mot de passe réinitialisé.')

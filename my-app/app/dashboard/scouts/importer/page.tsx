@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Papa from 'papaparse'
 import { toast } from 'sonner'
+import { confirmer } from '@/app/components/ConfirmDialog'
 
 const COLONNES_ATTENDUES = [
   'nom', 'prenom', 'dateNaissance', 'sexe', 'brancheType', 'matricule',
@@ -77,6 +78,12 @@ export default function PageImporterScouts() {
 
   const importer = async () => {
     if (lignes.length === 0) return
+    const ok = await confirmer({
+      titre: `Importer ${lignes.length} scout${lignes.length > 1 ? 's' : ''} ?`,
+      description: `${lignes.length} scout${lignes.length > 1 ? 's' : ''} du fichier "${nomFichier}" ${lignes.length > 1 ? 'seront' : 'sera'} créé${lignes.length > 1 ? 's' : ''}.`,
+      labelConfirmer: 'Importer',
+    })
+    if (!ok) return
     setSoumission(true)
     setResultats(null)
     try {

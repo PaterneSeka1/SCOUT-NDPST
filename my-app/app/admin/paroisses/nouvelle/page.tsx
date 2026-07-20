@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { confirmer } from '@/app/components/ConfirmDialog'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
@@ -40,6 +41,12 @@ export default function NouvelleParoissePage() {
       toast.error('Le nom, la ville, le diocèse et le district sont obligatoires.')
       return
     }
+    const ok = await confirmer({
+      titre: 'Créer cette paroisse ?',
+      description: `La paroisse "${form.nom}" sera créée. Vous pourrez ensuite lui désigner un Chef de Groupe.`,
+      labelConfirmer: 'Créer',
+    })
+    if (!ok) return
     setSoumission(true)
     try {
       const res = await fetch('/api/admin/paroisses', {

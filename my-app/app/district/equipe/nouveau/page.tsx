@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { confirmer } from '@/app/components/ConfirmDialog'
 import { SelecteurMembre } from '@/app/components/SelecteurMembre'
 import { LABELS_ROLES, ROLES_ASSIGNABLES_DISTRICT } from '@/lib/roles'
 import { LABELS_BRANCHES } from '@/lib/branches'
@@ -71,6 +72,12 @@ export default function NouveauMembreEquipePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!valider()) return
+    const ok = await confirmer({
+      titre: "Nommer ce membre dans l'équipe district ?",
+      description: "Cette personne sera nommée dans l'équipe district avec le rôle sélectionné, en plus de sa charge paroissiale actuelle.",
+      labelConfirmer: 'Nommer',
+    })
+    if (!ok) return
     try {
       await mutateAsync({
         utilisateurId: form.utilisateurId,

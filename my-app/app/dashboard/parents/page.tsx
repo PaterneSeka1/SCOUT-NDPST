@@ -4,12 +4,34 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useUtilisateurs, useModifierUtilisateur } from '@/hooks/useUtilisateurs'
 import type { Utilisateur } from '@/hooks/useUtilisateurs'
+import { confirmer } from '@/app/components/ConfirmDialog'
 import { SkeletonCard, SkeletonRow } from '@/app/components/Skeletons'
 import { useRechercheDebounce } from '@/hooks/useRechercheDebounce'
 
+async function confirmerToggle(parent: Utilisateur): Promise<boolean> {
+  const prochainEtat = !parent.actif
+  if (prochainEtat) {
+    return confirmer({
+      titre: 'Réactiver ce compte ?',
+      description: `${parent.prenom} ${parent.nom} retrouvera l'accès à son compte.`,
+      labelConfirmer: 'Réactiver',
+    })
+  }
+  return confirmer({
+    titre: 'Désactiver ce compte ?',
+    description: `${parent.prenom} ${parent.nom} perdra immédiatement l'accès à son compte. Aucune donnée ne sera supprimée — vous pourrez réactiver ce compte à tout moment.`,
+    labelConfirmer: 'Désactiver',
+    danger: true,
+  })
+}
+
 function CarteParent({ parent }: { parent: Utilisateur }) {
   const { mutateAsync, isPending } = useModifierUtilisateur(parent.id)
-  const handleToggle = async () => { await mutateAsync({ actif: !parent.actif }) }
+  const handleToggle = async () => {
+    const ok = await confirmerToggle(parent)
+    if (!ok) return
+    await mutateAsync({ actif: !parent.actif })
+  }
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2.5">
@@ -57,7 +79,11 @@ function CarteParent({ parent }: { parent: Utilisateur }) {
 
 function LigneParent({ parent }: { parent: Utilisateur }) {
   const { mutateAsync, isPending } = useModifierUtilisateur(parent.id)
-  const handleToggle = async () => { await mutateAsync({ actif: !parent.actif }) }
+  const handleToggle = async () => {
+    const ok = await confirmerToggle(parent)
+    if (!ok) return
+    await mutateAsync({ actif: !parent.actif })
+  }
 
   return (
     <tr className="hover:bg-gray-50 transition-colors">
