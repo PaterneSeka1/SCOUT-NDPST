@@ -4,13 +4,19 @@ import { signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { MONO_PAROISSE } from '@/lib/monoParoisse'
 
+// Districts n'a de sens que pour regrouper plusieurs paroisses : masqué en V1
+// mono-paroisse (voir lib/monoParoisse.ts). La page reste accessible en
+// direct pour ne pas perdre l'accès au district existant, seule l'entrée de
+// menu disparaît.
 const MENU = [
   { label: 'Tableau de bord', href: '/admin', icone: '📊' },
   { label: 'Paroisses', href: '/admin/paroisses', icone: '⛪' },
-  { label: 'Districts', href: '/admin/districts', icone: '🧭' },
+  ...(MONO_PAROISSE ? [] : [{ label: 'Districts', href: '/admin/districts', icone: '🧭' }]),
   { label: 'Utilisateurs', href: '/admin/utilisateurs', icone: '👥' },
   { label: 'Rapports', href: '/admin/rapports', icone: '📈' },
+  { label: "Journal d'audit", href: '/admin/audit', icone: '🛡️' },
   { label: 'Apparence', href: '/admin/apparence', icone: '🎨' },
 ]
 

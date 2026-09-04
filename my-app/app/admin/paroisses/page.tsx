@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { MONO_PAROISSE } from '@/lib/monoParoisse'
 
 interface Paroisse {
   id: string
@@ -77,13 +78,15 @@ export default function ListeParoisses() {
             {paroisses.length} paroisse{paroisses.length > 1 ? 's' : ''} enregistrée{paroisses.length > 1 ? 's' : ''}
           </p>
         </div>
-        <Link
-          href="/admin/paroisses/nouvelle"
-          className="w-full sm:w-auto flex-shrink-0 rounded-lg px-4 py-2.5 text-sm font-bold text-white hover:brightness-110 transition text-center"
-          style={{ backgroundColor: 'var(--cp)' }}
-        >
-          + Nouvelle paroisse
-        </Link>
+        {(!MONO_PAROISSE || paroisses.length === 0) && (
+          <Link
+            href="/admin/paroisses/nouvelle"
+            className="w-full sm:w-auto flex-shrink-0 rounded-lg px-4 py-2.5 text-sm font-bold text-white hover:brightness-110 transition text-center"
+            style={{ backgroundColor: 'var(--cp)' }}
+          >
+            + Nouvelle paroisse
+          </Link>
+        )}
       </div>
 
       <div className="relative">

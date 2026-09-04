@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_PLATEFORME } from '@/lib/roles'
+import { MONO_PAROISSE } from '@/lib/monoParoisse'
 import { enregistrerAudit } from '@/lib/audit'
 import { logger } from '@/lib/logger'
 
@@ -37,6 +38,16 @@ export async function POST(request: NextRequest) {
     if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
     if (!ROLES_PLATEFORME.includes(session.user.role)) {
       return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
+    }
+
+    if (MONO_PAROISSE) {
+      const nbDistricts = await prisma.district.count()
+      if (nbDistricts >= 1) {
+        return NextResponse.json(
+          { erreur: 'Cette version ne prend en charge qu’une seule paroisse. La création d’un district supplémentaire est désactivée.' },
+          { status: 400 },
+        )
+      }
     }
 
     const body = await request.json()

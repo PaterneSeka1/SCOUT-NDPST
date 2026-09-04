@@ -13,9 +13,14 @@ interface EntreeAudit {
   details: Record<string, unknown> | null
   createdAt: string
   acteur: { id: string; nom: string; prenom: string; role: string } | null
+  paroisse: { id: string; nom: string } | null
 }
 
-const ENTITES = ['Utilisateur', 'Scout', 'Document', 'Cotisation']
+interface ParoisseOption { id: string; nom: string }
+
+// Toutes les entités tracées dans le journal, tous rôles confondus (paroisse
+// et plateforme) — voir les appels à enregistrerAudit() dans app/api.
+const ENTITES = ['Utilisateur', 'Scout', 'Document', 'Cotisation', 'JourReunion', 'Paroisse', 'District', 'RapportPlateforme']
 
 function formatDetails(details: Record<string, unknown> | null): string {
   if (!details) return ''
@@ -24,18 +29,28 @@ function formatDetails(details: Record<string, unknown> | null): string {
     .join(' · ')
 }
 
-export default function PageJournalAudit() {
+export default function PageJournalAuditPlateforme() {
   const [entrees, setEntrees] = useState<EntreeAudit[]>([])
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [filtreEntite, setFiltreEntite] = useState('')
+  const [filtreParoisse, setFiltreParoisse] = useState('')
+  const [paroisses, setParoisses] = useState<ParoisseOption[]>([])
   const [chargement, setChargement] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/admin/paroisses')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: ParoisseOption[]) => setParoisses(data))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     setChargement(true)
     const params = new URLSearchParams({ page: String(page), limite: '30' })
     if (filtreEntite) params.set('entite', filtreEntite)
-    fetch(`/api/audit?${params.toString()}`)
+    if (filtreParoisse) params.set('paroisseId', filtreParoisse)
+    fetch(`/api/admin/audit?${params.toString()}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.erreur) { toast.error(data.erreur); return }
@@ -44,17 +59,17 @@ export default function PageJournalAudit() {
       })
       .catch(() => toast.error('Impossible de charger le journal'))
       .finally(() => setChargement(false))
-  }, [page, filtreEntite])
+  }, [page, filtreEntite, filtreParoisse])
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Journal d&apos;audit</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Historique des actions sensibles (comptes, scouts, documents)</p>
+        <p className="text-sm text-gray-500 mt-0.5">Historique des actions sensibles, toutes paroisses confondues (comptes, scouts, documents, paroisses, districts…)</p>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 space-y-4">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <label className="text-sm text-gray-600">Filtrer par type :</label>
           <select
             value={filtreEntite}
@@ -63,6 +78,16 @@ export default function PageJournalAudit() {
           >
             <option value="">Tout</option>
             {ENTITES.map((e) => <option key={e} value={e}>{e}</option>)}
+          </select>
+
+          <label className="text-sm text-gray-600">Paroisse :</label>
+          <select
+            value={filtreParoisse}
+            onChange={(e) => { setFiltreParoisse(e.target.value); setPage(1) }}
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731]"
+          >
+            <option value="">Toutes</option>
+            {paroisses.map((p) => <option key={p.id} value={p.id}>{p.nom}</option>)}
           </select>
         </div>
 
@@ -81,6 +106,7 @@ export default function PageJournalAudit() {
               <thead>
                 <tr className="text-left text-xs text-gray-500 border-b border-gray-100">
                   <th className="py-2 pr-4 font-medium">Date</th>
+                  <th className="py-2 pr-4 font-medium">Paroisse</th>
                   <th className="py-2 pr-4 font-medium">Action</th>
                   <th className="py-2 pr-4 font-medium">Auteur</th>
                   <th className="py-2 font-medium">Détails</th>
@@ -91,6 +117,9 @@ export default function PageJournalAudit() {
                   <tr key={e.id} className="border-b border-gray-50 last:border-0">
                     <td className="py-2.5 pr-4 text-gray-500 whitespace-nowrap">
                       {new Date(e.createdAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+                    </td>
+                    <td className="py-2.5 pr-4 text-gray-600 whitespace-nowrap">
+                      {e.paroisse ? e.paroisse.nom : <span className="text-gray-400 italic">Plateforme</span>}
                     </td>
                     <td className="py-2.5 pr-4 text-gray-900 font-medium whitespace-nowrap">
                       {LABELS_ACTIONS_AUDIT[e.action] ?? e.action}

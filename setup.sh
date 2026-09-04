@@ -59,6 +59,16 @@ info "Installation des dépendances npm..."
 cd my-app
 npm install --silent
 ok "Dépendances installées"
+
+# --- Client Prisma ---
+# Généré dans app/generated/prisma (voir schema.prisma), ignoré par git : doit
+# être régénéré à chaque installation, npm n'a pas de hook postinstall pour ça
+# (voir Dockerfile — le client est généré explicitement au build, pas via
+# postinstall, car l'étape "deps" du Dockerfile ne copie pas prisma/schema.prisma).
+info "Génération du client Prisma..."
+npx prisma generate
+ok "Client Prisma généré"
+
 cd "$SCRIPT_DIR"
 
 # --- Démarrage de la base de données ---

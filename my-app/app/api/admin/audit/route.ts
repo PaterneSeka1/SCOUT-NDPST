@@ -2,18 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { ROLES_GROUPE } from '@/lib/roles'
+import { ROLES_PLATEFORME } from '@/lib/roles'
 import { logger } from '@/lib/logger'
-import { paroisseIdRequise } from '@/lib/session'
 
-// GET — journal d'audit de la paroisse. Réservé à la direction du groupe :
-// c'est un registre des actions sensibles (comptes, scouts, documents…), pas
-// un outil de suivi d'activité générale.
+// GET — journal d'audit de la plateforme : toutes les paroisses confondues,
+// plus les actions de portée plateforme (paroisseId = null, ex. création
+// d'un district). Réservé à l'administrateur plateforme (voir
+// app/admin/layout.tsx pour le garde-fou de toute la zone /admin) — ce
+// journal n'est plus accessible depuis l'espace paroisse (ex-/dashboard/audit).
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
-    if (!ROLES_GROUPE.includes(session.user.role)) {
+    if (!ROLES_PLATEFORME.includes(session.user.role)) {
       return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
     }
 
@@ -22,9 +23,10 @@ export async function GET(req: NextRequest) {
     const limite = Math.min(100, Math.max(1, parseInt(searchParams.get('limite') ?? '30', 10)))
     const action = searchParams.get('action') ?? undefined
     const entite = searchParams.get('entite') ?? undefined
+    const paroisseId = searchParams.get('paroisseId') ?? undefined
 
     const where = {
-      paroisseId: paroisseIdRequise(session),
+      ...(paroisseId ? { paroisseId } : {}),
       ...(action ? { action } : {}),
       ...(entite ? { entite } : {}),
     }
@@ -32,7 +34,10 @@ export async function GET(req: NextRequest) {
     const [entrees, total] = await Promise.all([
       prisma.journalAudit.findMany({
         where,
-        include: { acteur: { select: { id: true, nom: true, prenom: true, role: true } } },
+        include: {
+          acteur: { select: { id: true, nom: true, prenom: true, role: true } },
+          paroisse: { select: { id: true, nom: true } },
+        },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limite,
         take: limite,
@@ -45,7 +50,7 @@ export async function GET(req: NextRequest) {
       pagination: { page, limite, total, totalPages: Math.ceil(total / limite) },
     })
   } catch (error) {
-    logger.error('GET /api/audit', error)
+    logger.error('GET /api/admin/audit', error)
     return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
   }
 }

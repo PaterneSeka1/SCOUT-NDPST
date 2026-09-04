@@ -67,6 +67,7 @@ export default async function DistrictLayout({ children }: { children: React.Rea
       <DistrictShell
         role={session.user.roleDistrict}
         roleParoisse={session.user.role}
+        paroisseId={session.user.paroisseId}
         nomComplet={`${session.user.prenom} ${session.user.nom}`}
         nomDistrict={nomDistrict}
         brancheType={utilisateur?.brancheTypeDistrict ?? null}

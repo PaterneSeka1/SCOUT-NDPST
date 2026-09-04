@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { ParoisseLogoImage } from '@/app/components/ParoisseLogoImage'
+import { Widgets } from '@/app/components/widgets/Widgets'
 
 type MenuItem = {
   label: string
@@ -56,7 +57,6 @@ function getMenuItemsDeBase(role: string): MenuItem[] {
         { label: 'Réunions', href: '/dashboard/reunions', icone: '🗓️' },
         { label: 'Programmes', href: '/dashboard/programmes', icone: '📘' },
         { label: 'Rapports', href: '/dashboard/rapports', icone: '📈' },
-        { label: "Journal d'audit", href: '/dashboard/audit', icone: '🛡️' },
       ]
     case 'ADJOINT_GROUPE':
     case 'ASSISTANT_GROUPE':
@@ -207,6 +207,7 @@ export function DashboardShell({
   children,
   role,
   roleDistrict,
+  paroisseId,
   nomComplet,
   logoUrl,
   nomSite,
@@ -216,6 +217,7 @@ export function DashboardShell({
   children: React.ReactNode
   role: string
   roleDistrict?: string | null
+  paroisseId: string | null
   nomComplet: string
   logoUrl: string | null
   nomSite: string
@@ -300,6 +302,8 @@ export function DashboardShell({
         {/* Contenu */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 print:overflow-visible print:p-0">{children}</main>
       </div>
+
+      <Widgets role={role} paroisseId={paroisseId} />
     </div>
   )
 }

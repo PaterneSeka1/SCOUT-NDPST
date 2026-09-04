@@ -17,3 +17,16 @@ export const COULEURS_TYPE_ACTIVITE: Record<string, string> = {
   FORMATION: 'bg-indigo-100 text-indigo-800',
   AUTRE: 'bg-gray-100 text-gray-700',
 }
+
+// Reprend les pictogrammes déjà utilisés au fil de l'eau (tableau de bord,
+// widget flottant) — centralisés ici pour éviter qu'une future icône ne
+// diverge d'un écran à l'autre (même principe que ICONES_TYPE_DOCUMENT).
+export const ICONES_TYPE_ACTIVITE: Record<string, string> = {
+  REUNION: '📋',
+  SORTIE: '🥾',
+  CAMP: '⛺',
+  SERVICE: '🤝',
+  CELEBRATION: '🎉',
+  FORMATION: '📚',
+  AUTRE: '📋',
+}

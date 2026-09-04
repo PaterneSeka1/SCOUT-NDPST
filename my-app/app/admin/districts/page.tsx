@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { MONO_PAROISSE } from '@/lib/monoParoisse'
 
 interface District {
   id: string
@@ -104,7 +105,7 @@ export default function ListeDistricts() {
             {districts.length} district{districts.length > 1 ? 's' : ''}
           </p>
         </div>
-        {!creation && (
+        {!creation && (!MONO_PAROISSE || districts.length === 0) && (
           <button
             onClick={() => setCreation(true)}
             className="sm:flex-shrink-0 rounded-lg px-4 py-2 text-sm font-bold text-white hover:brightness-110 transition"

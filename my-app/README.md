@@ -10,6 +10,7 @@ docker compose up -d db
 
 # Depuis my-app/
 npm install
+npx prisma generate         # génère le client dans app/generated/prisma (ignoré par git, pas de hook postinstall — voir Dockerfile)
 npx prisma migrate deploy   # applique les migrations existantes (voir ci-dessous — jamais `migrate dev` en dehors du cas ci-dessous)
 npm run seed                # crée le compte ADMIN_PLATEFORME (voir prisma/seed.ts)
 npm run dev

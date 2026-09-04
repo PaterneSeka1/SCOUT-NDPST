@@ -251,8 +251,10 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
         )}
       </div>
 
-      {/* Bouton sticky */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-4 shadow-lg">
+      {/* Bouton sticky — z-50 : au-dessus des widgets flottants (z-40) du
+          tableau de bord, pour que l'action d'enregistrement reste toujours
+          cliquable sur grand écran (voir app/components/widgets/Widgets.tsx). */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 px-4 py-4 shadow-lg">
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <p className="text-sm text-gray-600 font-medium">
             {nbPresents} présent(s) sur {nbTotal} scout(s)

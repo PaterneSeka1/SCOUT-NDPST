@@ -71,6 +71,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <DashboardShell
         role={session.user.role}
         roleDistrict={session.user.roleDistrict}
+        paroisseId={paroisseId}
         nomComplet={`${session.user.prenom} ${session.user.nom}`}
         logoUrl={logoUrl}
         nomSite={nomSite}

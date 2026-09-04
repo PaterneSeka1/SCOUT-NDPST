@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { LABELS_ROLES } from '@/lib/roles'
+import { Widgets } from '@/app/components/widgets/Widgets'
 
 type MenuItem = { label: string; href: string; icone: string }
 
@@ -104,9 +105,15 @@ function SidebarContent({
 }
 
 export function DistrictShell({
-  children, role, roleParoisse, nomComplet, nomDistrict, brancheType,
+  children, role, roleParoisse, paroisseId, nomComplet, nomDistrict, brancheType,
 }: {
-  children: React.ReactNode; role: string; roleParoisse: string; nomComplet: string; nomDistrict: string; brancheType: string | null
+  children: React.ReactNode
+  role: string
+  roleParoisse: string
+  paroisseId: string | null
+  nomComplet: string
+  nomDistrict: string
+  brancheType: string | null
 }) {
   const pathname = usePathname()
   const [sidebarOuverte, setSidebarOuverte] = useState(false)
@@ -177,6 +184,11 @@ export function DistrictShell({
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-6">{children}</main>
       </div>
+
+      {/* Activités/documents dépendent du rôle PAROISSIAL (roleParoisse), pas du
+          rôle district (role) — ROLES_TOUT_STAFF et /api/documents/expirations
+          ne connaissent que la hiérarchie paroissiale (voir lib/roles.ts). */}
+      <Widgets role={roleParoisse} paroisseId={paroisseId} />
     </div>
   )
 }
