@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { LABELS_ACTIONS_AUDIT } from '@/lib/audit-labels'
 import { LABELS_ROLES } from '@/lib/roles'
+import { History } from '@/lib/icons'
+import { EmptyState } from '@/app/components/ui/EmptyState'
 
 interface EntreeAudit {
   id: string
@@ -93,13 +95,10 @@ export default function PageJournalAuditPlateforme() {
 
         {chargement ? (
           <div className="flex items-center justify-center py-12">
-            <div className="w-6 h-6 border-2 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : entrees.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-4xl mb-3">🗒️</p>
-            <p className="text-sm text-gray-500">Aucune action enregistrée pour le moment.</p>
-          </div>
+          <EmptyState icon={History} title="Aucune action enregistrée pour le moment." />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

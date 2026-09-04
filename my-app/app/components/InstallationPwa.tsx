@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Smartphone, Share, X } from '@/lib/icons'
 
 type EvenementInstallation = Event & {
   prompt: () => Promise<void>
@@ -66,9 +67,9 @@ export function InstallationPwa({ nomSite, logoSite }: { nomSite: string; logoSi
         <button
           onClick={ecarter}
           aria-label="Fermer"
-          className="absolute right-3 top-3 text-lg leading-none text-gray-400 transition hover:text-gray-600"
+          className="absolute right-3 top-3 text-gray-400 transition hover:text-gray-600"
         >
-          ×
+          <X className="h-4 w-4" strokeWidth={2} />
         </button>
 
         <div className="flex items-start gap-3 pr-4">
@@ -83,10 +84,10 @@ export function InstallationPwa({ nomSite, logoSite }: { nomSite: string; logoSi
             />
           ) : (
             <div
-              className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-xl"
+              className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-white"
               style={{ backgroundColor: 'var(--cp)' }}
             >
-              📱
+              <Smartphone className="h-5 w-5" strokeWidth={2} />
             </div>
           )}
           <div className="flex-1">
@@ -94,7 +95,8 @@ export function InstallationPwa({ nomSite, logoSite }: { nomSite: string; logoSi
             <p className="mt-0.5 text-xs leading-relaxed text-gray-500">
               {estIOS ? (
                 <>
-                  Appuyez sur <strong>Partager</strong> (icône <span aria-hidden>⬆️</span>) puis{' '}
+                  Appuyez sur <strong>Partager</strong> (icône{' '}
+                  <Share className="inline h-3.5 w-3.5 -translate-y-px" strokeWidth={2} aria-hidden />) puis{' '}
                   <strong>« Sur l&apos;écran d&apos;accueil »</strong> pour un accès rapide, même sans connexion.
                 </>
               ) : (

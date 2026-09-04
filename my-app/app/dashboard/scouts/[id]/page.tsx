@@ -8,7 +8,8 @@ import { toast } from 'sonner'
 import { useScout, useAttribuerMatricule, useAjouterContact, useSupprimerContact, useCreerCompteScout, useAjouterDocument, useSupprimerDocument, type DocumentScout } from '@/hooks/useScouts'
 import { useProgressionsScout, useValiderBadge } from '@/hooks/useProgressions'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
-import { LABELS_TYPE_DOCUMENT, ICONES_TYPE_DOCUMENT } from '@/lib/documents'
+import { LABELS_TYPE_DOCUMENT } from '@/lib/documents'
+import { ICONES_TYPE_DOCUMENT, Camera, AlertTriangle, Check, Paperclip } from '@/lib/icons'
 import { LABELS_TYPE_COTISATION, LABELS_STATUT_COTISATION, COULEURS_STATUT_COTISATION, formatMontantFCFA } from '@/lib/cotisations'
 import { ROLES_BRANCHE } from '@/lib/roles'
 import { PasswordInput } from '@/app/components/PasswordInput'
@@ -210,8 +211,9 @@ export default function FicheScoutPage() {
                 {scout.actif ? 'Actif' : 'Inactif'}
               </span>
               <span className="text-sm text-gray-500">{age} ans — {scout.sexe === 'MASCULIN' ? 'Garçon' : 'Fille'}</span>
-              <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${scout.consentementImage ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
-                {scout.consentementImage ? '📸 Droit à l\'image autorisé' : '📸 Droit à l\'image non autorisé'}
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${scout.consentementImage ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
+                <Camera className="h-3 w-3" strokeWidth={2} />
+                {scout.consentementImage ? "Droit à l'image autorisé" : "Droit à l'image non autorisé"}
               </span>
             </div>
             <p className="text-sm text-gray-500 mt-1">
@@ -225,7 +227,8 @@ export default function FicheScoutPage() {
       {(scout.allergies || scout.traitementsMedicaux) && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 sm:p-6">
           <h2 className="text-base font-semibold text-amber-900 mb-2 flex items-center gap-2">
-            ⚠️ Informations médicales
+            <AlertTriangle className="h-4 w-4" strokeWidth={2} />
+            Informations médicales
           </h2>
           {scout.allergies && (
             <p className="text-sm text-amber-800"><span className="font-medium">Allergies :</span> {scout.allergies}</p>
@@ -287,7 +290,8 @@ export default function FicheScoutPage() {
         {scout.utilisateur ? (
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1 bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded-full">
-              ✓ Compte actif
+              <Check className="h-3 w-3" strokeWidth={2.5} />
+              Compte actif
             </span>
             <span className="text-sm text-gray-500">Matricule : {scout.utilisateur.matricule}</span>
           </div>
@@ -449,7 +453,14 @@ export default function FicheScoutPage() {
             {scout.documents.map((doc) => (
               <li key={doc.id} className="flex items-center justify-between border border-gray-100 rounded-md p-3">
                 <a href={doc.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 min-w-0 hover:underline">
-                  <span className="text-lg flex-shrink-0">{ICONES_TYPE_DOCUMENT[doc.type] ?? '📎'}</span>
+                  {(() => {
+                    const IconeDocument = ICONES_TYPE_DOCUMENT[doc.type] ?? Paperclip
+                    return (
+                      <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-500">
+                        <IconeDocument className="h-4 w-4" strokeWidth={2} />
+                      </span>
+                    )
+                  })()}
                   <span className="min-w-0">
                     <span className="block text-sm font-medium text-gray-900 truncate">{LABELS_TYPE_DOCUMENT[doc.type] ?? doc.type}</span>
                     <span className="block text-xs text-gray-500 truncate">{doc.nomFichier}</span>

@@ -8,6 +8,7 @@ import { ParoisseLogoImageAuto } from '@/app/components/ParoisseLogoImage'
 import { useSiteInfo } from '@/app/components/useSiteInfo'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
+import { BackLink } from '@/app/components/ui/BackLink'
 
 function FormulaireReinitialisation() {
   const searchParams = useSearchParams()
@@ -96,10 +97,9 @@ function FormulaireReinitialisation() {
                 style={{ backgroundColor: 'var(--cp)' }}>
                 Faire une nouvelle demande
               </Link>
-              <Link href="/login"
-                className="block text-center text-sm text-gray-500 hover:text-gray-700 transition-colors">
-                ← Retour à la connexion
-              </Link>
+              <div className="flex justify-center">
+                <BackLink href="/login">Retour à la connexion</BackLink>
+              </div>
             </div>
           )}
 

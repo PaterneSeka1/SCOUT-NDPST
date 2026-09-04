@@ -3,6 +3,8 @@
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { ICONES_KPI, ICONE_KPI_DEFAUT, ICONES_TYPE_ACTIVITE, ClipboardList } from '@/lib/icons'
+import { StatCard, StatCardSkeleton } from '@/app/components/ui/StatCard'
 
 type ActiviteRecente = {
   id: string
@@ -19,26 +21,7 @@ type KpisData = {
   activitesRecentes: ActiviteRecente[]
 }
 
-const ICONES_KPI: Record<string, string> = {
-  'Scouts actifs': '⚜️',
-  'Activités ce mois': '📅',
-  'Taux de présence': '✅',
-  'Branches actives': '🌿',
-  'Branches': '🌿',
-  'Scouts dans la branche': '⚜️',
-  'Présences ce mois': '✅',
-  'Mes enfants': '👨‍👧‍👦',
-  'Prochaines activités': '📅',
-  'Badges obtenus': '🏅',
-  'Activités participées': '📅',
-}
-
-const COULEURS_KPI = [
-  'bg-[#1a4731]',
-  'bg-[#27ae60]',
-  'bg-[#f39c12]',
-  'bg-blue-600',
-]
+const TONS_KPI: Array<'primary' | 'accent' | 'warning' | 'info'> = ['primary', 'accent', 'warning', 'info']
 
 const LIBELLES_TYPE: Record<string, string> = {
   REUNION: 'Réunion',
@@ -107,11 +90,11 @@ export default function DashboardPage() {
       <div className="bg-white rounded-xl px-4 py-4 sm:p-6 shadow-sm border border-gray-100">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="text-base sm:text-xl font-bold text-[#1a4731] leading-snug">
-              Bienvenue, {session?.user?.prenom} {session?.user?.nom} 👋
+            <h1 className="text-base sm:text-xl font-bold leading-snug" style={{ color: 'var(--cp)' }}>
+              Bienvenue, {session?.user?.prenom} {session?.user?.nom}
             </h1>
             <p className="text-gray-500 mt-0.5 text-xs sm:text-sm">
-              Profil : <span className="font-medium text-[#27ae60]">{libelleRole(role)}</span>
+              Profil : <span className="font-medium" style={{ color: 'var(--ca)' }}>{libelleRole(role)}</span>
             </p>
           </div>
 
@@ -119,7 +102,7 @@ export default function DashboardPage() {
             <div className="flex flex-wrap gap-2 flex-shrink-0">
               <Link
                 href="/dashboard/utilisateurs/nouveau"
-                className="inline-flex items-center justify-center bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium"
+                className="inline-flex items-center justify-center bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium"
               >
                 + Nouveau membre
               </Link>
@@ -147,29 +130,15 @@ export default function DashboardPage() {
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {chargement
-          ? Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 animate-pulse"
-              >
-                <div className="w-10 h-10 bg-gray-200 rounded-lg mb-4" />
-                <div className="h-7 bg-gray-200 rounded w-16 mb-2" />
-                <div className="h-3 bg-gray-100 rounded w-24" />
-              </div>
-            ))
+          ? Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
           : entrees.map(([titre, valeur], i) => (
-              <div
+              <StatCard
                 key={titre}
-                className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100"
-              >
-                <div
-                  className={`w-10 h-10 sm:w-12 sm:h-12 ${COULEURS_KPI[i % COULEURS_KPI.length]} rounded-xl flex items-center justify-center text-xl sm:text-2xl mb-4`}
-                >
-                  {ICONES_KPI[titre] ?? '📊'}
-                </div>
-                <p className="text-2xl sm:text-3xl font-bold text-gray-800 leading-none">{valeur}</p>
-                <p className="text-sm text-gray-500 mt-1.5 leading-tight">{titre}</p>
-              </div>
+                label={titre}
+                value={valeur}
+                icon={ICONES_KPI[titre] ?? ICONE_KPI_DEFAUT}
+                tone={TONS_KPI[i % TONS_KPI.length]}
+              />
             ))}
       </div>
 
@@ -191,11 +160,13 @@ export default function DashboardPage() {
           </p>
         ) : (
           <div className="divide-y divide-gray-50">
-            {data.activitesRecentes.map((a) => (
+            {data.activitesRecentes.map((a) => {
+              const IconeActivite = ICONES_TYPE_ACTIVITE[a.type] ?? ClipboardList
+              return (
               <div key={a.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 first:pt-0 last:pb-0 gap-2">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 bg-[#1a4731]/10 rounded-lg flex items-center justify-center text-sm flex-shrink-0">
-                    {a.type === 'CAMP' ? '⛺' : a.type === 'SORTIE' ? '🥾' : a.type === 'SERVICE' ? '🤝' : a.type === 'CELEBRATION' ? '🎉' : a.type === 'FORMATION' ? '📚' : '📋'}
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(var(--cp-rgb), 0.1)', color: 'var(--cp)' }}>
+                    <IconeActivite className="h-4 w-4" strokeWidth={2} />
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">{a.titre}</p>
@@ -207,7 +178,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex items-center flex-wrap gap-2 sm:flex-shrink-0 sm:ml-4 pl-11 sm:pl-0">
                   {a.brancheType && (
-                    <span className="text-xs bg-[#1a4731]/10 text-[#1a4731] font-medium px-2 py-0.5 rounded-full">
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(var(--cp-rgb), 0.1)', color: 'var(--cp)' }}>
                       {LIBELLES_BRANCHE[a.brancheType] ?? a.brancheType}
                     </span>
                   )}
@@ -219,7 +190,8 @@ export default function DashboardPage() {
                   </span>
                 </div>
               </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

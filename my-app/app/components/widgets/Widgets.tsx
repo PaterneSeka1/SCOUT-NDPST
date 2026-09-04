@@ -10,10 +10,11 @@
 // — aucune nouvelle route ni nouveau modèle de données.
 import { useEffect, useLayoutEffect, useState } from 'react'
 import Link from 'next/link'
-import { LABELS_TYPE_ACTIVITE, ICONES_TYPE_ACTIVITE } from '@/lib/activites'
+import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
 import { LABELS_BRANCHES } from '@/lib/branches'
-import { LABELS_TYPE_DOCUMENT, ICONES_TYPE_DOCUMENT } from '@/lib/documents'
+import { LABELS_TYPE_DOCUMENT } from '@/lib/documents'
 import { ROLES_TOUT_STAFF } from '@/lib/roles'
+import { ICONES_TYPE_ACTIVITE, ICONES_TYPE_DOCUMENT, ClipboardList, Paperclip } from '@/lib/icons'
 
 type ActiviteWidget = {
   id: string
@@ -73,13 +74,15 @@ function ActivitesWidget({ activites, sousTitre }: { activites: ActiviteWidget[]
         <div className="text-xs text-gray-400 py-2">Aucune activité pour le moment.</div>
       ) : (
         <div className="space-y-2.5 overflow-y-auto pr-1">
-          {activites.map((a) => (
+          {activites.map((a) => {
+            const IconeActivite = ICONES_TYPE_ACTIVITE[a.type] ?? ClipboardList
+            return (
             <div key={a.id} className="flex items-center gap-2.5 border-t border-gray-100 pt-2.5 first:border-t-0 first:pt-0">
               <span
-                className="w-7 h-7 rounded-full flex items-center justify-center text-sm shrink-0"
-                style={{ backgroundColor: 'rgba(var(--cp-rgb), 0.1)' }}
+                className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+                style={{ backgroundColor: 'rgba(var(--cp-rgb), 0.1)', color: 'var(--cp)' }}
               >
-                {ICONES_TYPE_ACTIVITE[a.type] ?? '📋'}
+                <IconeActivite className="h-3.5 w-3.5" strokeWidth={2} />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="text-xs font-semibold text-gray-800 truncate">{a.titre}</div>
@@ -91,7 +94,8 @@ function ActivitesWidget({ activites, sousTitre }: { activites: ActiviteWidget[]
               </div>
               <div className="text-[10px] text-gray-400 shrink-0">{LABELS_TYPE_ACTIVITE[a.type] ?? a.type}</div>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
@@ -121,10 +125,12 @@ function DocumentsWidget({ documents }: { documents: DocumentEcheance[] }) {
         <div className="text-xs text-gray-400 py-2">Aucun document à échéance proche.</div>
       ) : (
         <div className="space-y-2.5 overflow-y-auto pr-1">
-          {documents.map((d) => (
+          {documents.map((d) => {
+            const IconeDocument = ICONES_TYPE_DOCUMENT[d.type] ?? Paperclip
+            return (
             <div key={d.id} className="flex items-center gap-2.5 border-t border-gray-100 pt-2.5 first:border-t-0 first:pt-0">
-              <span className="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center text-sm shrink-0">
-                {ICONES_TYPE_DOCUMENT[d.type] ?? '📎'}
+              <span className="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center text-gray-500 shrink-0">
+                <IconeDocument className="h-3.5 w-3.5" strokeWidth={2} />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="text-xs font-semibold text-gray-800 truncate">
@@ -139,7 +145,8 @@ function DocumentsWidget({ documents }: { documents: DocumentEcheance[] }) {
                 {d.dateExpiration ? formatDateCourt(d.dateExpiration) : '—'}
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

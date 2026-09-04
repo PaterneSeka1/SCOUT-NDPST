@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { ParoisseLogoImage } from '@/app/components/ParoisseLogoImage'
+import { Users, CalendarRange, CheckSquare, Award, ArrowRight, type LucideIcon } from '@/lib/icons'
 
 // Sans ceci, Next.js prérend cette page une seule fois au build (aucune API
 // dynamique utilisée ici) et fige la config lue en base à cet instant : les
@@ -62,26 +63,30 @@ async function getSiteConfig(): Promise<SiteConfig & { logoUrl: string | null }>
   }
 }
 
-const modules = [
+const modules: { title: string; text: string; accent: string; icone: LucideIcon }[] = [
   {
     title: 'Effectifs',
     text: 'Centralisez les fiches scouts, les contacts parents, les branches et les informations utiles de chaque jeune.',
     accent: 'bg-[#1a4731]',
+    icone: Users,
   },
   {
     title: 'Activités',
     text: 'Préparez les réunions, sorties, camps et services avec une vision claire des dates, lieux et participants.',
     accent: 'bg-[#c2410c]',
+    icone: CalendarRange,
   },
   {
     title: 'Présences',
     text: 'Suivez les présences par activité pour garder un historique fiable au niveau de la paroisse.',
     accent: 'bg-[#2563eb]',
+    icone: CheckSquare,
   },
   {
     title: 'Progression',
     text: 'Accompagnez les badges, étapes pédagogiques et validations selon les responsabilités de chaque équipe.',
     accent: 'bg-[#b45309]',
+    icone: Award,
   },
 ]
 
@@ -184,9 +189,10 @@ export default async function Home() {
                 </Link>
                 <a
                   href="#modules"
-                  className="rounded-lg border border-white/32 px-6 py-3 text-center text-sm font-bold text-white transition hover:bg-white/12"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/32 px-6 py-3 text-center text-sm font-bold text-white transition hover:bg-white/12"
                 >
                   Découvrir les modules
+                  <ArrowRight className="h-4 w-4" strokeWidth={2} />
                 </a>
               </div>
             </div>
@@ -222,16 +228,21 @@ export default async function Home() {
         </div>
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {modules.map((module) => (
-            <article
-              key={module.title}
-              className="rounded-lg border border-[#dbe6df] bg-white p-5 shadow-sm"
-            >
-              <span className={`mb-5 block h-1.5 w-12 rounded-sm ${module.accent}`} />
-              <h3 className="text-lg font-bold text-[#15241b]">{module.title}</h3>
-              <p className="mt-3 text-sm leading-7 text-[#657368]">{module.text}</p>
-            </article>
-          ))}
+          {modules.map((module) => {
+            const Icone = module.icone
+            return (
+              <article
+                key={module.title}
+                className="rounded-lg border border-[#dbe6df] bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+              >
+                <span className={`mb-5 inline-flex h-10 w-10 items-center justify-center rounded-lg text-white ${module.accent}`}>
+                  <Icone className="h-5 w-5" strokeWidth={2} />
+                </span>
+                <h3 className="text-lg font-bold text-[#15241b]">{module.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-[#657368]">{module.text}</p>
+              </article>
+            )
+          })}
         </div>
       </section>
 

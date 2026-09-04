@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { LABELS_BRANCHES, COULEURS_BRANCHES, ORDRE_BRANCHES } from '@/lib/branches'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
+import { ICONES_KPI, ICONE_KPI_DEFAUT } from '@/lib/icons'
 
 interface Activite {
   id: string; titre: string; dateDebut: string; type: string; brancheType: string | null
@@ -41,7 +42,7 @@ function BarrePourcent({ valeur, max, couleur }: { valeur: number; max: number; 
 }
 
 function JaugeTaux({ taux }: { taux: number }) {
-  const couleur = taux >= 75 ? 'bg-green-500' : taux >= 50 ? 'bg-[#f39c12]' : 'bg-red-400'
+  const couleur = taux >= 75 ? 'bg-green-500' : taux >= 50 ? 'bg-amber-500' : 'bg-red-400'
   return (
     <div className="flex items-center gap-2">
       <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
@@ -68,7 +69,7 @@ export default function PageRapportsDistrict() {
 
   if (chargement) return (
     <div className="flex items-center justify-center h-48">
-      <div className="w-6 h-6 border-2 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
     </div>
   )
   if (!rapport) return null
@@ -86,17 +87,20 @@ export default function PageRapportsDistrict() {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: 'Scouts actifs', valeur: rapport.scoutsActifs, couleur: 'bg-[#1a4731]', icone: '⚜️' },
-          { label: 'Scouts inactifs', valeur: rapport.scoutsInactifs, couleur: 'bg-gray-500', icone: '⏸️' },
-          { label: 'Activités ce mois', valeur: rapport.activitesMois, couleur: 'bg-[#27ae60]', icone: '📅' },
-          { label: 'Réunions ce mois', valeur: rapport.reunionsMois, couleur: 'bg-blue-600', icone: '🗓️' },
-        ].map(({ label, valeur, couleur, icone }) => (
-          <div key={label} className={`${couleur} text-white rounded-xl p-4`}>
-            <div className="text-2xl mb-1">{icone}</div>
-            <p className="text-2xl font-bold">{valeur}</p>
-            <p className="text-xs opacity-90 mt-0.5">{label}</p>
-          </div>
-        ))}
+          { label: 'Scouts actifs', valeur: rapport.scoutsActifs, couleur: 'bg-[var(--cp)]' },
+          { label: 'Scouts inactifs', valeur: rapport.scoutsInactifs, couleur: 'bg-gray-500' },
+          { label: 'Activités ce mois', valeur: rapport.activitesMois, couleur: 'bg-[var(--ca)]' },
+          { label: 'Réunions ce mois', valeur: rapport.reunionsMois, couleur: 'bg-blue-600' },
+        ].map(({ label, valeur, couleur }) => {
+          const Icone = ICONES_KPI[label] ?? ICONE_KPI_DEFAUT
+          return (
+            <div key={label} className={`${couleur} text-white rounded-xl p-4`}>
+              <Icone className="h-6 w-6 mb-2 opacity-90" strokeWidth={2} />
+              <p className="text-2xl font-bold">{valeur}</p>
+              <p className="text-xs opacity-90 mt-0.5">{label}</p>
+            </div>
+          )
+        })}
       </div>
 
       {/* Taux de présence global */}

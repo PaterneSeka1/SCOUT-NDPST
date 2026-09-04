@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { formatMontantFCFA } from '@/lib/cotisations'
 import { GraphiqueUtilisateursParCategorie, GraphiqueCotisations, GraphiqueScoutsParParoisse } from './KpiCharts'
+import { ICONES_KPI, ICONE_KPI_DEFAUT } from '@/lib/icons'
 
 interface Totaux {
   paroisses: number
@@ -53,15 +54,17 @@ export default function AdminAccueil() {
     )
   }
 
+  // Palette catégorielle fixe (indépendante du thème par paroisse) — sert
+  // uniquement à distinguer visuellement les 8 indicateurs entre eux.
   const cartes = [
-    { label: 'Paroisses actives', value: `${totaux?.paroissesActives ?? 0} / ${totaux?.paroisses ?? 0}`, icone: '⛪', couleur: '#1a4731' },
-    { label: 'Scouts (toutes paroisses)', value: totaux?.scouts ?? 0, icone: '⚜️', couleur: '#27ae60' },
-    { label: 'Utilisateurs', value: totaux?.utilisateurs ?? 0, icone: '👥', couleur: '#f39c12' },
-    { label: 'Activités', value: totaux?.activites ?? 0, icone: '📅', couleur: '#3498db' },
-    { label: 'Taux de présence', value: `${kpis?.tauxPresence ?? 0} %`, icone: '✅', couleur: '#27ae60' },
-    { label: 'Activités ce mois', value: kpis?.activitesMois ?? 0, icone: '🗓️', couleur: '#3498db' },
-    { label: 'Cotisations payées', value: formatMontantFCFA(kpis?.cotisationsPayees ?? 0), icone: '💰', couleur: '#27ae60' },
-    { label: 'Cotisations en attente', value: formatMontantFCFA(kpis?.cotisationsEnAttente ?? 0), icone: '⏳', couleur: '#f39c12' },
+    { label: 'Paroisses actives', value: `${totaux?.paroissesActives ?? 0} / ${totaux?.paroisses ?? 0}`, couleur: '#1a4731' },
+    { label: 'Scouts (toutes paroisses)', value: totaux?.scouts ?? 0, couleur: '#27ae60' },
+    { label: 'Utilisateurs', value: totaux?.utilisateurs ?? 0, couleur: '#f39c12' },
+    { label: 'Activités', value: totaux?.activites ?? 0, couleur: '#3498db' },
+    { label: 'Taux de présence', value: `${kpis?.tauxPresence ?? 0} %`, couleur: '#27ae60' },
+    { label: 'Activités ce mois', value: kpis?.activitesMois ?? 0, couleur: '#3498db' },
+    { label: 'Cotisations payées', value: formatMontantFCFA(kpis?.cotisationsPayees ?? 0), couleur: '#27ae60' },
+    { label: 'Cotisations en attente', value: formatMontantFCFA(kpis?.cotisationsEnAttente ?? 0), couleur: '#f39c12' },
   ]
 
   return (
@@ -91,18 +94,21 @@ export default function AdminAccueil() {
       <div>
         <h2 className="text-sm font-semibold text-gray-700 mb-3">Indicateurs clés</h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {cartes.map((c) => (
-            <div key={c.label} className="bg-white rounded-xl border border-gray-200 p-4">
-              <div
-                className="w-10 h-10 rounded-lg flex items-center justify-center text-lg mb-3"
-                style={{ backgroundColor: `${c.couleur}1a` }}
-              >
-                {c.icone}
+          {cartes.map((c) => {
+            const Icone = ICONES_KPI[c.label] ?? ICONE_KPI_DEFAUT
+            return (
+              <div key={c.label} className="bg-white rounded-xl border border-gray-200 p-4">
+                <div
+                  className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
+                  style={{ backgroundColor: `${c.couleur}1a`, color: c.couleur }}
+                >
+                  <Icone className="h-5 w-5" strokeWidth={2} />
+                </div>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 leading-none">{c.value}</p>
+                <p className="text-xs sm:text-sm text-gray-500 mt-1.5 leading-tight">{c.label}</p>
               </div>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 leading-none">{c.value}</p>
-              <p className="text-xs sm:text-sm text-gray-500 mt-1.5 leading-tight">{c.label}</p>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 

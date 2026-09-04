@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
+import { Compass } from '@/lib/icons'
 
 // Tailles prédéfinies (px)
 const TAILLES = {
@@ -14,7 +15,8 @@ const TAILLES = {
 type Taille = keyof typeof TAILLES
 
 // ──────────────────────────────────────────────────────────────────
-// Composant "muet" : affiche le logo si logoUrl fourni, sinon ⚜️
+// Composant "muet" : affiche le logo si logoUrl fourni, sinon une icône
+// de repli (boussole scoute).
 // ──────────────────────────────────────────────────────────────────
 export function ParoisseLogoImage({
   logoUrl,
@@ -41,9 +43,13 @@ export function ParoisseLogoImage({
     )
   }
 
-  // Fallback : fleur de lys emoji
-  const textCls = taille === 'xl' || taille === 'lg' ? 'text-3xl' : taille === 'sm' ? 'text-base' : 'text-2xl'
-  return <span className={`${textCls} ${className}`}>⚜️</span>
+  // Fallback : icône de repli, taille proportionnelle au conteneur
+  const iconPx = Math.round(px * 0.55)
+  return (
+    <span className={`inline-flex items-center justify-center ${className}`}>
+      <Compass style={{ width: iconPx, height: iconPx }} strokeWidth={1.75} />
+    </span>
+  )
 }
 
 // ──────────────────────────────────────────────────────────────────

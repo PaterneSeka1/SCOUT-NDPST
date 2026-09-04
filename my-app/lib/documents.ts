@@ -5,9 +5,5 @@ export const LABELS_TYPE_DOCUMENT: Record<string, string> = {
   AUTRE: 'Autre',
 }
 
-export const ICONES_TYPE_DOCUMENT: Record<string, string> = {
-  AUTORISATION_PARENTALE: '📝',
-  CERTIFICAT_MEDICAL: '🩺',
-  PHOTO_IDENTITE: '🪪',
-  AUTRE: '📎',
-}
+// Les icônes par type de document vivent désormais dans lib/icons.ts
+// (ICONES_TYPE_DOCUMENT, composants lucide-react).

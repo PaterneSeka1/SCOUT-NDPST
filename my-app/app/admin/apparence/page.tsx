@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { toast } from 'sonner'
+import { ImageOff, Upload, ExternalLink } from '@/lib/icons'
 
 type Theme = {
   couleurPrimaire: string
@@ -232,7 +233,7 @@ export default function SiteConfigPage() {
                   className="w-full h-full object-contain"
                 />
               ) : (
-                <span className="text-3xl text-gray-300">🖼</span>
+                <ImageOff className="h-7 w-7 text-gray-300" strokeWidth={1.75} />
               )}
             </div>
 
@@ -460,7 +461,7 @@ export default function SiteConfigPage() {
               >
                 {uploadHero
                   ? <span className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-gray-500" />
-                  : <span>📤</span>}
+                  : <Upload className="h-3.5 w-3.5" strokeWidth={2} />}
                 {uploadHero ? 'Téléversement…' : 'Téléverser une nouvelle photo'}
               </button>
               <span className="text-xs text-gray-400">JPEG, PNG, WebP, SVG — max 5 Mo</span>
@@ -546,9 +547,10 @@ export default function SiteConfigPage() {
             href="/"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
           >
-            Voir la page d&apos;accueil ↗
+            Voir la page d&apos;accueil
+            <ExternalLink className="h-3.5 w-3.5" strokeWidth={2} />
           </a>
           <button
             type="submit"

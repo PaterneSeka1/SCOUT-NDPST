@@ -6,11 +6,12 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { ParoisseLogoImage } from '@/app/components/ParoisseLogoImage'
 import { Widgets } from '@/app/components/widgets/Widgets'
+import { NavIcon, Menu, UserCircle, LogOut, type LucideIcon } from '@/lib/icons'
 
 type MenuItem = {
   label: string
   href: string
-  icone: string
+  icone: LucideIcon
 }
 
 // aDesEnfants : un membre du staff (Chef de Groupe, encadrement de branche,
@@ -29,13 +30,13 @@ function getMenuItems(role: string, aDesEnfants: boolean, roleDistrict?: string 
   const items = getMenuItemsDeBase(role)
   let menu = items
   if (role !== 'PARENT' && aDesEnfants) {
-    const item = { label: 'Mes enfants', href: '/dashboard/mes-enfants', icone: '👨‍👧‍👦' }
+    const item = { label: 'Mes enfants', href: '/dashboard/mes-enfants', icone: NavIcon.mesEnfants }
     const indexApresParoisse = items.findIndex((m) => m.href === '/dashboard/paroisse')
     const position = indexApresParoisse >= 0 ? indexApresParoisse + 1 : items.length
     menu = [...items.slice(0, position), item, ...items.slice(position)]
   }
   if (roleDistrict) {
-    menu = [...menu, { label: 'Espace district', href: '/district', icone: '🏛️' }]
+    menu = [...menu, { label: 'Espace district', href: '/district', icone: NavIcon.espaceDistrict }]
   }
   return menu
 }
@@ -44,64 +45,64 @@ function getMenuItemsDeBase(role: string): MenuItem[] {
   switch (role) {
     case 'CHEF_GROUPE':
       return [
-        { label: 'Tableau de bord', href: '/dashboard', icone: '📊' },
-        { label: 'Paroisse', href: '/dashboard/paroisse', icone: '⛪' },
-        { label: 'Membres', href: '/dashboard/utilisateurs', icone: '👥' },
-        { label: 'Parents', href: '/dashboard/parents', icone: '👨‍👩‍👧' },
-        { label: 'Branches', href: '/dashboard/branches', icone: '🌿' },
-        { label: 'Scouts', href: '/dashboard/scouts', icone: '⚜️' },
-        { label: 'Documents', href: '/dashboard/documents', icone: '📄' },
-        { label: 'Calendrier', href: '/dashboard/calendrier', icone: '🗓' },
-        { label: 'Cotisations', href: '/dashboard/cotisations', icone: '💶' },
-        { label: 'Activités', href: '/dashboard/activites', icone: '📅' },
-        { label: 'Réunions', href: '/dashboard/reunions', icone: '🗓️' },
-        { label: 'Programmes', href: '/dashboard/programmes', icone: '📘' },
-        { label: 'Rapports', href: '/dashboard/rapports', icone: '📈' },
+        { label: 'Tableau de bord', href: '/dashboard', icone: NavIcon.tableauDeBord },
+        { label: 'Paroisse', href: '/dashboard/paroisse', icone: NavIcon.paroisse },
+        { label: 'Membres', href: '/dashboard/utilisateurs', icone: NavIcon.membres },
+        { label: 'Parents', href: '/dashboard/parents', icone: NavIcon.parents },
+        { label: 'Branches', href: '/dashboard/branches', icone: NavIcon.branches },
+        { label: 'Scouts', href: '/dashboard/scouts', icone: NavIcon.scouts },
+        { label: 'Documents', href: '/dashboard/documents', icone: NavIcon.documents },
+        { label: 'Calendrier', href: '/dashboard/calendrier', icone: NavIcon.calendrier },
+        { label: 'Cotisations', href: '/dashboard/cotisations', icone: NavIcon.cotisations },
+        { label: 'Activités', href: '/dashboard/activites', icone: NavIcon.activites },
+        { label: 'Réunions', href: '/dashboard/reunions', icone: NavIcon.reunions },
+        { label: 'Programmes', href: '/dashboard/programmes', icone: NavIcon.programmes },
+        { label: 'Rapports', href: '/dashboard/rapports', icone: NavIcon.rapports },
       ]
     case 'ADJOINT_GROUPE':
     case 'ASSISTANT_GROUPE':
       return [
-        { label: 'Tableau de bord', href: '/dashboard', icone: '📊' },
-        { label: 'Paroisse', href: '/dashboard/paroisse', icone: '⛪' },
-        { label: 'Branches', href: '/dashboard/branches', icone: '🌿' },
-        { label: 'Scouts', href: '/dashboard/scouts', icone: '⚜️' },
-        { label: 'Documents', href: '/dashboard/documents', icone: '📄' },
-        { label: 'Calendrier', href: '/dashboard/calendrier', icone: '🗓' },
-        { label: 'Cotisations', href: '/dashboard/cotisations', icone: '💶' },
-        { label: 'Activités', href: '/dashboard/activites', icone: '📅' },
-        { label: 'Réunions', href: '/dashboard/reunions', icone: '🗓️' },
-        { label: 'Programmes', href: '/dashboard/programmes', icone: '📘' },
+        { label: 'Tableau de bord', href: '/dashboard', icone: NavIcon.tableauDeBord },
+        { label: 'Paroisse', href: '/dashboard/paroisse', icone: NavIcon.paroisse },
+        { label: 'Branches', href: '/dashboard/branches', icone: NavIcon.branches },
+        { label: 'Scouts', href: '/dashboard/scouts', icone: NavIcon.scouts },
+        { label: 'Documents', href: '/dashboard/documents', icone: NavIcon.documents },
+        { label: 'Calendrier', href: '/dashboard/calendrier', icone: NavIcon.calendrier },
+        { label: 'Cotisations', href: '/dashboard/cotisations', icone: NavIcon.cotisations },
+        { label: 'Activités', href: '/dashboard/activites', icone: NavIcon.activites },
+        { label: 'Réunions', href: '/dashboard/reunions', icone: NavIcon.reunions },
+        { label: 'Programmes', href: '/dashboard/programmes', icone: NavIcon.programmes },
       ]
     case 'RESPONSABLE_BRANCHE':
     case 'ADJOINT_BRANCHE':
     case 'ASSISTANT_BRANCHE':
       return [
-        { label: 'Tableau de bord', href: '/dashboard', icone: '📊' },
-        { label: 'Paroisse', href: '/dashboard/paroisse', icone: '⛪' },
-        { label: 'Ma branche', href: '/dashboard/ma-branche', icone: '🌿' },
-        { label: 'Scouts', href: '/dashboard/scouts', icone: '⚜️' },
-        { label: 'Documents', href: '/dashboard/documents', icone: '📄' },
-        { label: 'Calendrier', href: '/dashboard/calendrier', icone: '🗓' },
-        { label: 'Cotisations', href: '/dashboard/cotisations', icone: '💶' },
-        { label: 'Activités', href: '/dashboard/activites', icone: '📅' },
-        { label: 'Réunions', href: '/dashboard/reunions', icone: '🗓️' },
-        { label: 'Programmes', href: '/dashboard/programmes', icone: '📘' },
-        { label: 'Présences', href: '/dashboard/presences', icone: '✅' },
+        { label: 'Tableau de bord', href: '/dashboard', icone: NavIcon.tableauDeBord },
+        { label: 'Paroisse', href: '/dashboard/paroisse', icone: NavIcon.paroisse },
+        { label: 'Ma branche', href: '/dashboard/ma-branche', icone: NavIcon.maBranche },
+        { label: 'Scouts', href: '/dashboard/scouts', icone: NavIcon.scouts },
+        { label: 'Documents', href: '/dashboard/documents', icone: NavIcon.documents },
+        { label: 'Calendrier', href: '/dashboard/calendrier', icone: NavIcon.calendrier },
+        { label: 'Cotisations', href: '/dashboard/cotisations', icone: NavIcon.cotisations },
+        { label: 'Activités', href: '/dashboard/activites', icone: NavIcon.activites },
+        { label: 'Réunions', href: '/dashboard/reunions', icone: NavIcon.reunions },
+        { label: 'Programmes', href: '/dashboard/programmes', icone: NavIcon.programmes },
+        { label: 'Présences', href: '/dashboard/presences', icone: NavIcon.presences },
       ]
     case 'PARENT':
       return [
-        { label: 'Tableau de bord', href: '/dashboard', icone: '📊' },
-        { label: 'Paroisse', href: '/dashboard/paroisse', icone: '⛪' },
-        { label: 'Mes enfants', href: '/dashboard/mes-enfants', icone: '👨‍👧‍👦' },
+        { label: 'Tableau de bord', href: '/dashboard', icone: NavIcon.tableauDeBord },
+        { label: 'Paroisse', href: '/dashboard/paroisse', icone: NavIcon.paroisse },
+        { label: 'Mes enfants', href: '/dashboard/mes-enfants', icone: NavIcon.mesEnfants },
       ]
     case 'SCOUT':
       return [
-        { label: 'Tableau de bord', href: '/dashboard', icone: '📊' },
-        { label: 'Paroisse', href: '/dashboard/paroisse', icone: '⛪' },
-        { label: 'Ma progression', href: '/dashboard/ma-progression', icone: '🏅' },
+        { label: 'Tableau de bord', href: '/dashboard', icone: NavIcon.tableauDeBord },
+        { label: 'Paroisse', href: '/dashboard/paroisse', icone: NavIcon.paroisse },
+        { label: 'Ma progression', href: '/dashboard/ma-progression', icone: NavIcon.maProgression },
       ]
     default:
-      return [{ label: 'Tableau de bord', href: '/dashboard', icone: '📊' }]
+      return [{ label: 'Tableau de bord', href: '/dashboard', icone: NavIcon.tableauDeBord }]
   }
 }
 
@@ -141,37 +142,38 @@ function SidebarContent({
   return (
     <>
       {/* Logo paroisse + nom de la paroisse */}
-      <div className="px-6 py-5 border-b border-white/15 flex-shrink-0">
+      <div className="flex-shrink-0 border-b border-white/10 px-6 py-5">
         <div className="flex items-center gap-3">
           <div
-            className="flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden"
+            className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl"
             style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}
           >
             <ParoisseLogoImage logoUrl={logoUrl} taille="xl" />
           </div>
           <div className="min-w-0">
-            <p className="text-white font-bold text-sm leading-tight truncate">{nomSite}</p>
-            <p className="text-white/60 text-xs truncate">{sousTitreSite}</p>
+            <p className="truncate text-sm leading-tight font-semibold text-white">{nomSite}</p>
+            <p className="truncate text-xs text-white/55">{sousTitreSite}</p>
           </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 overflow-y-auto">
-        <ul className="space-y-1">
+      <nav className="scrollbar-fine flex-1 overflow-y-auto px-3 py-4">
+        <ul className="space-y-0.5">
           {menuItems.map((item) => {
             const actif = pathname === item.href
+            const Icone = item.icone
             return (
               <li key={item.href}>
                 <Link
                   href={item.href}
                   onClick={onNavigate}
-                  className={`snav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium ${
+                  className={`snav-link flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium ${
                     actif ? 'snav-active' : ''
                   }`}
                 >
-                  <span className="text-base">{item.icone}</span>
-                  {item.label}
+                  <Icone className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={2} />
+                  <span className="truncate">{item.label}</span>
                 </Link>
               </li>
             )
@@ -180,22 +182,22 @@ function SidebarContent({
       </nav>
 
       {/* Pied de sidebar */}
-      <div className="px-4 py-4 border-t border-white/15 flex-shrink-0">
-        <p className="text-white/60 text-xs truncate mb-0.5">{nomComplet}</p>
-        <p className="text-[#f39c12] text-xs font-medium mb-3">{libelleRole(role)}</p>
+      <div className="flex-shrink-0 border-t border-white/10 px-4 py-4">
+        <p className="mb-0.5 truncate text-xs text-white/55">{nomComplet}</p>
+        <p className="mb-3 text-xs font-medium" style={{ color: 'var(--ca)' }}>{libelleRole(role)}</p>
         <Link
           href="/dashboard/profil"
           onClick={onNavigate}
-          className="w-full text-xs text-white/60 hover:text-white hover:bg-white/10 px-3 py-2 rounded-lg transition-colors flex items-center gap-2 mb-1"
+          className="mb-1 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-white/60 transition-colors hover:bg-white/10 hover:text-white"
         >
-          <span>👤</span>
+          <UserCircle className="h-4 w-4" strokeWidth={2} />
           Mon profil
         </Link>
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}
-          className="w-full text-xs text-white/60 hover:text-white hover:bg-red-700/40 px-3 py-2 rounded-lg transition-colors flex items-center gap-2"
+          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-white/60 transition-colors hover:bg-red-500/20 hover:text-white"
         >
-          <span>🚪</span>
+          <LogOut className="h-4 w-4" strokeWidth={2} />
           Déconnexion
         </button>
       </div>
@@ -242,7 +244,7 @@ export function DashboardShell({
   const sidebarProps = { pathname, nomComplet, role, logoUrl, nomSite, sousTitreSite }
 
   return (
-    <div className="flex h-screen bg-gray-100 overflow-hidden print:h-auto print:overflow-visible">
+    <div className="flex h-dvh overflow-hidden bg-gray-50 print:h-auto print:overflow-visible">
 
       {/* Overlay mobile */}
       {sidebarOuverte && (
@@ -253,13 +255,13 @@ export function DashboardShell({
       )}
 
       {/* Sidebar desktop */}
-      <aside className="hidden lg:flex w-64 flex-col flex-shrink-0 print:hidden" style={sidebarStyle}>
+      <aside className="hidden w-64 flex-shrink-0 flex-col lg:flex print:hidden" style={sidebarStyle}>
         <SidebarContent menuItems={menuItems} {...sidebarProps} />
       </aside>
 
       {/* Sidebar mobile (drawer) */}
       <aside
-        className={`fixed inset-y-0 left-0 z-30 w-72 flex flex-col transition-transform duration-300 lg:hidden print:hidden ${
+        className={`fixed inset-y-0 left-0 z-30 flex w-72 flex-col transition-transform duration-300 lg:hidden print:hidden ${
           sidebarOuverte ? 'translate-x-0' : '-translate-x-full'
         }`}
         style={sidebarStyle}
@@ -268,30 +270,28 @@ export function DashboardShell({
       </aside>
 
       {/* Zone principale */}
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0 print:overflow-visible">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden print:overflow-visible">
 
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between flex-shrink-0 gap-3 print:hidden">
-          <div className="flex items-center gap-3 min-w-0">
+        <header className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:px-6 sm:py-4 print:hidden">
+          <div className="flex min-w-0 items-center gap-3">
             <button
-              className="lg:hidden flex items-center justify-center w-9 h-9 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
+              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 lg:hidden"
               onClick={() => setSidebarOuverte(true)}
               aria-label="Ouvrir le menu"
             >
-              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+              <Menu className="h-5 w-5" strokeWidth={2} />
             </button>
-            <h2 className="text-gray-800 font-semibold text-sm truncate">{titrePage}</h2>
+            <h2 className="truncate text-sm font-semibold text-gray-800">{titrePage}</h2>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            <div className="hidden sm:block text-right">
-              <p className="text-sm font-medium text-gray-800 leading-tight">{nomComplet}</p>
+          <div className="flex flex-shrink-0 items-center gap-2 sm:gap-3">
+            <div className="hidden text-right sm:block">
+              <p className="text-sm leading-tight font-medium text-gray-800">{nomComplet}</p>
               <p className="text-xs text-gray-500">{libelleRole(role)}</p>
             </div>
             <div
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+              className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold text-white sm:h-9 sm:w-9"
               style={{ backgroundColor: 'var(--cp)' }}
             >
               {initiale}

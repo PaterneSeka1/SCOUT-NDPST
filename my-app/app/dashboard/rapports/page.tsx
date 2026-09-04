@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_BRANCHES, COULEURS_BRANCHES, ORDRE_BRANCHES } from '@/lib/branches'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
+import { ICONES_KPI, ICONE_KPI_DEFAUT, ArrowRight, Download } from '@/lib/icons'
 
 interface Activite {
   id: string; titre: string; dateDebut: string; type: string; brancheType: string | null
@@ -42,7 +43,7 @@ function BarrePourcent({ valeur, max, couleur }: { valeur: number; max: number; 
 }
 
 function JaugeTaux({ taux }: { taux: number }) {
-  const couleur = taux >= 75 ? 'bg-green-500' : taux >= 50 ? 'bg-[#f39c12]' : 'bg-red-400'
+  const couleur = taux >= 75 ? 'bg-green-500' : taux >= 50 ? 'bg-amber-500' : 'bg-red-400'
   return (
     <div className="flex items-center gap-2">
       <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
@@ -73,7 +74,7 @@ export default function PageRapports() {
 
   if (chargement) return (
     <div className="flex items-center justify-center h-48">
-      <div className="w-6 h-6 border-2 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
@@ -96,17 +97,20 @@ export default function PageRapports() {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: 'Scouts actifs', valeur: rapport.scoutsActifs, couleur: 'bg-[#1a4731]', icone: '⚜️' },
-          { label: 'Scouts inactifs', valeur: rapport.scoutsInactifs, couleur: 'bg-gray-500', icone: '⏸️' },
-          { label: 'Activités ce mois', valeur: rapport.activitesMois, couleur: 'bg-[#27ae60]', icone: '📅' },
-          { label: 'Réunions ce mois', valeur: rapport.reunionsMois, couleur: 'bg-blue-600', icone: '🗓️' },
-        ].map(({ label, valeur, couleur, icone }) => (
-          <div key={label} className={`${couleur} text-white rounded-xl p-4`}>
-            <div className="text-2xl mb-1">{icone}</div>
-            <p className="text-2xl font-bold">{valeur}</p>
-            <p className="text-xs opacity-90 mt-0.5">{label}</p>
-          </div>
-        ))}
+          { label: 'Scouts actifs', valeur: rapport.scoutsActifs, couleur: 'bg-[var(--cp)]' },
+          { label: 'Scouts inactifs', valeur: rapport.scoutsInactifs, couleur: 'bg-gray-500' },
+          { label: 'Activités ce mois', valeur: rapport.activitesMois, couleur: 'bg-[var(--ca)]' },
+          { label: 'Réunions ce mois', valeur: rapport.reunionsMois, couleur: 'bg-blue-600' },
+        ].map(({ label, valeur, couleur }) => {
+          const Icone = ICONES_KPI[label] ?? ICONE_KPI_DEFAUT
+          return (
+            <div key={label} className={`${couleur} text-white rounded-xl p-4`}>
+              <Icone className="h-6 w-6 mb-2 opacity-90" strokeWidth={2} />
+              <p className="text-2xl font-bold">{valeur}</p>
+              <p className="text-xs opacity-90 mt-0.5">{label}</p>
+            </div>
+          )
+        })}
       </div>
 
       {/* Taux de présence global */}
@@ -182,8 +186,9 @@ export default function PageRapports() {
       <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-gray-800">Présences aux réunions</h2>
-          <Link href="/dashboard/reunions" className="text-xs text-[#1a4731] hover:underline">
-            Voir toutes →
+          <Link href="/dashboard/reunions" className="inline-flex items-center gap-1 text-xs hover:underline" style={{ color: 'var(--cp)' }}>
+            Voir toutes
+            <ArrowRight className="h-3 w-3" strokeWidth={2} />
           </Link>
         </div>
 
@@ -228,8 +233,9 @@ export default function PageRapports() {
                       </td>
                       <td className="py-3 text-right">
                         <a href={`/api/reunions/${r.id}/presences/export`}
-                          className="text-xs text-[#1a4731] hover:underline whitespace-nowrap">
-                          CSV ↓
+                          className="inline-flex items-center gap-1 text-xs hover:underline whitespace-nowrap" style={{ color: 'var(--cp)' }}>
+                          <Download className="h-3 w-3" strokeWidth={2} />
+                          CSV
                         </a>
                       </td>
                     </tr>

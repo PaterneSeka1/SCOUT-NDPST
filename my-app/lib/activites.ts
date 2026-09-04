@@ -18,15 +18,6 @@ export const COULEURS_TYPE_ACTIVITE: Record<string, string> = {
   AUTRE: 'bg-gray-100 text-gray-700',
 }
 
-// Reprend les pictogrammes déjà utilisés au fil de l'eau (tableau de bord,
-// widget flottant) — centralisés ici pour éviter qu'une future icône ne
-// diverge d'un écran à l'autre (même principe que ICONES_TYPE_DOCUMENT).
-export const ICONES_TYPE_ACTIVITE: Record<string, string> = {
-  REUNION: '📋',
-  SORTIE: '🥾',
-  CAMP: '⛺',
-  SERVICE: '🤝',
-  CELEBRATION: '🎉',
-  FORMATION: '📚',
-  AUTRE: '📋',
-}
+// Les icônes par type d'activité vivent désormais dans lib/icons.ts
+// (ICONES_TYPE_ACTIVITE, composants lucide-react) — un seul endroit pour ne
+// pas faire diverger pictogramme texte et pictogramme SVG d'un écran à l'autre.

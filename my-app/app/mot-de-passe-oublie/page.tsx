@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { ParoisseLogoImageAuto } from '@/app/components/ParoisseLogoImage'
 import { useSiteInfo } from '@/app/components/useSiteInfo'
+import { BackLink } from '@/app/components/ui/BackLink'
 
 export default function PageMotDePasseOublie() {
   const [email, setEmail] = useState('')
@@ -97,10 +98,9 @@ export default function PageMotDePasseOublie() {
                 ) : 'Envoyer le lien'}
               </button>
 
-              <Link href="/login"
-                className="block text-center text-sm text-gray-500 hover:text-gray-700 transition-colors">
-                ← Retour à la connexion
-              </Link>
+              <div className="flex justify-center">
+                <BackLink href="/login">Retour à la connexion</BackLink>
+              </div>
             </form>
           )}
         </div>
