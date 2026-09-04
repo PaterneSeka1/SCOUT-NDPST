@@ -5,8 +5,9 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
+import { Church } from '@/lib/icons'
 
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
+const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 interface Paroisse {
@@ -121,7 +122,7 @@ export default function PageParoisse() {
 
   if (chargement) return (
     <div className="flex items-center justify-center h-48">
-      <div className="w-6 h-6 border-2 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
@@ -151,17 +152,17 @@ export default function PageParoisse() {
         <div className={`grid gap-3 ${voitStatsDetaillees ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1'}`}>
           {voitStatsDetaillees && (
             <>
-              <div className="bg-[#1a4731] text-white rounded-xl p-4 text-center">
+              <div className="bg-[var(--cp)] text-white rounded-xl p-4 text-center">
                 <p className="text-2xl sm:text-3xl font-bold">{paroisse._count.scouts}</p>
                 <p className="text-xs sm:text-sm opacity-90 mt-0.5">Scouts</p>
               </div>
-              <div className="bg-[#27ae60] text-white rounded-xl p-4 text-center">
+              <div className="bg-[var(--ca)] text-white rounded-xl p-4 text-center">
                 <p className="text-2xl sm:text-3xl font-bold">{paroisse._count.utilisateurs}</p>
                 <p className="text-xs sm:text-sm opacity-90 mt-0.5">Utilisateurs</p>
               </div>
             </>
           )}
-          <div className="bg-[#f39c12] text-white rounded-xl p-4 text-center">
+          <div className="bg-[var(--ca)] text-white rounded-xl p-4 text-center">
             <p className="text-2xl sm:text-3xl font-bold">{paroisse._count.activites}</p>
             <p className="text-xs sm:text-sm opacity-90 mt-0.5">Activités</p>
           </div>
@@ -177,7 +178,7 @@ export default function PageParoisse() {
                 {logoPreview ? (
                   <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-4xl">⛪</span>
+                  <Church className="h-9 w-9 text-gray-300" strokeWidth={2} />
                 )}
                 {estChefGroupe && (
                   <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-xl">
@@ -287,7 +288,7 @@ export default function PageParoisse() {
 
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <button type="submit" disabled={soumission}
-                className="sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
+                className="sm:flex-none bg-[var(--cp)] text-white px-5 py-2.5 rounded-lg hover:brightness-110 transition-all text-sm font-medium disabled:opacity-60">
                 {soumission ? 'Enregistrement…' : 'Enregistrer'}
               </button>
               <button type="button" onClick={() => setModeEdition(false)}
@@ -305,12 +306,12 @@ export default function PageParoisse() {
         {estParent ? (
           <p className="text-sm text-gray-500 text-center py-4">
             Consultez les prochaines activités de vos enfants depuis{' '}
-            <Link href="/dashboard/mes-enfants" className="text-[#1a4731] hover:underline font-medium">Mes enfants</Link>.
+            <Link href="/dashboard/mes-enfants" className="text-[var(--cp)] hover:underline font-medium">Mes enfants</Link>.
           </p>
         ) : role === 'SCOUT' ? (
           <p className="text-sm text-gray-500 text-center py-4">
             Consultez vos prochaines activités depuis{' '}
-            <Link href="/dashboard/ma-progression" className="text-[#1a4731] hover:underline font-medium">Ma progression</Link>.
+            <Link href="/dashboard/ma-progression" className="text-[var(--cp)] hover:underline font-medium">Ma progression</Link>.
           </p>
         ) : activitesAVenir.length === 0 ? (
           <p className="text-sm text-gray-400 italic text-center py-4">Aucune activité à venir pour le moment</p>
@@ -320,11 +321,11 @@ export default function PageParoisse() {
               const debut = new Date(a.dateDebut)
               return (
                 <div key={a.id} className="flex items-center gap-4 py-2 border-b border-gray-50 last:border-0">
-                  <div className="flex-shrink-0 w-11 h-11 rounded-xl bg-[#1a4731]/10 flex flex-col items-center justify-center">
-                    <span className="text-xs font-bold text-[#1a4731] leading-none">
+                  <div className="flex-shrink-0 w-11 h-11 rounded-xl bg-[var(--cp)]/10 flex flex-col items-center justify-center">
+                    <span className="text-xs font-bold text-[var(--cp)] leading-none">
                       {debut.toLocaleDateString('fr-FR', { day: '2-digit' })}
                     </span>
-                    <span className="text-xs text-[#1a4731]/70 leading-none mt-0.5">
+                    <span className="text-xs text-[var(--cp)]/70 leading-none mt-0.5">
                       {debut.toLocaleDateString('fr-FR', { month: 'short' })}
                     </span>
                   </div>
@@ -335,7 +336,7 @@ export default function PageParoisse() {
                       {a.lieu ? ` · ${a.lieu}` : ''}
                     </p>
                   </div>
-                  <span className="flex-shrink-0 text-xs bg-[#1a4731]/10 text-[#1a4731] px-2 py-0.5 rounded-full font-medium">
+                  <span className="flex-shrink-0 text-xs bg-[var(--cp)]/10 text-[var(--cp)] px-2 py-0.5 rounded-full font-medium">
                     {debut.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>

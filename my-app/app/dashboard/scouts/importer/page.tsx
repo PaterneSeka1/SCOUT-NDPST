@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Papa from 'papaparse'
 import { toast } from 'sonner'
+import { BackLink } from '@/app/components/ui/BackLink'
+import { Download, FileText, CheckCircle2, XCircle } from '@/lib/icons'
 
 const COLONNES_ATTENDUES = [
   'nom', 'prenom', 'dateNaissance', 'sexe', 'brancheType', 'matricule',
@@ -100,9 +101,7 @@ export default function PageImporterScouts() {
 
   return (
     <div className="space-y-6">
-      <Link href="/dashboard/scouts" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
-        ← Retour à la liste
-      </Link>
+      <BackLink href="/dashboard/scouts">Retour à la liste</BackLink>
 
       <div>
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Importer des scouts</h1>
@@ -113,12 +112,14 @@ export default function PageImporterScouts() {
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <button
             onClick={telechargerModele}
-            className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+            className="inline-flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
           >
-            📥 Télécharger le modèle CSV
+            <Download className="h-3.5 w-3.5" strokeWidth={2} />
+            Télécharger le modèle CSV
           </button>
-          <label className="bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium cursor-pointer text-center">
-            📄 Choisir un fichier CSV
+          <label className="inline-flex items-center justify-center gap-2 bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium cursor-pointer text-center">
+            <FileText className="h-3.5 w-3.5" strokeWidth={2} />
+            Choisir un fichier CSV
             <input type="file" accept=".csv,text/csv" onChange={handleFichier} className="hidden" />
           </label>
           {nomFichier && <span className="text-sm text-gray-500 truncate">{nomFichier}</span>}
@@ -156,7 +157,7 @@ export default function PageImporterScouts() {
             <button
               onClick={importer}
               disabled={soumission}
-              className="bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60"
+              className="bg-[var(--cp)] text-white px-5 py-2.5 rounded-lg hover:brightness-110 transition-all text-sm font-medium disabled:opacity-60"
             >
               {soumission ? 'Import en cours…' : `Importer ${lignes.length} scout${lignes.length > 1 ? 's' : ''}`}
             </button>
@@ -169,7 +170,9 @@ export default function PageImporterScouts() {
             <div className="space-y-1.5">
               {resultats.map((r) => (
                 <div key={r.ligne} className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg ${r.succes ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                  <span className="flex-shrink-0">{r.succes ? '✅' : '❌'}</span>
+                  <span className="flex-shrink-0">
+                    {r.succes ? <CheckCircle2 className="h-4 w-4" strokeWidth={2} /> : <XCircle className="h-4 w-4" strokeWidth={2} />}
+                  </span>
                   <span className="flex-shrink-0 font-medium">Ligne {r.ligne}</span>
                   <span className="truncate">{r.succes ? `${r.prenom} ${r.nom} créé(e)` : r.erreur}</span>
                 </div>
@@ -184,7 +187,7 @@ export default function PageImporterScouts() {
               </button>
               <button
                 onClick={() => router.push('/dashboard/scouts')}
-                className="bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium"
+                className="bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium"
               >
                 Voir la liste des scouts
               </button>

@@ -6,9 +6,11 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_BRANCHES, ORDRE_BRANCHES } from '@/lib/branches'
+import { BackLink } from '@/app/components/ui/BackLink'
+import { CalendarDays, Repeat, Check } from '@/lib/icons'
 
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
-const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
+const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
+const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 const BRANCHES = [
@@ -148,11 +150,7 @@ export default function PageNouvelleReunion() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Link href="/dashboard/reunions" className="text-gray-400 hover:text-gray-600">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </Link>
+        <BackLink href="/dashboard/reunions">Retour</BackLink>
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Planifier une réunion</h1>
       </div>
 
@@ -164,8 +162,9 @@ export default function PageNouvelleReunion() {
             <div className="flex gap-3">
               {(['serie', 'unique'] as const).map((m) => (
                 <button key={m} type="button" onClick={() => setMode(m)}
-                  className={`flex-1 py-2.5 rounded-lg border text-sm font-medium transition-colors ${mode === m ? 'bg-[#1a4731] text-white border-[#1a4731]' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
-                  {m === 'unique' ? '📅 Réunion unique' : '🔁 Série hebdomadaire'}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg border text-sm font-medium transition-colors ${mode === m ? 'bg-[var(--cp)] text-white border-[var(--cp)]' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
+                  {m === 'unique' ? <CalendarDays className="h-4 w-4" strokeWidth={2} /> : <Repeat className="h-4 w-4" strokeWidth={2} />}
+                  {m === 'unique' ? 'Réunion unique' : 'Série hebdomadaire'}
                 </button>
               ))}
             </div>
@@ -188,8 +187,9 @@ export default function PageNouvelleReunion() {
                 </select>
               )}
               {configAppliquee && (
-                <p className="text-xs text-[#1a4731] mt-1">
-                  ✓ Jour habituel pré-rempli depuis la configuration
+                <p className="inline-flex items-center gap-1 text-xs text-[var(--cp)] mt-1">
+                  <Check className="h-3 w-3" strokeWidth={2.5} />
+                  Jour habituel pré-rempli depuis la configuration
                 </p>
               )}
             </div>
@@ -245,7 +245,7 @@ export default function PageNouvelleReunion() {
                 </div>
               </div>
               {previewDates.length > 0 && (
-                <div className="text-xs text-[#1a4731] bg-[#1a4731]/5 px-3 py-2 rounded-lg">
+                <div className="text-xs text-[var(--cp)] bg-[var(--cp)]/5 px-3 py-2 rounded-lg">
                   <span className="font-medium">{previewDates.length} réunion{previewDates.length > 1 ? 's' : ''} seront créées</span>
                   {previewDates.length <= 6 && (
                     <span className="text-gray-500 ml-1">
@@ -278,12 +278,12 @@ export default function PageNouvelleReunion() {
             <label className={CLS_LABEL}>Notes <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
               placeholder="Programme, consignes particulières…"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] resize-none" />
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] resize-none" />
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={soumission}
-              className="sm:flex-none bg-[#1a4731] text-white px-6 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
+              className="sm:flex-none bg-[var(--cp)] text-white px-6 py-2.5 rounded-lg hover:brightness-110 transition-all text-sm font-medium disabled:opacity-60">
               {soumission
                 ? 'Création…'
                 : mode === 'serie'

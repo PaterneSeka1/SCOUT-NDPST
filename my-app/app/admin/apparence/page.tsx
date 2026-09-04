@@ -264,7 +264,7 @@ export default function SiteConfigPage() {
                 >
                   {uploadLogo
                     ? <span className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-gray-500" />
-                    : <span>📤</span>}
+                    : <Upload className="h-3.5 w-3.5" strokeWidth={2} />}
                   {uploadLogo ? 'Téléversement…' : 'Téléverser un logo'}
                 </button>
                 {config.logoSite && (

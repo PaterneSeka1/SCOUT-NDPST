@@ -1,12 +1,13 @@
 'use client'
 
 import { use, useState, useEffect } from 'react'
-import Link from 'next/link'
 import { toast } from 'sonner'
 import { useActivite, usePresencesActivite, useEnregistrerPresences } from '@/hooks/useActivites'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { ScannerQR } from '@/app/components/ScannerQR'
 import { decoderQrScout } from '@/lib/qr'
+import { BackLink } from '@/app/components/ui/BackLink'
+import { Camera, Stethoscope, FileSignature } from '@/lib/icons'
 
 interface EtatPresence {
   scoutId: string
@@ -95,12 +96,7 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
       {/* En-tête */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Link
-            href={`/dashboard/activites/${id}`}
-            className="text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            ← Retour
-          </Link>
+          <BackLink href={`/dashboard/activites/${id}`}>Retour</BackLink>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Feuille de présence</h1>
             {activite && (
@@ -117,7 +113,7 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
         {/* Compteur + boutons tout cocher */}
         <div className="flex items-center gap-3 flex-shrink-0">
           <div className="text-right">
-            <p className="text-2xl font-bold text-[#1a4731]">{nbPresents}/{nbTotal}</p>
+            <p className="text-2xl font-bold text-[var(--cp)]">{nbPresents}/{nbTotal}</p>
             <p className="text-xs text-gray-500">présent(s)</p>
           </div>
           <div className="flex flex-col gap-1">
@@ -136,9 +132,10 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
           </div>
           <button
             onClick={() => setScannerOuvert(true)}
-            className="text-xs px-3 py-2 bg-[#1a4731] text-white rounded-lg hover:bg-[#163d29] transition-colors font-medium flex items-center gap-1.5"
+            className="text-xs px-3 py-2 bg-[var(--cp)] text-white rounded-lg hover:brightness-110 transition-all font-medium flex items-center gap-1.5"
           >
-            📷 Scanner
+            <Camera className="h-3.5 w-3.5" strokeWidth={2} />
+            Scanner
           </button>
         </div>
       </div>
@@ -200,19 +197,21 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
                     {/* Autorisations de camp signées par le parent (camps uniquement, information seule) */}
                     {activite?.type === 'CAMP' && (
                       <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${
+                        <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium border ${
                           p.scout.autorisationCamp?.ficheMedicale
                             ? 'bg-green-50 text-green-700 border-green-100'
                             : 'bg-orange-50 text-orange-700 border-orange-100'
                         }`}>
-                          🩺 Fiche {p.scout.autorisationCamp?.ficheMedicale ? 'signée' : 'non signée'}
+                          <Stethoscope className="h-3 w-3" strokeWidth={2} />
+                          Fiche {p.scout.autorisationCamp?.ficheMedicale ? 'signée' : 'non signée'}
                         </span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${
+                        <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium border ${
                           p.scout.autorisationCamp?.autorisationParentale
                             ? 'bg-green-50 text-green-700 border-green-100'
                             : 'bg-orange-50 text-orange-700 border-orange-100'
                         }`}>
-                          📝 Autorisation {p.scout.autorisationCamp?.autorisationParentale ? 'signée' : 'non signée'}
+                          <FileSignature className="h-3 w-3" strokeWidth={2} />
+                          Autorisation {p.scout.autorisationCamp?.autorisationParentale ? 'signée' : 'non signée'}
                         </span>
                       </div>
                     )}
@@ -230,7 +229,7 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
                       value={etat?.commentaire ?? ''}
                       onChange={(e) => setCommentaire(p.scout.id, e.target.value)}
                       placeholder="Commentaire (optionnel)"
-                      className="w-48 text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#1a4731] hidden sm:block"
+                      className="w-48 text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[var(--cp)] hidden sm:block"
                     />
                   </div>
 
@@ -241,7 +240,7 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
                       value={etat?.commentaire ?? ''}
                       onChange={(e) => setCommentaire(p.scout.id, e.target.value)}
                       placeholder="Commentaire (optionnel)"
-                      className="w-full text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#1a4731]"
+                      className="w-full text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[var(--cp)]"
                     />
                   </div>
                 </div>
@@ -262,7 +261,7 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
           <button
             onClick={handleEnregistrer}
             disabled={enregistrerPresences.isPending || scouts.length === 0}
-            className="w-full sm:w-auto bg-[#1a4731] text-white px-6 py-2 rounded-lg hover:bg-[#15392a] disabled:opacity-50 transition-colors text-sm font-medium"
+            className="w-full sm:w-auto bg-[var(--cp)] text-white px-6 py-2 rounded-lg hover:brightness-110 disabled:opacity-50 transition-all text-sm font-medium"
           >
             {enregistrerPresences.isPending ? 'Enregistrement...' : 'Enregistrer les présences'}
           </button>

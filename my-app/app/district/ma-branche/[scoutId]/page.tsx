@@ -2,10 +2,10 @@
 
 import { useState } from 'react'
 import { useParams } from 'next/navigation'
-import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { useProgressionsScout, useValiderBadge } from '@/hooks/useProgressions'
+import { BackLink } from '@/app/components/ui/BackLink'
 
 export default function ProgressionScoutBranchePage() {
   const { scoutId } = useParams<{ scoutId: string }>()
@@ -27,9 +27,7 @@ export default function ProgressionScoutBranchePage() {
 
   return (
     <div className="space-y-5 sm:space-y-6">
-      <Link href="/district/ma-branche" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
-        ← Retour à ma branche
-      </Link>
+      <BackLink href="/district/ma-branche">Retour à ma branche</BackLink>
 
       {isLoading ? (
         <div className="flex items-center justify-center py-24">
@@ -77,7 +75,7 @@ export default function ProgressionScoutBranchePage() {
                       <button
                         onClick={() => handleValiderBadge(badge.id)}
                         disabled={validationEnCours && badgeEnCours === badge.id}
-                        className="text-sm bg-[#1a4731] text-white px-3 py-1.5 rounded-lg hover:bg-[#163d29] transition-colors disabled:opacity-60 flex-shrink-0 ml-2"
+                        className="text-sm bg-[var(--cp)] text-white px-3 py-1.5 rounded-lg hover:brightness-110 transition-colors disabled:opacity-60 flex-shrink-0 ml-2"
                       >
                         {validationEnCours && badgeEnCours === badge.id ? '…' : 'Valider'}
                       </button>

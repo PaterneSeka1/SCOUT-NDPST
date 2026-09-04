@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { COULEURS_ROLES, libelleRoleAvecFonction } from '@/lib/roles'
+import { BackLink } from '@/app/components/ui/BackLink'
 
 interface UtilisateurDetail {
   id: string
@@ -66,7 +67,7 @@ export default function FicheUtilisateurPlateformePage() {
     return (
       <div className="max-w-2xl mx-auto space-y-4">
         <p className="text-sm text-gray-600">Impossible de charger cet utilisateur.</p>
-        <Link href="/admin/utilisateurs" className="text-sm text-gray-500 hover:text-gray-800">← Retour aux utilisateurs</Link>
+        <BackLink href="/admin/utilisateurs">Retour aux utilisateurs</BackLink>
       </div>
     )
   }
@@ -76,9 +77,7 @@ export default function FicheUtilisateurPlateformePage() {
       {/* En-tête */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Link href="/admin/utilisateurs" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
-            ← Retour
-          </Link>
+          <BackLink href="/admin/utilisateurs">Retour</BackLink>
           <h1 className="text-2xl font-bold text-gray-900">Fiche utilisateur</h1>
         </div>
 

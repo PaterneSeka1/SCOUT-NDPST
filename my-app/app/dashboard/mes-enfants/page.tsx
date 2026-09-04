@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
 import { LABELS_TYPE_COTISATION, LABELS_STATUT_COTISATION, COULEURS_STATUT_COTISATION, formatMontantFCFA } from '@/lib/cotisations'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
+import { Baby, Check } from '@/lib/icons'
 
 const LABELS_STATUT_REUNION: Record<string, { label: string; cls: string; dot: string }> = {
   PRESENT: { label: 'Présent', cls: 'text-green-700 bg-green-50', dot: 'bg-green-500' },
@@ -149,7 +150,7 @@ export default function PageMesEnfants() {
 
   if (chargement) return (
     <div className="flex items-center justify-center h-48">
-      <div className="w-6 h-6 border-2 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
     </div>
   )
   if (erreur) return <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreur}</div>
@@ -163,7 +164,7 @@ export default function PageMesEnfants() {
 
       {enfants.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-          <p className="text-4xl mb-3">👨‍👧‍👦</p>
+          <Baby className="h-10 w-10 mx-auto mb-3 text-gray-300" strokeWidth={2} />
           <p className="text-sm text-gray-500">Aucun enfant lié à votre compte</p>
           <p className="text-xs text-gray-400 mt-1">Contactez le Chef de Groupe de votre paroisse pour associer vos enfants.</p>
         </div>
@@ -212,10 +213,10 @@ export default function PageMesEnfants() {
                   <button
                     onClick={() => basculerConsentementImage(scout.id, !scout.consentementImage)}
                     disabled={enCours === `consentement-${scout.id}`}
-                    className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60 ${
+                    className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-lg transition-all disabled:opacity-60 ${
                       scout.consentementImage
                         ? 'border border-gray-300 text-gray-600 hover:bg-gray-50'
-                        : 'bg-[#1a4731] text-white hover:bg-[#163d29]'
+                        : 'bg-[var(--cp)] text-white hover:brightness-110'
                     }`}
                   >
                     {enCours === `consentement-${scout.id}` ? '…' : scout.consentementImage ? 'Révoquer' : 'Autoriser'}
@@ -271,15 +272,15 @@ export default function PageMesEnfants() {
                             <div key={type} className="flex items-center justify-between gap-3">
                               <span className="text-xs text-gray-700">{LABELS_TYPE_AUTORISATION[type]}</span>
                               {signee ? (
-                                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-50 text-green-700 border border-green-100">
-                                  ✓ Signée
+                                <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-green-50 text-green-700 border border-green-100">
+                                  <Check className="h-3 w-3" strokeWidth={2.5} /> Signée
                                 </span>
                               ) : (
                                 <div className="flex items-center gap-2">
                                   <button
                                     onClick={() => confirmerDigitalement(camp.id, scout.id, type)}
                                     disabled={chargementLigne}
-                                    className="text-xs bg-[#1a4731] text-white px-2.5 py-1 rounded-lg hover:bg-[#163d29] transition-colors disabled:opacity-60"
+                                    className="text-xs bg-[var(--cp)] text-white px-2.5 py-1 rounded-lg hover:brightness-110 transition-all disabled:opacity-60"
                                   >
                                     {chargementLigne ? '…' : 'Je confirme'}
                                   </button>
@@ -304,7 +305,7 @@ export default function PageMesEnfants() {
                   <div className="flex px-5 gap-1 pt-3">
                     {([['reunions', `Réunions (${scout._count.presencesReunion})`], ['activites', `Activités (${scout._count.presences})`]] as const).map(([k, label]) => (
                       <button key={k} onClick={() => setOnglet(scout.id, k)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${onglet === k ? 'bg-[#1a4731] text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
+                        className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${onglet === k ? 'bg-[var(--cp)] text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
                         {label}
                       </button>
                     ))}
@@ -371,7 +372,7 @@ export default function PageMesEnfants() {
                     <div className="space-y-2">
                       {responsablesBranche.map((r) => (
                         <div key={r.id} className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-[#1a4731]/10 flex items-center justify-center text-xs font-bold text-[#1a4731] flex-shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-[var(--cp)]/10 flex items-center justify-center text-xs font-bold text-[var(--cp)] flex-shrink-0">
                             {r.utilisateur.prenom[0]}{r.utilisateur.nom[0]}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -383,18 +384,18 @@ export default function PageMesEnfants() {
                           <div className="flex-shrink-0 flex gap-2">
                             {r.utilisateur.telephone && (
                               <a href={`tel:${r.utilisateur.telephone}`}
-                                className="w-7 h-7 rounded-lg bg-[#1a4731]/10 flex items-center justify-center hover:bg-[#1a4731]/20 transition-colors"
+                                className="w-7 h-7 rounded-lg bg-[var(--cp)]/10 flex items-center justify-center hover:bg-[var(--cp)]/20 transition-colors"
                                 title={r.utilisateur.telephone}>
-                                <svg className="w-3.5 h-3.5 text-[#1a4731]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg className="w-3.5 h-3.5 text-[var(--cp)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                                 </svg>
                               </a>
                             )}
                             {r.utilisateur.email && (
                               <a href={`mailto:${r.utilisateur.email}`}
-                                className="w-7 h-7 rounded-lg bg-[#1a4731]/10 flex items-center justify-center hover:bg-[#1a4731]/20 transition-colors"
+                                className="w-7 h-7 rounded-lg bg-[var(--cp)]/10 flex items-center justify-center hover:bg-[var(--cp)]/20 transition-colors"
                                 title={r.utilisateur.email}>
-                                <svg className="w-3.5 h-3.5 text-[#1a4731]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg className="w-3.5 h-3.5 text-[var(--cp)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                                 </svg>
                               </a>
@@ -420,11 +421,11 @@ export default function PageMesEnfants() {
               const date = new Date(r.dateReportee ?? r.dateHeure)
               return (
                 <div key={r.id} className="flex items-center gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[#1a4731]/10 flex flex-col items-center justify-center">
-                    <span className="text-xs font-bold text-[#1a4731] leading-none">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[var(--cp)]/10 flex flex-col items-center justify-center">
+                    <span className="text-xs font-bold text-[var(--cp)] leading-none">
                       {date.toLocaleDateString('fr-FR', { day: '2-digit' })}
                     </span>
-                    <span className="text-xs text-[#1a4731]/70 leading-none">
+                    <span className="text-xs text-[var(--cp)]/70 leading-none">
                       {date.toLocaleDateString('fr-FR', { month: 'short' })}
                     </span>
                   </div>
@@ -451,11 +452,11 @@ export default function PageMesEnfants() {
           <div className="space-y-3">
             {prochaines.map((a) => (
               <div key={a.id} className="flex items-center gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[#f39c12]/10 flex flex-col items-center justify-center">
-                  <span className="text-xs font-bold text-[#f39c12] leading-none">
+                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[var(--ca)]/10 flex flex-col items-center justify-center">
+                  <span className="text-xs font-bold text-[var(--ca)] leading-none">
                     {new Date(a.dateDebut).toLocaleDateString('fr-FR', { day: '2-digit' })}
                   </span>
-                  <span className="text-xs text-[#f39c12]/70 leading-none">
+                  <span className="text-xs text-[var(--ca)]/70 leading-none">
                     {new Date(a.dateDebut).toLocaleDateString('fr-FR', { month: 'short' })}
                   </span>
                 </div>

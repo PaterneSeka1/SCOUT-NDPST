@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { MONO_PAROISSE } from '@/lib/monoParoisse'
+import { ArrowRight } from '@/lib/icons'
 
 interface District {
   id: string
@@ -123,7 +124,7 @@ export default function ListeDistricts() {
             placeholder="Nom du district (ex : District Nord)"
             value={nomNouveauDistrict}
             onChange={(e) => setNomNouveauDistrict(e.target.value)}
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent"
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent"
           />
           <div className="flex gap-2 flex-shrink-0">
             <button type="submit" disabled={soumissionCreation} className="rounded-lg px-4 py-2 text-sm font-bold text-white disabled:opacity-50 transition" style={{ backgroundColor: 'var(--cp)' }}>
@@ -145,7 +146,7 @@ export default function ListeDistricts() {
           placeholder="Rechercher un district…"
           value={recherche}
           onChange={(e) => setRecherche(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1a4731] bg-white"
+          className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--cp)] bg-white"
         />
       </div>
 
@@ -174,8 +175,9 @@ export default function ListeDistricts() {
                   </div>
                 </div>
 
-                <p className="mt-4 text-sm font-semibold" style={{ color: 'var(--cp)' }}>
-                  {d.commissaire ? 'Gérer le district →' : 'Nommer le Commissaire →'}
+                <p className="mt-4 inline-flex items-center gap-1 text-sm font-semibold" style={{ color: 'var(--cp)' }}>
+                  {d.commissaire ? 'Gérer le district' : 'Nommer le Commissaire'}
+                  <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
                 </p>
               </Link>
             ))}

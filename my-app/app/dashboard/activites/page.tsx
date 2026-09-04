@@ -9,6 +9,8 @@ import { LABELS_TYPE_ACTIVITE, COULEURS_TYPE_ACTIVITE } from '@/lib/activites'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
 import { ROLES_BRANCHE } from '@/lib/roles'
 import { confirmer } from '@/app/components/ConfirmDialog'
+import { ICONES_TYPE_ACTIVITE, ClipboardList } from '@/lib/icons'
+import { Pagination } from '@/app/components/ui/Pagination'
 
 type Activite = {
   id: string
@@ -19,10 +21,6 @@ type Activite = {
   lieu: string | null
   creePar: string
   _count: { presences: number }
-}
-
-const ICONES_TYPE: Record<string, string> = {
-  CAMP: '⛺', SORTIE: '🥾', SERVICE: '🤝', CELEBRATION: '🎉', FORMATION: '📚', REUNION: '📋', AUTRE: '📌',
 }
 
 function formaterDate(dateStr: string) {
@@ -56,10 +54,14 @@ function CarteActivite({
   peutSupprimer: boolean
   onSupprimer: (id: string, titre: string) => void
 }) {
+  const IconeType = ICONES_TYPE_ACTIVITE[activite.type] ?? ClipboardList
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2.5">
       <div className="flex items-start gap-3">
-        <span className="text-lg flex-shrink-0 mt-0.5">{ICONES_TYPE[activite.type] ?? '📋'}</span>
+        <span className="flex-shrink-0 mt-0.5 text-gray-500">
+          <IconeType className="h-5 w-5" strokeWidth={2} />
+        </span>
         <p className="text-sm font-semibold text-gray-900 leading-tight">{activite.titre}</p>
       </div>
 
@@ -83,7 +85,7 @@ function CarteActivite({
       </p>
 
       <div className="flex items-center gap-3 pt-1 border-t border-gray-50">
-        <Link href={`/dashboard/activites/${activite.id}`} className="text-[#1a4731] font-medium text-xs hover:underline">Voir</Link>
+        <Link href={`/dashboard/activites/${activite.id}`} className="text-[var(--cp)] font-medium text-xs hover:underline">Voir</Link>
         <span className="text-gray-200">|</span>
         <Link href={`/dashboard/activites/${activite.id}/modifier`} className="text-blue-600 font-medium text-xs hover:underline">Modifier</Link>
         {peutSupprimer && (
@@ -132,7 +134,7 @@ export default function PageActivites() {
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Activités</h1>
         <Link
           href="/dashboard/activites/nouvelle"
-          className="inline-flex items-center justify-center gap-2 bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#15392a] transition-colors text-sm font-medium"
+          className="inline-flex items-center justify-center gap-2 bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium"
         >
           + Nouvelle activité
         </Link>
@@ -145,13 +147,13 @@ export default function PageActivites() {
           placeholder="Rechercher une activité…"
           value={recherche}
           onChange={(e) => { setRecherche(e.target.value); setPage(1) }}
-          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1a4731] bg-white"
+          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--cp)] bg-white"
         />
         <div className="flex gap-2">
           <select
             value={filtreType}
             onChange={(e) => { setFiltreType(e.target.value); setPage(1) }}
-            className="flex-1 sm:flex-none sm:w-36 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a4731] bg-white"
+            className="flex-1 sm:flex-none sm:w-36 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--cp)] bg-white"
           >
             <option value="">Tous types</option>
             {Object.entries(LABELS_TYPE_ACTIVITE).map(([val, label]) => (
@@ -162,7 +164,7 @@ export default function PageActivites() {
             <select
               value={filtreBranche}
               onChange={(e) => { setFiltreBranche(e.target.value); setPage(1) }}
-              className="flex-1 sm:flex-none sm:w-36 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a4731] bg-white"
+              className="flex-1 sm:flex-none sm:w-36 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--cp)] bg-white"
             >
               <option value="">Toutes branches</option>
               {Object.entries(LABELS_BRANCHES).map(([val, label]) => (
@@ -229,7 +231,7 @@ export default function PageActivites() {
                     <td className="px-4 py-3 text-gray-600">{activite._count.presences}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
-                        <Link href={`/dashboard/activites/${activite.id}`} className="text-[#1a4731] hover:text-[#15392a] font-medium text-xs">Voir</Link>
+                        <Link href={`/dashboard/activites/${activite.id}`} className="text-[var(--cp)] hover:brightness-110 font-medium text-xs">Voir</Link>
                         <Link href={`/dashboard/activites/${activite.id}/modifier`} className="text-blue-600 hover:text-blue-800 font-medium text-xs">Modifier</Link>
                         {peutSupprimer(activite) && (
                           <button onClick={() => handleSupprimer(activite.id, activite.titre)} className="text-red-600 hover:text-red-800 font-medium text-xs">Supprimer</button>
@@ -245,18 +247,8 @@ export default function PageActivites() {
       </div>
 
       {/* Pagination */}
-      {pagination && pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-xs sm:text-sm text-gray-600">
-            {pagination.total} activité{pagination.total !== 1 ? 's' : ''} — p. {pagination.page}/{pagination.totalPages}
-          </p>
-          <div className="flex gap-2">
-            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-              className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-sm disabled:opacity-40 hover:bg-gray-50">←</button>
-            <button onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))} disabled={page === pagination.totalPages}
-              className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-sm disabled:opacity-40 hover:bg-gray-50">→</button>
-          </div>
-        </div>
+      {pagination && (
+        <Pagination page={page} totalPages={pagination.totalPages} onPageChange={setPage} total={pagination.total} itemLabel="activité" />
       )}
     </div>
   )

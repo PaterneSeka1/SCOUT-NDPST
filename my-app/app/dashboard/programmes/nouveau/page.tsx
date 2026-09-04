@@ -7,8 +7,8 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_BRANCHES, ORDRE_BRANCHES } from '@/lib/branches'
 
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
-const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
+const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
+const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 const BRANCHES = [
@@ -120,12 +120,12 @@ export default function PageNouveauProgramme() {
             <label className={CLS_LABEL}>Description / objectifs <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
               placeholder="Objectifs pédagogiques généraux de ce programme…"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] resize-none" />
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] resize-none" />
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={soumission}
-              className="sm:flex-none bg-[#1a4731] text-white px-6 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
+              className="sm:flex-none bg-[var(--cp)] text-white px-6 py-2.5 rounded-lg hover:brightness-110 transition-all text-sm font-medium disabled:opacity-60">
               {soumission ? 'Création…' : 'Créer le programme'}
             </button>
             <Link href="/dashboard/programmes"

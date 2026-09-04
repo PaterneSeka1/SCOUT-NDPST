@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
+import { ClipboardList, ArrowRight } from '@/lib/icons'
+import { EmptyState } from '@/app/components/ui/EmptyState'
+import { Pagination } from '@/app/components/ui/Pagination'
 
 interface Activite {
   id: string; titre: string; dateDebut: string; dateFin: string | null
@@ -36,7 +39,7 @@ export default function PagePresences() {
 
   if (chargement) return (
     <div className="flex items-center justify-center h-48">
-      <div className="w-6 h-6 border-2 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
@@ -50,12 +53,17 @@ export default function PagePresences() {
       </div>
 
       {activites.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-          <p className="text-4xl mb-3">📋</p>
-          <p className="text-sm text-gray-500">Aucune activité enregistrée</p>
-          <Link href="/dashboard/activites/nouvelle" className="mt-4 inline-block text-sm text-[#1a4731] font-medium hover:underline">
-            Créer une activité →
-          </Link>
+        <div className="bg-white rounded-xl border border-gray-200">
+          <EmptyState
+            icon={ClipboardList}
+            title="Aucune activité enregistrée"
+            action={
+              <Link href="/dashboard/activites/nouvelle" className="inline-flex items-center gap-1 text-sm text-[var(--cp)] font-medium hover:underline">
+                Créer une activité
+                <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
+              </Link>
+            }
+          />
         </div>
       ) : (
         <div className="space-y-3">
@@ -64,11 +72,11 @@ export default function PagePresences() {
             const passee = date < new Date()
             return (
               <div key={a.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-4">
-                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-[#1a4731]/10 flex flex-col items-center justify-center">
-                  <span className="text-xs font-bold text-[#1a4731] leading-none">
+                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-[var(--cp)]/10 flex flex-col items-center justify-center">
+                  <span className="text-xs font-bold text-[var(--cp)] leading-none">
                     {date.toLocaleDateString('fr-FR', { day: '2-digit' })}
                   </span>
-                  <span className="text-xs text-[#1a4731]/70 leading-none mt-0.5">
+                  <span className="text-xs text-[var(--cp)]/70 leading-none mt-0.5">
                     {date.toLocaleDateString('fr-FR', { month: 'short' })}
                   </span>
                 </div>
@@ -95,7 +103,7 @@ export default function PagePresences() {
                     {passee ? `${a._count.presences} présent${a._count.presences > 1 ? 's' : ''}` : 'À venir'}
                   </span>
                   <Link href={`/dashboard/activites/${a.id}/presences`}
-                    className="text-sm bg-[#1a4731] text-white px-3 py-1.5 rounded-lg hover:bg-[#163d29] transition-colors font-medium whitespace-nowrap">
+                    className="text-sm bg-[var(--cp)] text-white px-3 py-1.5 rounded-lg hover:brightness-110 transition-all font-medium whitespace-nowrap">
                     {passee ? 'Voir / Modifier' : 'Préparer'}
                   </Link>
                 </div>
@@ -105,19 +113,7 @@ export default function PagePresences() {
         </div>
       )}
 
-      {nbPages > 1 && (
-        <div className="flex items-center justify-between pt-2">
-          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40">
-            ← Précédent
-          </button>
-          <span className="text-sm text-gray-500">Page {page} / {nbPages}</span>
-          <button onClick={() => setPage((p) => Math.min(nbPages, p + 1))} disabled={page === nbPages}
-            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40">
-            Suivant →
-          </button>
-        </div>
-      )}
+      <Pagination page={page} totalPages={nbPages} onPageChange={setPage} total={total} itemLabel="activité" />
     </div>
   )
 }

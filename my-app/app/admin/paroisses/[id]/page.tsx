@@ -8,8 +8,10 @@ import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { confirmer } from '@/app/components/ConfirmDialog'
 import { COULEURS_ROLES, LABELS_ROLES, ROLES_BRANCHE, ROLES_TOUT_STAFF, libelleRoleAvecFonction } from '@/lib/roles'
+import { BackLink } from '@/app/components/ui/BackLink'
+import { Download } from '@/lib/icons'
 
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
+const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 interface ChefGroupe {
@@ -294,7 +296,7 @@ export default function FicheParoissePage() {
     return (
       <div className="max-w-3xl mx-auto space-y-4">
         <p className="text-sm text-gray-600">Impossible de charger cette paroisse.</p>
-        <Link href="/admin/paroisses" className="text-sm text-gray-500 hover:text-gray-800">← Retour aux paroisses</Link>
+        <BackLink href="/admin/paroisses">Retour aux paroisses</BackLink>
       </div>
     )
   }
@@ -304,7 +306,7 @@ export default function FicheParoissePage() {
       <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <Link href="/admin/paroisses" className="text-sm text-gray-500 hover:text-gray-800">← Retour aux paroisses</Link>
+            <BackLink href="/admin/paroisses">Retour aux paroisses</BackLink>
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Paroisse</p>
               <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${paroisse.actif ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
@@ -320,14 +322,14 @@ export default function FicheParoissePage() {
               href={`/api/admin/paroisses/${id}/export/scouts`}
               className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
             >
-              <span aria-hidden="true">↓</span>
+              <Download className="h-3.5 w-3.5" strokeWidth={2} />
               Scouts CSV
             </a>
             <a
               href={`/api/admin/paroisses/${id}/export/utilisateurs`}
               className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
             >
-              <span aria-hidden="true">↓</span>
+              <Download className="h-3.5 w-3.5" strokeWidth={2} />
               Membres CSV
             </a>
           </div>
@@ -602,7 +604,7 @@ export default function FicheParoissePage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Link href={`/admin/utilisateurs/${membre.id}`} className="text-xs font-semibold text-[#1a4731] hover:underline">
+                      <Link href={`/admin/utilisateurs/${membre.id}`} className="text-xs font-semibold text-[var(--cp)] hover:underline">
                         Fiche
                       </Link>
                     </td>

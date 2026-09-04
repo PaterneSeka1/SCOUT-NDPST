@@ -8,6 +8,8 @@ import { useActivite, useSupprimerActivite } from '@/hooks/useActivites'
 import { LABELS_TYPE_ACTIVITE, COULEURS_TYPE_ACTIVITE } from '@/lib/activites'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
 import { confirmer } from '@/app/components/ConfirmDialog'
+import { BackLink } from '@/app/components/ui/BackLink'
+import { ArrowRight } from '@/lib/icons'
 
 export default function PageDetailActivite({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -55,7 +57,7 @@ export default function PageDetailActivite({ params }: { params: Promise<{ id: s
     return (
       <div className="max-w-3xl mx-auto p-8 text-center">
         <p className="text-red-600 font-medium">Activité introuvable</p>
-        <Link href="/dashboard/activites" className="text-sm text-[#1a4731] hover:underline mt-2 inline-block">
+        <Link href="/dashboard/activites" className="text-sm text-[var(--cp)] hover:underline mt-2 inline-block">
           Retour aux activités
         </Link>
       </div>
@@ -67,12 +69,7 @@ export default function PageDetailActivite({ params }: { params: Promise<{ id: s
       {/* En-tête */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Link
-            href="/dashboard/activites"
-            className="text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            ← Retour
-          </Link>
+          <BackLink href="/dashboard/activites">Retour</BackLink>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{activite.titre}</h1>
             <div className="flex items-center gap-2 mt-1">
@@ -97,7 +94,7 @@ export default function PageDetailActivite({ params }: { params: Promise<{ id: s
         <div className="flex gap-2 flex-shrink-0">
           <Link
             href={`/dashboard/activites/${id}/presences`}
-            className="inline-flex items-center gap-1 bg-[#1a4731] text-white px-3 py-2 rounded-lg hover:bg-[#15392a] transition-colors text-sm font-medium"
+            className="inline-flex items-center gap-1 bg-[var(--cp)] text-white px-3 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium"
           >
             Gérer les présences
           </Link>
@@ -154,9 +151,10 @@ export default function PageDetailActivite({ params }: { params: Promise<{ id: s
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Présences</h2>
           <Link
             href={`/dashboard/activites/${id}/presences`}
-            className="text-sm text-[#1a4731] hover:underline font-medium"
+            className="inline-flex items-center gap-1 text-sm text-[var(--cp)] hover:underline font-medium"
           >
-            Voir la feuille →
+            Voir la feuille
+            <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
           </Link>
         </div>
 
@@ -165,14 +163,14 @@ export default function PageDetailActivite({ params }: { params: Promise<{ id: s
             <p className="text-gray-500 text-sm">Aucune présence enregistrée</p>
             <Link
               href={`/dashboard/activites/${id}/presences`}
-              className="inline-flex items-center gap-1 mt-2 bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#15392a] transition-colors text-sm font-medium"
+              className="inline-flex items-center gap-1 mt-2 bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium"
             >
               Prendre les présences
             </Link>
           </div>
         ) : (
           <div className="flex items-center gap-4">
-            <div className="text-3xl font-bold text-[#1a4731]">{activite._count.presences}</div>
+            <div className="text-3xl font-bold text-[var(--cp)]">{activite._count.presences}</div>
             <div className="text-sm text-gray-600">présence(s) enregistrée(s)</div>
           </div>
         )}

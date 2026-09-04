@@ -120,7 +120,7 @@ export function SelecteurEnfants({ scoutIds, onChange, scoutsInitiaux }: Props) 
               className="inline-flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-800 hover:bg-green-100"
             >
               {scout.prenom} {scout.nom}
-              <span aria-hidden="true">×</span>
+              <X className="h-3 w-3" strokeWidth={2.5} aria-hidden="true" />
             </button>
           ))}
         </div>
@@ -136,7 +136,7 @@ export function SelecteurEnfants({ scoutIds, onChange, scoutsInitiaux }: Props) 
             className={CLS_INPUT}
           />
           {rechercheScoutEnCours && !chargementScouts && (
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 border-2 border-gray-300 border-t-[#1a4731] rounded-full animate-spin" />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 border-2 border-gray-300 border-t-[var(--cp)] rounded-full animate-spin" />
           )}
         </div>
         <select
@@ -153,7 +153,7 @@ export function SelecteurEnfants({ scoutIds, onChange, scoutsInitiaux }: Props) 
       <div className="rounded-lg border border-gray-200 bg-gray-50 overflow-hidden">
         {chargementScouts ? (
           <div className="flex items-center justify-center py-8">
-            <span className="w-5 h-5 border-2 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
+            <span className="w-5 h-5 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : erreurScouts ? (
           <p className="px-4 py-4 text-sm text-red-600">Impossible de charger les scouts.</p>
@@ -172,7 +172,7 @@ export function SelecteurEnfants({ scoutIds, onChange, scoutsInitiaux }: Props) 
                       type="checkbox"
                       checked={selectionne}
                       onChange={() => basculerScout(scout)}
-                      className="w-4 h-4 rounded accent-[#1a4731] flex-shrink-0"
+                      className="w-4 h-4 rounded accent-[var(--cp)] flex-shrink-0"
                     />
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-medium text-gray-900 truncate">{scout.prenom} {scout.nom}</span>
@@ -196,17 +196,19 @@ export function SelecteurEnfants({ scoutIds, onChange, scoutsInitiaux }: Props) 
                     type="button"
                     onClick={() => setPageScouts((p) => p - 1)}
                     disabled={pageScouts <= 1}
-                    className="border border-gray-300 text-gray-700 px-2.5 py-1 rounded-md text-xs disabled:opacity-40 transition-colors hover:bg-white"
+                    className="inline-flex items-center gap-1 border border-gray-300 text-gray-700 px-2.5 py-1 rounded-md text-xs disabled:opacity-40 transition-colors hover:bg-white"
                   >
-                    ← Précédent
+                    <ChevronLeft className="h-4 w-4" strokeWidth={2} />
+                    Précédent
                   </button>
                   <button
                     type="button"
                     onClick={() => setPageScouts((p) => p + 1)}
                     disabled={pageScouts >= totalPagesScouts}
-                    className="border border-gray-300 text-gray-700 px-2.5 py-1 rounded-md text-xs disabled:opacity-40 transition-colors hover:bg-white"
+                    className="inline-flex items-center gap-1 border border-gray-300 text-gray-700 px-2.5 py-1 rounded-md text-xs disabled:opacity-40 transition-colors hover:bg-white"
                   >
-                    Suivant →
+                    Suivant
+                    <ChevronRight className="h-4 w-4" strokeWidth={2} />
                   </button>
                 </div>
               )}

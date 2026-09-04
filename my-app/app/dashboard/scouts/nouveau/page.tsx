@@ -7,13 +7,14 @@ import { toast } from 'sonner'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { useCreerScout } from '@/hooks/useScouts'
 import type { DonneesContact } from '@/hooks/useScouts'
+import { BackLink } from '@/app/components/ui/BackLink'
 
 const BRANCHES_LISTE = Object.keys(LABELS_BRANCHES)
 
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
-const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
-const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
-const CLS_SELECT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
+const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
+const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
+const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
+const CLS_SELECT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 interface ContactForm {
@@ -144,9 +145,7 @@ export default function NouveauScoutPage() {
 
   return (
     <div className="space-y-6">
-      <Link href="/dashboard/scouts" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
-        ← Retour à la liste
-      </Link>
+      <BackLink href="/dashboard/scouts">Retour à la liste</BackLink>
 
       <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Inscrire un scout</h1>
 
@@ -302,14 +301,14 @@ export default function NouveauScoutPage() {
 
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={contact.principal}
-                  onChange={(e) => modifierContact(idx, 'principal', e.target.checked)} className="accent-[#1a4731]" />
+                  onChange={(e) => modifierContact(idx, 'principal', e.target.checked)} className="accent-[var(--cp)]" />
                 <span className="text-xs text-gray-700">Contact principal</span>
               </label>
             </div>
           ))}
 
           <button type="button" onClick={ajouterContact}
-            className="text-sm text-[#1a4731] font-medium border border-[#1a4731]/30 hover:border-[#1a4731] px-4 py-2 rounded-lg transition-colors">
+            className="text-sm text-[var(--cp)] font-medium border border-[var(--cp)]/30 hover:border-[var(--cp)] px-4 py-2 rounded-lg transition-colors">
             + Ajouter un contact
           </button>
         </div>
@@ -317,7 +316,7 @@ export default function NouveauScoutPage() {
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3">
           <button type="submit" disabled={isPending}
-            className="sm:flex-none bg-[#1a4731] text-white px-5 py-2.5 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
+            className="sm:flex-none bg-[var(--cp)] text-white px-5 py-2.5 rounded-lg hover:brightness-110 transition-all text-sm font-medium disabled:opacity-60">
             {isPending ? 'Enregistrement…' : 'Inscrire le scout'}
           </button>
           <Link href="/dashboard/scouts"

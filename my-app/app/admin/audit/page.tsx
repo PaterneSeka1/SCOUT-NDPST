@@ -76,7 +76,7 @@ export default function PageJournalAuditPlateforme() {
           <select
             value={filtreEntite}
             onChange={(e) => { setFiltreEntite(e.target.value); setPage(1) }}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731]"
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)]"
           >
             <option value="">Tout</option>
             {ENTITES.map((e) => <option key={e} value={e}>{e}</option>)}
@@ -86,7 +86,7 @@ export default function PageJournalAuditPlateforme() {
           <select
             value={filtreParoisse}
             onChange={(e) => { setFiltreParoisse(e.target.value); setPage(1) }}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731]"
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)]"
           >
             <option value="">Toutes</option>
             {paroisses.map((p) => <option key={p.id} value={p.id}>{p.nom}</option>)}

@@ -69,7 +69,7 @@ export default function LoginPage() {
                 required
                 autoComplete="username"
                 placeholder="Ex : 0545247O ou 0712345678"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#27ae60] focus:border-transparent transition text-gray-700 placeholder-gray-400"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ca)] focus:border-transparent transition text-gray-700 placeholder-gray-400"
               />
             </div>
 
@@ -87,7 +87,7 @@ export default function LoginPage() {
                 required
                 autoComplete="current-password"
                 placeholder="••••••••"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#27ae60] focus:border-transparent transition text-gray-700 placeholder-gray-400"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ca)] focus:border-transparent transition text-gray-700 placeholder-gray-400"
               />
             </div>
 
@@ -108,7 +108,7 @@ export default function LoginPage() {
             </button>
 
             <div className="text-center">
-              <a href="/mot-de-passe-oublie" className="text-sm text-gray-500 hover:text-[#1a4731] transition-colors">
+              <a href="/mot-de-passe-oublie" className="text-sm text-gray-500 hover:text-[var(--cp)] transition-colors">
                 Mot de passe oublié ?
               </a>
             </div>

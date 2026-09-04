@@ -2,18 +2,18 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_ROLES, ROLES_ASSIGNABLES_DISTRICT } from '@/lib/roles'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { useDistrictUtilisateur, useModifierDistrictUtilisateur, useResetDistrictPassword } from '@/hooks/useDistrictUtilisateurs'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
+import { BackLink } from '@/app/components/ui/BackLink'
 
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
-const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
-const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
-const CLS_SELECT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
+const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
+const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
+const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
+const CLS_SELECT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 const ROLES_LISTE = ROLES_ASSIGNABLES_DISTRICT
@@ -110,22 +110,20 @@ export default function ModifierMembreEquipePage() {
 
   if (isLoading) return (
     <div className="flex items-center justify-center py-16">
-      <div className="w-8 h-8 border-4 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
+      <div className="w-8 h-8 border-4 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
   if (isError || !utilisateur) return (
     <div className="space-y-4">
-      <Link href="/district/equipe" className="text-sm text-gray-500 hover:text-gray-700">← Retour</Link>
+      <BackLink href="/district/equipe">Retour</BackLink>
       <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">Membre introuvable.</div>
     </div>
   )
 
   return (
     <div className="space-y-6 px-1 sm:px-0">
-      <Link href="/district/equipe" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
-        ← Retour à la liste
-      </Link>
+      <BackLink href="/district/equipe">Retour à la liste</BackLink>
 
       <div>
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Modifier le membre</h1>
@@ -164,12 +162,12 @@ export default function ModifierMembreEquipePage() {
                 <div className="flex gap-4">
                   <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                     <input type="radio" name="modeFonction" checked={modeBranche}
-                      onChange={() => setModeFonction('branche')} className="accent-[#1a4731]" />
+                      onChange={() => setModeFonction('branche')} className="accent-[var(--cp)]" />
                     Chargé d&apos;une branche
                   </label>
                   <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                     <input type="radio" name="modeFonction" checked={!modeBranche}
-                      onChange={() => setModeFonction('autre')} className="accent-[#1a4731]" />
+                      onChange={() => setModeFonction('autre')} className="accent-[var(--cp)]" />
                     Autre fonction
                   </label>
                 </div>
@@ -199,7 +197,7 @@ export default function ModifierMembreEquipePage() {
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={soumissionInfos}
-              className="w-full rounded-lg bg-[#1a4731] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#163d29] disabled:opacity-60 sm:w-auto">
+              className="w-full rounded-lg bg-[var(--cp)] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:brightness-110 disabled:opacity-60 sm:w-auto">
               {soumissionInfos ? 'Enregistrement…' : 'Enregistrer les modifications'}
             </button>
           </div>
@@ -228,7 +226,7 @@ export default function ModifierMembreEquipePage() {
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={soumissionMdp}
-              className="w-full rounded-lg bg-[#1a4731] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#163d29] disabled:opacity-60 sm:w-auto">
+              className="w-full rounded-lg bg-[var(--cp)] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:brightness-110 disabled:opacity-60 sm:w-auto">
               {soumissionMdp ? 'Réinitialisation…' : 'Réinitialiser le mot de passe'}
             </button>
           </div>

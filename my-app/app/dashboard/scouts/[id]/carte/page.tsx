@@ -23,7 +23,7 @@ export default function CarteScoutPage() {
 
   if (isLoading) return (
     <div className="flex items-center justify-center h-48">
-      <div className="w-6 h-6 border-2 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
@@ -36,25 +36,23 @@ export default function CarteScoutPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between print:hidden">
-        <Link href={`/dashboard/scouts/${id}`} className="text-sm text-gray-500 hover:text-gray-700">
-          ← Retour à la fiche
-        </Link>
+        <BackLink href={`/dashboard/scouts/${id}`}>Retour à la fiche</BackLink>
         <button
           onClick={() => window.print()}
-          className="bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium"
+          className="bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium"
         >
           Imprimer la carte
         </button>
       </div>
 
       <div className="flex justify-center">
-        <div className="w-80 bg-white border-2 border-[#1a4731] rounded-2xl p-6 text-center space-y-3 shadow-sm">
-          <p className="text-xs font-semibold text-[#1a4731] uppercase tracking-wide">{nomParoisse}</p>
-          <div className="w-20 h-20 mx-auto rounded-full bg-[#1a4731]/10 flex items-center justify-center overflow-hidden">
+        <div className="w-80 bg-white border-2 border-[var(--cp)] rounded-2xl p-6 text-center space-y-3 shadow-sm">
+          <p className="text-xs font-semibold text-[var(--cp)] uppercase tracking-wide">{nomParoisse}</p>
+          <div className="w-20 h-20 mx-auto rounded-full bg-[var(--cp)]/10 flex items-center justify-center overflow-hidden">
             {scout.photo ? (
               <img src={scout.photo} alt="" className="w-full h-full object-cover" />
             ) : (
-              <span className="text-xl font-bold text-[#1a4731]">{scout.prenom[0]}{scout.nom[0]}</span>
+              <span className="text-xl font-bold text-[var(--cp)]">{scout.prenom[0]}{scout.nom[0]}</span>
             )}
           </div>
           <div>

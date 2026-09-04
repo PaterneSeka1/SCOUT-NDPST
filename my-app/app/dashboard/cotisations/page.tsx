@@ -411,7 +411,7 @@ export default function PageCotisations() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
               <select value={formGeneration.type} onChange={(e) => setFormGeneration((f) => ({ ...f, type: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731]">
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)]">
                 {Object.entries(LABELS_TYPE_COTISATION).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </div>
@@ -420,7 +420,7 @@ export default function PageCotisations() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Libellé <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
               <input value={formGeneration.libelle} onChange={(e) => setFormGeneration((f) => ({ ...f, libelle: e.target.value }))}
                 placeholder="Ex : Camp de Pâques 2027"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1a4731]" />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--cp)]" />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -428,12 +428,12 @@ export default function PageCotisations() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Montant (FCFA)</label>
                 <input type="number" min="0" step="100" value={formGeneration.montant}
                   onChange={(e) => setFormGeneration((f) => ({ ...f, montant: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a4731]" />
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--cp)]" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Année scolaire</label>
                 <select value={formGeneration.anneeScolaire} onChange={(e) => setFormGeneration((f) => ({ ...f, anneeScolaire: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731]">
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)]">
                   {optionsAnnees().map((a) => <option key={a} value={a}>{a}</option>)}
                 </select>
               </div>
@@ -441,7 +441,7 @@ export default function PageCotisations() {
 
             <div className="flex gap-3 pt-2">
               <button onClick={genererCotisations} disabled={generationEnCours}
-                className="flex-1 bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60">
+                className="flex-1 bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium disabled:opacity-60">
                 {generationEnCours ? 'Génération…' : 'Générer'}
               </button>
               <button onClick={() => setModalOuvert(false)}

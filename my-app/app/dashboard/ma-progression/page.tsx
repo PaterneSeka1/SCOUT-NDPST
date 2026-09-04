@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
+import { Award, Check } from '@/lib/icons'
 
 const LABELS_STATUT_REUNION: Record<string, { label: string; cls: string; dot: string }> = {
   PRESENT: { label: 'Présent', cls: 'text-green-700 bg-green-50', dot: 'bg-green-500' },
@@ -55,7 +56,7 @@ export default function PageMaProgression() {
 
   if (chargement) return (
     <div className="flex items-center justify-center h-48">
-      <div className="w-6 h-6 border-2 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
@@ -95,15 +96,15 @@ export default function PageMaProgression() {
 
       {/* Statistiques */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="bg-[#1a4731] text-white rounded-xl p-4 text-center">
+        <div className="bg-[var(--cp)] text-white rounded-xl p-4 text-center">
           <p className="text-2xl font-bold">{badgesObtenus.size}</p>
           <p className="text-xs opacity-90 mt-0.5">Badge{badgesObtenus.size > 1 ? 's' : ''} obtenu{badgesObtenus.size > 1 ? 's' : ''}</p>
         </div>
-        <div className="bg-[#27ae60] text-white rounded-xl p-4 text-center">
+        <div className="bg-[var(--ca)] text-white rounded-xl p-4 text-center">
           <p className="text-2xl font-bold">{scout._count.presences}</p>
           <p className="text-xs opacity-90 mt-0.5">Activité{scout._count.presences > 1 ? 's' : ''}</p>
         </div>
-        <div className="bg-[#f39c12] text-white rounded-xl p-4 text-center">
+        <div className="bg-[var(--ca)] text-white rounded-xl p-4 text-center">
           <p className="text-2xl font-bold">{pct}%</p>
           <p className="text-xs opacity-90 mt-0.5">Progression</p>
         </div>
@@ -113,7 +114,7 @@ export default function PageMaProgression() {
       <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
         {badgesBranche.length === 0 ? (
           <div className="text-center py-6">
-            <p className="text-3xl mb-2">🏅</p>
+            <Award className="h-8 w-8 mx-auto mb-2 text-gray-300" strokeWidth={2} />
             <p className="text-sm text-gray-500">Aucun badge configuré pour ta branche pour le moment.</p>
             <p className="text-xs text-gray-400 mt-1">Demande à ton responsable de branche.</p>
           </div>
@@ -124,7 +125,7 @@ export default function PageMaProgression() {
               <span className="text-xs text-gray-400">{badgesObtenus.size} / {badgesBranche.length}</span>
             </div>
             <div className="w-full bg-gray-100 rounded-full h-2 mb-4">
-              <div className="bg-[#1a4731] h-2 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+              <div className="bg-[var(--cp)] h-2 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
             </div>
             <div className="space-y-2">
               {badgesBranche.map((badge) => {
@@ -133,7 +134,7 @@ export default function PageMaProgression() {
                 return (
                   <div key={badge.id} className={`flex items-start gap-3 p-3 rounded-lg ${obtenu ? 'bg-green-50 border border-green-100' : 'bg-gray-50 border border-gray-100'}`}>
                     <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs mt-0.5 ${obtenu ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
-                      {obtenu ? '✓' : badge.ordre}
+                      {obtenu ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} /> : badge.ordre}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm font-medium ${obtenu ? 'text-green-800' : 'text-gray-600'}`}>{badge.nom}</p>
@@ -162,7 +163,7 @@ export default function PageMaProgression() {
           <div className="space-y-2">
             {prochainesActivites.map((a) => (
               <div key={a.id} className="flex items-center gap-3 py-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#f39c12] flex-shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--ca)] flex-shrink-0" />
                 <span className="flex-1 text-sm text-gray-700 truncate">{a.titre}</span>
                 <span className="text-xs text-gray-400 flex-shrink-0">
                   {new Date(a.dateDebut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -183,7 +184,7 @@ export default function PageMaProgression() {
           <div className="space-y-2">
             {scout.presences.map((p, i) => (
               <div key={i} className="flex items-center gap-3 py-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#27ae60] flex-shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--ca)] flex-shrink-0" />
                 <span className="flex-1 text-sm text-gray-700 truncate">{p.activite.titre}</span>
                 <span className="text-xs text-gray-400 flex-shrink-0">
                   {new Date(p.activite.dateDebut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}

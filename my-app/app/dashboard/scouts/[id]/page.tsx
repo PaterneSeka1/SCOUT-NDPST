@@ -9,12 +9,13 @@ import { useScout, useAttribuerMatricule, useAjouterContact, useSupprimerContact
 import { useProgressionsScout, useValiderBadge } from '@/hooks/useProgressions'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
 import { LABELS_TYPE_DOCUMENT } from '@/lib/documents'
-import { ICONES_TYPE_DOCUMENT, Camera, AlertTriangle, Check, Paperclip } from '@/lib/icons'
+import { ICONES_TYPE_DOCUMENT, Camera, AlertTriangle, Check, Paperclip, ArrowRight } from '@/lib/icons'
 import { LABELS_TYPE_COTISATION, LABELS_STATUT_COTISATION, COULEURS_STATUT_COTISATION, formatMontantFCFA } from '@/lib/cotisations'
 import { ROLES_BRANCHE } from '@/lib/roles'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { confirmer } from '@/app/components/ConfirmDialog'
+import { BackLink } from '@/app/components/ui/BackLink'
 
 export default function FicheScoutPage() {
   const { id } = useParams<{ id: string }>()
@@ -72,7 +73,7 @@ export default function FicheScoutPage() {
 
   if (isLoading) return (
     <div className="flex items-center justify-center h-48">
-      <div className="w-6 h-6 border-2 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
@@ -176,9 +177,7 @@ export default function FicheScoutPage() {
     <div className="space-y-6 max-w-3xl mx-auto">
       {/* En-tête */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link href="/dashboard/scouts" className="text-sm text-gray-500 hover:text-gray-700">
-          ← Retour à la liste
-        </Link>
+        <BackLink href="/dashboard/scouts">Retour à la liste</BackLink>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <Link
             href={`/dashboard/scouts/${id}/carte`}
@@ -188,7 +187,7 @@ export default function FicheScoutPage() {
           </Link>
           <Link
             href={`/dashboard/scouts/${id}/modifier`}
-            className="inline-flex items-center justify-center bg-[#1a4731] text-white px-4 py-2 rounded-md text-sm hover:bg-[#163d29] transition-colors"
+            className="inline-flex items-center justify-center bg-[var(--cp)] text-white px-4 py-2 rounded-md text-sm hover:brightness-110 transition-all"
           >
             Modifier
           </Link>
@@ -198,7 +197,7 @@ export default function FicheScoutPage() {
       {/* Infos principales */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-start gap-4">
-          <div className="w-16 h-16 rounded-full bg-[#1a4731]/10 flex items-center justify-center text-2xl font-bold text-[#1a4731]">
+          <div className="w-16 h-16 rounded-full bg-[var(--cp)]/10 flex items-center justify-center text-2xl font-bold text-[var(--cp)]">
             {scout.nom[0]}{scout.prenom[0]}
           </div>
           <div className="flex-1">
@@ -244,7 +243,7 @@ export default function FicheScoutPage() {
         <h2 className="text-base font-semibold text-gray-900 mb-3">Matricule</h2>
         {scout.matricule ? (
           <div className="flex items-center gap-3">
-            <span className="font-mono text-lg font-bold text-[#1a4731] bg-[#1a4731]/5 px-3 py-1 rounded">
+            <span className="font-mono text-lg font-bold text-[var(--cp)] bg-[var(--cp)]/5 px-3 py-1 rounded">
               {scout.matricule}
             </span>
             <button onClick={() => setAfficherFormulaireMatricule(!afficherFormulaireMatricule)} className="text-sm text-gray-500 underline hover:text-gray-700">
@@ -258,7 +257,7 @@ export default function FicheScoutPage() {
         {!scout.matricule && !afficherFormulaireMatricule && (
           <button
             onClick={() => setAfficherFormulaireMatricule(true)}
-            className="mt-2 text-sm bg-[#1a4731] text-white px-3 py-1.5 rounded-md hover:bg-[#163d29] transition-colors"
+            className="mt-2 text-sm bg-[var(--cp)] text-white px-3 py-1.5 rounded-md hover:brightness-110 transition-all"
           >
             Attribuer un matricule
           </button>
@@ -270,10 +269,10 @@ export default function FicheScoutPage() {
               <input
                 type="text" value={nouveauMatricule} onChange={e => setNouveauMatricule(e.target.value)}
                 placeholder="Ex : 0545247O" required
-                className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#1a4731] sm:w-auto"
+                className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[var(--cp)] sm:w-auto"
               />
             </div>
-            <button type="submit" disabled={matriculeEnCours} className="bg-[#1a4731] text-white px-3 py-1.5 rounded-md text-sm hover:bg-[#163d29] transition-colors disabled:opacity-60">
+            <button type="submit" disabled={matriculeEnCours} className="bg-[var(--cp)] text-white px-3 py-1.5 rounded-md text-sm hover:brightness-110 transition-all disabled:opacity-60">
               {matriculeEnCours ? '…' : 'Enregistrer'}
             </button>
             <button type="button" onClick={() => setAfficherFormulaireMatricule(false)} className="text-sm text-gray-500 px-2 py-1.5 hover:text-gray-700">
@@ -303,7 +302,7 @@ export default function FicheScoutPage() {
               <>
                 <p className="text-sm text-gray-500 mb-2">Ce scout n&apos;a pas encore d&apos;espace personnel.</p>
                 {!afficherFormulaireCompte && (
-                  <button onClick={() => setAfficherFormulaireCompte(true)} className="text-sm bg-[#1a4731] text-white px-3 py-1.5 rounded-md hover:bg-[#163d29] transition-colors">
+                  <button onClick={() => setAfficherFormulaireCompte(true)} className="text-sm bg-[var(--cp)] text-white px-3 py-1.5 rounded-md hover:brightness-110 transition-all">
                     Créer un compte
                   </button>
                 )}
@@ -312,15 +311,15 @@ export default function FicheScoutPage() {
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Mot de passe <span className="text-red-500">*</span></label>
                       <PasswordInput value={passwordCompte} onChange={e => setPasswordCompte(e.target.value)} required placeholder={REGLE_MOT_DE_PASSE}
-                        className="border border-gray-300 rounded-md px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#1a4731]" />
+                        className="border border-gray-300 rounded-md px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[var(--cp)]" />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Téléphone <span className="text-gray-400">(optionnel)</span></label>
                       <input type="tel" value={telephoneCompte} onChange={e => setTelephoneCompte(e.target.value)} placeholder="0712345678"
-                        className="border border-gray-300 rounded-md px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#1a4731]" />
+                        className="border border-gray-300 rounded-md px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[var(--cp)]" />
                     </div>
                     <div className="flex flex-col gap-2 sm:flex-row">
-                      <button type="submit" disabled={compteEnCours} className="bg-[#1a4731] text-white px-3 py-1.5 rounded-md text-sm hover:bg-[#163d29] transition-colors disabled:opacity-60">
+                      <button type="submit" disabled={compteEnCours} className="bg-[var(--cp)] text-white px-3 py-1.5 rounded-md text-sm hover:brightness-110 transition-all disabled:opacity-60">
                         {compteEnCours ? 'Création…' : 'Créer le compte'}
                       </button>
                       <button type="button" onClick={() => setAfficherFormulaireCompte(false)} className="text-sm text-gray-500 px-2 hover:text-gray-700">Annuler</button>
@@ -337,7 +336,7 @@ export default function FicheScoutPage() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold text-gray-900">Contacts d&apos;urgence</h2>
-          <button onClick={() => setAfficherFormulaireContact(!afficherFormulaireContact)} className="text-sm text-[#1a4731] font-medium hover:underline">
+          <button onClick={() => setAfficherFormulaireContact(!afficherFormulaireContact)} className="text-sm text-[var(--cp)] font-medium hover:underline">
             + Ajouter
           </button>
         </div>
@@ -352,7 +351,7 @@ export default function FicheScoutPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-gray-900">{contact.prenom} {contact.nom}</span>
-                  {contact.principal && <span className="bg-[#1a4731] text-white text-xs px-1.5 py-0.5 rounded">Principal</span>}
+                  {contact.principal && <span className="bg-[var(--cp)] text-white text-xs px-1.5 py-0.5 rounded">Principal</span>}
                   {contact.relation && <span className="text-xs text-gray-500">{contact.relation}</span>}
                 </div>
                 <p className="text-sm text-gray-600 mt-0.5">{contact.telephone}</p>
@@ -375,24 +374,24 @@ export default function FicheScoutPage() {
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Nom <span className="text-red-500">*</span></label>
                 <input type="text" value={nouveauContact.nom} onChange={e => setNouveauContact(p => ({ ...p, nom: e.target.value }))} required
-                  className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a4731]" />
+                  className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cp)]" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Prénom</label>
                 <input type="text" value={nouveauContact.prenom} onChange={e => setNouveauContact(p => ({ ...p, prenom: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a4731]" />
+                  className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cp)]" />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Téléphone <span className="text-red-500">*</span></label>
                 <input type="tel" value={nouveauContact.telephone} onChange={e => setNouveauContact(p => ({ ...p, telephone: e.target.value }))} required
-                  className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a4731]" />
+                  className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cp)]" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Relation</label>
                 <select value={nouveauContact.relation} onChange={e => setNouveauContact(p => ({ ...p, relation: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731]">
+                  className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)]">
                   <option value="">Sélectionner</option>
                   <option>Père</option><option>Mère</option><option>Tuteur</option><option>Tutrice</option><option>Autre</option>
                 </select>
@@ -403,7 +402,7 @@ export default function FicheScoutPage() {
               Contact principal
             </label>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <button type="submit" disabled={contactEnCours} className="bg-[#1a4731] text-white px-3 py-1.5 rounded-md text-sm hover:bg-[#163d29] transition-colors disabled:opacity-60">
+              <button type="submit" disabled={contactEnCours} className="bg-[var(--cp)] text-white px-3 py-1.5 rounded-md text-sm hover:brightness-110 transition-all disabled:opacity-60">
                 {contactEnCours ? '…' : 'Ajouter'}
               </button>
               <button type="button" onClick={() => setAfficherFormulaireContact(false)} className="text-sm text-gray-500 px-2 hover:text-gray-700">Annuler</button>
@@ -416,7 +415,10 @@ export default function FicheScoutPage() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-base font-semibold text-gray-900">Cotisations</h2>
-          <Link href="/dashboard/cotisations" className="text-xs text-[#1a4731] hover:underline">Gérer les cotisations →</Link>
+          <Link href="/dashboard/cotisations" className="inline-flex items-center gap-1 text-xs hover:underline" style={{ color: 'var(--cp)' }}>
+            Gérer les cotisations
+            <ArrowRight className="h-3 w-3" strokeWidth={2} />
+          </Link>
         </div>
         {scout.cotisations.length === 0 ? (
           <p className="text-sm text-gray-500">Aucune cotisation enregistrée.</p>
@@ -482,7 +484,7 @@ export default function FicheScoutPage() {
 
         <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center border-t border-gray-100 pt-4">
           <select value={typeDocument} onChange={(e) => changerTypeDocument(e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] sm:w-auto">
+            className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] sm:w-auto">
             {Object.entries(LABELS_TYPE_DOCUMENT).map(([val, label]) => (
               <option key={val} value={val}>{label}</option>
             ))}
@@ -492,9 +494,9 @@ export default function FicheScoutPage() {
             value={dateExpirationDocument}
             onChange={(e) => setDateExpirationDocument(e.target.value)}
             title="Date d'expiration (optionnelle)"
-            className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] sm:w-auto"
+            className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] sm:w-auto"
           />
-          <label className="inline-flex w-full items-center justify-center text-sm bg-[#1a4731] text-white px-3 py-1.5 rounded-md hover:bg-[#163d29] transition-colors cursor-pointer sm:w-auto">
+          <label className="inline-flex w-full items-center justify-center text-sm bg-[var(--cp)] text-white px-3 py-1.5 rounded-md hover:brightness-110 transition-all cursor-pointer sm:w-auto">
             {uploadDocumentEnCours ? 'Envoi…' : '+ Ajouter un fichier'}
             <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
               onChange={handleUploadDocument} disabled={uploadDocumentEnCours} className="hidden" />
@@ -533,7 +535,7 @@ export default function FicheScoutPage() {
                     <button
                       onClick={() => handleValiderBadge(badge.id)}
                       disabled={validationEnCours && badgeEnCours === badge.id}
-                      className="text-sm bg-[#1a4731] text-white px-3 py-1.5 rounded-md hover:bg-[#163d29] transition-colors disabled:opacity-60 flex-shrink-0 ml-2"
+                      className="text-sm bg-[var(--cp)] text-white px-3 py-1.5 rounded-md hover:brightness-110 transition-all disabled:opacity-60 flex-shrink-0 ml-2"
                     >
                       {validationEnCours && badgeEnCours === badge.id ? '…' : 'Valider'}
                     </button>

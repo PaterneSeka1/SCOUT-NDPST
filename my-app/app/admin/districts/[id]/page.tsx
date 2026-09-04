@@ -7,8 +7,9 @@ import { toast } from 'sonner'
 import { confirmer } from '@/app/components/ConfirmDialog'
 import { SelecteurMembre } from '@/app/components/SelecteurMembre'
 import { COULEURS_ROLES, LABELS_ROLES, ROLES_TOUT_STAFF, libelleRoleAvecFonction } from '@/lib/roles'
+import { BackLink } from '@/app/components/ui/BackLink'
 
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
+const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
 
 interface ParoisseDistrict {
   id: string
@@ -299,7 +300,7 @@ export default function FicheDistrictPage() {
     return (
       <div className="max-w-3xl mx-auto space-y-4">
         <p className="text-sm text-gray-600">Impossible de charger ce district.</p>
-        <Link href="/admin/districts" className="text-sm text-gray-500 hover:text-gray-800">← Retour aux districts</Link>
+        <BackLink href="/admin/districts">Retour aux districts</BackLink>
       </div>
     )
   }
@@ -307,7 +308,7 @@ export default function FicheDistrictPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-        <Link href="/admin/districts" className="text-sm text-gray-500 hover:text-gray-800">← Retour aux districts</Link>
+        <BackLink href="/admin/districts">Retour aux districts</BackLink>
 
         {renommage ? (
           <form onSubmit={handleRenommer} className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
@@ -474,7 +475,7 @@ export default function FicheDistrictPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Link href={`/admin/utilisateurs/${membre.id}`} className="text-xs font-semibold text-[#1a4731] hover:underline">
+                      <Link href={`/admin/utilisateurs/${membre.id}`} className="text-xs font-semibold text-[var(--cp)] hover:underline">
                         Fiche
                       </Link>
                     </td>

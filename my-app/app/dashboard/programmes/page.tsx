@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { ROLES_GROUPE, ROLES_BRANCHE } from '@/lib/roles'
 import { LABELS_BRANCHES as BRANCHES, COULEURS_BRANCHES as COULEURS_BRANCHE } from '@/lib/branches'
+import { Plus } from '@/lib/icons'
 
 interface Programme {
   id: string
@@ -49,7 +50,7 @@ export default function PageProgrammes() {
 
   if (chargement) return (
     <div className="flex items-center justify-center h-48">
-      <div className="w-6 h-6 border-2 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
@@ -62,10 +63,8 @@ export default function PageProgrammes() {
         </div>
         {peutCreer && (
           <Link href="/dashboard/programmes/nouveau"
-            className="flex-shrink-0 flex items-center gap-1.5 bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
+            className="flex-shrink-0 flex items-center gap-1.5 bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium">
+            <Plus className="h-4 w-4" strokeWidth={2} />
             Nouveau programme
           </Link>
         )}
@@ -103,7 +102,7 @@ export default function PageProgrammes() {
 function CarteProgramme({ programme: p }: { programme: Programme }) {
   return (
     <Link href={`/dashboard/programmes/${p.id}`}
-      className="block bg-white rounded-xl border border-gray-200 p-4 sm:p-5 hover:border-[#1a4731]/40 transition-colors">
+      className="block bg-white rounded-xl border border-gray-200 p-4 sm:p-5 hover:border-[var(--cp)]/40 transition-colors">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">

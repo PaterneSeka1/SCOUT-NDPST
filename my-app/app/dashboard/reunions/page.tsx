@@ -7,6 +7,8 @@ import { toast } from 'sonner'
 import { ROLES_GROUPE, ROLES_BRANCHE } from '@/lib/roles'
 import { LABELS_BRANCHES as BRANCHES, COULEURS_BRANCHES as COULEURS_BRANCHE, ORDRE_BRANCHES as BRANCHES_ORDRE } from '@/lib/branches'
 import { confirmer } from '@/app/components/ConfirmDialog'
+import { Plus, ChevronDown, ArrowRight } from '@/lib/icons'
+import { MoreVertical } from 'lucide-react'
 
 const JOURS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
 
@@ -137,7 +139,7 @@ export default function PageReunions() {
 
   if (chargement) return (
     <div className="flex items-center justify-center h-48">
-      <div className="w-6 h-6 border-2 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
     </div>
   )
   return (
@@ -149,10 +151,8 @@ export default function PageReunions() {
         </div>
         {peutCreer && (
           <Link href="/dashboard/reunions/nouveau"
-            className="flex-shrink-0 flex items-center gap-1.5 bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
+            className="flex-shrink-0 flex items-center gap-1.5 bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium">
+            <Plus className="h-4 w-4" strokeWidth={2} />
             Planifier
           </Link>
         )}
@@ -199,8 +199,9 @@ export default function PageReunions() {
               <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
                 <p className="text-gray-400 text-sm">Aucune réunion planifiée</p>
                 {peutCreer && (
-                  <Link href="/dashboard/reunions/nouveau" className="text-[#1a4731] text-sm font-medium hover:underline mt-2 inline-block">
-                    Planifier la prochaine réunion →
+                  <Link href="/dashboard/reunions/nouveau" className="text-[var(--cp)] text-sm font-medium hover:underline mt-2 inline-flex items-center gap-1">
+                    Planifier la prochaine réunion
+                    <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
                   </Link>
                 )}
               </div>
@@ -233,11 +234,11 @@ export default function PageReunions() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nouvelle date et heure</label>
               <input type="datetime-local" value={nouvelleDate} onChange={(e) => setNouvelleDate(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a4731]" />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cp)]" />
             </div>
             <div className="flex gap-3">
               <button onClick={handleReporter} disabled={!nouvelleDate || soumissionReport}
-                className="flex-1 bg-[#1a4731] text-white py-2 rounded-lg text-sm font-medium hover:bg-[#163d29] disabled:opacity-60 transition-colors">
+                className="flex-1 bg-[var(--cp)] text-white py-2 rounded-lg text-sm font-medium hover:brightness-110 disabled:opacity-60 transition-all">
                 {soumissionReport ? 'Enregistrement…' : 'Confirmer le report'}
               </button>
               <button onClick={() => { setModalReport(null); setNouvelleDate('') }}
@@ -299,9 +300,7 @@ function CarteConfig({ branche, config, onSave }: {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <svg className={`w-4 h-4 text-gray-400 transition-transform ${ouvert ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+          <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${ouvert ? 'rotate-180' : ''}`} strokeWidth={2} />
         </div>
       </button>
 
@@ -311,30 +310,30 @@ function CarteConfig({ branche, config, onSave }: {
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Jour</label>
               <select value={jourSemaine} onChange={(e) => setJourSemaine(parseInt(e.target.value))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731]">
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)]">
                 {JOURS.map((j, i) => <option key={i} value={i}>{j}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Heure</label>
               <input type="time" value={heureDebut} onChange={(e) => setHeureDebut(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a4731]" />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cp)]" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Durée (min)</label>
               <input type="number" value={dureeMinutes} onChange={(e) => setDureeMinutes(parseInt(e.target.value))}
                 min="15" max="480" step="15"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a4731]" />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cp)]" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Lieu habituel</label>
               <input type="text" value={lieu} onChange={(e) => setLieu(e.target.value)}
                 placeholder="Ex. Salle parois."
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1a4731]" />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--cp)]" />
             </div>
           </div>
           <button onClick={handleSave} disabled={sauvegarde}
-            className="bg-[#1a4731] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#163d29] transition-colors disabled:opacity-60">
+            className="bg-[var(--cp)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:brightness-110 transition-all disabled:opacity-60">
             {sauvegarde ? 'Enregistrement…' : 'Enregistrer'}
           </button>
         </div>
@@ -363,11 +362,11 @@ function CarteReunion({ reunion: r, estGroupe, brancheUtilisateur, onAnnuler, on
   return (
     <div className={`bg-white rounded-xl border border-gray-200 p-4 sm:p-5 ${r.statut === 'ANNULEE' ? 'opacity-60' : ''}`}>
       <div className="flex items-center gap-3">
-        <div className="flex-shrink-0 w-11 h-11 rounded-xl bg-[#1a4731]/10 flex flex-col items-center justify-center">
-          <span className="text-xs font-bold text-[#1a4731] leading-none">
+        <div className="flex-shrink-0 w-11 h-11 rounded-xl bg-[var(--cp)]/10 flex flex-col items-center justify-center">
+          <span className="text-xs font-bold text-[var(--cp)] leading-none">
             {date.toLocaleDateString('fr-FR', { day: '2-digit' })}
           </span>
-          <span className="text-xs text-[#1a4731]/70 leading-none mt-0.5">
+          <span className="text-xs text-[var(--cp)]/70 leading-none mt-0.5">
             {date.toLocaleDateString('fr-FR', { month: 'short' })}
           </span>
         </div>
@@ -394,7 +393,7 @@ function CarteReunion({ reunion: r, estGroupe, brancheUtilisateur, onAnnuler, on
         <div className="flex-shrink-0 flex items-center gap-2">
           {r.statut !== 'ANNULEE' && (
             <Link href={`/dashboard/reunions/${r.id}/presences`}
-              className="text-xs bg-[#1a4731] text-white px-3 py-2 rounded-lg hover:bg-[#163d29] transition-colors whitespace-nowrap">
+              className="text-xs bg-[var(--cp)] text-white px-3 py-2 rounded-lg hover:brightness-110 transition-all whitespace-nowrap">
               {estPassee && r._count.presences > 0 ? 'Voir présences' : 'Présences'}
             </Link>
           )}
@@ -405,9 +404,7 @@ function CarteReunion({ reunion: r, estGroupe, brancheUtilisateur, onAnnuler, on
                 onClick={() => setMenuOuvert((o) => !o)}
                 onBlur={() => setTimeout(() => setMenuOuvert(false), 150)}
                 className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-gray-500">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" />
-                </svg>
+                <MoreVertical className="h-4 w-4" strokeWidth={2} />
               </button>
               {menuOuvert && (
                 <div className="absolute right-0 top-full mt-1 w-36 bg-white border border-gray-200 rounded-xl shadow-lg z-20 py-1 overflow-hidden">

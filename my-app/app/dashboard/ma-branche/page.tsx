@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
 import { formatMontantFCFA, anneeScolaireCourante } from '@/lib/cotisations'
+import { ArrowRight, ICONES_TYPE_ACTIVITE } from '@/lib/icons'
 
 interface Scout {
   id: string; prenom: string; nom: string; matricule: string | null; actif: boolean; photo: string | null
@@ -78,7 +79,7 @@ export default function PageMaBranche() {
 
   if (chargement) return (
     <div className="flex items-center justify-center h-48">
-      <div className="w-6 h-6 border-2 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
@@ -103,15 +104,15 @@ export default function PageMaBranche() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Link
           href={prochaineReunion ? `/dashboard/reunions/${prochaineReunion.id}/presences` : '/dashboard/reunions'}
-          className="bg-white rounded-xl border border-gray-200 p-4 hover:border-[#1a4731]/40 transition-colors"
+          className="bg-white rounded-xl border border-gray-200 p-4 hover:border-[var(--cp)]/40 transition-colors"
         >
           <p className="text-xs font-medium text-gray-500">Prochaine réunion</p>
           {prochaineReunion ? (
             <>
               <p className="text-sm font-semibold text-gray-900 mt-1 truncate">{prochaineReunion.titre ?? 'Réunion'}</p>
-              <p className="text-xs text-[#1a4731] mt-0.5">
+              <p className="inline-flex items-center gap-1 text-xs text-[var(--cp)] mt-0.5">
                 {new Date(prochaineReunion.dateReportee ?? prochaineReunion.dateHeure).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
-                {' · '}Prendre les présences →
+                {' · '}Prendre les présences <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
               </p>
             </>
           ) : (
@@ -119,21 +120,23 @@ export default function PageMaBranche() {
           )}
         </Link>
 
-        <Link href="/dashboard/documents" className="bg-white rounded-xl border border-gray-200 p-4 hover:border-[#1a4731]/40 transition-colors">
+        <Link href="/dashboard/documents" className="bg-white rounded-xl border border-gray-200 p-4 hover:border-[var(--cp)]/40 transition-colors">
           <p className="text-xs font-medium text-gray-500">Documents à renouveler</p>
           <p className={`text-2xl font-bold mt-1 ${documentsARenouveler.length > 0 ? 'text-amber-600' : 'text-gray-900'}`}>
             {documentsARenouveler.length}
           </p>
-          {documentsARenouveler.length > 0 && <p className="text-xs text-amber-600 mt-0.5">À vérifier →</p>}
+          {documentsARenouveler.length > 0 && (
+            <p className="inline-flex items-center gap-1 text-xs text-amber-600 mt-0.5">À vérifier <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} /></p>
+          )}
         </Link>
 
-        <Link href="/dashboard/cotisations" className="bg-white rounded-xl border border-gray-200 p-4 hover:border-[#1a4731]/40 transition-colors">
+        <Link href="/dashboard/cotisations" className="bg-white rounded-xl border border-gray-200 p-4 hover:border-[var(--cp)]/40 transition-colors">
           <p className="text-xs font-medium text-gray-500">Cotisations en attente</p>
           <p className={`text-2xl font-bold mt-1 ${cotisationsEnAttente.length > 0 ? 'text-amber-600' : 'text-gray-900'}`}>
             {cotisationsEnAttente.length}
           </p>
           {cotisationsEnAttente.length > 0 && (
-            <p className="text-xs text-amber-600 mt-0.5">{formatMontantFCFA(totalCotisationsDues)} dus →</p>
+            <p className="inline-flex items-center gap-1 text-xs text-amber-600 mt-0.5">{formatMontantFCFA(totalCotisationsDues)} dus <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} /></p>
           )}
         </Link>
       </div>
@@ -143,7 +146,7 @@ export default function PageMaBranche() {
         <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-gray-800">Scouts de ma branche ({scouts.length})</h2>
-            <Link href="/dashboard/scouts" className="text-xs text-[#1a4731] hover:underline">Voir tout →</Link>
+            <Link href="/dashboard/scouts" className="inline-flex items-center gap-1 text-xs text-[var(--cp)] hover:underline">Voir tout <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} /></Link>
           </div>
           {scouts.length === 0 ? (
             <p className="text-sm text-gray-400 italic">Aucun scout dans cette branche</p>
@@ -175,7 +178,7 @@ export default function PageMaBranche() {
         <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-gray-800">Activités récentes</h2>
-            <Link href="/dashboard/activites" className="text-xs text-[#1a4731] hover:underline">Voir tout →</Link>
+            <Link href="/dashboard/activites" className="inline-flex items-center gap-1 text-xs text-[var(--cp)] hover:underline">Voir tout <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} /></Link>
           </div>
           {activites.length === 0 ? (
             <p className="text-sm text-gray-400 italic">Aucune activité enregistrée</p>
@@ -184,8 +187,11 @@ export default function PageMaBranche() {
               {activites.map((a) => (
                 <Link key={a.id} href={`/dashboard/activites/${a.id}`}
                   className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className="w-9 h-9 rounded-lg bg-[#1a4731]/10 flex items-center justify-center text-lg flex-shrink-0">
-                    {a.type === 'CAMP' ? '⛺' : a.type === 'SORTIE' ? '🥾' : a.type === 'CELEBRATION' ? '✝️' : '📅'}
+                  <div className="w-9 h-9 rounded-lg bg-[var(--cp)]/10 flex items-center justify-center flex-shrink-0">
+                    {(() => {
+                      const IconeType = ICONES_TYPE_ACTIVITE[a.type] ?? ICONES_TYPE_ACTIVITE.AUTRE
+                      return <IconeType className="h-4 w-4 text-[var(--cp)]" strokeWidth={2} />
+                    })()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{a.titre}</p>

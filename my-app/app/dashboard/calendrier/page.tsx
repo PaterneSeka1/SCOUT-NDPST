@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { LABELS_BRANCHES } from '@/lib/branches'
+import { ChevronLeft, ChevronRight } from '@/lib/icons'
 
 interface EvenementCalendrier {
   id: string
@@ -103,7 +104,7 @@ export default function PageCalendrier() {
             onClick={() => setReference((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
             className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50"
           >
-            ‹
+            <ChevronLeft className="h-4 w-4" strokeWidth={2} />
           </button>
           <span className="text-sm font-medium text-gray-800 min-w-[140px] text-center capitalize">
             {reference.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
@@ -112,7 +113,7 @@ export default function PageCalendrier() {
             onClick={() => setReference((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
             className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50"
           >
-            ›
+            <ChevronRight className="h-4 w-4" strokeWidth={2} />
           </button>
           <button
             onClick={() => setReference(new Date())}
@@ -134,7 +135,7 @@ export default function PageCalendrier() {
           <button
             onClick={genererLien}
             disabled={genereEnCours}
-            className="flex-shrink-0 bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60"
+            className="flex-shrink-0 bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium disabled:opacity-60"
           >
             {genereEnCours ? 'Génération…' : lienAbonnement ? 'Régénérer le lien' : 'Obtenir mon lien'}
           </button>
@@ -142,14 +143,14 @@ export default function PageCalendrier() {
         {lienAbonnement && (
           <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
             <input readOnly value={lienAbonnement} className="flex-1 min-w-0 bg-transparent text-xs text-gray-600 outline-none" />
-            <button onClick={copierLien} className="text-xs text-[#1a4731] font-medium hover:underline flex-shrink-0">Copier</button>
+            <button onClick={copierLien} className="text-xs text-[var(--cp)] font-medium hover:underline flex-shrink-0">Copier</button>
           </div>
         )}
       </div>
 
       {chargement ? (
         <div className="flex items-center justify-center py-12">
-          <div className="w-6 h-6 border-2 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -174,7 +175,7 @@ export default function PageCalendrier() {
                 >
                   <span
                     className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs ${
-                      estAujourdHui ? 'bg-[#1a4731] text-white font-semibold' : dansLeMois ? 'text-gray-700' : 'text-gray-300'
+                      estAujourdHui ? 'bg-[var(--cp)] text-white font-semibold' : dansLeMois ? 'text-gray-700' : 'text-gray-300'
                     }`}
                   >
                     {jour.getDate()}

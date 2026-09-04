@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { MONO_PAROISSE } from '@/lib/monoParoisse'
+import { ArrowRight } from '@/lib/icons'
 
 interface Paroisse {
   id: string
@@ -98,7 +99,7 @@ export default function ListeParoisses() {
           placeholder="Rechercher une paroisse…"
           value={recherche}
           onChange={(e) => setRecherche(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1a4731] bg-white"
+          className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--cp)] bg-white"
         />
       </div>
 
@@ -143,7 +144,10 @@ export default function ListeParoisses() {
                   )}
                 </div>
 
-                <p className="mt-4 text-sm font-semibold" style={{ color: 'var(--cp)' }}>Voir la fiche →</p>
+                <p className="mt-4 inline-flex items-center gap-1 text-sm font-semibold" style={{ color: 'var(--cp)' }}>
+                  Voir la fiche
+                  <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
+                </p>
               </Link>
             ))}
           </div>

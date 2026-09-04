@@ -93,7 +93,7 @@ export function RechercheGlobale() {
           onFocus={() => setOuvert(true)}
           onKeyDown={(e) => { if (e.key === 'Escape') setOuvert(false) }}
           placeholder="Rechercher un scout, un membre…"
-          className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent focus:bg-white transition-colors"
+          className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent focus:bg-white transition-colors"
         />
       </div>
 

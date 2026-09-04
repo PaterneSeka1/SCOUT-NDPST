@@ -8,8 +8,11 @@ import { toast } from 'sonner'
 import { confirmer } from '@/app/components/ConfirmDialog'
 import { ROLES_GROUPE, ROLES_BRANCHE } from '@/lib/roles'
 import { LABELS_BRANCHES as BRANCHES, COULEURS_BRANCHES as COULEURS_BRANCHE } from '@/lib/branches'
+import { BackLink } from '@/app/components/ui/BackLink'
+import { Check, ChevronDown } from '@/lib/icons'
+import { ChevronUp } from 'lucide-react'
 
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
+const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
 const CLS_LABEL = 'block text-xs font-medium text-gray-600 mb-1'
 
 interface Ligne {
@@ -159,7 +162,7 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
   if (chargement) {
     return (
       <div className="flex items-center justify-center h-48">
-        <div className="w-6 h-6 border-2 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
@@ -168,9 +171,9 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
     return (
       <div className="max-w-3xl mx-auto p-8 text-center">
         <p className="text-red-600 font-medium">Programme introuvable</p>
-        <Link href="/dashboard/programmes" className="text-sm text-[#1a4731] hover:underline mt-2 inline-block">
-          Retour aux programmes
-        </Link>
+        <div className="mt-2 flex justify-center">
+          <BackLink href="/dashboard/programmes">Retour aux programmes</BackLink>
+        </div>
       </div>
     )
   }
@@ -181,7 +184,7 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard/programmes" className="text-gray-500 hover:text-gray-700 transition-colors">← Retour</Link>
+          <BackLink href="/dashboard/programmes">Retour</BackLink>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{programme.titre}</h1>
             <div className="flex items-center gap-2 mt-1">
@@ -230,10 +233,10 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
           <div>
             <label className={CLS_LABEL}>Description / objectifs</label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] resize-none" />
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] resize-none" />
           </div>
           <button onClick={handleEnregistrerMeta}
-            className="bg-[#1a4731] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#163d29] transition-colors">
+            className="bg-[var(--cp)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:brightness-110 transition-all">
             Enregistrer
           </button>
         </div>
@@ -259,9 +262,9 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
                 {peutGerer && (
                   <div className="flex flex-col gap-1 flex-shrink-0 pt-0.5">
                     <button onClick={() => handleDeplacerLigne(ligne, -1)} disabled={i === 0}
-                      className="w-6 h-6 flex items-center justify-center rounded border border-gray-200 text-gray-400 hover:text-gray-700 disabled:opacity-30 text-xs">▲</button>
+                      className="w-6 h-6 flex items-center justify-center rounded border border-gray-200 text-gray-400 hover:text-gray-700 disabled:opacity-30"><ChevronUp className="h-3.5 w-3.5" strokeWidth={2} /></button>
                     <button onClick={() => handleDeplacerLigne(ligne, 1)} disabled={i === lignesTriees.length - 1}
-                      className="w-6 h-6 flex items-center justify-center rounded border border-gray-200 text-gray-400 hover:text-gray-700 disabled:opacity-30 text-xs">▼</button>
+                      className="w-6 h-6 flex items-center justify-center rounded border border-gray-200 text-gray-400 hover:text-gray-700 disabled:opacity-30"><ChevronDown className="h-3.5 w-3.5" strokeWidth={2} /></button>
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
@@ -273,8 +276,9 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
                     )}
                     {ligne.activite ? (
                       <Link href={`/dashboard/activites/${ligne.activite.id}`}
-                        className="text-xs bg-green-50 text-green-700 border border-green-100 px-2 py-0.5 rounded-full font-medium hover:bg-green-100">
-                        ✓ Réalisé — {ligne.activite.titre}
+                        className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 border border-green-100 px-2 py-0.5 rounded-full font-medium hover:bg-green-100">
+                        <Check className="h-3 w-3" strokeWidth={2.5} />
+                        Réalisé — {ligne.activite.titre}
                       </Link>
                     ) : (
                       <span className="text-xs bg-gray-50 text-gray-500 border border-gray-100 px-2 py-0.5 rounded-full">À réaliser</span>
@@ -310,7 +314,7 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
                 placeholder="Objectif pédagogique" className={CLS_INPUT} />
             </div>
             <button type="submit" disabled={ajoutEnCours}
-              className="bg-[#1a4731] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#163d29] transition-colors disabled:opacity-60">
+              className="bg-[var(--cp)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:brightness-110 transition-all disabled:opacity-60">
               {ajoutEnCours ? 'Ajout…' : '+ Ajouter'}
             </button>
           </form>

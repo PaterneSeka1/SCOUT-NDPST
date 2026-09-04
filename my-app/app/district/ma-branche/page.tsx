@@ -127,7 +127,7 @@ export default function MaBranchePage() {
         <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-sm font-bold text-gray-900">Activités récentes</h2>
-            <Link href="/district/ma-branche/activites/nouvelle" className="text-xs font-medium text-[#1a4731] hover:underline whitespace-nowrap">
+            <Link href="/district/ma-branche/activites/nouvelle" className="text-xs font-medium text-[var(--cp)] hover:underline whitespace-nowrap">
               + Nouvelle activité de branche
             </Link>
           </div>
@@ -151,7 +151,7 @@ export default function MaBranchePage() {
         <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-sm font-bold text-gray-900">Programmes récents</h2>
-            <Link href="/district/ma-branche/programmes/nouveau" className="text-xs font-medium text-[#1a4731] hover:underline whitespace-nowrap">
+            <Link href="/district/ma-branche/programmes/nouveau" className="text-xs font-medium text-[var(--cp)] hover:underline whitespace-nowrap">
               + Nouveau programme de branche
             </Link>
           </div>

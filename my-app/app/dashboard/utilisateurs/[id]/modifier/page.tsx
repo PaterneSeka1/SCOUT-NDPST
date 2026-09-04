@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_ROLES, ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT, ROLES_BRANCHE } from '@/lib/roles'
 import { LABELS_BRANCHES } from '@/lib/branches'
@@ -182,7 +181,7 @@ export default function ModifierUtilisateurPage() {
 
           <label className="flex items-center gap-2.5 cursor-pointer">
             <input id="actif" name="actif" type="checkbox" checked={formInfos.actif} onChange={handleInfosChange}
-              className="w-4 h-4 accent-[#1a4731] rounded" />
+              className="w-4 h-4 accent-[var(--cp)] rounded" />
             <span className="text-sm text-gray-700">Compte actif</span>
           </label>
 
@@ -192,7 +191,7 @@ export default function ModifierUtilisateurPage() {
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={soumissionInfos}
-              className="w-full rounded-lg bg-[#1a4731] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#163d29] disabled:opacity-60 sm:w-auto">
+              className="w-full rounded-lg bg-[var(--cp)] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:brightness-110 disabled:opacity-60 sm:w-auto">
               {soumissionInfos ? 'Enregistrement…' : 'Enregistrer les modifications'}
             </button>
           </div>
@@ -221,7 +220,7 @@ export default function ModifierUtilisateurPage() {
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={soumissionMdp}
-              className="w-full rounded-lg bg-[#1a4731] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#163d29] disabled:opacity-60 sm:w-auto">
+              className="w-full rounded-lg bg-[var(--cp)] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:brightness-110 disabled:opacity-60 sm:w-auto">
               {soumissionMdp ? 'Réinitialisation…' : 'Réinitialiser le mot de passe'}
             </button>
           </div>
