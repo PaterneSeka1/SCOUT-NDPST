@@ -13,6 +13,7 @@ import {
   libelleRoleAvecFonction,
 } from '@/lib/roles'
 import { LABELS_BRANCHES } from '@/lib/branches'
+import { Pagination } from '@/app/components/ui/Pagination'
 
 interface UtilisateurListe {
   id: string
@@ -64,9 +65,9 @@ const AFFECTATIONS_DISTRICT_FILTRE = [
   { value: 'ASSISTANT_DISTRICT', label: 'Assistants de district' },
 ]
 const LIMITES_PAGE = [20, 50, 100]
-const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
-const CLS_SELECT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
+const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
+const CLS_SELECT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
+const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 interface FormNomination {
@@ -835,29 +836,7 @@ export default function UtilisateursPlateformePage() {
         </div>
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-xs sm:text-sm text-gray-500">
-            {total} utilisateur{total !== 1 ? 's' : ''} — p. {page}/{totalPages}
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setPage((p) => p - 1)}
-              disabled={page <= 1}
-              className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-sm disabled:opacity-40 transition-colors hover:bg-gray-50"
-            >
-              ←
-            </button>
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={page >= totalPages}
-              className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-sm disabled:opacity-40 transition-colors hover:bg-gray-50"
-            >
-              →
-            </button>
-          </div>
-        </div>
-      )}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} total={total} itemLabel="utilisateur" />
 
       {utilisateurNomination && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 px-0 py-0 sm:items-center sm:px-4 sm:py-6">
@@ -954,7 +933,7 @@ export default function UtilisateursPlateformePage() {
                               name="modeDistrict"
                               checked={nominationModeBranche}
                               onChange={() => setFormNomination((p) => ({ ...p, modeDistrict: 'branche', fonctionDistrict: '' }))}
-                              className="accent-[#1a4731]"
+                              className="accent-[var(--cp)]"
                             />
                             Commissaire de branche
                           </label>
@@ -964,7 +943,7 @@ export default function UtilisateursPlateformePage() {
                               name="modeDistrict"
                               checked={!nominationModeBranche}
                               onChange={() => setFormNomination((p) => ({ ...p, modeDistrict: 'fonction', brancheTypeDistrict: '' }))}
-                              className="accent-[#1a4731]"
+                              className="accent-[var(--cp)]"
                             />
                             Autre fonction
                           </label>

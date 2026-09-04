@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { formatMontantFCFA } from '@/lib/cotisations'
+import { ICONES_KPI, ICONE_KPI_DEFAUT } from '@/lib/icons'
 
 interface LigneParoisse {
   id: string; nom: string; ville: string; actif: boolean
@@ -64,22 +65,23 @@ export default function RapportsPlateforme() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div className="rounded-xl bg-[#1a4731] p-3 text-center text-white sm:p-4">
-          <p className="text-2xl font-bold">{totaux?.paroissesActives ?? 0} / {totaux?.paroisses ?? 0}</p>
-          <p className="text-xs opacity-90 mt-0.5">Paroisses actives</p>
-        </div>
-        <div className="rounded-xl bg-[#27ae60] p-3 text-center text-white sm:p-4">
-          <p className="text-2xl font-bold">{totaux?.scouts ?? 0}</p>
-          <p className="text-xs opacity-90 mt-0.5">Scouts</p>
-        </div>
-        <div className="rounded-xl bg-[#f39c12] p-3 text-center text-white sm:p-4">
-          <p className="text-2xl font-bold">{totaux?.utilisateurs ?? 0}</p>
-          <p className="text-xs opacity-90 mt-0.5">Utilisateurs</p>
-        </div>
-        <div className="rounded-xl bg-[#3498db] p-3 text-center text-white sm:p-4">
-          <p className="text-2xl font-bold">{totaux?.activites ?? 0}</p>
-          <p className="text-xs opacity-90 mt-0.5">Activités</p>
-        </div>
+        {/* Palette catégorielle fixe (indépendante du thème par paroisse) —
+            sert uniquement à distinguer visuellement les 4 indicateurs. */}
+        {[
+          { label: 'Paroisses actives', value: `${totaux?.paroissesActives ?? 0} / ${totaux?.paroisses ?? 0}`, couleur: 'bg-[#1a4731]' },
+          { label: 'Scouts', value: totaux?.scouts ?? 0, couleur: 'bg-[#27ae60]' },
+          { label: 'Utilisateurs', value: totaux?.utilisateurs ?? 0, couleur: 'bg-[#f39c12]' },
+          { label: 'Activités', value: totaux?.activites ?? 0, couleur: 'bg-[#3498db]' },
+        ].map(({ label, value, couleur }) => {
+          const Icone = ICONES_KPI[label] ?? ICONE_KPI_DEFAUT
+          return (
+            <div key={label} className={`rounded-xl ${couleur} p-3 text-center text-white sm:p-4`}>
+              <Icone className="h-5 w-5 mx-auto mb-1.5 opacity-90" strokeWidth={2} />
+              <p className="text-2xl font-bold">{value}</p>
+              <p className="text-xs opacity-90 mt-0.5">{label}</p>
+            </div>
+          )
+        })}
       </div>
 
       <section className="rounded-xl border border-gray-200 bg-white p-4">
@@ -94,11 +96,11 @@ export default function RapportsPlateforme() {
             <a
               key={exportRapport.type}
               href={`/api/admin/rapports/export?type=${exportRapport.type}`}
-              className="flex min-h-20 flex-col justify-between rounded-lg border border-gray-200 px-3 py-2.5 text-sm transition hover:border-[#1a4731] hover:bg-gray-50"
+              className="flex min-h-20 flex-col justify-between rounded-lg border border-gray-200 px-3 py-2.5 text-sm transition hover:border-[var(--cp)] hover:bg-gray-50"
             >
               <span className="font-semibold text-gray-900">{exportRapport.titre}</span>
               <span className="mt-1 text-xs text-gray-500">{exportRapport.description}</span>
-              <span className="mt-2 text-xs font-bold text-[#1a4731]">Télécharger CSV</span>
+              <span className="mt-2 text-xs font-bold" style={{ color: 'var(--cp)' }}>Télécharger CSV</span>
             </a>
           ))}
         </div>

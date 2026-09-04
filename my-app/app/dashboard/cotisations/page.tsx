@@ -14,6 +14,7 @@ import {
   formatMontantFCFA,
 } from '@/lib/cotisations'
 import { ROLES_GROUPE } from '@/lib/roles'
+import { Wallet, Plus } from '@/lib/icons'
 
 interface Cotisation {
   id: string
@@ -202,9 +203,10 @@ export default function PageCotisations() {
         {estGroupe && (
           <button
             onClick={ouvrirModal}
-            className="bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium"
+            className="inline-flex items-center gap-1.5 bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium"
           >
-            + Générer des cotisations
+            <Plus className="h-4 w-4" strokeWidth={2} />
+            Générer des cotisations
           </button>
         )}
       </div>
@@ -232,12 +234,12 @@ export default function PageCotisations() {
         <div className="flex flex-wrap items-center gap-3">
           <label className="text-sm text-gray-600">Année scolaire :</label>
           <select value={anneeScolaire} onChange={(e) => setAnneeScolaire(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731]">
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)]">
             {optionsAnnees().map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
           <label className="text-sm text-gray-600 ml-2">Statut :</label>
           <select value={filtreStatut} onChange={(e) => setFiltreStatut(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731]">
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)]">
             <option value="">Tous</option>
             {Object.entries(LABELS_STATUT_COTISATION).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
@@ -245,11 +247,11 @@ export default function PageCotisations() {
 
         {chargement ? (
           <div className="flex items-center justify-center py-12">
-            <div className="w-6 h-6 border-2 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : cotisations.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-4xl mb-3">💶</p>
+            <Wallet className="h-10 w-10 mx-auto mb-3 text-gray-300" strokeWidth={2} />
             <p className="text-sm text-gray-500">Aucune cotisation pour cette période.</p>
           </div>
         ) : (
@@ -260,7 +262,7 @@ export default function PageCotisations() {
                 <div key={c.id} className="border border-gray-100 rounded-lg p-3 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <Link href={`/dashboard/scouts/${c.scout.id}`} className="text-sm font-medium text-[#1a4731] hover:underline truncate block">
+                      <Link href={`/dashboard/scouts/${c.scout.id}`} className="text-sm font-medium text-[var(--cp)] hover:underline truncate block">
                         {c.scout.prenom} {c.scout.nom}
                       </Link>
                       <p className="text-xs text-gray-500 mt-0.5">{LABELS_BRANCHES[c.scout.brancheType] ?? c.scout.brancheType}</p>
@@ -326,7 +328,7 @@ export default function PageCotisations() {
                   {cotisations.map((c) => (
                     <tr key={c.id} className="border-b border-gray-50 last:border-0">
                       <td className="py-2.5 pr-4 whitespace-nowrap">
-                        <Link href={`/dashboard/scouts/${c.scout.id}`} className="text-gray-900 font-medium hover:text-[#1a4731] hover:underline">
+                        <Link href={`/dashboard/scouts/${c.scout.id}`} className="text-gray-900 font-medium hover:text-[var(--cp)] hover:underline">
                           {c.scout.prenom} {c.scout.nom}
                         </Link>
                       </td>
@@ -397,7 +399,7 @@ export default function PageCotisations() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Branche</label>
               <select value={formGeneration.branche} onChange={(e) => setFormGeneration((f) => ({ ...f, branche: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731]">
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)]">
                 <option value="">Sélectionner une branche</option>
                 {BRANCHES.map((b) => <option key={b} value={b}>{LABELS_BRANCHES[b]}</option>)}
               </select>

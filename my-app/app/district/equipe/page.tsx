@@ -7,6 +7,7 @@ import { LABELS_ROLES, ROLES_ASSIGNABLES_DISTRICT, libelleRoleAvecFonction } fro
 import { confirmer } from '@/app/components/ConfirmDialog'
 import { useDistrictUtilisateurs, useRetirerDistrictUtilisateur } from '@/hooks/useDistrictUtilisateurs'
 import type { Utilisateur } from '@/hooks/useDistrictUtilisateurs'
+import { Pagination } from '@/app/components/ui/Pagination'
 
 const ROLES_FILTRE = ROLES_ASSIGNABLES_DISTRICT
 
@@ -87,7 +88,7 @@ function CarteUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
       <div className="flex items-center gap-3 pt-1 border-t border-gray-50">
         <Link
           href={`/district/equipe/${utilisateur.id}/modifier`}
-          className="text-[#1a4731] font-medium text-xs hover:underline"
+          className="text-[var(--cp)] font-medium text-xs hover:underline"
         >
           Modifier
         </Link>
@@ -131,7 +132,7 @@ function LigneUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
         <div className="flex items-center gap-2">
           <Link
             href={`/district/equipe/${utilisateur.id}/modifier`}
-            className="text-[#1a4731] hover:underline text-xs font-medium"
+            className="text-[var(--cp)] hover:underline text-xs font-medium"
           >
             Modifier
           </Link>
@@ -183,7 +184,7 @@ export default function EquipeDistrictPage() {
         </div>
         <Link
           href="/district/equipe/nouveau"
-          className="inline-flex items-center justify-center bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium"
+          className="inline-flex items-center justify-center bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-colors text-sm font-medium"
         >
           + Nommer un membre
         </Link>

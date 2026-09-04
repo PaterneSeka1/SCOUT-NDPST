@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_BRANCHES, COULEURS_BRANCHES, ORDRE_BRANCHES } from '@/lib/branches'
 import { ROLES_GROUPE } from '@/lib/roles'
+import { ArrowRight } from '@/lib/icons'
 
 const LABELS_ROLE: Record<string, string> = {
   RESPONSABLE: 'Responsable',
@@ -41,7 +42,7 @@ export default function PageBranches() {
 
   if (chargement) return (
     <div className="flex items-center justify-center h-48">
-      <div className="w-6 h-6 border-2 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
@@ -54,7 +55,7 @@ export default function PageBranches() {
         </div>
         {session?.user && ROLES_GROUPE.includes(session.user.role) && (
           <Link href="/dashboard/branches/passage"
-            className="flex-shrink-0 bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium">
+            className="flex-shrink-0 bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium">
             Passage de branche
           </Link>
         )}
@@ -79,8 +80,8 @@ export default function PageBranches() {
                   <p className={`text-xs mt-0.5 ${textCls} opacity-75`}>{nbScouts} scout{nbScouts > 1 ? 's' : ''} actif{nbScouts > 1 ? 's' : ''}</p>
                 </div>
                 <Link href={`/dashboard/scouts?branche=${branche}`}
-                  className={`text-xs ${textCls} underline underline-offset-2 hover:opacity-80`}>
-                  Voir les scouts →
+                  className={`inline-flex items-center gap-1 text-xs ${textCls} underline underline-offset-2 hover:opacity-80`}>
+                  Voir les scouts <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
                 </Link>
               </div>
 
@@ -99,7 +100,7 @@ export default function PageBranches() {
                         <p className="text-xs text-gray-500">{LABELS_ROLE[p.role]}{p.fonction ? ` — ${p.fonction}` : ''}</p>
                       </div>
                       <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full ${
-                        p.role === 'RESPONSABLE' ? 'bg-[#1a4731] text-white' :
+                        p.role === 'RESPONSABLE' ? 'bg-[var(--cp)] text-white' :
                         p.role === 'ADJOINT' ? 'bg-gray-200 text-gray-700' :
                         'bg-gray-100 text-gray-500'
                       }`}>{LABELS_ROLE[p.role]}</span>

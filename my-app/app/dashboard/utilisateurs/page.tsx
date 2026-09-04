@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { LABELS_ROLES, COULEURS_ROLES, ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT } from '@/lib/roles'
 import { useUtilisateurs, useModifierUtilisateur } from '@/hooks/useUtilisateurs'
 import type { Utilisateur } from '@/hooks/useUtilisateurs'
+import { Pagination } from '@/app/components/ui/Pagination'
 
 // Page "Membres" = équipe d'encadrement, jamais les parents (page dédiée
 // /dashboard/parents). Sans filtre de rôle actif, on demande explicitement
@@ -72,7 +73,7 @@ function CarteUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
       <div className="flex items-center gap-3 pt-1 border-t border-gray-50">
         <Link
           href={`/dashboard/utilisateurs/${utilisateur.id}/modifier`}
-          className="text-[#1a4731] font-medium text-xs hover:underline"
+          className="text-[var(--cp)] font-medium text-xs hover:underline"
         >
           Modifier
         </Link>
@@ -119,7 +120,7 @@ function LigneUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
         <div className="flex items-center gap-2">
           <Link
             href={`/dashboard/utilisateurs/${utilisateur.id}/modifier`}
-            className="text-[#1a4731] hover:underline text-xs font-medium"
+            className="text-[var(--cp)] hover:underline text-xs font-medium"
           >
             Modifier
           </Link>
@@ -173,7 +174,7 @@ export default function UtilisateursPage() {
         </div>
         <Link
           href="/dashboard/utilisateurs/nouveau"
-          className="inline-flex items-center justify-center bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium"
+          className="inline-flex items-center justify-center bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-colors text-sm font-medium"
         >
           + Nouveau membre
         </Link>
@@ -186,12 +187,12 @@ export default function UtilisateursPage() {
           placeholder="Rechercher…"
           value={recherche}
           onChange={(e) => handleRechercheChange(e.target.value)}
-          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1a4731] bg-white"
+          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--cp)] bg-white"
         />
         <select
           value={roleFiltre}
           onChange={(e) => { setRoleFiltre(e.target.value); setPage(1) }}
-          className="sm:w-48 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a4731] bg-white"
+          className="sm:w-48 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--cp)] bg-white"
         >
           <option value="">Tous les rôles</option>
           {ROLES_FILTRE.map((role) => (
@@ -249,28 +250,8 @@ export default function UtilisateursPage() {
       </div>
 
       {/* Pagination */}
-      {!isLoading && totalPages > 1 && (
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-xs sm:text-sm text-gray-500">
-            {total} membre{total !== 1 ? 's' : ''} — p. {page}/{totalPages}
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setPage((p) => p - 1)}
-              disabled={page <= 1}
-              className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-sm disabled:opacity-40 transition-colors hover:bg-gray-50"
-            >
-              ←
-            </button>
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={page >= totalPages}
-              className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-sm disabled:opacity-40 transition-colors hover:bg-gray-50"
-            >
-              →
-            </button>
-          </div>
-        </div>
+      {!isLoading && (
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} total={total} itemLabel="membre" />
       )}
     </div>
   )

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { ICONES_KPI, ICONE_KPI_DEFAUT } from '@/lib/icons'
 
 interface ChefGroupe {
   nom: string
@@ -103,12 +104,16 @@ export function ApercuDistrictClient() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {cartes.map((c) => (
-          <div key={c.label} className="rounded-xl p-4 text-center text-white" style={{ backgroundColor: c.couleur }}>
-            <p className="text-2xl font-bold">{c.value}</p>
-            <p className="text-xs opacity-90 mt-0.5">{c.label}</p>
-          </div>
-        ))}
+        {cartes.map((c) => {
+          const Icone = ICONES_KPI[c.label] ?? ICONE_KPI_DEFAUT
+          return (
+            <div key={c.label} className="rounded-xl p-4 text-center text-white" style={{ backgroundColor: c.couleur }}>
+              <Icone className="h-5 w-5 mx-auto mb-1.5 opacity-90" strokeWidth={2} />
+              <p className="text-2xl font-bold">{c.value}</p>
+              <p className="text-xs opacity-90 mt-0.5">{c.label}</p>
+            </div>
+          )
+        })}
       </div>
 
       {paroisses.length === 0 ? (

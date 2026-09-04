@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
-import Link from 'next/link'
 import { toast } from 'sonner'
 import { confirmer } from '@/app/components/ConfirmDialog'
+import { BackLink } from '@/app/components/ui/BackLink'
 import { LABELS_BRANCHES, COULEURS_BRANCHES, TRANCHES_AGE_BRANCHES, ORDRE_BRANCHES, formatTrancheAge } from '@/lib/branches'
+import { ArrowRight, AlertTriangle, CheckCircle2 } from '@/lib/icons'
 
 interface Proposition {
   scoutId: string
@@ -121,9 +122,7 @@ export default function PagePassageBranche() {
 
   return (
     <div className="space-y-6">
-      <Link href="/dashboard/branches" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
-        ← Retour aux branches
-      </Link>
+      <BackLink href="/dashboard/branches">Retour aux branches</BackLink>
 
       <div>
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Passage de branche</h1>
@@ -148,7 +147,7 @@ export default function PagePassageBranche() {
               type="date"
               value={dateReference}
               onChange={(e) => setDateReference(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent"
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent"
             />
             <p className="mt-1 text-xs text-gray-400">Âge calculé à cette date (ex : le 1er septembre pour une rentrée scoute).</p>
           </div>
@@ -165,11 +164,11 @@ export default function PagePassageBranche() {
 
         {chargement ? (
           <div className="flex items-center justify-center py-12">
-            <div className="w-6 h-6 border-2 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : propositions.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-4xl mb-3">✅</p>
+            <CheckCircle2 className="h-10 w-10 mx-auto mb-3 text-gray-300" strokeWidth={2} />
             <p className="text-sm text-gray-500">Aucun scout à changer de branche à cette date.</p>
           </div>
         ) : (
@@ -180,14 +179,14 @@ export default function PagePassageBranche() {
                   type="checkbox"
                   checked={selection.size === propositions.length}
                   onChange={toutBasculer}
-                  className="w-4 h-4 accent-[#1a4731] rounded"
+                  className="w-4 h-4 accent-[var(--cp)] rounded"
                 />
                 Tout sélectionner ({propositions.length})
               </label>
               <button
                 onClick={soumettrePassage}
                 disabled={soumission || selection.size === 0}
-                className="bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium disabled:opacity-60"
+                className="bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium disabled:opacity-60"
               >
                 {soumission ? 'Application…' : `Confirmer pour ${selection.size} scout${selection.size > 1 ? 's' : ''}`}
               </button>
@@ -204,7 +203,7 @@ export default function PagePassageBranche() {
                       type="checkbox"
                       checked={selection.has(p.scoutId)}
                       onChange={() => basculer(p.scoutId)}
-                      className="w-4 h-4 accent-[#1a4731] rounded flex-shrink-0"
+                      className="w-4 h-4 accent-[var(--cp)] rounded flex-shrink-0"
                     />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">{p.prenom} {p.nom}</p>
@@ -213,14 +212,14 @@ export default function PagePassageBranche() {
                   </div>
                   <div className="flex items-center gap-2 flex-wrap pl-7 sm:pl-0 sm:flex-shrink-0">
                     {badgeBranche(p.brancheActuelle)}
-                    <span className="text-gray-300">→</span>
+                    <ArrowRight className="h-4 w-4 text-gray-300" strokeWidth={2} />
                     {badgeBranche(p.brancheProposee)}
                     {estCorrection(p) && (
                       <span
-                        className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full whitespace-nowrap"
+                        className="inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full whitespace-nowrap"
                         title="La branche proposée est antérieure à la branche actuelle : vérifiez la date de naissance de ce scout avant de confirmer."
                       >
-                        ⚠️ à vérifier
+                        <AlertTriangle className="h-3.5 w-3.5" strokeWidth={2} /> à vérifier
                       </span>
                     )}
                   </div>

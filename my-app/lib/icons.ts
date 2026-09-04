@@ -76,6 +76,7 @@ export const ICONES_KPI: Record<string, LucideIcon> = {
   'Scouts inactifs': PauseCircle,
   'Scouts (toutes paroisses)': Compass,
   'Scouts dans la branche': Compass,
+  'Scouts': Compass,
   'Activités ce mois': CalendarRange,
   'Réunions ce mois': Clock,
   'Prochaines activités': CalendarRange,

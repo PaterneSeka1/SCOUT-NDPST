@@ -2,10 +2,10 @@
 
 import { useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 import { useScout } from '@/hooks/useScouts'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { QRCodeScout } from '@/app/components/QRCodeScout'
+import { BackLink } from '@/app/components/ui/BackLink'
 
 export default function CarteScoutPage() {
   const { id } = useParams<{ id: string }>()

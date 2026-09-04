@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { LABELS_BRANCHES, COULEURS_BRANCHES, ORDRE_BRANCHES } from '@/lib/branches'
 import { useScouts, useModifierScout } from '@/hooks/useScouts'
 import type { Scout } from '@/hooks/useScouts'
+import { Pagination } from '@/app/components/ui/Pagination'
 
 const BRANCHES_OPTIONS = [
   { valeur: '', label: 'Toutes les branches' },
@@ -71,14 +72,14 @@ function CarteScout({ scout }: { scout: Scout }) {
       <div className="flex items-center gap-3 pt-1 border-t border-gray-50">
         <Link
           href={`/dashboard/scouts/${scout.id}`}
-          className="text-[#1a4731] font-medium text-xs hover:underline"
+          className="text-[var(--cp)] font-medium text-xs hover:underline"
         >
           Voir
         </Link>
         <span className="text-gray-200">|</span>
         <Link
           href={`/dashboard/scouts/${scout.id}/modifier`}
-          className="text-[#1a4731] font-medium text-xs hover:underline"
+          className="text-[var(--cp)] font-medium text-xs hover:underline"
         >
           Modifier
         </Link>
@@ -125,9 +126,9 @@ function LigneScout({ scout }: { scout: Scout }) {
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
-          <Link href={`/dashboard/scouts/${scout.id}`} className="text-[#1a4731] hover:underline text-xs font-medium">Voir</Link>
+          <Link href={`/dashboard/scouts/${scout.id}`} className="text-[var(--cp)] hover:underline text-xs font-medium">Voir</Link>
           <span className="text-gray-300">|</span>
-          <Link href={`/dashboard/scouts/${scout.id}/modifier`} className="text-[#1a4731] hover:underline text-xs font-medium">Modifier</Link>
+          <Link href={`/dashboard/scouts/${scout.id}/modifier`} className="text-[var(--cp)] hover:underline text-xs font-medium">Modifier</Link>
           <span className="text-gray-300">|</span>
           <button
             onClick={handleToggle}
@@ -187,7 +188,7 @@ export default function ScoutsPage() {
           </Link>
           <Link
             href="/dashboard/scouts/nouveau"
-            className="inline-flex items-center justify-center bg-[#1a4731] text-white px-4 py-2 rounded-lg hover:bg-[#163d29] transition-colors text-sm font-medium"
+            className="inline-flex items-center justify-center bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium"
           >
             + Inscrire un scout
           </Link>
@@ -201,12 +202,12 @@ export default function ScoutsPage() {
           placeholder="Rechercher par nom, prénom ou matricule…"
           value={recherche}
           onChange={(e) => handleRechercheChange(e.target.value)}
-          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1a4731] bg-white"
+          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--cp)] bg-white"
         />
         <select
           value={brancheFiltre}
           onChange={(e) => handleBrancheChange(e.target.value)}
-          className="sm:w-48 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a4731] bg-white"
+          className="sm:w-48 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--cp)] bg-white"
         >
           {BRANCHES_OPTIONS.map((opt) => (
             <option key={opt.valeur} value={opt.valeur}>{opt.label}</option>
@@ -262,28 +263,8 @@ export default function ScoutsPage() {
       </div>
 
       {/* Pagination */}
-      {!isLoading && totalPages > 1 && (
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-xs sm:text-sm text-gray-500">
-            {total} scout{total !== 1 ? 's' : ''} — p. {page}/{totalPages}
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setPage((p) => p - 1)}
-              disabled={page <= 1}
-              className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-sm disabled:opacity-40 transition-colors hover:bg-gray-50"
-            >
-              ←
-            </button>
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={page >= totalPages}
-              className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-sm disabled:opacity-40 transition-colors hover:bg-gray-50"
-            >
-              →
-            </button>
-          </div>
-        </div>
+      {!isLoading && (
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} total={total} itemLabel="scout" />
       )}
     </div>
   )

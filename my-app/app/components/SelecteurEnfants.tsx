@@ -4,9 +4,10 @@ import { useMemo, useRef, useState, useEffect } from 'react'
 import { useScouts } from '@/hooks/useScouts'
 import type { Scout } from '@/hooks/useScouts'
 import { LABELS_BRANCHES, ORDRE_BRANCHES } from '@/lib/branches'
+import { ChevronLeft, ChevronRight, X } from '@/lib/icons'
 
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent'
-const CLS_SELECT = 'sm:w-48 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a4731] focus:border-transparent bg-white'
+const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
+const CLS_SELECT = 'sm:w-48 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent bg-white'
 
 // Recherche paginée côté serveur : avec plusieurs milliers d'enfants dans la
 // paroisse, on ne charge jamais toute la liste — seulement la page courante.

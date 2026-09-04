@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { LABELS_ROLES, COULEURS_ROLES } from '@/lib/roles'
+import { BackLink } from '@/app/components/ui/BackLink'
 
 interface Utilisateur {
   id: string
@@ -58,12 +59,7 @@ export default function FicheUtilisateurPage() {
       {/* En-tête */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Link
-            href="/dashboard/utilisateurs"
-            className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            ← Retour
-          </Link>
+          <BackLink href="/dashboard/utilisateurs">Retour</BackLink>
           <h1 className="text-2xl font-bold text-gray-900">Fiche membre</h1>
         </div>
 
@@ -71,7 +67,7 @@ export default function FicheUtilisateurPage() {
           <div className="flex flex-wrap gap-2 flex-shrink-0">
             <Link
               href={`/dashboard/utilisateurs/${utilisateur.id}/modifier`}
-              className="bg-[#1a4731] text-white px-4 py-2 rounded-md hover:bg-[#163d29] transition-colors text-sm font-medium"
+              className="bg-[var(--cp)] text-white px-4 py-2 rounded-md hover:brightness-110 transition-colors text-sm font-medium"
             >
               Modifier
             </Link>
@@ -87,7 +83,7 @@ export default function FicheUtilisateurPage() {
 
       {chargement && (
         <div className="flex items-center justify-center py-16">
-          <div className="w-8 h-8 border-4 border-[#1a4731] border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
         </div>
       )}
 
@@ -102,7 +98,7 @@ export default function FicheUtilisateurPage() {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-5">
             {/* Matricule */}
             <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-              <p className="text-3xl font-mono font-bold text-[#1a4731] tracking-wider">
+              <p className="text-3xl font-mono font-bold text-[var(--cp)] tracking-wider">
                 {utilisateur.matricule}
               </p>
               {utilisateur.actif ? (
