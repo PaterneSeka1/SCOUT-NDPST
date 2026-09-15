@@ -91,7 +91,7 @@ info "Build de production"
 npm run build
 
 info "Démarrage / redémarrage de l'application via pm2..."
-mkdir -p uploads-prives public/uploads
+mkdir -p uploads-prives uploads-publiques
 if pm2 describe scout-ndpst >/dev/null 2>&1; then
   pm2 restart scout-ndpst
 else

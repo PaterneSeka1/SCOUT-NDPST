@@ -45,3 +45,6 @@ next-env.d.ts
 
 # fichiers privés téléversés (photos/documents de scouts, autorisations de camp)
 /uploads-prives/
+
+# fichiers publics téléversés (logo, image d'accueil) en mode stockage local
+/uploads-publiques/

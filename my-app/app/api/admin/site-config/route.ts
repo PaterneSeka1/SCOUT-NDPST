@@ -77,11 +77,11 @@ export async function PUT(req: NextRequest) {
   const origineStockage = urlPubliqueBase()
 
   if (data.logoSite && !estUrlFichierValide(data.logoSite, origineStockage)) {
-    return NextResponse.json({ erreur: 'logoSite doit être un chemin local (ex : /uploads/…) ou une URL de stockage autorisée' }, { status: 400 })
+    return NextResponse.json({ erreur: 'logoSite doit être un chemin local (ex : /api/fichiers-publics/…) ou une URL de stockage autorisée' }, { status: 400 })
   }
 
   if (data.hero?.imageUrl && !estUrlFichierValide(data.hero.imageUrl, origineStockage)) {
-    return NextResponse.json({ erreur: 'hero.imageUrl doit être un chemin local (ex : /uploads/…) ou une URL de stockage autorisée' }, { status: 400 })
+    return NextResponse.json({ erreur: 'hero.imageUrl doit être un chemin local (ex : /api/fichiers-publics/…) ou une URL de stockage autorisée' }, { status: 400 })
   }
 
   if (data.theme) {

@@ -66,6 +66,19 @@ export function cleFichierPrive(paroisseId: string, nomFichier: string): string 
   return `prive/${paroisseId}/${nomFichier}`
 }
 
+// Extensions/MIME acceptées par /api/upload (voir lib/fileSignature.ts) —
+// partagé par les deux routes qui resservent un fichier téléversé
+// (app/api/fichiers-publics et app/api/fichiers) pour fixer le Content-Type
+// sans jamais faire confiance à l'extension telle quelle.
+export const TYPES_MIME_FICHIERS: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+  '.pdf': 'application/pdf',
+}
+
 // Origine à autoriser dans estUrlFichierValide() (lib/validation.ts) pour les
 // fichiers publics — uniquement pertinent quand le pilote S3 est actif, sinon
 // les fichiers publics restent des chemins locaux ("/uploads/…").
@@ -92,10 +105,20 @@ export async function sauvegarderFichierPublic(
     return `${endpoint}/${bucket}/${cle}`
   }
 
-  const dossier = path.join(process.cwd(), 'public', 'uploads')
+  // Écrit en dehors de `public/` : ce dossier fait partie du build standalone
+  // (`.next/standalone/public`), régénéré/écrasé à chaque déploiement (voir
+  // scripts/deploy-o2switch.sh) — un fichier qui y vivrait serait donc perdu
+  // au déploiement suivant. `uploads-publiques/` est un dossier séparé, jamais
+  // touché par le build, resservi dynamiquement par /api/fichiers-publics.
+  const dossier = path.join(process.cwd(), 'uploads-publiques')
   await mkdir(dossier, { recursive: true })
   await writeFile(path.join(dossier, nomFichier), buffer)
-  return `/uploads/${nomFichier}`
+  return `/api/fichiers-publics/${nomFichier}`
+}
+
+export async function lireFichierPublicLocal(nomFichier: string): Promise<Buffer> {
+  const chemin = path.join(process.cwd(), 'uploads-publiques', nomFichier)
+  return readFile(chemin)
 }
 
 export async function sauvegarderFichierPrive(

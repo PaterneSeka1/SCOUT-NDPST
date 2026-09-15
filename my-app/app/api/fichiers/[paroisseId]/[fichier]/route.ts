@@ -2,16 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import path from 'path'
-import { lireFichierPrive } from '@/lib/storage'
-
-const TYPES_MIME: Record<string, string> = {
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.webp': 'image/webp',
-  '.gif': 'image/gif',
-  '.pdf': 'application/pdf',
-}
+import { lireFichierPrive, TYPES_MIME_FICHIERS } from '@/lib/storage'
 
 type RouteParams = { params: Promise<{ paroisseId: string; fichier: string }> }
 
@@ -40,7 +31,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     const ext = path.extname(nomFichier).toLowerCase()
     return new NextResponse(new Uint8Array(buffer), {
       headers: {
-        'Content-Type': TYPES_MIME[ext] ?? 'application/octet-stream',
+        'Content-Type': TYPES_MIME_FICHIERS[ext] ?? 'application/octet-stream',
         'Cache-Control': 'private, max-age=3600',
       },
     })

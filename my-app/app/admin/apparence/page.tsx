@@ -245,7 +245,7 @@ export default function SiteConfigPage() {
                   value={config.logoSite}
                   onChange={(e) => setConfig((prev) => ({ ...prev, logoSite: e.target.value }))}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 text-gray-900 placeholder:text-gray-400"
-                  placeholder="/uploads/logo.png"
+                  placeholder="/api/fichiers-publics/logo.png"
                 />
               </div>
               <div className="flex flex-wrap items-center gap-3">
@@ -448,7 +448,7 @@ export default function SiteConfigPage() {
                 value={config.hero.imageUrl}
                 onChange={(e) => updateHero('imageUrl', e.target.value)}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 text-gray-900 placeholder:text-gray-400"
-                placeholder="/uploads/ma-photo.jpg"
+                placeholder="/api/fichiers-publics/ma-photo.jpg"
               />
             </div>
             <div className="flex flex-wrap items-center gap-3">

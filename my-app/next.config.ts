@@ -5,7 +5,7 @@ const EN_PRODUCTION = process.env.NODE_ENV === 'production'
 // Origine du bucket public de stockage (Supabase, R2, Spaces...), dérivée de
 // la même variable que lib/storage.ts — jamais d'hôte distant en dur ici : si
 // le stockage local (aucune variable STORAGE_S3_* définie) est utilisé, les
-// logos/photos restent des chemins "/uploads/…" déjà couverts par 'self'.
+// logos/photos restent des chemins "/api/fichiers-publics/…" déjà couverts par 'self'.
 const ORIGINE_STOCKAGE_PUBLIC = (() => {
   if (!process.env.STORAGE_PUBLIC_URL_BASE) return null
   try {

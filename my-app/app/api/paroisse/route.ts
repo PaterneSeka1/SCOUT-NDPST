@@ -48,7 +48,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (logo != null && logo.trim() !== '' && !estUrlFichierValide(logo.trim(), urlPubliqueBase())) {
-    return NextResponse.json({ erreur: 'logo doit être un chemin local (ex : /uploads/…) ou une URL de stockage autorisée' }, { status: 400 })
+    return NextResponse.json({ erreur: 'logo doit être un chemin local (ex : /api/fichiers-publics/…) ou une URL de stockage autorisée' }, { status: 400 })
   }
 
   const paroisse = await prisma.paroisse.update({

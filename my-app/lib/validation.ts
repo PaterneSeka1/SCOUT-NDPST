@@ -25,7 +25,7 @@ export const StatutPresenceReunionSchema = z.enum(['PRESENT', 'ABSENT', 'EXCUSE'
 
 export const TypeAutorisationCampSchema = z.enum(['FICHE_MEDICALE', 'AUTORISATION_PARENTALE'])
 
-// N'accepte que des chemins locaux (ex : "/uploads/xxx.png" ou "/api/fichiers/…").
+// N'accepte que des chemins locaux (ex : "/api/fichiers-publics/xxx.png" ou "/api/fichiers/…").
 // Refuse les URL absolues ("https://…", "//hote/…") pour empêcher qu'une URL
 // externe arbitraire ne soit enregistrée puis potentiellement exploitée (SSRF,
 // hameçonnage via un lien qui semble interne à l'application).
