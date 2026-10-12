@@ -134,7 +134,9 @@ export async function POST(request: NextRequest) {
     // cette route — uniquement via la bascule de compte ou un accès base directe.
     // Les rôles de district non plus : gérés par ADMIN_PLATEFORME (création du
     // Commissaire de District) puis par lui-même via /district/equipe.
-    if (role === 'ADMIN_PLATEFORME' || ROLES_DISTRICT_ETENDU.includes(role)) {
+    // ROLES_ASSIGNABLES_PAROISSE exclut aussi PARENT et SCOUT en périmètre V1
+    // (voir lib/perimetreV1.ts).
+    if (role === 'ADMIN_PLATEFORME' || ROLES_DISTRICT_ETENDU.includes(role) || !ROLES_ASSIGNABLES_PAROISSE.includes(role)) {
       return NextResponse.json({ error: 'Rôle invalide' }, { status: 400 })
     }
 

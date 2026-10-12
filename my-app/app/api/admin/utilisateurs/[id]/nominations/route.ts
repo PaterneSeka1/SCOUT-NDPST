@@ -96,7 +96,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (fonctionDistrictCorps !== undefined && fonctionDistrictCorps !== null && typeof fonctionDistrictCorps !== 'string') {
       return NextResponse.json({ erreur: 'Fonction de district invalide' }, { status: 400 })
     }
-    if (role !== undefined && !ROLES_ASSIGNABLES_PAROISSE.includes(role)) {
+    // Un compte PARENT/SCOUT existant (hors périmètre V1) garde son rôle tel quel.
+    if (role !== undefined && role !== existant.role && !ROLES_ASSIGNABLES_PAROISSE.includes(role)) {
       return NextResponse.json({ erreur: 'Rôle invalide' }, { status: 400 })
     }
 

@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { RoleUtilisateur, BrancheType } from '@/app/generated/prisma/client'
-import { ROLES_GROUPE as ROLES_AUTORISES, ROLES_DISTRICT_ETENDU, ROLES_BRANCHE } from '@/lib/roles'
+import { ROLES_GROUPE as ROLES_AUTORISES, ROLES_DISTRICT_ETENDU, ROLES_BRANCHE, ROLES_ASSIGNABLES_PAROISSE } from '@/lib/roles'
 import { BrancheTypeSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
@@ -115,6 +115,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (id === session.user.id && ((role !== undefined && role !== existant.role) || actif === false)) {
       return NextResponse.json({ error: 'Vous ne pouvez pas modifier votre propre rôle ou vous désactiver' }, { status: 403 })
     }
+
+    // Périmètre V1 : on ne bascule plus personne vers PARENT ou SCOUT (exclus de
+    // ROLES_ASSIGNABLES_PAROISSE) ; un compte existant garde toutefois son rôle.
+    if (role !== undefined && role !== existant.role && !ROLES_ASSIGNABLES_PAROISSE.includes(role))
+      return NextResponse.json({ error: 'Rôle invalide' }, { status: 400 })
 
     const emailNettoye = email?.trim() ?? ''
     if (email !== undefined && emailNettoye) {

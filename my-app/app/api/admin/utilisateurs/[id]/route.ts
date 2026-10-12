@@ -86,7 +86,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // ROLES_ASSIGNABLES_PAROISSE les exclut (voir lib/roles.ts) : une affectation
     // district (roleDistrict) se gère exclusivement via /admin/districts/[id]/commissaire
     // ou /district/utilisateurs.
-    if (role !== undefined && !ROLES_ASSIGNABLES_PAROISSE.includes(role)) {
+    // Un compte PARENT/SCOUT existant (hors périmètre V1) garde son rôle tel quel.
+    if (role !== undefined && role !== existant.role && !ROLES_ASSIGNABLES_PAROISSE.includes(role)) {
       return NextResponse.json({ erreur: 'Rôle invalide' }, { status: 400 })
     }
     if (nom !== undefined && (typeof nom !== 'string' || !nom.trim())) {

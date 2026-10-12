@@ -14,6 +14,7 @@ import {
   LABELS_ROLES,
   libelleRoleAvecFonction,
 } from './roles'
+import { PERIMETRE_V1 } from './perimetreV1'
 
 // Ces constantes pilotent le contrôle d'accès d'une vingtaine de routes API
 // (voir la centralisation RBAC). Un test de non-régression ici évite qu'une
@@ -62,7 +63,14 @@ describe('groupes de rôles RBAC', () => {
     for (const roleDistrict of ROLES_DISTRICT_ETENDU) {
       expect(ROLES_ASSIGNABLES_PAROISSE).not.toContain(roleDistrict)
     }
-    expect(ROLES_ASSIGNABLES_PAROISSE.length).toBe(Object.keys(LABELS_ROLES).length - 1 - ROLES_DISTRICT_ETENDU.length)
+    // Périmètre V1 : PARENT et SCOUT sont également exclus (voir lib/perimetreV1.ts).
+    const horsV1 = PERIMETRE_V1 ? 2 : 0
+    expect(ROLES_ASSIGNABLES_PAROISSE.length).toBe(Object.keys(LABELS_ROLES).length - 1 - ROLES_DISTRICT_ETENDU.length - horsV1)
+  })
+
+  it('en périmètre V1, ROLES_ASSIGNABLES_PAROISSE se limite au staff paroissial', () => {
+    if (!PERIMETRE_V1) return
+    expect([...ROLES_ASSIGNABLES_PAROISSE].sort()).toEqual([...ROLES_TOUT_STAFF].sort())
   })
 
   it('chaque rôle utilisé dans les groupes a un libellé défini', () => {

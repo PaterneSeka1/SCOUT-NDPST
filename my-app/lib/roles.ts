@@ -1,4 +1,7 @@
 import { LABELS_BRANCHES } from './branches'
+import { PERIMETRE_V1 } from './perimetreV1'
+
+const ROLES_HORS_V1 = ['PARENT', 'SCOUT']
 
 export const LABELS_ROLES: Record<string, string> = {
   ADMIN_PLATEFORME: 'Administrateur plateforme',
@@ -105,7 +108,12 @@ export const ROLES_ASSIGNABLES_DISTRICT: string[] = ['ADJOINT_DISTRICT', 'ASSIST
  * directement `role` — voir prisma/schema.prisma et /district/utilisateurs.
  */
 export const ROLES_ASSIGNABLES_PAROISSE: string[] = Object.keys(LABELS_ROLES).filter(
-  (r) => r !== 'ADMIN_PLATEFORME' && !ROLES_DISTRICT_ETENDU.includes(r),
+  (r) =>
+    r !== 'ADMIN_PLATEFORME' &&
+    !ROLES_DISTRICT_ETENDU.includes(r) &&
+    // Périmètre V1 (voir lib/perimetreV1.ts) : seul le staff paroissial a un
+    // compte, les espaces parent et scout sont masqués.
+    !(PERIMETRE_V1 && ROLES_HORS_V1.includes(r)),
 )
 
 /**
