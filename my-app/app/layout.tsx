@@ -5,6 +5,7 @@ import { Providers } from './providers'
 import { ConfirmDialogHost } from '@/app/components/ConfirmDialog'
 import { InstallationPwa } from '@/app/components/InstallationPwa'
 import { prisma } from '@/lib/prisma'
+import { logger } from '@/lib/logger'
 import { THEME_DEFAUT, couleurSure, hexToRgb, type Theme } from '@/lib/theme'
 
 const geistSans = Geist({
@@ -34,9 +35,25 @@ function getMetadataBase(): URL {
 // paroisse en particulier) : appliquée à toutes les pages, y compris avant
 // connexion. L'identité propre à chaque paroisse (logo + couleurs) est
 // appliquée en surcharge dans le tableau de bord une fois connecté.
+//
+// Le thème est modifiable à chaud depuis /admin : il ne doit pas être figé au
+// moment du build (et le build, notamment en CI Docker, n'a pas de base de
+// données). Le layout racine est donc rendu dynamiquement à chaque requête.
+export const dynamic = 'force-dynamic'
+
+const IDENTITE_DEFAUT = { theme: THEME_DEFAUT, nomSite: 'SCOUT ASCCI', logoSite: null }
+
 async function getTheme(): Promise<{ theme: Theme; nomSite: string; logoSite: string | null }> {
-  const cfg = await prisma.configurationPlateforme.findUnique({ where: { id: 'platform' } })
-  if (!cfg) return { theme: THEME_DEFAUT, nomSite: 'SCOUT ASCCI', logoSite: null }
+  let cfg
+  try {
+    cfg = await prisma.configurationPlateforme.findUnique({ where: { id: 'platform' } })
+  } catch (error) {
+    // Base indisponible : on affiche l'identité par défaut plutôt que de
+    // faire échouer le rendu de toutes les pages.
+    logger.error('layout getTheme', error)
+    return IDENTITE_DEFAUT
+  }
+  if (!cfg) return IDENTITE_DEFAUT
 
   const theme: Theme = {
     couleurPrimaire: couleurSure(cfg.couleurPrimaire, THEME_DEFAUT.couleurPrimaire),
