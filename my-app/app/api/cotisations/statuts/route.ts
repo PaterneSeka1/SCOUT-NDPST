@@ -102,39 +102,51 @@ export async function PUT(req: NextRequest) {
     const scout = await prisma.scout.findFirst({ where: { id: scoutId, paroisseId }, select: { id: true } })
     if (!scout) return NextResponse.json({ erreur: 'Scout introuvable' }, { status: 404 })
 
-    const existante = await prisma.cotisation.findFirst({
+    // L'ancien suivi détaillé a pu laisser plusieurs lignes ADHESION_ANNUELLE
+    // pour la même année : on raisonne sur l'ensemble, comme le GET (cotisant
+    // dès qu'une ligne est PAYEE/EXONEREE).
+    const lignes = await prisma.cotisation.findMany({
       where: { scoutId, paroisseId, anneeScolaire, type: 'ADHESION_ANNUELLE' },
       orderBy: { createdAt: 'desc' },
     })
+    const lignesCotisant = lignes.filter((l) => STATUTS_COTISANT.includes(l.statut))
 
-    const etaitCotisant = !!existante && STATUTS_COTISANT.includes(existante.statut)
-    if (etaitCotisant === cotisant) {
+    if ((lignesCotisant.length > 0) === cotisant) {
       return NextResponse.json({ scoutId, anneeScolaire, cotisant })
     }
 
     // On ne supprime jamais une ligne : le passage à « non cotisant » repasse
-    // la cotisation EN_ATTENTE, pour garder l'historique (et l'audit) cohérents.
-    const donnees = cotisant
-      ? { statut: 'PAYEE' as const, datePaiement: new Date(), enregistreParId: session.user.id }
-      : { statut: 'EN_ATTENTE' as const, montantPaye: 0, datePaiement: null, enregistreParId: null }
+    // les cotisations EN_ATTENTE, pour garder l'historique (et l'audit) cohérents.
+    let modifiees: { id: string; ancienStatut: string }[]
+    if (cotisant) {
+      const derniere = lignes[0]
+      const donnees = { statut: 'PAYEE' as const, datePaiement: new Date(), enregistreParId: session.user.id }
+      const cotisation = derniere
+        ? await prisma.cotisation.update({ where: { id: derniere.id }, data: { ...donnees, montantPaye: derniere.montant } })
+        : await prisma.cotisation.create({
+            data: { scoutId, paroisseId, anneeScolaire, type: 'ADHESION_ANNUELLE', montant: 0, ...donnees },
+          })
+      modifiees = [{ id: cotisation.id, ancienStatut: derniere?.statut ?? 'AUCUNE' }]
+    } else {
+      await prisma.cotisation.updateMany({
+        where: { id: { in: lignesCotisant.map((l) => l.id) } },
+        data: { statut: 'EN_ATTENTE', montantPaye: 0, datePaiement: null, enregistreParId: null },
+      })
+      modifiees = lignesCotisant.map((l) => ({ id: l.id, ancienStatut: l.statut }))
+    }
 
-    const cotisation = existante
-      ? await prisma.cotisation.update({
-          where: { id: existante.id },
-          data: { ...donnees, ...(cotisant ? { montantPaye: existante.montant } : {}) },
-        })
-      : await prisma.cotisation.create({
-          data: { scoutId, paroisseId, anneeScolaire, type: 'ADHESION_ANNUELLE', montant: 0, ...donnees },
-        })
-
-    await enregistrerAudit({
-      paroisseId,
-      acteurId: session.user.id,
-      action: 'COTISATION_STATUT_MODIFIE',
-      entite: 'Cotisation',
-      entiteId: cotisation.id,
-      details: { scoutId, anneeScolaire, ancienStatut: existante?.statut ?? null, nouveauStatut: cotisation.statut },
-    })
+    await Promise.all(
+      modifiees.map((m) =>
+        enregistrerAudit({
+          paroisseId,
+          acteurId: session.user.id,
+          action: 'COTISATION_STATUT_MODIFIE',
+          entite: 'Cotisation',
+          entiteId: m.id,
+          details: { scoutId, anneeScolaire, ancienStatut: m.ancienStatut, nouveauStatut: cotisant ? 'PAYEE' : 'EN_ATTENTE' },
+        }),
+      ),
+    )
 
     return NextResponse.json({ scoutId, anneeScolaire, cotisant })
   } catch (error) {
