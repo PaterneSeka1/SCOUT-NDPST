@@ -144,10 +144,10 @@ function SidebarContent({
   return (
     <>
       {/* Logo paroisse + nom de la paroisse */}
-      <div className="flex-shrink-0 border-b border-white/10 px-6 py-5">
+      <div className="shrink-0 border-b border-white/10 px-6 py-5">
         <div className="flex items-center gap-3">
           <div
-            className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl"
+            className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl"
             style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}
           >
             <ParoisseLogoImage logoUrl={logoUrl} taille="xl" />
@@ -174,7 +174,7 @@ function SidebarContent({
                     actif ? 'snav-active' : ''
                   }`}
                 >
-                  <Icone className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={2} />
+                  <Icone className="h-4.5 w-4.5 shrink-0" strokeWidth={2} />
                   <span className="truncate">{item.label}</span>
                 </Link>
               </li>
@@ -184,7 +184,7 @@ function SidebarContent({
       </nav>
 
       {/* Pied de sidebar */}
-      <div className="flex-shrink-0 border-t border-white/10 px-4 py-4">
+      <div className="shrink-0 border-t border-white/10 px-4 py-4">
         <p className="mb-0.5 truncate text-xs text-white/55">{nomComplet}</p>
         <p className="mb-3 text-xs font-medium" style={{ color: 'var(--ca)' }}>{libelleRole(role)}</p>
         <Link
@@ -257,7 +257,7 @@ export function DashboardShell({
       )}
 
       {/* Sidebar desktop */}
-      <aside className="hidden w-64 flex-shrink-0 flex-col lg:flex print:hidden" style={sidebarStyle}>
+      <aside className="hidden w-64 shrink-0 flex-col lg:flex print:hidden" style={sidebarStyle}>
         <SidebarContent menuItems={menuItems} {...sidebarProps} />
       </aside>
 
@@ -275,10 +275,10 @@ export function DashboardShell({
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden print:overflow-visible">
 
         {/* Header */}
-        <header className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:px-6 sm:py-4 print:hidden">
+        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:px-6 sm:py-4 print:hidden">
           <div className="flex min-w-0 items-center gap-3">
             <button
-              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 lg:hidden"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 lg:hidden"
               onClick={() => setSidebarOuverte(true)}
               aria-label="Ouvrir le menu"
             >
@@ -287,13 +287,13 @@ export function DashboardShell({
             <h2 className="truncate text-sm font-semibold text-gray-800">{titrePage}</h2>
           </div>
 
-          <div className="flex flex-shrink-0 items-center gap-2 sm:gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <div className="hidden text-right sm:block">
               <p className="text-sm leading-tight font-medium text-gray-800">{nomComplet}</p>
               <p className="text-xs text-gray-500">{libelleRole(role)}</p>
             </div>
             <div
-              className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold text-white sm:h-9 sm:w-9"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white sm:h-9 sm:w-9"
               style={{ backgroundColor: 'var(--cp)' }}
             >
               {initiale}

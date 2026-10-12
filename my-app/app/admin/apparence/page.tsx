@@ -222,7 +222,7 @@ export default function SiteConfigPage() {
 
           <div className="flex flex-col sm:flex-row items-start gap-5">
             {/* Aperçu logo */}
-            <div className="flex-shrink-0 w-20 h-20 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50">
+            <div className="shrink-0 w-20 h-20 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50">
               {config.logoSite ? (
                 <Image
                   src={config.logoSite}
@@ -364,7 +364,7 @@ export default function SiteConfigPage() {
                     type="color"
                     value={config.theme[key]}
                     onChange={(e) => updateTheme(key, e.target.value)}
-                    className="h-10 w-12 cursor-pointer rounded-lg border border-gray-300 p-0.5 flex-shrink-0"
+                    className="h-10 w-12 cursor-pointer rounded-lg border border-gray-300 p-0.5 shrink-0"
                   />
                   <input
                     type="text"
@@ -388,7 +388,7 @@ export default function SiteConfigPage() {
           {/* Aperçu sidebar */}
           <div className="mt-6 rounded-lg overflow-hidden border border-gray-200 flex flex-col sm:flex-row sm:h-24">
             <div
-              className="w-full sm:w-36 flex-shrink-0 flex flex-col justify-center px-3 py-3 sm:py-0 gap-1.5"
+              className="w-full sm:w-36 shrink-0 flex flex-col justify-center px-3 py-3 sm:py-0 gap-1.5"
               style={{ backgroundColor: config.theme.couleurPrimaire }}
             >
               <div className="h-1.5 w-16 rounded-full bg-white/30" />

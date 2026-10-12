@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
 import { Church } from '@/lib/icons'
 
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
+const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 interface Paroisse {
@@ -122,7 +122,7 @@ export default function PageParoisse() {
 
   if (chargement) return (
     <div className="flex items-center justify-center h-48">
-      <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-(--cp) border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
@@ -138,7 +138,7 @@ export default function PageParoisse() {
         </div>
         {estChefGroupe && !modeEdition && (
           <button onClick={() => setModeEdition(true)}
-            className="flex-shrink-0 flex items-center gap-1.5 border border-gray-300 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+            className="shrink-0 flex items-center gap-1.5 border border-gray-300 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
@@ -152,17 +152,17 @@ export default function PageParoisse() {
         <div className={`grid gap-3 ${voitStatsDetaillees ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1'}`}>
           {voitStatsDetaillees && (
             <>
-              <div className="bg-[var(--cp)] text-white rounded-xl p-4 text-center">
+              <div className="bg-(--cp) text-white rounded-xl p-4 text-center">
                 <p className="text-2xl sm:text-3xl font-bold">{paroisse._count.scouts}</p>
                 <p className="text-xs sm:text-sm opacity-90 mt-0.5">Scouts</p>
               </div>
-              <div className="bg-[var(--ca)] text-white rounded-xl p-4 text-center">
+              <div className="bg-(--ca) text-white rounded-xl p-4 text-center">
                 <p className="text-2xl sm:text-3xl font-bold">{paroisse._count.utilisateurs}</p>
                 <p className="text-xs sm:text-sm opacity-90 mt-0.5">Utilisateurs</p>
               </div>
             </>
           )}
-          <div className="bg-[var(--ca)] text-white rounded-xl p-4 text-center">
+          <div className="bg-(--ca) text-white rounded-xl p-4 text-center">
             <p className="text-2xl sm:text-3xl font-bold">{paroisse._count.activites}</p>
             <p className="text-xs sm:text-sm opacity-90 mt-0.5">Activités</p>
           </div>
@@ -173,7 +173,7 @@ export default function PageParoisse() {
       {!modeEdition ? (
         <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
           <div className="flex items-start gap-5">
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl border-2 border-dashed border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center relative group">
                 {logoPreview ? (
                   <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" />
@@ -211,7 +211,7 @@ export default function PageParoisse() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                 {paroisse.adresse && (
                   <div className="flex items-start gap-2 text-gray-600">
-                    <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 mt-0.5 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
@@ -220,7 +220,7 @@ export default function PageParoisse() {
                 )}
                 {paroisse.telephone && (
                   <div className="flex items-center gap-2 text-gray-600">
-                    <svg className="w-4 h-4 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                     </svg>
                     {paroisse.telephone}
@@ -228,7 +228,7 @@ export default function PageParoisse() {
                 )}
                 {paroisse.email && (
                   <div className="flex items-center gap-2 text-gray-600">
-                    <svg className="w-4 h-4 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                     {paroisse.email}
@@ -288,7 +288,7 @@ export default function PageParoisse() {
 
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <button type="submit" disabled={soumission}
-                className="sm:flex-none bg-[var(--cp)] text-white px-5 py-2.5 rounded-lg hover:brightness-110 transition-all text-sm font-medium disabled:opacity-60">
+                className="sm:flex-none bg-(--cp) text-white px-5 py-2.5 rounded-lg hover:brightness-110 transition-all text-sm font-medium disabled:opacity-60">
                 {soumission ? 'Enregistrement…' : 'Enregistrer'}
               </button>
               <button type="button" onClick={() => setModeEdition(false)}
@@ -306,12 +306,12 @@ export default function PageParoisse() {
         {estParent ? (
           <p className="text-sm text-gray-500 text-center py-4">
             Consultez les prochaines activités de vos enfants depuis{' '}
-            <Link href="/dashboard/mes-enfants" className="text-[var(--cp)] hover:underline font-medium">Mes enfants</Link>.
+            <Link href="/dashboard/mes-enfants" className="text-(--cp) hover:underline font-medium">Mes enfants</Link>.
           </p>
         ) : role === 'SCOUT' ? (
           <p className="text-sm text-gray-500 text-center py-4">
             Consultez vos prochaines activités depuis{' '}
-            <Link href="/dashboard/ma-progression" className="text-[var(--cp)] hover:underline font-medium">Ma progression</Link>.
+            <Link href="/dashboard/ma-progression" className="text-(--cp) hover:underline font-medium">Ma progression</Link>.
           </p>
         ) : activitesAVenir.length === 0 ? (
           <p className="text-sm text-gray-400 italic text-center py-4">Aucune activité à venir pour le moment</p>
@@ -321,11 +321,11 @@ export default function PageParoisse() {
               const debut = new Date(a.dateDebut)
               return (
                 <div key={a.id} className="flex items-center gap-4 py-2 border-b border-gray-50 last:border-0">
-                  <div className="flex-shrink-0 w-11 h-11 rounded-xl bg-[var(--cp)]/10 flex flex-col items-center justify-center">
-                    <span className="text-xs font-bold text-[var(--cp)] leading-none">
+                  <div className="shrink-0 w-11 h-11 rounded-xl bg-(--cp)/10 flex flex-col items-center justify-center">
+                    <span className="text-xs font-bold text-(--cp) leading-none">
                       {debut.toLocaleDateString('fr-FR', { day: '2-digit' })}
                     </span>
-                    <span className="text-xs text-[var(--cp)]/70 leading-none mt-0.5">
+                    <span className="text-xs text-(--cp)/70 leading-none mt-0.5">
                       {debut.toLocaleDateString('fr-FR', { month: 'short' })}
                     </span>
                   </div>
@@ -336,7 +336,7 @@ export default function PageParoisse() {
                       {a.lieu ? ` · ${a.lieu}` : ''}
                     </p>
                   </div>
-                  <span className="flex-shrink-0 text-xs bg-[var(--cp)]/10 text-[var(--cp)] px-2 py-0.5 rounded-full font-medium">
+                  <span className="shrink-0 text-xs bg-(--cp)/10 text-(--cp) px-2 py-0.5 rounded-full font-medium">
                     {debut.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>

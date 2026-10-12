@@ -82,7 +82,7 @@ export default function ListeParoisses() {
         {(!MONO_PAROISSE || paroisses.length === 0) && (
           <Link
             href="/admin/paroisses/nouvelle"
-            className="w-full sm:w-auto flex-shrink-0 rounded-lg px-4 py-2.5 text-sm font-bold text-white hover:brightness-110 transition text-center"
+            className="w-full sm:w-auto shrink-0 rounded-lg px-4 py-2.5 text-sm font-bold text-white hover:brightness-110 transition text-center"
             style={{ backgroundColor: 'var(--cp)' }}
           >
             + Nouvelle paroisse
@@ -99,7 +99,7 @@ export default function ListeParoisses() {
           placeholder="Rechercher une paroisse…"
           value={recherche}
           onChange={(e) => setRecherche(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--cp)] bg-white"
+          className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-(--cp) bg-white"
         />
       </div>
 

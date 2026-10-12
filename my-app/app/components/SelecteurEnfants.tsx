@@ -6,8 +6,8 @@ import type { Scout } from '@/hooks/useScouts'
 import { LABELS_BRANCHES, ORDRE_BRANCHES } from '@/lib/branches'
 import { ChevronLeft, ChevronRight, X } from '@/lib/icons'
 
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
-const CLS_SELECT = 'sm:w-48 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent bg-white'
+const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_SELECT = 'sm:w-48 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent bg-white'
 
 // Recherche paginée côté serveur : avec plusieurs milliers d'enfants dans la
 // paroisse, on ne charge jamais toute la liste — seulement la page courante.
@@ -136,7 +136,7 @@ export function SelecteurEnfants({ scoutIds, onChange, scoutsInitiaux }: Props) 
             className={CLS_INPUT}
           />
           {rechercheScoutEnCours && !chargementScouts && (
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 border-2 border-gray-300 border-t-[var(--cp)] rounded-full animate-spin" />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 border-2 border-gray-300 border-t-(--cp) rounded-full animate-spin" />
           )}
         </div>
         <select
@@ -153,7 +153,7 @@ export function SelecteurEnfants({ scoutIds, onChange, scoutsInitiaux }: Props) 
       <div className="rounded-lg border border-gray-200 bg-gray-50 overflow-hidden">
         {chargementScouts ? (
           <div className="flex items-center justify-center py-8">
-            <span className="w-5 h-5 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
+            <span className="w-5 h-5 border-2 border-(--cp) border-t-transparent rounded-full animate-spin" />
           </div>
         ) : erreurScouts ? (
           <p className="px-4 py-4 text-sm text-red-600">Impossible de charger les scouts.</p>
@@ -172,7 +172,7 @@ export function SelecteurEnfants({ scoutIds, onChange, scoutsInitiaux }: Props) 
                       type="checkbox"
                       checked={selectionne}
                       onChange={() => basculerScout(scout)}
-                      className="w-4 h-4 rounded accent-[var(--cp)] flex-shrink-0"
+                      className="w-4 h-4 rounded accent-(--cp) shrink-0"
                     />
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-medium text-gray-900 truncate">{scout.prenom} {scout.nom}</span>

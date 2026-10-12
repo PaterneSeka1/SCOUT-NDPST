@@ -139,7 +139,7 @@ export default function PageReunions() {
 
   if (chargement) return (
     <div className="flex items-center justify-center h-48">
-      <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-(--cp) border-t-transparent rounded-full animate-spin" />
     </div>
   )
   return (
@@ -151,7 +151,7 @@ export default function PageReunions() {
         </div>
         {peutCreer && (
           <Link href="/dashboard/reunions/nouveau"
-            className="flex-shrink-0 flex items-center gap-1.5 bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium">
+            className="shrink-0 flex items-center gap-1.5 bg-(--cp) text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium">
             <Plus className="h-4 w-4" strokeWidth={2} />
             Planifier
           </Link>
@@ -199,7 +199,7 @@ export default function PageReunions() {
               <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
                 <p className="text-gray-400 text-sm">Aucune réunion planifiée</p>
                 {peutCreer && (
-                  <Link href="/dashboard/reunions/nouveau" className="text-[var(--cp)] text-sm font-medium hover:underline mt-2 inline-flex items-center gap-1">
+                  <Link href="/dashboard/reunions/nouveau" className="text-(--cp) text-sm font-medium hover:underline mt-2 inline-flex items-center gap-1">
                     Planifier la prochaine réunion
                     <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
                   </Link>
@@ -234,11 +234,11 @@ export default function PageReunions() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nouvelle date et heure</label>
               <input type="datetime-local" value={nouvelleDate} onChange={(e) => setNouvelleDate(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cp)]" />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-(--cp)" />
             </div>
             <div className="flex gap-3">
               <button onClick={handleReporter} disabled={!nouvelleDate || soumissionReport}
-                className="flex-1 bg-[var(--cp)] text-white py-2 rounded-lg text-sm font-medium hover:brightness-110 disabled:opacity-60 transition-all">
+                className="flex-1 bg-(--cp) text-white py-2 rounded-lg text-sm font-medium hover:brightness-110 disabled:opacity-60 transition-all">
                 {soumissionReport ? 'Enregistrement…' : 'Confirmer le report'}
               </button>
               <button onClick={() => { setModalReport(null); setNouvelleDate('') }}
@@ -310,30 +310,30 @@ function CarteConfig({ branche, config, onSave }: {
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Jour</label>
               <select value={jourSemaine} onChange={(e) => setJourSemaine(parseInt(e.target.value))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)]">
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-(--cp)">
                 {JOURS.map((j, i) => <option key={i} value={i}>{j}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Heure</label>
               <input type="time" value={heureDebut} onChange={(e) => setHeureDebut(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cp)]" />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-(--cp)" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Durée (min)</label>
               <input type="number" value={dureeMinutes} onChange={(e) => setDureeMinutes(parseInt(e.target.value))}
                 min="15" max="480" step="15"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cp)]" />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-(--cp)" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Lieu habituel</label>
               <input type="text" value={lieu} onChange={(e) => setLieu(e.target.value)}
                 placeholder="Ex. Salle parois."
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--cp)]" />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-(--cp)" />
             </div>
           </div>
           <button onClick={handleSave} disabled={sauvegarde}
-            className="bg-[var(--cp)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:brightness-110 transition-all disabled:opacity-60">
+            className="bg-(--cp) text-white px-4 py-2 rounded-lg text-sm font-medium hover:brightness-110 transition-all disabled:opacity-60">
             {sauvegarde ? 'Enregistrement…' : 'Enregistrer'}
           </button>
         </div>
@@ -362,11 +362,11 @@ function CarteReunion({ reunion: r, estGroupe, brancheUtilisateur, onAnnuler, on
   return (
     <div className={`bg-white rounded-xl border border-gray-200 p-4 sm:p-5 ${r.statut === 'ANNULEE' ? 'opacity-60' : ''}`}>
       <div className="flex items-center gap-3">
-        <div className="flex-shrink-0 w-11 h-11 rounded-xl bg-[var(--cp)]/10 flex flex-col items-center justify-center">
-          <span className="text-xs font-bold text-[var(--cp)] leading-none">
+        <div className="shrink-0 w-11 h-11 rounded-xl bg-(--cp)/10 flex flex-col items-center justify-center">
+          <span className="text-xs font-bold text-(--cp) leading-none">
             {date.toLocaleDateString('fr-FR', { day: '2-digit' })}
           </span>
-          <span className="text-xs text-[var(--cp)]/70 leading-none mt-0.5">
+          <span className="text-xs text-(--cp)/70 leading-none mt-0.5">
             {date.toLocaleDateString('fr-FR', { month: 'short' })}
           </span>
         </div>
@@ -376,7 +376,7 @@ function CarteReunion({ reunion: r, estGroupe, brancheUtilisateur, onAnnuler, on
             <p className="text-sm font-semibold text-gray-900 truncate">
               {r.titre || `Réunion ${r.brancheType ? BRANCHES[r.brancheType] : 'inter-branches'}`}
             </p>
-            <span className={`text-xs px-2 py-0.5 rounded-full border font-medium flex-shrink-0 ${cfg.cls}`}>{cfg.label}</span>
+            <span className={`text-xs px-2 py-0.5 rounded-full border font-medium shrink-0 ${cfg.cls}`}>{cfg.label}</span>
           </div>
           <p className="text-xs text-gray-500 mt-0.5">
             {JOURS[date.getDay()]} · {formatHeure(date)}
@@ -390,10 +390,10 @@ function CarteReunion({ reunion: r, estGroupe, brancheUtilisateur, onAnnuler, on
           )}
         </div>
 
-        <div className="flex-shrink-0 flex items-center gap-2">
+        <div className="shrink-0 flex items-center gap-2">
           {r.statut !== 'ANNULEE' && (
             <Link href={`/dashboard/reunions/${r.id}/presences`}
-              className="text-xs bg-[var(--cp)] text-white px-3 py-2 rounded-lg hover:brightness-110 transition-all whitespace-nowrap">
+              className="text-xs bg-(--cp) text-white px-3 py-2 rounded-lg hover:brightness-110 transition-all whitespace-nowrap">
               {estPassee && r._count.presences > 0 ? 'Voir présences' : 'Présences'}
             </Link>
           )}

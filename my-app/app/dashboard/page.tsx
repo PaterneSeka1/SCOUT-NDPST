@@ -100,10 +100,10 @@ export default function DashboardPage() {
           </div>
 
           {role === 'CHEF_GROUPE' && (
-            <div className="flex flex-wrap gap-2 flex-shrink-0">
+            <div className="flex flex-wrap gap-2 shrink-0">
               <Link
                 href="/dashboard/utilisateurs/nouveau"
-                className="inline-flex items-center justify-center bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium"
+                className="inline-flex items-center justify-center bg-(--cp) text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium"
               >
                 + Nouveau membre
               </Link>
@@ -168,7 +168,7 @@ export default function DashboardPage() {
               return (
               <div key={a.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 first:pt-0 last:pb-0 gap-2">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(var(--cp-rgb), 0.1)', color: 'var(--cp)' }}>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(var(--cp-rgb), 0.1)', color: 'var(--cp)' }}>
                     <IconeActivite className="h-4 w-4" strokeWidth={2} />
                   </div>
                   <div className="min-w-0">
@@ -179,7 +179,7 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center flex-wrap gap-2 sm:flex-shrink-0 sm:ml-4 pl-11 sm:pl-0">
+                <div className="flex items-center flex-wrap gap-2 sm:shrink-0 sm:ml-4 pl-11 sm:pl-0">
                   {a.brancheType && (
                     <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(var(--cp-rgb), 0.1)', color: 'var(--cp)' }}>
                       {LIBELLES_BRANCHE[a.brancheType] ?? a.brancheType}

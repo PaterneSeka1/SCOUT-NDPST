@@ -52,7 +52,7 @@ function CarteUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
         <p className="text-sm font-semibold text-gray-900 leading-tight">
           {utilisateur.nom} {utilisateur.prenom}
         </p>
-        <span className={`flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+        <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
           utilisateur.actif ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
         }`}>
           {utilisateur.actif ? 'Actif' : 'Inactif'}
@@ -73,7 +73,7 @@ function CarteUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
       <div className="flex items-center gap-3 pt-1 border-t border-gray-50">
         <Link
           href={`/dashboard/utilisateurs/${utilisateur.id}/modifier`}
-          className="text-[var(--cp)] font-medium text-xs hover:underline"
+          className="text-(--cp) font-medium text-xs hover:underline"
         >
           Modifier
         </Link>
@@ -120,7 +120,7 @@ function LigneUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
         <div className="flex items-center gap-2">
           <Link
             href={`/dashboard/utilisateurs/${utilisateur.id}/modifier`}
-            className="text-[var(--cp)] hover:underline text-xs font-medium"
+            className="text-(--cp) hover:underline text-xs font-medium"
           >
             Modifier
           </Link>
@@ -174,7 +174,7 @@ export default function UtilisateursPage() {
         </div>
         <Link
           href="/dashboard/utilisateurs/nouveau"
-          className="inline-flex items-center justify-center bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-colors text-sm font-medium"
+          className="inline-flex items-center justify-center bg-(--cp) text-white px-4 py-2 rounded-lg hover:brightness-110 transition-colors text-sm font-medium"
         >
           + Nouveau membre
         </Link>
@@ -187,12 +187,12 @@ export default function UtilisateursPage() {
           placeholder="Rechercher…"
           value={recherche}
           onChange={(e) => handleRechercheChange(e.target.value)}
-          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--cp)] bg-white"
+          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-(--cp) bg-white"
         />
         <select
           value={roleFiltre}
           onChange={(e) => { setRoleFiltre(e.target.value); setPage(1) }}
-          className="sm:w-48 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--cp)] bg-white"
+          className="sm:w-48 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-(--cp) bg-white"
         >
           <option value="">Tous les rôles</option>
           {ROLES_FILTRE.map((role) => (

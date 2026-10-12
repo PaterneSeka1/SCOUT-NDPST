@@ -93,7 +93,7 @@ export function RechercheGlobale() {
           onFocus={() => setOuvert(true)}
           onKeyDown={(e) => { if (e.key === 'Escape') setOuvert(false) }}
           placeholder="Rechercher un scout, un membre…"
-          className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent focus:bg-white transition-colors"
+          className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent focus:bg-white transition-colors"
         />
       </div>
 
@@ -120,7 +120,7 @@ export function RechercheGlobale() {
                   className="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors flex items-center justify-between gap-2"
                 >
                   <span className="text-sm text-gray-800 truncate">{s.prenom} {s.nom}</span>
-                  <span className="text-xs text-gray-400 flex-shrink-0">{LABELS_BRANCHES[s.brancheType] ?? s.brancheType}</span>
+                  <span className="text-xs text-gray-400 shrink-0">{LABELS_BRANCHES[s.brancheType] ?? s.brancheType}</span>
                 </button>
               ))}
             </div>
@@ -136,7 +136,7 @@ export function RechercheGlobale() {
                   className="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors flex items-center justify-between gap-2"
                 >
                   <span className="text-sm text-gray-800 truncate">{u.prenom} {u.nom}</span>
-                  <span className="text-xs text-gray-400 flex-shrink-0">{LABELS_ROLES[u.role] ?? u.role}</span>
+                  <span className="text-xs text-gray-400 shrink-0">{LABELS_ROLES[u.role] ?? u.role}</span>
                 </button>
               ))}
             </div>

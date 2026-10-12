@@ -11,10 +11,10 @@ import { SelecteurEnfants } from '@/app/components/SelecteurEnfants'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { BackLink } from '@/app/components/ui/BackLink'
 
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
-const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
-const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
-const CLS_SELECT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
+const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_SELECT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 const ROLES_LISTE = ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT
@@ -110,7 +110,7 @@ export default function ModifierUtilisateurPage() {
 
   if (isLoading) return (
     <div className="flex items-center justify-center py-16">
-      <div className="w-8 h-8 border-4 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
+      <div className="w-8 h-8 border-4 border-(--cp) border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
@@ -181,7 +181,7 @@ export default function ModifierUtilisateurPage() {
 
           <label className="flex items-center gap-2.5 cursor-pointer">
             <input id="actif" name="actif" type="checkbox" checked={formInfos.actif} onChange={handleInfosChange}
-              className="w-4 h-4 accent-[var(--cp)] rounded" />
+              className="w-4 h-4 accent-(--cp) rounded" />
             <span className="text-sm text-gray-700">Compte actif</span>
           </label>
 
@@ -191,7 +191,7 @@ export default function ModifierUtilisateurPage() {
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={soumissionInfos}
-              className="w-full rounded-lg bg-[var(--cp)] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:brightness-110 disabled:opacity-60 sm:w-auto">
+              className="w-full rounded-lg bg-(--cp) px-5 py-2.5 text-sm font-medium text-white transition-colors hover:brightness-110 disabled:opacity-60 sm:w-auto">
               {soumissionInfos ? 'Enregistrement…' : 'Enregistrer les modifications'}
             </button>
           </div>
@@ -220,7 +220,7 @@ export default function ModifierUtilisateurPage() {
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={soumissionMdp}
-              className="w-full rounded-lg bg-[var(--cp)] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:brightness-110 disabled:opacity-60 sm:w-auto">
+              className="w-full rounded-lg bg-(--cp) px-5 py-2.5 text-sm font-medium text-white transition-colors hover:brightness-110 disabled:opacity-60 sm:w-auto">
               {soumissionMdp ? 'Réinitialisation…' : 'Réinitialiser le mot de passe'}
             </button>
           </div>

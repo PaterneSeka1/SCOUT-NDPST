@@ -51,7 +51,7 @@ function CarteScout({ scout }: { scout: Scout }) {
         <p className="text-sm font-semibold text-gray-900 leading-tight">
           {scout.nom} {scout.prenom}
         </p>
-        <span className={`flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+        <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
           scout.actif ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
         }`}>
           {scout.actif ? 'Actif' : 'Inactif'}
@@ -72,14 +72,14 @@ function CarteScout({ scout }: { scout: Scout }) {
       <div className="flex items-center gap-3 pt-1 border-t border-gray-50">
         <Link
           href={`/dashboard/scouts/${scout.id}`}
-          className="text-[var(--cp)] font-medium text-xs hover:underline"
+          className="text-(--cp) font-medium text-xs hover:underline"
         >
           Voir
         </Link>
         <span className="text-gray-200">|</span>
         <Link
           href={`/dashboard/scouts/${scout.id}/modifier`}
-          className="text-[var(--cp)] font-medium text-xs hover:underline"
+          className="text-(--cp) font-medium text-xs hover:underline"
         >
           Modifier
         </Link>
@@ -126,9 +126,9 @@ function LigneScout({ scout }: { scout: Scout }) {
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
-          <Link href={`/dashboard/scouts/${scout.id}`} className="text-[var(--cp)] hover:underline text-xs font-medium">Voir</Link>
+          <Link href={`/dashboard/scouts/${scout.id}`} className="text-(--cp) hover:underline text-xs font-medium">Voir</Link>
           <span className="text-gray-300">|</span>
-          <Link href={`/dashboard/scouts/${scout.id}/modifier`} className="text-[var(--cp)] hover:underline text-xs font-medium">Modifier</Link>
+          <Link href={`/dashboard/scouts/${scout.id}/modifier`} className="text-(--cp) hover:underline text-xs font-medium">Modifier</Link>
           <span className="text-gray-300">|</span>
           <button
             onClick={handleToggle}
@@ -188,7 +188,7 @@ export default function ScoutsPage() {
           </Link>
           <Link
             href="/dashboard/scouts/nouveau"
-            className="inline-flex items-center justify-center bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium"
+            className="inline-flex items-center justify-center bg-(--cp) text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium"
           >
             + Inscrire un scout
           </Link>
@@ -202,12 +202,12 @@ export default function ScoutsPage() {
           placeholder="Rechercher par nom, prénom ou matricule…"
           value={recherche}
           onChange={(e) => handleRechercheChange(e.target.value)}
-          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--cp)] bg-white"
+          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-(--cp) bg-white"
         />
         <select
           value={brancheFiltre}
           onChange={(e) => handleBrancheChange(e.target.value)}
-          className="sm:w-48 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--cp)] bg-white"
+          className="sm:w-48 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-(--cp) bg-white"
         >
           {BRANCHES_OPTIONS.map((opt) => (
             <option key={opt.valeur} value={opt.valeur}>{opt.label}</option>

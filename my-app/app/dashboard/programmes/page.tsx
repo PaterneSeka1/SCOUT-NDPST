@@ -50,7 +50,7 @@ export default function PageProgrammes() {
 
   if (chargement) return (
     <div className="flex items-center justify-center h-48">
-      <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-(--cp) border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
@@ -63,7 +63,7 @@ export default function PageProgrammes() {
         </div>
         {peutCreer && (
           <Link href="/dashboard/programmes/nouveau"
-            className="flex-shrink-0 flex items-center gap-1.5 bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium">
+            className="shrink-0 flex items-center gap-1.5 bg-(--cp) text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium">
             <Plus className="h-4 w-4" strokeWidth={2} />
             Nouveau programme
           </Link>
@@ -102,23 +102,23 @@ export default function PageProgrammes() {
 function CarteProgramme({ programme: p }: { programme: Programme }) {
   return (
     <Link href={`/dashboard/programmes/${p.id}`}
-      className="block bg-white rounded-xl border border-gray-200 p-4 sm:p-5 hover:border-[var(--cp)]/40 transition-colors">
+      className="block bg-white rounded-xl border border-gray-200 p-4 sm:p-5 hover:border-(--cp)/40 transition-colors">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm font-semibold text-gray-900 truncate">{p.titre}</p>
             {p.brancheType ? (
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${COULEURS_BRANCHE[p.brancheType] ?? 'bg-gray-100 text-gray-600'}`}>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${COULEURS_BRANCHE[p.brancheType] ?? 'bg-gray-100 text-gray-600'}`}>
                 {BRANCHES[p.brancheType]}
               </span>
             ) : (
-              <span className="text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 bg-gray-100 text-gray-600">Groupe</span>
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0 bg-gray-100 text-gray-600">Groupe</span>
             )}
           </div>
           <p className="text-xs text-gray-500 mt-1">{formatPeriode(p.periodeDebut, p.periodeFin)}</p>
           {p.description && <p className="text-xs text-gray-400 mt-1 truncate">{p.description}</p>}
         </div>
-        <div className="flex-shrink-0 text-right">
+        <div className="shrink-0 text-right">
           <span className="text-xs font-medium text-gray-500">{p._count.lignes} thème{p._count.lignes !== 1 ? 's' : ''}</span>
         </div>
       </div>

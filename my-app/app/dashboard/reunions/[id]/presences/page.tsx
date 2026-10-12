@@ -126,7 +126,7 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
 
   if (chargement) return (
     <div className="flex items-center justify-center h-48">
-      <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-(--cp) border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
@@ -136,7 +136,7 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
     <div className="space-y-5">
       {/* En-tête */}
       <div className="flex items-start gap-3">
-        <div className="mt-1 flex-shrink-0">
+        <div className="mt-1 shrink-0">
           <BackLink href="/dashboard/reunions">Retour</BackLink>
         </div>
         <div className="flex-1 min-w-0">
@@ -194,7 +194,7 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
           {/* Cartes QR hors périmètre V1 : rien à scanner. */}
           {!PERIMETRE_V1 && (
             <button onClick={() => setScannerOuvert(true)}
-              className="ml-auto text-xs bg-[var(--cp)] text-white px-3 py-1.5 rounded-lg hover:brightness-110 transition-all font-medium flex items-center gap-1.5">
+              className="ml-auto text-xs bg-(--cp) text-white px-3 py-1.5 rounded-lg hover:brightness-110 transition-all font-medium flex items-center gap-1.5">
               <Camera className="h-3.5 w-3.5" strokeWidth={2} />
               Scanner un QR
             </button>
@@ -218,14 +218,14 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
             return (
               <div key={scout.id} className="flex items-center gap-3 px-4 py-3">
                 {/* Numéro */}
-                <span className="flex-shrink-0 w-5 text-xs text-gray-300 text-right">{i + 1}</span>
+                <span className="shrink-0 w-5 text-xs text-gray-300 text-right">{i + 1}</span>
 
                 {/* Avatar */}
-                <div className="flex-shrink-0 w-9 h-9 rounded-full overflow-hidden bg-[var(--cp)]/10 flex items-center justify-center">
+                <div className="shrink-0 w-9 h-9 rounded-full overflow-hidden bg-(--cp)/10 flex items-center justify-center">
                   {scout.photo ? (
                     <img src={scout.photo} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-sm font-bold text-[var(--cp)]">{scout.prenom[0]}{scout.nom[0]}</span>
+                    <span className="text-sm font-bold text-(--cp)">{scout.prenom[0]}{scout.nom[0]}</span>
                   )}
                 </div>
 
@@ -236,7 +236,7 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
                 </div>
 
                 {/* Boutons statut */}
-                <div className="flex-shrink-0 flex gap-1">
+                <div className="shrink-0 flex gap-1">
                   {STATUTS.map((s) => (
                     <button key={s.value} onClick={() => setStatut(scout.id, s.value as any)}
                       className={`text-xs px-2.5 py-1 rounded-lg border font-medium transition-colors ${statut === s.value ? s.active : s.cls}`}>
@@ -254,7 +254,7 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
       {scouts.length > 0 && (
         <div className="sticky bottom-4">
           <button onClick={handleSauvegarder} disabled={sauvegarde || !modifie}
-            className="w-full bg-[var(--cp)] text-white py-3.5 rounded-xl font-medium text-sm hover:brightness-110 transition-all disabled:opacity-60 shadow-lg shadow-[var(--cp)]/20">
+            className="w-full bg-(--cp) text-white py-3.5 rounded-xl font-medium text-sm hover:brightness-110 transition-all disabled:opacity-60 shadow-lg shadow-(--cp)/20">
             {sauvegarde ? 'Enregistrement…' : `Enregistrer les présences (${stats.present} présent${stats.present > 1 ? 's' : ''})`}
           </button>
         </div>

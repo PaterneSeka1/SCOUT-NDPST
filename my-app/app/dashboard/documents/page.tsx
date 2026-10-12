@@ -56,7 +56,7 @@ export default function PageDocumentsExpirations() {
           <select
             value={joursAvant}
             onChange={(e) => setJoursAvant(Number(e.target.value))}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)]"
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp)"
           >
             <option value={15}>15 jours</option>
             <option value={30}>30 jours</option>
@@ -67,7 +67,7 @@ export default function PageDocumentsExpirations() {
 
         {chargement ? (
           <div className="flex items-center justify-center py-12">
-            <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-(--cp) border-t-transparent rounded-full animate-spin" />
           </div>
         ) : documents.length === 0 ? (
           <EmptyState icon={CheckCircle2} title="Aucun document à renouveler pour le moment." />
@@ -104,7 +104,7 @@ function LigneDocument({ doc }: { doc: DocumentExpiration }) {
       href={`/dashboard/scouts/${doc.scout.id}`}
       className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
     >
-      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-500">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-500">
         <IconeDocument className="h-4 w-4" strokeWidth={2} />
       </span>
       <div className="flex-1 min-w-0">
@@ -114,7 +114,7 @@ function LigneDocument({ doc }: { doc: DocumentExpiration }) {
           {doc.scout.matricule ? ` · ${doc.scout.matricule}` : ''}
         </p>
       </div>
-      <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full ${doc.expire ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+      <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full ${doc.expire ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
         {doc.expire
           ? `Expiré depuis ${Math.abs(jours ?? 0)} j`
           : `Expire dans ${jours} j`}

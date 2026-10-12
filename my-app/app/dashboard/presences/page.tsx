@@ -39,7 +39,7 @@ export default function PagePresences() {
 
   if (chargement) return (
     <div className="flex items-center justify-center h-48">
-      <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-(--cp) border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
@@ -58,7 +58,7 @@ export default function PagePresences() {
             icon={ClipboardList}
             title="Aucune activité enregistrée"
             action={
-              <Link href="/dashboard/activites/nouvelle" className="inline-flex items-center gap-1 text-sm text-[var(--cp)] font-medium hover:underline">
+              <Link href="/dashboard/activites/nouvelle" className="inline-flex items-center gap-1 text-sm text-(--cp) font-medium hover:underline">
                 Créer une activité
                 <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
               </Link>
@@ -72,11 +72,11 @@ export default function PagePresences() {
             const passee = date < new Date()
             return (
               <div key={a.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-4">
-                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-[var(--cp)]/10 flex flex-col items-center justify-center">
-                  <span className="text-xs font-bold text-[var(--cp)] leading-none">
+                <div className="shrink-0 w-12 h-12 rounded-xl bg-(--cp)/10 flex flex-col items-center justify-center">
+                  <span className="text-xs font-bold text-(--cp) leading-none">
                     {date.toLocaleDateString('fr-FR', { day: '2-digit' })}
                   </span>
-                  <span className="text-xs text-[var(--cp)]/70 leading-none mt-0.5">
+                  <span className="text-xs text-(--cp)/70 leading-none mt-0.5">
                     {date.toLocaleDateString('fr-FR', { month: 'short' })}
                   </span>
                 </div>
@@ -98,12 +98,12 @@ export default function PagePresences() {
                     )}
                   </div>
                 </div>
-                <div className="flex-shrink-0 flex items-center gap-3">
+                <div className="shrink-0 flex items-center gap-3">
                   <span className={`text-xs px-2 py-0.5 rounded-full ${passee ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-700'}`}>
                     {passee ? `${a._count.presences} présent${a._count.presences > 1 ? 's' : ''}` : 'À venir'}
                   </span>
                   <Link href={`/dashboard/activites/${a.id}/presences`}
-                    className="text-sm bg-[var(--cp)] text-white px-3 py-1.5 rounded-lg hover:brightness-110 transition-all font-medium whitespace-nowrap">
+                    className="text-sm bg-(--cp) text-white px-3 py-1.5 rounded-lg hover:brightness-110 transition-all font-medium whitespace-nowrap">
                     {passee ? 'Voir / Modifier' : 'Préparer'}
                   </Link>
                 </div>

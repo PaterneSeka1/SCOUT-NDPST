@@ -32,10 +32,10 @@ export default function FicheParentPage() {
         </div>
 
         {parent && (
-          <div className="flex flex-wrap gap-2 flex-shrink-0">
+          <div className="flex flex-wrap gap-2 shrink-0">
             <Link
               href={`/dashboard/parents/${parent.id}/modifier`}
-              className="bg-[var(--cp)] text-white px-4 py-2 rounded-md hover:brightness-110 transition-colors text-sm font-medium"
+              className="bg-(--cp) text-white px-4 py-2 rounded-md hover:brightness-110 transition-colors text-sm font-medium"
             >
               Modifier
             </Link>
@@ -51,7 +51,7 @@ export default function FicheParentPage() {
 
       {chargement && (
         <div className="flex items-center justify-center py-16">
-          <div className="w-8 h-8 border-4 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-(--cp) border-t-transparent rounded-full animate-spin" />
         </div>
       )}
 
@@ -66,7 +66,7 @@ export default function FicheParentPage() {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-5">
             {/* Téléphone */}
             <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-              <p className="text-2xl font-mono font-bold text-[var(--cp)] tracking-wider">
+              <p className="text-2xl font-mono font-bold text-(--cp) tracking-wider">
                 {parent.telephone ?? '—'}
               </p>
               {parent.actif ? (
@@ -150,7 +150,7 @@ export default function FicheParentPage() {
                           {!enfant.actif && ' · Inactif'}
                         </span>
                       </span>
-                      <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${
+                      <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${
                         COULEURS_BRANCHES[enfant.brancheType] ?? 'bg-gray-100 text-gray-700'
                       }`}>
                         {LABELS_BRANCHES[enfant.brancheType] ?? enfant.brancheType}

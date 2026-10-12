@@ -40,7 +40,7 @@ function CarteParent({ parent }: { parent: Utilisateur }) {
         <p className="text-sm font-semibold text-gray-900 leading-tight">
           {parent.nom} {parent.prenom}
         </p>
-        <span className={`flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+        <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
           parent.actif ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
         }`}>
           {parent.actif ? 'Actif' : 'Inactif'}
@@ -52,14 +52,14 @@ function CarteParent({ parent }: { parent: Utilisateur }) {
       <div className="flex items-center gap-3 pt-1 border-t border-gray-50">
         <Link
           href={`/dashboard/parents/${parent.id}`}
-          className="text-[var(--cp)] font-medium text-xs hover:underline"
+          className="text-(--cp) font-medium text-xs hover:underline"
         >
           Voir
         </Link>
         <span className="text-gray-200">|</span>
         <Link
           href={`/dashboard/parents/${parent.id}/modifier`}
-          className="text-[var(--cp)] font-medium text-xs hover:underline"
+          className="text-(--cp) font-medium text-xs hover:underline"
         >
           Modifier
         </Link>
@@ -99,14 +99,14 @@ function LigneParent({ parent }: { parent: Utilisateur }) {
         <div className="flex items-center gap-2">
           <Link
             href={`/dashboard/parents/${parent.id}`}
-            className="text-[var(--cp)] hover:underline text-xs font-medium"
+            className="text-(--cp) hover:underline text-xs font-medium"
           >
             Voir
           </Link>
           <span className="text-gray-300">|</span>
           <Link
             href={`/dashboard/parents/${parent.id}/modifier`}
-            className="text-[var(--cp)] hover:underline text-xs font-medium"
+            className="text-(--cp) hover:underline text-xs font-medium"
           >
             Modifier
           </Link>
@@ -159,7 +159,7 @@ export default function ParentsPage() {
         </div>
         <Link
           href="/dashboard/parents/nouveau"
-          className="inline-flex items-center justify-center bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-colors text-sm font-medium"
+          className="inline-flex items-center justify-center bg-(--cp) text-white px-4 py-2 rounded-lg hover:brightness-110 transition-colors text-sm font-medium"
         >
           + Nouveau parent
         </Link>
@@ -172,7 +172,7 @@ export default function ParentsPage() {
           placeholder="Rechercher…"
           value={recherche}
           onChange={(e) => handleRechercheChange(e.target.value)}
-          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--cp)] bg-white"
+          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-(--cp) bg-white"
         />
       </div>
 

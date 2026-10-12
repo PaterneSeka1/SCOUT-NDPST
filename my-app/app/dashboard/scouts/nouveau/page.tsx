@@ -11,10 +11,10 @@ import { BackLink } from '@/app/components/ui/BackLink'
 
 const BRANCHES_LISTE = Object.keys(LABELS_BRANCHES)
 
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
-const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
-const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
-const CLS_SELECT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
+const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_SELECT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 interface ContactForm {
@@ -205,7 +205,7 @@ export default function NouveauScoutPage() {
             <label className={CLS_LABEL}>Photo <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
             <div className="flex items-start gap-4">
               {/* Prévisualisation */}
-              <div className="flex-shrink-0 w-20 h-20 rounded-lg border-2 border-dashed border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center">
+              <div className="shrink-0 w-20 h-20 rounded-lg border-2 border-dashed border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center">
                 {photoPreview ? (
                   <img src={photoPreview} alt="Aperçu" className="w-full h-full object-cover" />
                 ) : (
@@ -301,14 +301,14 @@ export default function NouveauScoutPage() {
 
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={contact.principal}
-                  onChange={(e) => modifierContact(idx, 'principal', e.target.checked)} className="accent-[var(--cp)]" />
+                  onChange={(e) => modifierContact(idx, 'principal', e.target.checked)} className="accent-(--cp)" />
                 <span className="text-xs text-gray-700">Contact principal</span>
               </label>
             </div>
           ))}
 
           <button type="button" onClick={ajouterContact}
-            className="text-sm text-[var(--cp)] font-medium border border-[var(--cp)]/30 hover:border-[var(--cp)] px-4 py-2 rounded-lg transition-colors">
+            className="text-sm text-(--cp) font-medium border border-(--cp)/30 hover:border-(--cp) px-4 py-2 rounded-lg transition-colors">
             + Ajouter un contact
           </button>
         </div>
@@ -316,7 +316,7 @@ export default function NouveauScoutPage() {
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3">
           <button type="submit" disabled={isPending}
-            className="sm:flex-none bg-[var(--cp)] text-white px-5 py-2.5 rounded-lg hover:brightness-110 transition-all text-sm font-medium disabled:opacity-60">
+            className="sm:flex-none bg-(--cp) text-white px-5 py-2.5 rounded-lg hover:brightness-110 transition-all text-sm font-medium disabled:opacity-60">
             {isPending ? 'Enregistrement…' : 'Inscrire le scout'}
           </button>
           <Link href="/dashboard/scouts"

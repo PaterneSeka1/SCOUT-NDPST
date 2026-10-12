@@ -10,7 +10,7 @@ export default function DashboardError({ reset }: { error: Error & { digest?: st
       <p className="text-sm text-gray-500">Réessayez, ou revenez plus tard si le problème persiste.</p>
       <button
         onClick={reset}
-        className="mt-2 bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium"
+        className="mt-2 bg-(--cp) text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium"
       >
         Réessayer
       </button>

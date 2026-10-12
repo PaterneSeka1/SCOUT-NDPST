@@ -65,9 +65,9 @@ const AFFECTATIONS_DISTRICT_FILTRE = [
   { value: 'ASSISTANT_DISTRICT', label: 'Assistants de district' },
 ]
 const LIMITES_PAGE = [20, 50, 100]
-const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
-const CLS_SELECT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
+const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_SELECT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 interface FormNomination {
@@ -337,7 +337,7 @@ export default function UtilisateursPlateformePage() {
         </div>
         <Link
           href="/admin/utilisateurs/nouveau"
-          className="flex-shrink-0 rounded-lg px-4 py-2.5 text-sm font-bold text-white hover:brightness-110 transition"
+          className="shrink-0 rounded-lg px-4 py-2.5 text-sm font-bold text-white hover:brightness-110 transition"
           style={{ backgroundColor: 'var(--cp)' }}
         >
           + Nouvel utilisateur
@@ -933,7 +933,7 @@ export default function UtilisateursPlateformePage() {
                               name="modeDistrict"
                               checked={nominationModeBranche}
                               onChange={() => setFormNomination((p) => ({ ...p, modeDistrict: 'branche', fonctionDistrict: '' }))}
-                              className="accent-[var(--cp)]"
+                              className="accent-(--cp)"
                             />
                             Commissaire de branche
                           </label>
@@ -943,7 +943,7 @@ export default function UtilisateursPlateformePage() {
                               name="modeDistrict"
                               checked={!nominationModeBranche}
                               onChange={() => setFormNomination((p) => ({ ...p, modeDistrict: 'fonction', brancheTypeDistrict: '' }))}
-                              className="accent-[var(--cp)]"
+                              className="accent-(--cp)"
                             />
                             Autre fonction
                           </label>

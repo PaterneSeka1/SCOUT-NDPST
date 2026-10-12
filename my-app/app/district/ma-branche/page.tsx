@@ -127,7 +127,7 @@ export default function MaBranchePage() {
         <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-sm font-bold text-gray-900">Activités récentes</h2>
-            <Link href="/district/ma-branche/activites/nouvelle" className="text-xs font-medium text-[var(--cp)] hover:underline whitespace-nowrap">
+            <Link href="/district/ma-branche/activites/nouvelle" className="text-xs font-medium text-(--cp) hover:underline whitespace-nowrap">
               + Nouvelle activité de branche
             </Link>
           </div>
@@ -141,7 +141,7 @@ export default function MaBranchePage() {
                     <p className="text-sm font-medium text-gray-800 truncate">{a.titre}</p>
                     <p className="text-xs text-gray-500">{a.paroisse.nom}</p>
                   </div>
-                  <span className="text-xs text-gray-500 flex-shrink-0">{formatDate(a.dateDebut)}</span>
+                  <span className="text-xs text-gray-500 shrink-0">{formatDate(a.dateDebut)}</span>
                 </li>
               ))}
             </ul>
@@ -151,7 +151,7 @@ export default function MaBranchePage() {
         <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-sm font-bold text-gray-900">Programmes récents</h2>
-            <Link href="/district/ma-branche/programmes/nouveau" className="text-xs font-medium text-[var(--cp)] hover:underline whitespace-nowrap">
+            <Link href="/district/ma-branche/programmes/nouveau" className="text-xs font-medium text-(--cp) hover:underline whitespace-nowrap">
               + Nouveau programme de branche
             </Link>
           </div>
@@ -165,7 +165,7 @@ export default function MaBranchePage() {
                     <p className="text-sm font-medium text-gray-800 truncate">{p.titre}</p>
                     <p className="text-xs text-gray-500">{p.paroisse.nom}</p>
                   </div>
-                  <span className="text-xs text-gray-500 flex-shrink-0">{formatDate(p.periodeDebut)}</span>
+                  <span className="text-xs text-gray-500 shrink-0">{formatDate(p.periodeDebut)}</span>
                 </li>
               ))}
             </ul>

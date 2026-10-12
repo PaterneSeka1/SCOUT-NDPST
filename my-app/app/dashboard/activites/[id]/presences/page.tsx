@@ -112,9 +112,9 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
         </div>
 
         {/* Compteur + boutons tout cocher */}
-        <div className="flex items-center gap-3 flex-shrink-0">
+        <div className="flex items-center gap-3 shrink-0">
           <div className="text-right">
-            <p className="text-2xl font-bold text-[var(--cp)]">{nbPresents}/{nbTotal}</p>
+            <p className="text-2xl font-bold text-(--cp)">{nbPresents}/{nbTotal}</p>
             <p className="text-xs text-gray-500">présent(s)</p>
           </div>
           <div className="flex flex-col gap-1">
@@ -135,7 +135,7 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
           {!PERIMETRE_V1 && (
             <button
               onClick={() => setScannerOuvert(true)}
-              className="text-xs px-3 py-2 bg-[var(--cp)] text-white rounded-lg hover:brightness-110 transition-all font-medium flex items-center gap-1.5"
+              className="text-xs px-3 py-2 bg-(--cp) text-white rounded-lg hover:brightness-110 transition-all font-medium flex items-center gap-1.5"
             >
               <Camera className="h-3.5 w-3.5" strokeWidth={2} />
               Scanner
@@ -175,7 +175,7 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
                     {/* Case à cocher */}
                     <button
                       onClick={() => togglePresence(p.scout.id)}
-                      className={`flex-shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
+                      className={`shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
                         estPresent
                           ? 'bg-green-500 border-green-500 text-white'
                           : 'border-gray-300 hover:border-green-400'
@@ -201,7 +201,7 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
                     {/* Autorisations de camp signées par le parent (camps uniquement, information seule) */}
                     {/* Hors périmètre V1 : sans espace parent, rien n'est jamais signé. */}
                     {!PERIMETRE_V1 && activite?.type === 'CAMP' && (
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium border ${
                           p.scout.autorisationCamp?.ficheMedicale
                             ? 'bg-green-50 text-green-700 border-green-100'
@@ -234,7 +234,7 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
                       value={etat?.commentaire ?? ''}
                       onChange={(e) => setCommentaire(p.scout.id, e.target.value)}
                       placeholder="Commentaire (optionnel)"
-                      className="w-48 text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[var(--cp)] hidden sm:block"
+                      className="w-48 text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-(--cp) hidden sm:block"
                     />
                   </div>
 
@@ -245,7 +245,7 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
                       value={etat?.commentaire ?? ''}
                       onChange={(e) => setCommentaire(p.scout.id, e.target.value)}
                       placeholder="Commentaire (optionnel)"
-                      className="w-full text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[var(--cp)]"
+                      className="w-full text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-(--cp)"
                     />
                   </div>
                 </div>
@@ -266,7 +266,7 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
           <button
             onClick={handleEnregistrer}
             disabled={enregistrerPresences.isPending || scouts.length === 0}
-            className="w-full sm:w-auto bg-[var(--cp)] text-white px-6 py-2 rounded-lg hover:brightness-110 disabled:opacity-50 transition-all text-sm font-medium"
+            className="w-full sm:w-auto bg-(--cp) text-white px-6 py-2 rounded-lg hover:brightness-110 disabled:opacity-50 transition-all text-sm font-medium"
           >
             {enregistrerPresences.isPending ? 'Enregistrement...' : 'Enregistrer les présences'}
           </button>

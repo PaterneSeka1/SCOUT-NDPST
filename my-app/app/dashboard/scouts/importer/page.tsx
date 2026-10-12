@@ -117,7 +117,7 @@ export default function PageImporterScouts() {
             <Download className="h-3.5 w-3.5" strokeWidth={2} />
             Télécharger le modèle CSV
           </button>
-          <label className="inline-flex items-center justify-center gap-2 bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium cursor-pointer text-center">
+          <label className="inline-flex items-center justify-center gap-2 bg-(--cp) text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium cursor-pointer text-center">
             <FileText className="h-3.5 w-3.5" strokeWidth={2} />
             Choisir un fichier CSV
             <input type="file" accept=".csv,text/csv" onChange={handleFichier} className="hidden" />
@@ -157,7 +157,7 @@ export default function PageImporterScouts() {
             <button
               onClick={importer}
               disabled={soumission}
-              className="bg-[var(--cp)] text-white px-5 py-2.5 rounded-lg hover:brightness-110 transition-all text-sm font-medium disabled:opacity-60"
+              className="bg-(--cp) text-white px-5 py-2.5 rounded-lg hover:brightness-110 transition-all text-sm font-medium disabled:opacity-60"
             >
               {soumission ? 'Import en cours…' : `Importer ${lignes.length} scout${lignes.length > 1 ? 's' : ''}`}
             </button>
@@ -170,10 +170,10 @@ export default function PageImporterScouts() {
             <div className="space-y-1.5">
               {resultats.map((r) => (
                 <div key={r.ligne} className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg ${r.succes ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                  <span className="flex-shrink-0">
+                  <span className="shrink-0">
                     {r.succes ? <CheckCircle2 className="h-4 w-4" strokeWidth={2} /> : <XCircle className="h-4 w-4" strokeWidth={2} />}
                   </span>
-                  <span className="flex-shrink-0 font-medium">Ligne {r.ligne}</span>
+                  <span className="shrink-0 font-medium">Ligne {r.ligne}</span>
                   <span className="truncate">{r.succes ? `${r.prenom} ${r.nom} créé(e)` : r.erreur}</span>
                 </div>
               ))}
@@ -187,7 +187,7 @@ export default function PageImporterScouts() {
               </button>
               <button
                 onClick={() => router.push('/dashboard/scouts')}
-                className="bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium"
+                className="bg-(--cp) text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium"
               >
                 Voir la liste des scouts
               </button>

@@ -96,7 +96,7 @@ export default function PageCotisations() {
   }
 
   const champ =
-    'border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)]'
+    'border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp)'
 
   return (
     <div className="space-y-6">
@@ -153,7 +153,7 @@ export default function PageCotisations() {
 
         {chargement ? (
           <div className="flex items-center justify-center py-12">
-            <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-(--cp) border-t-transparent rounded-full animate-spin" />
           </div>
         ) : scoutsAffiches.length === 0 ? (
           <div className="text-center py-12">
@@ -165,7 +165,7 @@ export default function PageCotisations() {
             {scoutsAffiches.map((s) => (
               <li key={s.id} className="flex items-center justify-between gap-3 py-2.5">
                 <div className="min-w-0">
-                  <Link href={`/dashboard/scouts/${s.id}`} className="block truncate text-sm font-medium text-gray-900 hover:text-[var(--cp)] hover:underline">
+                  <Link href={`/dashboard/scouts/${s.id}`} className="block truncate text-sm font-medium text-gray-900 hover:text-(--cp) hover:underline">
                     {s.prenom} {s.nom}
                   </Link>
                   <p className="text-xs text-gray-500 truncate">
@@ -181,7 +181,7 @@ export default function PageCotisations() {
                     aria-label={`${s.prenom} ${s.nom} cotisant`}
                     disabled={enCours === s.id}
                     onClick={() => basculer(s)}
-                    className={`flex-shrink-0 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors disabled:opacity-50 ${
+                    className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors disabled:opacity-50 ${
                       s.cotisant
                         ? 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200'
                         : 'bg-white text-amber-700 border-amber-200 hover:bg-amber-50'
@@ -190,7 +190,7 @@ export default function PageCotisations() {
                     {s.cotisant ? 'Cotisant' : 'Non cotisant'}
                   </button>
                 ) : (
-                  <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full ${s.cotisant ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+                  <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full ${s.cotisant ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
                     {s.cotisant ? 'Cotisant' : 'Non cotisant'}
                   </span>
                 )}

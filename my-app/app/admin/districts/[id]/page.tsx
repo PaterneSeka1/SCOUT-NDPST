@@ -9,7 +9,7 @@ import { SelecteurMembre } from '@/app/components/SelecteurMembre'
 import { COULEURS_ROLES, LABELS_ROLES, ROLES_TOUT_STAFF, libelleRoleAvecFonction } from '@/lib/roles'
 import { BackLink } from '@/app/components/ui/BackLink'
 
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
+const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
 
 interface ParoisseDistrict {
   id: string
@@ -475,7 +475,7 @@ export default function FicheDistrictPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Link href={`/admin/utilisateurs/${membre.id}`} className="text-xs font-semibold text-[var(--cp)] hover:underline">
+                      <Link href={`/admin/utilisateurs/${membre.id}`} className="text-xs font-semibold text-(--cp) hover:underline">
                         Fiche
                       </Link>
                     </td>

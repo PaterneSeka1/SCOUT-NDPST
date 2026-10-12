@@ -59,7 +59,7 @@ export default function ProgressionScoutBranchePage() {
                 {progressions.badges.map((badge) => (
                   <li key={badge.id} className="flex items-center justify-between border border-gray-100 rounded-lg p-3">
                     <div className="flex items-start gap-2 min-w-0">
-                      {badge.valide && <span className="mt-1.5 w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />}
+                      {badge.valide && <span className="mt-1.5 w-2 h-2 rounded-full bg-green-500 shrink-0" />}
                       <div className="min-w-0">
                         <span className="block text-sm font-medium text-gray-900 truncate">{badge.nom}</span>
                         {badge.description && <span className="block text-xs text-gray-500 truncate">{badge.description}</span>}
@@ -75,7 +75,7 @@ export default function ProgressionScoutBranchePage() {
                       <button
                         onClick={() => handleValiderBadge(badge.id)}
                         disabled={validationEnCours && badgeEnCours === badge.id}
-                        className="text-sm bg-[var(--cp)] text-white px-3 py-1.5 rounded-lg hover:brightness-110 transition-colors disabled:opacity-60 flex-shrink-0 ml-2"
+                        className="text-sm bg-(--cp) text-white px-3 py-1.5 rounded-lg hover:brightness-110 transition-colors disabled:opacity-60 shrink-0 ml-2"
                       >
                         {validationEnCours && badgeEnCours === badge.id ? '…' : 'Valider'}
                       </button>

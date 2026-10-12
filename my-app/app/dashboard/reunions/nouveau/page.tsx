@@ -9,8 +9,8 @@ import { LABELS_BRANCHES, ORDRE_BRANCHES } from '@/lib/branches'
 import { BackLink } from '@/app/components/ui/BackLink'
 import { CalendarDays, Repeat, Check } from '@/lib/icons'
 
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
-const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
+const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 const BRANCHES = [
@@ -162,7 +162,7 @@ export default function PageNouvelleReunion() {
             <div className="flex gap-3">
               {(['serie', 'unique'] as const).map((m) => (
                 <button key={m} type="button" onClick={() => setMode(m)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg border text-sm font-medium transition-colors ${mode === m ? 'bg-[var(--cp)] text-white border-[var(--cp)]' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg border text-sm font-medium transition-colors ${mode === m ? 'bg-(--cp) text-white border-(--cp)' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
                   {m === 'unique' ? <CalendarDays className="h-4 w-4" strokeWidth={2} /> : <Repeat className="h-4 w-4" strokeWidth={2} />}
                   {m === 'unique' ? 'Réunion unique' : 'Série hebdomadaire'}
                 </button>
@@ -187,7 +187,7 @@ export default function PageNouvelleReunion() {
                 </select>
               )}
               {configAppliquee && (
-                <p className="inline-flex items-center gap-1 text-xs text-[var(--cp)] mt-1">
+                <p className="inline-flex items-center gap-1 text-xs text-(--cp) mt-1">
                   <Check className="h-3 w-3" strokeWidth={2.5} />
                   Jour habituel pré-rempli depuis la configuration
                 </p>
@@ -245,7 +245,7 @@ export default function PageNouvelleReunion() {
                 </div>
               </div>
               {previewDates.length > 0 && (
-                <div className="text-xs text-[var(--cp)] bg-[var(--cp)]/5 px-3 py-2 rounded-lg">
+                <div className="text-xs text-(--cp) bg-(--cp)/5 px-3 py-2 rounded-lg">
                   <span className="font-medium">{previewDates.length} réunion{previewDates.length > 1 ? 's' : ''} seront créées</span>
                   {previewDates.length <= 6 && (
                     <span className="text-gray-500 ml-1">
@@ -278,12 +278,12 @@ export default function PageNouvelleReunion() {
             <label className={CLS_LABEL}>Notes <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
               placeholder="Programme, consignes particulières…"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] resize-none" />
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) resize-none" />
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={soumission}
-              className="sm:flex-none bg-[var(--cp)] text-white px-6 py-2.5 rounded-lg hover:brightness-110 transition-all text-sm font-medium disabled:opacity-60">
+              className="sm:flex-none bg-(--cp) text-white px-6 py-2.5 rounded-lg hover:brightness-110 transition-all text-sm font-medium disabled:opacity-60">
               {soumission
                 ? 'Création…'
                 : mode === 'serie'

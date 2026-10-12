@@ -74,7 +74,7 @@ export default function AdminAccueil() {
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Tableau de bord plateforme</h1>
           <p className="text-sm text-gray-500 mt-0.5">Vue d&apos;ensemble consolidée de toutes les paroisses</p>
         </div>
-        <div className="flex flex-wrap gap-2 flex-shrink-0">
+        <div className="flex flex-wrap gap-2 shrink-0">
           <Link
             href="/admin/paroisses/nouvelle"
             className="rounded-lg px-4 py-2 text-sm font-bold text-white hover:brightness-110 transition"

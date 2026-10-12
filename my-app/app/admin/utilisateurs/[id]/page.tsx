@@ -81,7 +81,7 @@ export default function FicheUtilisateurPlateformePage() {
           <h1 className="text-2xl font-bold text-gray-900">Fiche utilisateur</h1>
         </div>
 
-        <div className="flex flex-wrap gap-2 flex-shrink-0">
+        <div className="flex flex-wrap gap-2 shrink-0">
           <Link
             href={`/admin/utilisateurs/${utilisateur.id}/modifier`}
             className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-bold text-white hover:brightness-110 transition"

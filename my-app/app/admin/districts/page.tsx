@@ -109,7 +109,7 @@ export default function ListeDistricts() {
         {!creation && (!MONO_PAROISSE || districts.length === 0) && (
           <button
             onClick={() => setCreation(true)}
-            className="sm:flex-shrink-0 rounded-lg px-4 py-2 text-sm font-bold text-white hover:brightness-110 transition"
+            className="sm:shrink-0 rounded-lg px-4 py-2 text-sm font-bold text-white hover:brightness-110 transition"
             style={{ backgroundColor: 'var(--cp)' }}
           >
             + Nouveau district
@@ -124,9 +124,9 @@ export default function ListeDistricts() {
             placeholder="Nom du district (ex : District Nord)"
             value={nomNouveauDistrict}
             onChange={(e) => setNomNouveauDistrict(e.target.value)}
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent"
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent"
           />
-          <div className="flex gap-2 flex-shrink-0">
+          <div className="flex gap-2 shrink-0">
             <button type="submit" disabled={soumissionCreation} className="rounded-lg px-4 py-2 text-sm font-bold text-white disabled:opacity-50 transition" style={{ backgroundColor: 'var(--cp)' }}>
               {soumissionCreation ? 'Création…' : 'Créer'}
             </button>
@@ -146,7 +146,7 @@ export default function ListeDistricts() {
           placeholder="Rechercher un district…"
           value={recherche}
           onChange={(e) => setRecherche(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--cp)] bg-white"
+          className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-(--cp) bg-white"
         />
       </div>
 

@@ -74,7 +74,7 @@ export default function PageRapports() {
 
   if (chargement) return (
     <div className="flex items-center justify-center h-48">
-      <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-(--cp) border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
@@ -97,9 +97,9 @@ export default function PageRapports() {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: 'Scouts actifs', valeur: rapport.scoutsActifs, couleur: 'bg-[var(--cp)]' },
+          { label: 'Scouts actifs', valeur: rapport.scoutsActifs, couleur: 'bg-(--cp)' },
           { label: 'Scouts inactifs', valeur: rapport.scoutsInactifs, couleur: 'bg-gray-500' },
-          { label: 'Activités ce mois', valeur: rapport.activitesMois, couleur: 'bg-[var(--ca)]' },
+          { label: 'Activités ce mois', valeur: rapport.activitesMois, couleur: 'bg-(--ca)' },
           { label: 'Réunions ce mois', valeur: rapport.reunionsMois, couleur: 'bg-blue-600' },
         ].map(({ label, valeur, couleur }) => {
           const Icone = ICONES_KPI[label] ?? ICONE_KPI_DEFAUT
@@ -172,7 +172,7 @@ export default function PageRapports() {
                       {a.brancheType ? ` · ${LABELS_BRANCHES[a.brancheType] ?? a.brancheType}` : ''}
                     </p>
                   </div>
-                  <span className="flex-shrink-0 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full border border-green-100">
+                  <span className="shrink-0 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full border border-green-100">
                     {a._count.presences} présent{a._count.presences > 1 ? 's' : ''}
                   </span>
                 </div>

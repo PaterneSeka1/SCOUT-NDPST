@@ -96,7 +96,7 @@ export default function RapportsPlateforme() {
             <a
               key={exportRapport.type}
               href={`/api/admin/rapports/export?type=${exportRapport.type}`}
-              className="flex min-h-20 flex-col justify-between rounded-lg border border-gray-200 px-3 py-2.5 text-sm transition hover:border-[var(--cp)] hover:bg-gray-50"
+              className="flex min-h-20 flex-col justify-between rounded-lg border border-gray-200 px-3 py-2.5 text-sm transition hover:border-(--cp) hover:bg-gray-50"
             >
               <span className="font-semibold text-gray-900">{exportRapport.titre}</span>
               <span className="mt-1 text-xs text-gray-500">{exportRapport.description}</span>

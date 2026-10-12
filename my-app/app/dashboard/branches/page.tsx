@@ -42,7 +42,7 @@ export default function PageBranches() {
 
   if (chargement) return (
     <div className="flex items-center justify-center h-48">
-      <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-(--cp) border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
@@ -55,7 +55,7 @@ export default function PageBranches() {
         </div>
         {session?.user && ROLES_GROUPE.includes(session.user.role) && (
           <Link href="/dashboard/branches/passage"
-            className="flex-shrink-0 bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium">
+            className="shrink-0 bg-(--cp) text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium">
             Passage de branche
           </Link>
         )}
@@ -92,15 +92,15 @@ export default function PageBranches() {
                 ) : (
                   [responsable, adjoint, ...assistants].filter(Boolean).map((p) => p && (
                     <div key={p.id} className="px-5 py-3 flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-semibold text-gray-600 flex-shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-semibold text-gray-600 shrink-0">
                         {p.utilisateur.prenom[0]}{p.utilisateur.nom[0]}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">{p.utilisateur.prenom} {p.utilisateur.nom}</p>
                         <p className="text-xs text-gray-500">{LABELS_ROLE[p.role]}{p.fonction ? ` — ${p.fonction}` : ''}</p>
                       </div>
-                      <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full ${
-                        p.role === 'RESPONSABLE' ? 'bg-[var(--cp)] text-white' :
+                      <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full ${
+                        p.role === 'RESPONSABLE' ? 'bg-(--cp) text-white' :
                         p.role === 'ADJOINT' ? 'bg-gray-200 text-gray-700' :
                         'bg-gray-100 text-gray-500'
                       }`}>{LABELS_ROLE[p.role]}</span>

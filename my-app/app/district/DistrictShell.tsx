@@ -45,7 +45,7 @@ function SidebarContent({
 }) {
   return (
     <>
-      <div className="flex-shrink-0 border-b border-white/10 px-6 py-5">
+      <div className="shrink-0 border-b border-white/10 px-6 py-5">
         <p className="text-sm leading-tight font-semibold text-white">District {nomDistrict}</p>
         <p className="mt-0.5 text-xs text-white/55">Espace district</p>
       </div>
@@ -62,7 +62,7 @@ function SidebarContent({
                   onClick={onNavigate}
                   className={`snav-link flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium ${actif ? 'snav-active' : ''}`}
                 >
-                  <Icone className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={2} />
+                  <Icone className="h-4.5 w-4.5 shrink-0" strokeWidth={2} />
                   <span className="truncate">{item.label}</span>
                 </Link>
               </li>
@@ -71,7 +71,7 @@ function SidebarContent({
         </ul>
       </nav>
 
-      <div className="flex-shrink-0 border-t border-white/10 px-4 py-4">
+      <div className="shrink-0 border-t border-white/10 px-4 py-4">
         <p className="mb-0.5 truncate text-xs text-white/55">{nomComplet}</p>
         <p className="mb-0.5 text-xs font-medium" style={{ color: 'var(--ca)' }}>{LABELS_ROLES[role] ?? role}</p>
         <p className="mb-3 text-[11px] text-white/45">{LABELS_ROLES[roleParoisse] ?? roleParoisse} (paroisse)</p>
@@ -137,7 +137,7 @@ export function DistrictShell({
         <div className="fixed inset-0 z-20 bg-black/50 lg:hidden" onClick={() => setSidebarOuverte(false)} />
       )}
 
-      <aside className="hidden w-64 flex-shrink-0 flex-col lg:flex" style={sidebarStyle}>
+      <aside className="hidden w-64 shrink-0 flex-col lg:flex" style={sidebarStyle}>
         <SidebarContent menuItems={menuItems} pathname={pathname} nomComplet={nomComplet} role={role} roleParoisse={roleParoisse} nomDistrict={nomDistrict} />
       </aside>
 
@@ -149,10 +149,10 @@ export function DistrictShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
+        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex min-w-0 items-center gap-3">
             <button
-              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 lg:hidden"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 lg:hidden"
               onClick={() => setSidebarOuverte(true)}
               aria-label="Ouvrir le menu"
             >
@@ -166,7 +166,7 @@ export function DistrictShell({
 
           <Link
             href="/district/profil"
-            className="flex flex-shrink-0 items-center gap-2 rounded-full p-1.5 pl-2 transition-colors hover:bg-gray-100"
+            className="flex shrink-0 items-center gap-2 rounded-full p-1.5 pl-2 transition-colors hover:bg-gray-100"
             aria-label="Ouvrir mon profil"
           >
             <div className="hidden text-right leading-tight sm:block">

@@ -7,10 +7,10 @@ import { toast } from 'sonner'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
 import { BackLink } from '@/app/components/ui/BackLink'
 
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
-const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
-const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
-const CLS_TEXTAREA = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent resize-none'
+const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_TEXTAREA = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent resize-none'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 interface ParoisseDistrict {
@@ -152,7 +152,7 @@ export default function PageNouvelleActiviteBranche() {
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={soumission}
-              className="sm:flex-none bg-[var(--cp)] text-white px-5 py-2.5 rounded-lg hover:brightness-110 transition-colors text-sm font-medium disabled:opacity-60">
+              className="sm:flex-none bg-(--cp) text-white px-5 py-2.5 rounded-lg hover:brightness-110 transition-colors text-sm font-medium disabled:opacity-60">
               {soumission ? 'Création…' : "Créer l'activité"}
             </button>
             <Link href="/district/ma-branche"

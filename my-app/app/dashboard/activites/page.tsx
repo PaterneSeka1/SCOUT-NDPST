@@ -59,7 +59,7 @@ function CarteActivite({
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2.5">
       <div className="flex items-start gap-3">
-        <span className="flex-shrink-0 mt-0.5 text-gray-500">
+        <span className="shrink-0 mt-0.5 text-gray-500">
           <IconeType className="h-5 w-5" strokeWidth={2} />
         </span>
         <p className="text-sm font-semibold text-gray-900 leading-tight">{activite.titre}</p>
@@ -85,7 +85,7 @@ function CarteActivite({
       </p>
 
       <div className="flex items-center gap-3 pt-1 border-t border-gray-50">
-        <Link href={`/dashboard/activites/${activite.id}`} className="text-[var(--cp)] font-medium text-xs hover:underline">Voir</Link>
+        <Link href={`/dashboard/activites/${activite.id}`} className="text-(--cp) font-medium text-xs hover:underline">Voir</Link>
         <span className="text-gray-200">|</span>
         <Link href={`/dashboard/activites/${activite.id}/modifier`} className="text-blue-600 font-medium text-xs hover:underline">Modifier</Link>
         {peutSupprimer && (
@@ -134,7 +134,7 @@ export default function PageActivites() {
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Activités</h1>
         <Link
           href="/dashboard/activites/nouvelle"
-          className="inline-flex items-center justify-center gap-2 bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium"
+          className="inline-flex items-center justify-center gap-2 bg-(--cp) text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium"
         >
           + Nouvelle activité
         </Link>
@@ -147,13 +147,13 @@ export default function PageActivites() {
           placeholder="Rechercher une activité…"
           value={recherche}
           onChange={(e) => { setRecherche(e.target.value); setPage(1) }}
-          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--cp)] bg-white"
+          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-(--cp) bg-white"
         />
         <div className="flex gap-2">
           <select
             value={filtreType}
             onChange={(e) => { setFiltreType(e.target.value); setPage(1) }}
-            className="flex-1 sm:flex-none sm:w-36 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--cp)] bg-white"
+            className="flex-1 sm:flex-none sm:w-36 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-(--cp) bg-white"
           >
             <option value="">Tous types</option>
             {Object.entries(LABELS_TYPE_ACTIVITE).map(([val, label]) => (
@@ -164,7 +164,7 @@ export default function PageActivites() {
             <select
               value={filtreBranche}
               onChange={(e) => { setFiltreBranche(e.target.value); setPage(1) }}
-              className="flex-1 sm:flex-none sm:w-36 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--cp)] bg-white"
+              className="flex-1 sm:flex-none sm:w-36 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-(--cp) bg-white"
             >
               <option value="">Toutes branches</option>
               {Object.entries(LABELS_BRANCHES).map(([val, label]) => (
@@ -231,7 +231,7 @@ export default function PageActivites() {
                     <td className="px-4 py-3 text-gray-600">{activite._count.presences}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
-                        <Link href={`/dashboard/activites/${activite.id}`} className="text-[var(--cp)] hover:brightness-110 font-medium text-xs">Voir</Link>
+                        <Link href={`/dashboard/activites/${activite.id}`} className="text-(--cp) hover:brightness-110 font-medium text-xs">Voir</Link>
                         <Link href={`/dashboard/activites/${activite.id}/modifier`} className="text-blue-600 hover:text-blue-800 font-medium text-xs">Modifier</Link>
                         {peutSupprimer(activite) && (
                           <button onClick={() => handleSupprimer(activite.id, activite.titre)} className="text-red-600 hover:text-red-800 font-medium text-xs">Supprimer</button>

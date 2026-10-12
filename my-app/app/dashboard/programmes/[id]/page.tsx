@@ -12,7 +12,7 @@ import { BackLink } from '@/app/components/ui/BackLink'
 import { Check, ChevronDown } from '@/lib/icons'
 import { ChevronUp } from 'lucide-react'
 
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
+const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
 const CLS_LABEL = 'block text-xs font-medium text-gray-600 mb-1'
 
 interface Ligne {
@@ -162,7 +162,7 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
   if (chargement) {
     return (
       <div className="flex items-center justify-center h-48">
-        <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-(--cp) border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
@@ -201,7 +201,7 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
         </div>
 
         {peutGerer && (
-          <div className="flex gap-2 flex-shrink-0">
+          <div className="flex gap-2 shrink-0">
             <button onClick={() => setModifierMeta((m) => !m)}
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
               Modifier
@@ -233,10 +233,10 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
           <div>
             <label className={CLS_LABEL}>Description / objectifs</label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] resize-none" />
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) resize-none" />
           </div>
           <button onClick={handleEnregistrerMeta}
-            className="bg-[var(--cp)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:brightness-110 transition-all">
+            className="bg-(--cp) text-white px-4 py-2 rounded-lg text-sm font-medium hover:brightness-110 transition-all">
             Enregistrer
           </button>
         </div>
@@ -260,7 +260,7 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
             {lignesTriees.map((ligne, i) => (
               <div key={ligne.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-start gap-3">
                 {peutGerer && (
-                  <div className="flex flex-col gap-1 flex-shrink-0 pt-0.5">
+                  <div className="flex flex-col gap-1 shrink-0 pt-0.5">
                     <button onClick={() => handleDeplacerLigne(ligne, -1)} disabled={i === 0}
                       className="w-6 h-6 flex items-center justify-center rounded border border-gray-200 text-gray-400 hover:text-gray-700 disabled:opacity-30"><ChevronUp className="h-3.5 w-3.5" strokeWidth={2} /></button>
                     <button onClick={() => handleDeplacerLigne(ligne, 1)} disabled={i === lignesTriees.length - 1}
@@ -287,7 +287,7 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
                 </div>
                 {peutGerer && (
                   <button onClick={() => handleSupprimerLigne(ligne.id)}
-                    className="text-red-500 hover:text-red-700 text-xs font-medium flex-shrink-0">Supprimer</button>
+                    className="text-red-500 hover:text-red-700 text-xs font-medium shrink-0">Supprimer</button>
                 )}
               </div>
             ))}
@@ -314,7 +314,7 @@ export default function PageDetailProgramme({ params }: { params: Promise<{ id: 
                 placeholder="Objectif pédagogique" className={CLS_INPUT} />
             </div>
             <button type="submit" disabled={ajoutEnCours}
-              className="bg-[var(--cp)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:brightness-110 transition-all disabled:opacity-60">
+              className="bg-(--cp) text-white px-4 py-2 rounded-lg text-sm font-medium hover:brightness-110 transition-all disabled:opacity-60">
               {ajoutEnCours ? 'Ajout…' : '+ Ajouter'}
             </button>
           </form>

@@ -80,11 +80,11 @@ export function InstallationPwa({ nomSite, logoSite }: { nomSite: string; logoSi
             <img
               src={logoSite}
               alt=""
-              className="h-11 w-11 flex-shrink-0 rounded-xl border border-gray-100 object-contain"
+              className="h-11 w-11 shrink-0 rounded-xl border border-gray-100 object-contain"
             />
           ) : (
             <div
-              className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-white"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white"
               style={{ backgroundColor: 'var(--cp)' }}
             >
               <Smartphone className="h-5 w-5" strokeWidth={2} />

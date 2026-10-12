@@ -10,8 +10,8 @@ import { LABELS_BRANCHES } from '@/lib/branches'
 import { useCreerDistrictUtilisateur, useDistrictPersonnelEligible } from '@/hooks/useDistrictUtilisateurs'
 import { BackLink } from '@/app/components/ui/BackLink'
 
-const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
-const CLS_SELECT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
+const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_SELECT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 interface FormData {
@@ -134,12 +134,12 @@ export default function NouveauMembreEquipePage() {
                 <div className="flex gap-4">
                   <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                     <input type="radio" name="modeFonction" checked={modeBranche}
-                      onChange={() => setModeFonction('branche')} className="accent-[var(--cp)]" />
+                      onChange={() => setModeFonction('branche')} className="accent-(--cp)" />
                     Chargé d&apos;une branche
                   </label>
                   <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                     <input type="radio" name="modeFonction" checked={!modeBranche}
-                      onChange={() => setModeFonction('autre')} className="accent-[var(--cp)]" />
+                      onChange={() => setModeFonction('autre')} className="accent-(--cp)" />
                     Autre fonction
                   </label>
                 </div>
@@ -169,7 +169,7 @@ export default function NouveauMembreEquipePage() {
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={isPending}
-              className="sm:flex-none bg-[var(--cp)] text-white px-5 py-2.5 rounded-lg hover:brightness-110 transition-colors text-sm font-medium disabled:opacity-60">
+              className="sm:flex-none bg-(--cp) text-white px-5 py-2.5 rounded-lg hover:brightness-110 transition-colors text-sm font-medium disabled:opacity-60">
               {isPending ? 'Enregistrement…' : 'Nommer dans l’équipe'}
             </button>
             <Link href="/district/equipe"

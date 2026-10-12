@@ -11,7 +11,7 @@ import { COULEURS_ROLES, LABELS_ROLES, ROLES_BRANCHE, ROLES_TOUT_STAFF, libelleR
 import { BackLink } from '@/app/components/ui/BackLink'
 import { Download } from '@/lib/icons'
 
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent'
+const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 interface ChefGroupe {
@@ -604,7 +604,7 @@ export default function FicheParoissePage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Link href={`/admin/utilisateurs/${membre.id}`} className="text-xs font-semibold text-[var(--cp)] hover:underline">
+                      <Link href={`/admin/utilisateurs/${membre.id}`} className="text-xs font-semibold text-(--cp) hover:underline">
                         Fiche
                       </Link>
                     </td>

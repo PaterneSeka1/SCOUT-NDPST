@@ -147,7 +147,7 @@ export default function PagePassageBranche() {
               type="date"
               value={dateReference}
               onChange={(e) => setDateReference(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--cp)] focus:border-transparent"
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent"
             />
             <p className="mt-1 text-xs text-gray-400">Âge calculé à cette date (ex : le 1er septembre pour une rentrée scoute).</p>
           </div>
@@ -164,7 +164,7 @@ export default function PagePassageBranche() {
 
         {chargement ? (
           <div className="flex items-center justify-center py-12">
-            <div className="w-6 h-6 border-2 border-[var(--cp)] border-t-transparent rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-(--cp) border-t-transparent rounded-full animate-spin" />
           </div>
         ) : propositions.length === 0 ? (
           <div className="text-center py-12">
@@ -179,14 +179,14 @@ export default function PagePassageBranche() {
                   type="checkbox"
                   checked={selection.size === propositions.length}
                   onChange={toutBasculer}
-                  className="w-4 h-4 accent-[var(--cp)] rounded"
+                  className="w-4 h-4 accent-(--cp) rounded"
                 />
                 Tout sélectionner ({propositions.length})
               </label>
               <button
                 onClick={soumettrePassage}
                 disabled={soumission || selection.size === 0}
-                className="bg-[var(--cp)] text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium disabled:opacity-60"
+                className="bg-(--cp) text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium disabled:opacity-60"
               >
                 {soumission ? 'Application…' : `Confirmer pour ${selection.size} scout${selection.size > 1 ? 's' : ''}`}
               </button>
@@ -203,14 +203,14 @@ export default function PagePassageBranche() {
                       type="checkbox"
                       checked={selection.has(p.scoutId)}
                       onChange={() => basculer(p.scoutId)}
-                      className="w-4 h-4 accent-[var(--cp)] rounded flex-shrink-0"
+                      className="w-4 h-4 accent-(--cp) rounded shrink-0"
                     />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">{p.prenom} {p.nom}</p>
                       <p className="text-xs text-gray-500">{p.matricule ?? 'Sans matricule'} · {p.age} ans</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap pl-7 sm:pl-0 sm:flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-wrap pl-7 sm:pl-0 sm:shrink-0">
                     {badgeBranche(p.brancheActuelle)}
                     <ArrowRight className="h-4 w-4 text-gray-300" strokeWidth={2} />
                     {badgeBranche(p.brancheProposee)}
