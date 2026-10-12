@@ -5,6 +5,8 @@ import {
   BrancheTypeSchema,
   TypeActiviteSchema,
   StatutReunionSchema,
+  estValeurEnum,
+  entierBorne,
 } from './validation'
 
 describe('estCheminLocalValide', () => {
@@ -78,5 +80,41 @@ describe('schémas enum (doivent rester synchronisés avec prisma/schema.prisma)
   it('StatutReunionSchema rejette une valeur inventée', () => {
     expect(StatutReunionSchema.safeParse('EN_COURS').success).toBe(false)
     expect(StatutReunionSchema.safeParse('TERMINEE').success).toBe(true)
+  })
+})
+
+describe('estValeurEnum', () => {
+  const Enum = { MASCULIN: 'MASCULIN', FEMININ: 'FEMININ' } as const
+
+  it('accepte les valeurs de l’enum', () => {
+    expect(estValeurEnum(Enum, 'MASCULIN')).toBe(true)
+    expect(estValeurEnum(Enum, 'FEMININ')).toBe(true)
+  })
+
+  it('refuse les clés héritées du prototype et les valeurs inconnues', () => {
+    for (const v of ['toString', 'constructor', '__proto__', 'hasOwnProperty', 'AUTRE', '']) {
+      expect(estValeurEnum(Enum, v)).toBe(false)
+    }
+  })
+
+  it('refuse les valeurs non textuelles', () => {
+    for (const v of [undefined, null, 1, {}, ['MASCULIN']]) {
+      expect(estValeurEnum(Enum, v)).toBe(false)
+    }
+  })
+})
+
+describe('entierBorne', () => {
+  it('retourne la valeur par défaut si absente ou non numérique', () => {
+    expect(entierBorne(null, 20, 1, 100)).toBe(20)
+    expect(entierBorne('abc', 20, 1, 100)).toBe(20)
+    expect(entierBorne('', 20, 1, 100)).toBe(20)
+  })
+
+  it('borne la valeur entre min et max', () => {
+    expect(entierBorne('0', 20, 1, 100)).toBe(1)
+    expect(entierBorne('-5', 20, 1, 100)).toBe(1)
+    expect(entierBorne('1000000', 20, 1, 100)).toBe(100)
+    expect(entierBorne('42', 20, 1, 100)).toBe(42)
   })
 })

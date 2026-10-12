@@ -4,7 +4,8 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLES_GROUPE, ROLES_BRANCHE, ROLES_TOUT_STAFF as ROLES_LECTURE } from '@/lib/roles'
 import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
-import { BrancheTypeSchema } from '@/lib/validation'
+import { BrancheTypeSchema, StatutReunionSchema, estValeurEnum } from '@/lib/validation'
+import { BrancheType, Prisma, StatutReunion } from '@/app/generated/prisma/client'
 import { logger } from '@/lib/logger'
 import { paroisseIdRequise } from '@/lib/session'
 
@@ -23,20 +24,32 @@ export async function GET(req: NextRequest) {
     // délibérément toute valeur de "branche" fournie par le client pour ce
     // groupe de rôles, sinon un simple `?branche=AUTRE` dans l'URL suffirait
     // à contourner la restriction.
-    let filtreBranche = branche
+    if (statut && !StatutReunionSchema.safeParse(statut).success) {
+      return NextResponse.json({ erreur: 'Statut invalide' }, { status: 400 })
+    }
+
+    // Strictement la branche de l'utilisateur : les réunions inter-branches
+    // (brancheType null) relèvent du groupe, et les routes /api/reunions/[id]
+    // les refusent aux rôles de branche (verifierAccesBranche).
+    let filtreBranche: Prisma.JourReunionWhereInput = {}
     if (ROLES_BRANCHE.includes(session.user.role)) {
       const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
       // Compte mal configuré (rôle de branche sans brancheType assigné) :
       // aucun résultat plutôt que la paroisse entière par défaut.
       if (!bt) return NextResponse.json([])
-      filtreBranche = bt
+      filtreBranche = { brancheType: bt as BrancheType }
+    } else if (branche) {
+      if (!estValeurEnum(BrancheType, branche)) {
+        return NextResponse.json({ erreur: 'Branche invalide' }, { status: 400 })
+      }
+      filtreBranche = { brancheType: branche }
     }
 
     const reunions = await prisma.jourReunion.findMany({
       where: {
         paroisseId,
-        ...(filtreBranche ? { brancheType: filtreBranche as any } : {}),
-        ...(statut ? { statut: statut as any } : {}),
+        ...filtreBranche,
+        ...(statut ? { statut: statut as StatutReunion } : {}),
       },
       include: {
         _count: { select: { presences: true } },
@@ -62,7 +75,15 @@ export async function POST(req: NextRequest) {
     if (!estGroupe && !estBranche) return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
     const paroisseId = paroisseIdRequise(session)
 
-    const body = await req.json()
+    let body: unknown
+    try {
+      body = await req.json()
+    } catch {
+      return NextResponse.json({ erreur: 'Corps JSON invalide' }, { status: 400 })
+    }
+    if (typeof body !== 'object' || body === null) {
+      return NextResponse.json({ erreur: 'Données invalides' }, { status: 400 })
+    }
     const { dates, brancheType, titre, lieu, dureeMinutes, notes } = body as {
       dates: string[]
       brancheType?: string
@@ -72,8 +93,12 @@ export async function POST(req: NextRequest) {
       notes?: string
     }
 
-    if (!dates?.length) return NextResponse.json({ erreur: 'Au moins une date est requise' }, { status: 400 })
+    if (!Array.isArray(dates) || !dates.length) return NextResponse.json({ erreur: 'Au moins une date est requise' }, { status: 400 })
     if (dates.length > 60) return NextResponse.json({ erreur: 'Maximum 60 réunions par création en série' }, { status: 400 })
+    const datesObj = dates.map((d) => (typeof d === 'string' ? new Date(d) : new Date(NaN)))
+    if (datesObj.some((d) => Number.isNaN(d.getTime()))) {
+      return NextResponse.json({ erreur: 'Une ou plusieurs dates sont invalides' }, { status: 400 })
+    }
     if (brancheType != null && !BrancheTypeSchema.safeParse(brancheType).success) {
       return NextResponse.json({ erreur: 'Branche invalide' }, { status: 400 })
     }
@@ -87,12 +112,12 @@ export async function POST(req: NextRequest) {
     }
 
     const created = await prisma.$transaction(
-      dates.map((d) =>
+      datesObj.map((d) =>
         prisma.jourReunion.create({
           data: {
             paroisseId,
             creePar: session.user.id,
-            dateHeure: new Date(d),
+            dateHeure: d,
             brancheType: brancheEffective as any ?? null,
             titre: titre ?? null,
             lieu: lieu ?? null,

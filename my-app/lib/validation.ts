@@ -60,3 +60,24 @@ export function estUrlFichierValide(valeur: unknown, origineExterneAutorisee?: s
     return false
   }
 }
+
+// Vérifie qu'une valeur fait partie d'un enum Prisma (objet { CLE: 'CLE' }).
+// `valeur in Enum` ne suffit pas : l'opérateur `in` remonte la chaîne de
+// prototypes et accepte donc "toString", "constructor", "__proto__"… qui
+// provoqueraient ensuite une erreur 500 côté Prisma au lieu d'un rejet en 400.
+export function estValeurEnum<T extends Record<string, string>>(enumObj: T, valeur: unknown): valeur is T[keyof T] {
+  return (
+    typeof valeur === 'string' &&
+    Object.prototype.hasOwnProperty.call(enumObj, valeur) &&
+    enumObj[valeur] === valeur
+  )
+}
+
+// Lit un entier de pagination depuis la query string : valeur absente ou non
+// numérique → valeur par défaut, sinon bornée à [min, max] (évite qu'un
+// `?limite=1000000` ne charge toute la table ou qu'un NaN n'atteigne Prisma).
+export function entierBorne(valeur: string | null, defaut: number, min: number, max: number): number {
+  const n = valeur === null ? NaN : parseInt(valeur, 10)
+  if (Number.isNaN(n)) return defaut
+  return Math.min(max, Math.max(min, n))
+}

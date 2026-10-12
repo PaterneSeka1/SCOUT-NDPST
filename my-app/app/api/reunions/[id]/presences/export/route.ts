@@ -7,6 +7,7 @@ import { ROLES_TOUT_STAFF, ROLES_BRANCHE } from '@/lib/roles'
 import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { paroisseIdRequise } from '@/lib/session'
 import { LABELS_BRANCHES as LABELS_BRANCHE } from '@/lib/branches'
+import { champCsv as champ, contentDispositionTelechargement } from '@/lib/csv'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -73,12 +74,12 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
       else stats.absent++
 
       lignes.push([
-        `"${scout.nom.toUpperCase()}"`,
-        `"${scout.prenom}"`,
-        `"${scout.matricule ?? ''}"`,
-        `"${LABELS_BRANCHE[scout.brancheType] ?? scout.brancheType}"`,
-        `"${LABELS_STATUT[statut] ?? statut}"`,
-        `"${p?.note ?? ''}"`,
+        champ(scout.nom.toUpperCase()),
+        champ(scout.prenom),
+        champ(scout.matricule),
+        champ(LABELS_BRANCHE[scout.brancheType] ?? scout.brancheType),
+        champ(LABELS_STATUT[statut] ?? statut),
+        champ(p?.note),
       ].join(';'))
     }
 
@@ -86,9 +87,9 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     const tauxPresence = total > 0 ? Math.round((stats.present / total) * 100) : 0
 
     const csv = [
-      `"${titre}"`,
-      `"Date : ${dateStr}"`,
-      `"Branche : ${brancheLabel}"`,
+      champ(titre),
+      champ(`Date : ${dateStr}`),
+      champ(`Branche : ${brancheLabel}`),
       `"Présents : ${stats.present} / ${total} (${tauxPresence}%)  |  Excusés : ${stats.excuse}  |  Absents : ${stats.absent}"`,
       '',
       '"Nom";"Prénom";"Matricule";"Branche";"Statut";"Note"',
@@ -97,12 +98,12 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
     // BOM UTF-8 pour compatibilité Excel
     const bom = '﻿'
-    const nomFichier = `presence_${titre.toLowerCase().replace(/\s+/g, '-')}_${new Date(dateEffective).toISOString().slice(0, 10)}.csv`
+    const nomFichier = `presence_${titre.toLowerCase().replace(/[\s/\\:*?"<>|]+/g, '-')}_${new Date(dateEffective).toISOString().slice(0, 10)}.csv`
 
     return new NextResponse(bom + csv, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${nomFichier}"`,
+        'Content-Disposition': contentDispositionTelechargement(nomFichier),
       },
     })
   } catch (error) {

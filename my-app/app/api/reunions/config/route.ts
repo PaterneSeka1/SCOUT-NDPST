@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { ROLES_GROUPE as ROLES_CREATION } from '@/lib/roles'
+import { ROLES_GROUPE as ROLES_CREATION, ROLES_TOUT_STAFF } from '@/lib/roles'
 import { BrancheTypeSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 import { paroisseIdRequise } from '@/lib/session'
@@ -11,6 +11,8 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) return NextResponse.json({ erreur: 'Non authentifié' }, { status: 401 })
+    // Réservé au staff paroissial (exclut notamment ADMIN_PLATEFORME, sans paroisse).
+    if (!ROLES_TOUT_STAFF.includes(session.user.role)) return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
     const paroisseId = paroisseIdRequise(session)
 
     const configs = await prisma.configReunionBranche.findMany({

@@ -6,6 +6,7 @@ import { ROLES_PLATEFORME } from '@/lib/roles'
 import { estUrlFichierValide } from '@/lib/validation'
 import { estCouleurHexValide } from '@/lib/theme'
 import { urlPubliqueBase } from '@/lib/storage'
+import { logger } from '@/lib/logger'
 
 // Identité visuelle commune à toutes les paroisses (page d'accueil, page de
 // connexion — avant qu'on sache à quelle paroisse un visiteur appartient).
@@ -51,12 +52,48 @@ function versJSON(cfg: Awaited<ReturnType<typeof chargerConfig>>): SiteConfigJSO
   }
 }
 
+const STATS_MAX = 12
+const LONGUEUR_STAT_MAX = 100
+
+// Forme attendue : tableau (borné) d'objets { value, label } textuels — sans
+// ce contrôle, n'importe quel JSON serait stocké tel quel puis renvoyé à la
+// page d'accueil publique.
+function statsValides(stats: unknown): stats is SiteConfigJSON['stats'] {
+  return (
+    Array.isArray(stats) &&
+    stats.length <= STATS_MAX &&
+    stats.every(
+      (s) =>
+        typeof s === 'object' &&
+        s !== null &&
+        typeof s.value === 'string' &&
+        typeof s.label === 'string' &&
+        s.value.length <= LONGUEUR_STAT_MAX &&
+        s.label.length <= LONGUEUR_STAT_MAX,
+    )
+  )
+}
+
 export async function GET() {
-  const cfg = await chargerConfig()
-  return NextResponse.json(versJSON(cfg))
+  try {
+    const cfg = await chargerConfig()
+    return NextResponse.json(versJSON(cfg))
+  } catch (error) {
+    logger.error('GET /api/admin/site-config', error)
+    return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
+  }
 }
 
 export async function PUT(req: NextRequest) {
+  try {
+    return await mettreAJour(req)
+  } catch (error) {
+    logger.error('PUT /api/admin/site-config', error)
+    return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
+  }
+}
+
+async function mettreAJour(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session || !ROLES_PLATEFORME.includes(session.user.role)) {
     return NextResponse.json({ erreur: 'Accès refusé' }, { status: 403 })
@@ -82,6 +119,13 @@ export async function PUT(req: NextRequest) {
 
   if (data.hero?.imageUrl && !estUrlFichierValide(data.hero.imageUrl, origineStockage)) {
     return NextResponse.json({ erreur: 'hero.imageUrl doit être un chemin local (ex : /api/fichiers-publics/…) ou une URL de stockage autorisée' }, { status: 400 })
+  }
+
+  if (data.stats !== undefined && !statsValides(data.stats)) {
+    return NextResponse.json(
+      { erreur: `stats doit être une liste d'au plus ${STATS_MAX} éléments { value, label } (textes de ${LONGUEUR_STAT_MAX} caractères maximum)` },
+      { status: 400 },
+    )
   }
 
   if (data.theme) {

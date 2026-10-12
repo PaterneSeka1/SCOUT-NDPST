@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { BrancheType, Sexe } from '@/app/generated/prisma/client'
 import { ROLES_TOUT_STAFF as ROLES_AUTORISES, ROLES_BRANCHE } from '@/lib/roles'
 import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
-import { estCheminLocalValide } from '@/lib/validation'
+import { estCheminLocalValide, estValeurEnum } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 import { paroisseIdRequise } from '@/lib/session'
@@ -142,7 +142,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Scout introuvable' }, { status: 404 })
     }
 
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Corps JSON invalide' }, { status: 400 })
+    }
+    if (typeof body !== 'object' || body === null) {
+      return NextResponse.json({ error: 'Données invalides' }, { status: 400 })
+    }
     const { nom, prenom, dateNaissance, sexe, brancheType, actif, photo, allergies, traitementsMedicaux, consentementImage } = body as {
       nom?: string
       prenom?: string
@@ -156,10 +164,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       consentementImage?: boolean
     }
 
-    if (sexe !== undefined && !(sexe in Sexe)) {
+    const dateNaissanceObj = dateNaissance !== undefined ? new Date(dateNaissance) : undefined
+    if (dateNaissanceObj && Number.isNaN(dateNaissanceObj.getTime())) {
+      return NextResponse.json({ error: 'La date de naissance est invalide' }, { status: 400 })
+    }
+    if (sexe !== undefined && !estValeurEnum(Sexe, sexe)) {
       return NextResponse.json({ error: 'Sexe invalide' }, { status: 400 })
     }
-    if (brancheType !== undefined && !(brancheType in BrancheType)) {
+    if (brancheType !== undefined && !estValeurEnum(BrancheType, brancheType)) {
       return NextResponse.json({ error: 'Branche invalide' }, { status: 400 })
     }
     // Le changement de branche est réservé au groupe (fonctionnalité dédiée
@@ -177,7 +189,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       data: {
         ...(nom !== undefined ? { nom: nom.trim() } : {}),
         ...(prenom !== undefined ? { prenom: prenom.trim() } : {}),
-        ...(dateNaissance !== undefined ? { dateNaissance: new Date(dateNaissance) } : {}),
+        ...(dateNaissanceObj ? { dateNaissance: dateNaissanceObj } : {}),
         ...(sexe !== undefined ? { sexe: sexe as Sexe } : {}),
         ...(brancheType !== undefined ? { brancheType: brancheType as BrancheType } : {}),
         ...(actif !== undefined ? { actif } : {}),

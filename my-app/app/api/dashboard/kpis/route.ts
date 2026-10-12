@@ -5,6 +5,9 @@ import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { BrancheType } from '@/app/generated/prisma/client'
+import { ROLES_TOUT_STAFF } from '@/lib/roles'
+
+const ROLES_KPIS: string[] = [...ROLES_TOUT_STAFF, 'PARENT', 'SCOUT']
 
 function debutDuMois(): Date {
   const d = new Date()
@@ -22,9 +25,14 @@ export async function GET() {
   const { id: userId, role, paroisseId } = session.user
   const debut = debutDuMois()
 
-  // ADMIN_PLATEFORME (transverse, sans paroisse) n'atteint jamais ce tableau de
-  // bord en pratique (redirigé vers /admin), mais on retourne des KPI vides
-  // plutôt que de planter si la route était appelée directement.
+  // Tableau de bord d'une paroisse : staff paroissial, parents et scouts.
+  // ADMIN_PLATEFORME (transverse, sans paroisse) a sa propre zone /admin.
+  if (!ROLES_KPIS.includes(role)) {
+    return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+  }
+
+  // Compte paroissial sans paroisse (ne devrait pas exister, contrainte CHECK
+  // en base) : KPI vides plutôt qu'une erreur.
   if (!paroisseId) {
     return NextResponse.json({ kpis: {}, activitesRecentes: [] })
   }

@@ -9,6 +9,7 @@ import { anneeScolaireCourante, anneeScolaireValide, STATUTS_COTISANT } from '@/
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 import { paroisseIdRequise } from '@/lib/session'
+import { estValeurEnum } from '@/lib/validation'
 
 // Cotisations V1 (voir lib/perimetreV1.ts) : on ne suit plus les montants ni
 // les paiements partiels, seulement « cotisant / non cotisant » par scout et
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest) {
       if (!bt) return NextResponse.json({ anneeScolaire, scouts: [] })
       filtreBranche = bt
     }
-    if (filtreBranche && !(filtreBranche in BrancheType)) {
+    if (filtreBranche && !estValeurEnum(BrancheType, filtreBranche)) {
       return NextResponse.json({ erreur: 'Branche invalide' }, { status: 400 })
     }
 

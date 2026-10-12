@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { BrancheType, Prisma, Sexe } from '@/app/generated/prisma/client'
 import { ROLES_TOUT_STAFF as ROLES_AUTORISES, ROLES_BRANCHE } from '@/lib/roles'
 import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
-import { estCheminLocalValide } from '@/lib/validation'
+import { estCheminLocalValide, estValeurEnum, entierBorne } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 import { paroisseIdRequise } from '@/lib/session'
@@ -23,8 +23,8 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
-    const limite = Math.max(1, parseInt(searchParams.get('limite') ?? '20', 10))
+    const page = entierBorne(searchParams.get('page'), 1, 1, Number.MAX_SAFE_INTEGER)
+    const limite = entierBorne(searchParams.get('limite'), 20, 1, 100)
     const recherche = searchParams.get('recherche') ?? undefined
     const actif = searchParams.get('actif')
 
@@ -40,6 +40,8 @@ export async function GET(request: NextRequest) {
       // aucun résultat plutôt que la paroisse entière par défaut.
       if (!bt) return NextResponse.json({ scouts: [], total: 0, page, totalPages: 0 })
       branche = bt
+    } else if (branche && !estValeurEnum(BrancheType, branche)) {
+      return NextResponse.json({ error: 'Branche invalide' }, { status: 400 })
     }
 
     const where: Prisma.ScoutWhereInput = {
@@ -105,7 +107,15 @@ export async function POST(request: NextRequest) {
 
     const paroisseId = paroisseIdRequise(session)
 
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Corps JSON invalide' }, { status: 400 })
+    }
+    if (typeof body !== 'object' || body === null) {
+      return NextResponse.json({ error: 'Données invalides' }, { status: 400 })
+    }
     const { nom, prenom, dateNaissance, sexe, brancheType, photo, allergies, traitementsMedicaux, contactsUrgence } = body as {
       nom?: string
       prenom?: string
@@ -134,10 +144,14 @@ export async function POST(request: NextRequest) {
     if (!dateNaissance) {
       return NextResponse.json({ error: 'La date de naissance est requise' }, { status: 400 })
     }
-    if (!sexe || !(sexe in Sexe)) {
+    const dateNaissanceObj = new Date(dateNaissance)
+    if (Number.isNaN(dateNaissanceObj.getTime())) {
+      return NextResponse.json({ error: 'La date de naissance est invalide' }, { status: 400 })
+    }
+    if (!estValeurEnum(Sexe, sexe)) {
       return NextResponse.json({ error: 'Le sexe est invalide ou manquant' }, { status: 400 })
     }
-    if (!brancheType || !(brancheType in BrancheType)) {
+    if (!estValeurEnum(BrancheType, brancheType)) {
       return NextResponse.json({ error: 'La branche est invalide ou manquante' }, { status: 400 })
     }
     if (photo != null && photo !== '' && !estCheminLocalValide(photo)) {
@@ -145,7 +159,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Un responsable de branche ne peut inscrire un scout que dans sa propre branche.
-    let brancheEffective = brancheType
+    let brancheEffective: string = brancheType
     if (ROLES_BRANCHE.includes(session.user.role)) {
       const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
       if (!bt) return NextResponse.json({ error: 'Aucune branche assignée' }, { status: 403 })
@@ -181,8 +195,8 @@ export async function POST(request: NextRequest) {
         data: {
           nom: nom.trim(),
           prenom: prenom.trim(),
-          dateNaissance: new Date(dateNaissance),
-          sexe: sexe as Sexe,
+          dateNaissance: dateNaissanceObj,
+          sexe,
           brancheType: brancheEffective as BrancheType,
           photo: photo?.trim() || null,
           allergies: allergies?.trim() || null,
