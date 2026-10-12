@@ -1,6 +1,7 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { PERIMETRE_V1 } from '@/lib/perimetreV1'
 
 // ---- Types ----------------------------------------------------------------
 
@@ -57,7 +58,8 @@ export function useProgressionsScout(scoutId: string) {
   return useQuery({
     queryKey: QUERY_KEYS.progressions(scoutId),
     queryFn: () => fetchProgressionsScout(scoutId),
-    enabled: Boolean(scoutId),
+    // Progression hors périmètre V1 (voir lib/perimetreV1.ts) : pas d'appel.
+    enabled: Boolean(scoutId) && !PERIMETRE_V1,
   })
 }
 

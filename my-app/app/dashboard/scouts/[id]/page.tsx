@@ -10,8 +10,9 @@ import { useProgressionsScout, useValiderBadge } from '@/hooks/useProgressions'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
 import { LABELS_TYPE_DOCUMENT } from '@/lib/documents'
 import { ICONES_TYPE_DOCUMENT, Camera, AlertTriangle, Check, Paperclip, ArrowRight } from '@/lib/icons'
-import { LABELS_TYPE_COTISATION, LABELS_STATUT_COTISATION, COULEURS_STATUT_COTISATION, formatMontantFCFA } from '@/lib/cotisations'
-import { ROLES_BRANCHE } from '@/lib/roles'
+import { LABELS_TYPE_COTISATION, LABELS_STATUT_COTISATION, COULEURS_STATUT_COTISATION, formatMontantFCFA, anneeScolaireCourante, STATUTS_COTISANT } from '@/lib/cotisations'
+import { ROLES_BRANCHE, ROLES_GROUPE } from '@/lib/roles'
+import { PERIMETRE_V1, pageHorsPerimetreV1 } from '@/lib/perimetreV1'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { confirmer } from '@/app/components/ConfirmDialog'
@@ -84,6 +85,17 @@ export default function FicheScoutPage() {
   )
 
   const age = Math.floor((referenceDate - new Date(scout.dateNaissance).getTime()) / (1000 * 60 * 60 * 24 * 365))
+
+  // Cotisations V1 : statut cotisant par année (adhésion annuelle), année en
+  // cours toujours affichée, même sans ligne enregistrée.
+  const estChefGroupe = ROLES_GROUPE.includes(session?.user?.role ?? '')
+  const adhesions = scout.cotisations.filter((c) => c.type === 'ADHESION_ANNUELLE')
+  const anneesCotisation = [...new Set([anneeScolaireCourante(), ...adhesions.map((c) => c.anneeScolaire)])]
+    .sort((a, b) => b.localeCompare(a))
+    .map((annee) => ({
+      annee,
+      cotisant: adhesions.some((c) => c.anneeScolaire === annee && (STATUTS_COTISANT as string[]).includes(c.statut)),
+    }))
 
   const handleAttribuerMatricule = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -179,12 +191,14 @@ export default function FicheScoutPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <BackLink href="/dashboard/scouts">Retour à la liste</BackLink>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-          <Link
-            href={`/dashboard/scouts/${id}/carte`}
-            className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50 transition-colors"
-          >
-            Carte QR
-          </Link>
+          {!pageHorsPerimetreV1(`/dashboard/scouts/${id}/carte`) && (
+            <Link
+              href={`/dashboard/scouts/${id}/carte`}
+              className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50 transition-colors"
+            >
+              Carte QR
+            </Link>
+          )}
           <Link
             href={`/dashboard/scouts/${id}/modifier`}
             className="inline-flex items-center justify-center bg-[var(--cp)] text-white px-4 py-2 rounded-md text-sm hover:brightness-110 transition-all"
@@ -282,7 +296,8 @@ export default function FicheScoutPage() {
         )}
       </div>
 
-      {/* Compte utilisateur */}
+      {/* Compte utilisateur — espace scout hors périmètre V1 */}
+      {!PERIMETRE_V1 && (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-base font-semibold text-gray-900 mb-3">Espace personnel</h2>
 
@@ -331,6 +346,7 @@ export default function FicheScoutPage() {
           </>
         )}
       </div>
+      )}
 
       {/* Contacts d'urgence */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -416,11 +432,23 @@ export default function FicheScoutPage() {
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-base font-semibold text-gray-900">Cotisations</h2>
           <Link href="/dashboard/cotisations" className="inline-flex items-center gap-1 text-xs hover:underline" style={{ color: 'var(--cp)' }}>
-            Gérer les cotisations
+            {estChefGroupe ? 'Gérer les cotisations' : 'Voir les cotisations'}
             <ArrowRight className="h-3 w-3" strokeWidth={2} />
           </Link>
         </div>
-        {scout.cotisations.length === 0 ? (
+        {PERIMETRE_V1 ? (
+          // V1 : simple statut cotisant / non cotisant par année scolaire.
+          <ul className="space-y-2 mt-3">
+            {anneesCotisation.map(({ annee, cotisant }) => (
+              <li key={annee} className="flex items-center justify-between border border-gray-100 rounded-md p-3">
+                <p className="text-sm text-gray-900">Année {annee}</p>
+                <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full ${cotisant ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+                  {cotisant ? 'Cotisant' : 'Non cotisant'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : scout.cotisations.length === 0 ? (
           <p className="text-sm text-gray-500">Aucune cotisation enregistrée.</p>
         ) : (
           <ul className="space-y-2">
@@ -441,7 +469,8 @@ export default function FicheScoutPage() {
         )}
       </div>
 
-      {/* Documents */}
+      {/* Documents — hors périmètre V1 */}
+      {!PERIMETRE_V1 && (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-base font-semibold text-gray-900 mb-1">Documents</h2>
         <p className="text-sm text-gray-500 mb-4">
@@ -503,9 +532,10 @@ export default function FicheScoutPage() {
           </label>
         </div>
       </div>
+      )}
 
-      {/* Progression / Badges */}
-      {progressions && (
+      {/* Progression / Badges — hors périmètre V1 */}
+      {!PERIMETRE_V1 && progressions && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h2 className="text-base font-semibold text-gray-900 mb-1">Progression / Badges</h2>
           <p className="text-sm text-gray-500 mb-4">
@@ -547,8 +577,8 @@ export default function FicheScoutPage() {
         </div>
       )}
 
-      {/* Parents avec comptes */}
-      {scout.liensParents.length > 0 && (
+      {/* Parents avec comptes — espace parent hors périmètre V1 */}
+      {!PERIMETRE_V1 && scout.liensParents.length > 0 && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h2 className="text-base font-semibold text-gray-900 mb-3">Parents avec espace personnel</h2>
           <ul className="space-y-2">

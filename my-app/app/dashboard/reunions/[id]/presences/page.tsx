@@ -8,6 +8,7 @@ import { decoderQrScout } from '@/lib/qr'
 import { LABELS_BRANCHES as BRANCHES } from '@/lib/branches'
 import { BackLink } from '@/app/components/ui/BackLink'
 import { Download, Camera } from '@/lib/icons'
+import { PERIMETRE_V1 } from '@/lib/perimetreV1'
 
 const STATUTS = [
   { value: 'PRESENT', label: 'Présent', cls: 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200', active: 'bg-green-500 text-white border-green-500 hover:bg-green-600' },
@@ -190,11 +191,14 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
             className="text-xs border border-red-200 text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors font-medium">
             Tous absents
           </button>
-          <button onClick={() => setScannerOuvert(true)}
-            className="ml-auto text-xs bg-[var(--cp)] text-white px-3 py-1.5 rounded-lg hover:brightness-110 transition-all font-medium flex items-center gap-1.5">
-            <Camera className="h-3.5 w-3.5" strokeWidth={2} />
-            Scanner un QR
-          </button>
+          {/* Cartes QR hors périmètre V1 : rien à scanner. */}
+          {!PERIMETRE_V1 && (
+            <button onClick={() => setScannerOuvert(true)}
+              className="ml-auto text-xs bg-[var(--cp)] text-white px-3 py-1.5 rounded-lg hover:brightness-110 transition-all font-medium flex items-center gap-1.5">
+              <Camera className="h-3.5 w-3.5" strokeWidth={2} />
+              Scanner un QR
+            </button>
+          )}
         </div>
       )}
 

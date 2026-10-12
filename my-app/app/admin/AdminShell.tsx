@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { MONO_PAROISSE } from '@/lib/monoParoisse'
+import { pageHorsPerimetreV1 } from '@/lib/perimetreV1'
 import { NavIcon, Menu, UserCircle, LogOut, type LucideIcon } from '@/lib/icons'
 
 type MenuItem = { label: string; href: string; icone: LucideIcon }
@@ -21,7 +22,7 @@ const MENU: MenuItem[] = [
   { label: 'Rapports', href: '/admin/rapports', icone: NavIcon.rapports },
   { label: "Journal d'audit", href: '/admin/audit', icone: NavIcon.audit },
   { label: 'Apparence', href: '/admin/apparence', icone: NavIcon.apparence },
-]
+].filter((m) => !pageHorsPerimetreV1(m.href)) // Périmètre V1 : voir lib/perimetreV1.ts
 
 function SidebarContent({ pathname, nomComplet, onNavigate }: { pathname: string; nomComplet: string; onNavigate?: () => void }) {
   return (

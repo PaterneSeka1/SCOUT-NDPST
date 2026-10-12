@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
-import { formatMontantFCFA, anneeScolaireCourante } from '@/lib/cotisations'
+import { anneeScolaireCourante } from '@/lib/cotisations'
 import { ArrowRight, ICONES_TYPE_ACTIVITE } from '@/lib/icons'
 
 interface Scout {
@@ -17,20 +17,13 @@ interface Activite {
 interface Reunion {
   id: string; titre: string | null; dateHeure: string; dateReportee: string | null; statut: string
 }
-interface DocumentExpiration {
-  id: string
-}
-interface Cotisation {
-  statut: string; montant: number
-}
 
 export default function PageMaBranche() {
   const { data: session } = useSession()
   const [scouts, setScouts] = useState<Scout[]>([])
   const [activites, setActivites] = useState<Activite[]>([])
   const [prochaineReunion, setProchaineReunion] = useState<Reunion | null>(null)
-  const [documentsARenouveler, setDocumentsARenouveler] = useState<DocumentExpiration[]>([])
-  const [cotisationsEnAttente, setCotisationsEnAttente] = useState<Cotisation[]>([])
+  const [nonCotisants, setNonCotisants] = useState(0)
   const [brancheType, setBrancheType] = useState<string | null>(null)
   const [chargement, setChargement] = useState(true)
   const [erreur, setErreur] = useState('')
@@ -54,13 +47,12 @@ export default function PageMaBranche() {
           fetch(`/api/scouts?limite=100`).then((r) => r.json()),
           fetch(`/api/activites?limite=10`).then((r) => r.json()),
           fetch('/api/reunions').then((r) => r.json()),
-          fetch('/api/documents/expirations?joursAvant=30').then((r) => r.json()),
-          fetch(`/api/cotisations?anneeScolaire=${anneeScolaireCourante()}`).then((r) => r.json()),
+          fetch(`/api/cotisations/statuts?anneeScolaire=${anneeScolaireCourante()}`).then((r) => r.json()),
         ])
       })
       .then((results) => {
         if (!results) return
-        const [scoutsData, activitesData, reunionsData, documentsData, cotisationsData] = results
+        const [scoutsData, activitesData, reunionsData, cotisationsData] = results
         setScouts(scoutsData.scouts ?? [])
         setActivites(activitesData.activites ?? [])
 
@@ -70,8 +62,7 @@ export default function PageMaBranche() {
           .sort((a: Reunion, b: Reunion) => new Date(a.dateReportee ?? a.dateHeure).getTime() - new Date(b.dateReportee ?? b.dateHeure).getTime())
         setProchaineReunion(aVenir[0] ?? null)
 
-        setDocumentsARenouveler(documentsData.documents ?? [])
-        setCotisationsEnAttente((cotisationsData.cotisations ?? []).filter((c: Cotisation) => c.statut === 'EN_ATTENTE'))
+        setNonCotisants((cotisationsData.scouts ?? []).filter((s: { cotisant: boolean }) => !s.cotisant).length)
       })
       .catch(() => setErreur('Impossible de charger les données'))
       .finally(() => setChargement(false))
@@ -87,7 +78,6 @@ export default function PageMaBranche() {
 
   const couleur = brancheType ? COULEURS_BRANCHES[brancheType] : 'bg-gray-100 text-gray-700'
   const [bgCls, textCls] = couleur.split(' ')
-  const totalCotisationsDues = cotisationsEnAttente.reduce((s, c) => s + c.montant, 0)
 
   return (
     <div className="space-y-6">
@@ -101,7 +91,7 @@ export default function PageMaBranche() {
       </div>
 
       {/* Actions du jour */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Link
           href={prochaineReunion ? `/dashboard/reunions/${prochaineReunion.id}/presences` : '/dashboard/reunions'}
           className="bg-white rounded-xl border border-gray-200 p-4 hover:border-[var(--cp)]/40 transition-colors"
@@ -120,23 +110,13 @@ export default function PageMaBranche() {
           )}
         </Link>
 
-        <Link href="/dashboard/documents" className="bg-white rounded-xl border border-gray-200 p-4 hover:border-[var(--cp)]/40 transition-colors">
-          <p className="text-xs font-medium text-gray-500">Documents à renouveler</p>
-          <p className={`text-2xl font-bold mt-1 ${documentsARenouveler.length > 0 ? 'text-amber-600' : 'text-gray-900'}`}>
-            {documentsARenouveler.length}
-          </p>
-          {documentsARenouveler.length > 0 && (
-            <p className="inline-flex items-center gap-1 text-xs text-amber-600 mt-0.5">À vérifier <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} /></p>
-          )}
-        </Link>
-
         <Link href="/dashboard/cotisations" className="bg-white rounded-xl border border-gray-200 p-4 hover:border-[var(--cp)]/40 transition-colors">
-          <p className="text-xs font-medium text-gray-500">Cotisations en attente</p>
-          <p className={`text-2xl font-bold mt-1 ${cotisationsEnAttente.length > 0 ? 'text-amber-600' : 'text-gray-900'}`}>
-            {cotisationsEnAttente.length}
+          <p className="text-xs font-medium text-gray-500">Non cotisants ({anneeScolaireCourante()})</p>
+          <p className={`text-2xl font-bold mt-1 ${nonCotisants > 0 ? 'text-amber-600' : 'text-gray-900'}`}>
+            {nonCotisants}
           </p>
-          {cotisationsEnAttente.length > 0 && (
-            <p className="inline-flex items-center gap-1 text-xs text-amber-600 mt-0.5">{formatMontantFCFA(totalCotisationsDues)} dus <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} /></p>
+          {nonCotisants > 0 && (
+            <p className="inline-flex items-center gap-1 text-xs text-amber-600 mt-0.5">Voir la liste <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} /></p>
           )}
         </Link>
       </div>

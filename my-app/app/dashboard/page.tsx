@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ICONES_KPI, ICONE_KPI_DEFAUT, ICONES_TYPE_ACTIVITE, ClipboardList } from '@/lib/icons'
 import { StatCard, StatCardSkeleton } from '@/app/components/ui/StatCard'
+import { pageHorsPerimetreV1 } from '@/lib/perimetreV1'
 
 type ActiviteRecente = {
   id: string
@@ -112,12 +113,14 @@ export default function DashboardPage() {
               >
                 Personnaliser ma paroisse
               </Link>
-              <Link
-                href="/dashboard/rapports"
-                className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
-              >
-                Voir les rapports
-              </Link>
+              {!pageHorsPerimetreV1('/dashboard/rapports') && (
+                <Link
+                  href="/dashboard/rapports"
+                  className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                >
+                  Voir les rapports
+                </Link>
+              )}
             </div>
           )}
         </div>

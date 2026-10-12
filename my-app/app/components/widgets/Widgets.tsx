@@ -14,6 +14,7 @@ import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { LABELS_TYPE_DOCUMENT } from '@/lib/documents'
 import { ROLES_TOUT_STAFF } from '@/lib/roles'
+import { PERIMETRE_V1 } from '@/lib/perimetreV1'
 import { ICONES_TYPE_ACTIVITE, ICONES_TYPE_DOCUMENT, ClipboardList, Paperclip } from '@/lib/icons'
 
 type ActiviteWidget = {
@@ -154,7 +155,8 @@ function DocumentsWidget({ documents }: { documents: DocumentEcheance[] }) {
 }
 
 export function Widgets({ role, paroisseId }: { role: string; paroisseId: string | null }) {
-  const estStaff = ROLES_TOUT_STAFF.includes(role)
+  // Documents hors périmètre V1 (voir lib/perimetreV1.ts) : widget masqué.
+  const estStaff = ROLES_TOUT_STAFF.includes(role) && !PERIMETRE_V1
   const aUneParoisse = !!paroisseId
 
   const [visible, setVisible] = useState<Record<CleWidget, boolean>>(VISIBILITE_DEFAUT)

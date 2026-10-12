@@ -8,6 +8,7 @@ import { ScannerQR } from '@/app/components/ScannerQR'
 import { decoderQrScout } from '@/lib/qr'
 import { BackLink } from '@/app/components/ui/BackLink'
 import { Camera, Stethoscope, FileSignature } from '@/lib/icons'
+import { PERIMETRE_V1 } from '@/lib/perimetreV1'
 
 interface EtatPresence {
   scoutId: string
@@ -130,13 +131,16 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
               Tout décocher
             </button>
           </div>
-          <button
-            onClick={() => setScannerOuvert(true)}
-            className="text-xs px-3 py-2 bg-[var(--cp)] text-white rounded-lg hover:brightness-110 transition-all font-medium flex items-center gap-1.5"
-          >
-            <Camera className="h-3.5 w-3.5" strokeWidth={2} />
-            Scanner
-          </button>
+          {/* Cartes QR hors périmètre V1 : rien à scanner. */}
+          {!PERIMETRE_V1 && (
+            <button
+              onClick={() => setScannerOuvert(true)}
+              className="text-xs px-3 py-2 bg-[var(--cp)] text-white rounded-lg hover:brightness-110 transition-all font-medium flex items-center gap-1.5"
+            >
+              <Camera className="h-3.5 w-3.5" strokeWidth={2} />
+              Scanner
+            </button>
+          )}
         </div>
       </div>
 
@@ -195,7 +199,8 @@ export default function PagePresences({ params }: { params: Promise<{ id: string
                     </div>
 
                     {/* Autorisations de camp signées par le parent (camps uniquement, information seule) */}
-                    {activite?.type === 'CAMP' && (
+                    {/* Hors périmètre V1 : sans espace parent, rien n'est jamais signé. */}
+                    {!PERIMETRE_V1 && activite?.type === 'CAMP' && (
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium border ${
                           p.scout.autorisationCamp?.ficheMedicale

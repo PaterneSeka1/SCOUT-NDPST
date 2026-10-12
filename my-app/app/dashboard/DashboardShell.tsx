@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react'
 import { ParoisseLogoImage } from '@/app/components/ParoisseLogoImage'
 import { Widgets } from '@/app/components/widgets/Widgets'
 import { NavIcon, Menu, UserCircle, LogOut, type LucideIcon } from '@/lib/icons'
+import { PERIMETRE_V1, pageHorsPerimetreV1 } from '@/lib/perimetreV1'
 
 type MenuItem = {
   label: string
@@ -26,8 +27,12 @@ type MenuItem = {
 // ailleurs Commissaire de District garde son menu paroissial complet, avec un
 // lien de bascule supplémentaire vers /district (symétrique au lien "Mon
 // espace paroisse" de DistrictShell).
+//
+// Périmètre V1 (voir lib/perimetreV1.ts) : les entrées hors périmètre sont
+// retirées, ainsi que "Mes enfants" et "Espace district".
 function getMenuItems(role: string, aDesEnfants: boolean, roleDistrict?: string | null): MenuItem[] {
-  const items = getMenuItemsDeBase(role)
+  const items = getMenuItemsDeBase(role).filter((m) => !pageHorsPerimetreV1(m.href))
+  if (PERIMETRE_V1) return items
   let menu = items
   if (role !== 'PARENT' && aDesEnfants) {
     const item = { label: 'Mes enfants', href: '/dashboard/mes-enfants', icone: NavIcon.mesEnfants }
