@@ -6,12 +6,37 @@ import { prisma } from '@/lib/prisma'
 import { Prisma, RoleUtilisateur, BrancheType } from '@/app/generated/prisma/client'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { ROLES_GROUPE as ROLES_AUTORISES, ROLES_DISTRICT_ETENDU, ROLES_BRANCHE, ROLES_ASSIGNABLES_PAROISSE } from '@/lib/roles'
-import { BrancheTypeSchema } from '@/lib/validation'
+import { BrancheTypeSchema, estValeurEnum } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 import { envoyerEmailBienvenue } from '@/lib/notifications'
 import { LABELS_ROLES } from '@/lib/roles'
 import { paroisseIdRequise } from '@/lib/session'
+
+// Unicité des postes « 1 Chef de Groupe actif par paroisse » et « 1 Responsable
+// de Branche actif par (paroisse, branche) » : garantie en base par des index
+// partiels (migration 20260713150000_fixes_pre_production), vérifiée ici en
+// amont pour renvoyer un message clair plutôt qu'une violation de contrainte.
+async function conflitPosteUnique(paroisseId: string, role: string, brancheType: string | null) {
+  if (role === 'CHEF_GROUPE') {
+    const autre = await prisma.utilisateur.findFirst({
+      where: { paroisseId, role: 'CHEF_GROUPE', actif: true },
+      select: { id: true },
+    })
+    if (autre) return 'Cette paroisse a déjà un Chef de Groupe actif. Utilisez la désignation du Chef de Groupe depuis l\'administration.'
+  }
+  if (role === 'RESPONSABLE_BRANCHE' && brancheType) {
+    const autre = await prisma.utilisateur.findFirst({
+      where: { paroisseId, role: 'RESPONSABLE_BRANCHE', brancheType: brancheType as BrancheType, actif: true },
+      select: { id: true },
+    })
+    if (autre) return 'Cette branche a déjà un Responsable de Branche actif dans la paroisse.'
+  }
+  return null
+}
+
+const MESSAGE_CONFLIT_UNICITE =
+  'Conflit avec un compte existant : matricule, téléphone, adresse e-mail ou poste unique déjà attribué.'
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,8 +51,12 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
-    const limite = Math.max(1, parseInt(searchParams.get('limite') ?? '20', 10))
+    // Bornés : une valeur non numérique retombe sur la valeur par défaut, et
+    // `limite` est plafonné pour éviter une requête non paginée en pratique.
+    const pageBrute = parseInt(searchParams.get('page') ?? '1', 10)
+    const limiteBrute = parseInt(searchParams.get('limite') ?? '20', 10)
+    const page = Number.isNaN(pageBrute) ? 1 : Math.max(1, pageBrute)
+    const limite = Number.isNaN(limiteBrute) ? 20 : Math.min(100, Math.max(1, limiteBrute))
     // Accepte un rôle unique ("PARENT") ou une liste séparée par des virgules
     // ("ADJOINT_GROUPE,ASSISTANT_GROUPE,...") — utilisé par la page "Membres"
     // pour exclure les parents sans avoir besoin d'un paramètre dédié.
@@ -126,7 +155,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: REGLE_MOT_DE_PASSE }, { status: 400 })
     }
 
-    if (!(role in RoleUtilisateur)) {
+    if (!estValeurEnum(RoleUtilisateur, role)) {
       return NextResponse.json({ error: 'Rôle invalide' }, { status: 400 })
     }
 
@@ -180,6 +209,10 @@ export async function POST(request: NextRequest) {
     }
 
     const paroisseId = paroisseIdRequise(session)
+
+    // Un compte est créé actif : il ne doit pas doubler un poste unique.
+    const conflitPoste = await conflitPosteUnique(paroisseId, role, brancheTypeFinal)
+    if (conflitPoste) return NextResponse.json({ error: conflitPoste }, { status: 409 })
 
     if (scoutIdsUniques.length > 0) {
       const scoutsAutorises = await prisma.scout.count({
@@ -290,6 +323,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(utilisateur, { status: 201 })
   } catch (error) {
+    // Création concurrente : la contrainte d'unicité en base a tranché.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json({ error: MESSAGE_CONFLIT_UNICITE }, { status: 409 })
+    }
     logger.error('POST /api/utilisateurs', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }

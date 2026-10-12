@@ -13,6 +13,7 @@ export const LABELS_ACTIONS_AUDIT: Record<string, string> = {
   SCOUT_MODIFIE: 'Modification scout',
   SCOUT_MATRICULE_ATTRIBUE: 'Attribution matricule',
   SCOUT_CONSENTEMENT_IMAGE_MODIFIE: 'Consentement image modifié',
+  SCOUTS_IMPORTES: 'Import de scouts',
   DOCUMENT_SUPPRIME: 'Suppression document',
   COTISATION_CREEE: 'Création cotisation',
   COTISATION_STATUT_MODIFIE: 'Changement de statut de cotisation',

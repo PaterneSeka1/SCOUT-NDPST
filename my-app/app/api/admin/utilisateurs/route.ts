@@ -18,6 +18,28 @@ import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 import { envoyerEmailBienvenue } from '@/lib/notifications'
 
+// Unicité des postes « 1 Chef de Groupe actif par paroisse » et « 1 Responsable
+// de Branche actif par (paroisse, branche) » : garantie en base par des index
+// partiels (migration 20260713150000_fixes_pre_production), vérifiée ici en
+// amont pour renvoyer un message clair plutôt qu'une violation de contrainte.
+async function conflitPosteUnique(paroisseId: string, role: string, brancheType: string | null) {
+  if (role === 'CHEF_GROUPE') {
+    const autre = await prisma.utilisateur.findFirst({
+      where: { paroisseId, role: 'CHEF_GROUPE', actif: true },
+      select: { id: true },
+    })
+    if (autre) return 'Cette paroisse a déjà un Chef de Groupe actif. Désactivez-le avant d\'en désigner un nouveau.'
+  }
+  if (role === 'RESPONSABLE_BRANCHE' && brancheType) {
+    const autre = await prisma.utilisateur.findFirst({
+      where: { paroisseId, role: 'RESPONSABLE_BRANCHE', brancheType: brancheType as BrancheType, actif: true },
+      select: { id: true },
+    })
+    if (autre) return 'Cette branche a déjà un Responsable de Branche actif dans la paroisse.'
+  }
+  return null
+}
+
 // Gestion transverse des comptes de toutes les paroisses par un admin plateforme.
 // Contrairement à /api/utilisateurs (scopé à la paroisse de l'appelant), cette
 // surface n'est jamais filtrée par une paroisseId d'appelant — l'admin plateforme
@@ -206,6 +228,10 @@ export async function POST(request: NextRequest) {
     const brancheTypeValeur = estBranche ? (brancheType as BrancheType) : null
     const fonctionValeur = fonction?.trim() || null
 
+    // Un compte est créé actif : il ne doit pas doubler un poste unique.
+    const conflitPoste = await conflitPosteUnique(paroisseId, role, brancheTypeValeur)
+    if (conflitPoste) return NextResponse.json({ erreur: conflitPoste }, { status: 409 })
+
     const estParent = role === 'PARENT'
 
     if (estParent && !telephone?.trim()) {
@@ -305,6 +331,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(utilisateur, { status: 201 })
   } catch (error) {
+    // Création concurrente : la contrainte d'unicité en base a tranché.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json(
+        { erreur: 'Conflit avec un compte existant : matricule, téléphone, adresse e-mail ou poste unique déjà attribué.' },
+        { status: 409 },
+      )
+    }
     logger.error('POST /api/admin/utilisateurs', error)
     return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
   }

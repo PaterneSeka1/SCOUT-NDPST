@@ -90,16 +90,34 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ erreur: 'Branche invalide' }, { status: 400 })
     }
 
+    // Un chef de branche ne peut pas déplacer une réunion vers une autre branche
+    // (ni la rendre inter-branches) : cf. PUT /api/activites/[id].
+    if (ROLES_BRANCHE.includes(session.user.role) && brancheType !== undefined && (brancheType ?? null) !== existant.brancheType) {
+      return NextResponse.json({ erreur: 'Le changement de branche est réservé au groupe' }, { status: 403 })
+    }
+
     if (statut === 'REPORTEE' && !dateReportee) {
       return NextResponse.json({ erreur: 'La nouvelle date est requise pour reporter une réunion' }, { status: 400 })
+    }
+
+    const dateReporteeFinale = typeof dateReportee === 'string' && dateReportee ? new Date(dateReportee) : null
+    if (
+      (dateReportee && typeof dateReportee !== 'string') ||
+      (dateReporteeFinale && Number.isNaN(dateReporteeFinale.getTime()))
+    ) {
+      return NextResponse.json({ erreur: 'La date de report est invalide' }, { status: 400 })
+    }
+    const dateHeureFinale = typeof dateHeure === 'string' ? new Date(dateHeure) : undefined
+    if (dateHeure !== undefined && (!dateHeureFinale || Number.isNaN(dateHeureFinale.getTime()))) {
+      return NextResponse.json({ erreur: 'La date de la réunion est invalide' }, { status: 400 })
     }
 
     const reunion = await prisma.jourReunion.update({
       where: { id },
       data: {
         ...(statut !== undefined ? { statut: statut as any } : {}),
-        ...(dateReportee !== undefined ? { dateReportee: dateReportee ? new Date(dateReportee) : null } : {}),
-        ...(dateHeure !== undefined ? { dateHeure: new Date(dateHeure) } : {}),
+        ...(dateReportee !== undefined ? { dateReportee: dateReporteeFinale } : {}),
+        ...(dateHeureFinale ? { dateHeure: dateHeureFinale } : {}),
         ...(brancheType !== undefined ? { brancheType: brancheType as any } : {}),
         ...(titre !== undefined ? { titre } : {}),
         ...(lieu !== undefined ? { lieu } : {}),
@@ -128,6 +146,15 @@ export async function DELETE(_req: NextRequest, { params }: RouteParams) {
       include: { _count: { select: { presences: true } } },
     })
     if (!existant) return NextResponse.json({ erreur: 'Réunion introuvable' }, { status: 404 })
+
+    // Même règle que PATCH : un chef de branche ne supprime que les réunions de
+    // sa propre branche (ni celles des autres branches, ni les inter-branches).
+    if (ROLES_BRANCHE.includes(session.user.role)) {
+      const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
+      if (!bt || existant.brancheType !== bt) {
+        return NextResponse.json({ erreur: 'Accès refusé à cette réunion' }, { status: 403 })
+      }
+    }
 
     await prisma.jourReunion.delete({ where: { id } })
 

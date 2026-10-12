@@ -2,14 +2,38 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { RoleUtilisateur, BrancheType } from '@/app/generated/prisma/client'
+import { Prisma, RoleUtilisateur, BrancheType } from '@/app/generated/prisma/client'
 import { ROLES_GROUPE as ROLES_AUTORISES, ROLES_DISTRICT_ETENDU, ROLES_BRANCHE, ROLES_ASSIGNABLES_PAROISSE } from '@/lib/roles'
-import { BrancheTypeSchema } from '@/lib/validation'
+import { BrancheTypeSchema, estValeurEnum } from '@/lib/validation'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
 import { paroisseIdRequise } from '@/lib/session'
 
 type RouteParams = { params: Promise<{ id: string }> }
+
+// Cf. POST /api/utilisateurs : unicité des postes (index partiels en base,
+// migration 20260713150000_fixes_pre_production) vérifiée en amont pour
+// renvoyer un message clair plutôt qu'une violation de contrainte.
+async function conflitPosteUnique(paroisseId: string, role: string, brancheType: string | null, exclureId: string) {
+  if (role === 'CHEF_GROUPE') {
+    const autre = await prisma.utilisateur.findFirst({
+      where: { paroisseId, role: 'CHEF_GROUPE', actif: true, NOT: { id: exclureId } },
+      select: { id: true },
+    })
+    if (autre) return 'Cette paroisse a déjà un Chef de Groupe actif. Utilisez la désignation du Chef de Groupe depuis l\'administration.'
+  }
+  if (role === 'RESPONSABLE_BRANCHE' && brancheType) {
+    const autre = await prisma.utilisateur.findFirst({
+      where: { paroisseId, role: 'RESPONSABLE_BRANCHE', brancheType: brancheType as BrancheType, actif: true, NOT: { id: exclureId } },
+      select: { id: true },
+    })
+    if (autre) return 'Cette branche a déjà un Responsable de Branche actif dans la paroisse.'
+  }
+  return null
+}
+
+const MESSAGE_CONFLIT_UNICITE =
+  'Conflit avec un compte existant : adresse e-mail ou poste unique déjà attribué.'
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   try {
@@ -61,7 +85,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const existant = await prisma.utilisateur.findFirst({
       where: { id, paroisseId },
-      select: { id: true, role: true, actif: true, brancheType: true },
+      select: { id: true, role: true, actif: true, brancheType: true, roleDistrict: true },
     })
     if (!existant) return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 })
 
@@ -71,7 +95,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       scoutIds?: unknown
     }
 
-    if (role !== undefined && !(role in RoleUtilisateur))
+    if (role !== undefined && !estValeurEnum(RoleUtilisateur, role))
       return NextResponse.json({ error: 'Rôle invalide' }, { status: 400 })
     if (nom !== undefined && (typeof nom !== 'string' || !nom.trim()))
       return NextResponse.json({ error: 'Le nom est invalide' }, { status: 400 })
@@ -121,6 +145,16 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (role !== undefined && role !== existant.role && !ROLES_ASSIGNABLES_PAROISSE.includes(role))
       return NextResponse.json({ error: 'Rôle invalide' }, { status: 400 })
 
+    // Un compte de l'équipe de district (roleDistrict renseigné) est piloté par
+    // l'administration plateforme / le district : le Chef de Groupe ne peut ni
+    // changer son rôle ni le désactiver.
+    if (existant.roleDistrict && ((role !== undefined && role !== existant.role) || actif === false)) {
+      return NextResponse.json(
+        { error: 'Ce compte fait partie de l\'équipe de district : son rôle et son statut sont gérés par l\'administration.' },
+        { status: 403 },
+      )
+    }
+
     const emailNettoye = email?.trim() ?? ''
     if (email !== undefined && emailNettoye) {
       const doublon = await prisma.utilisateur.findFirst({
@@ -144,6 +178,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     if (ROLES_BRANCHE.includes(roleFinal) && !brancheTypeFinal) {
       return NextResponse.json({ error: 'La branche est requise pour ce rôle' }, { status: 400 })
+    }
+
+    const actifFinal = actif !== undefined ? actif : existant.actif
+    if (actifFinal) {
+      const conflitPoste = await conflitPosteUnique(paroisseId, roleFinal, brancheTypeFinal, id)
+      if (conflitPoste) return NextResponse.json({ error: conflitPoste }, { status: 409 })
     }
 
     const utilisateur = await prisma.$transaction(async (tx) => {
@@ -211,6 +251,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ ...utilisateur, enfants: liensParent.map((lien) => lien.scout) })
   } catch (error) {
+    // Modification concurrente : la contrainte d'unicité en base a tranché.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json({ error: MESSAGE_CONFLIT_UNICITE }, { status: 409 })
+    }
     logger.error('PUT /api/utilisateurs/[id]', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
@@ -231,9 +275,17 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 
     const existant = await prisma.utilisateur.findFirst({
       where: { id, paroisseId },
-      select: { id: true },
+      select: { id: true, roleDistrict: true },
     })
     if (!existant) return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 })
+
+    // Cf. PUT : un compte de l'équipe de district n'est pas désactivable ici.
+    if (existant.roleDistrict) {
+      return NextResponse.json(
+        { error: 'Ce compte fait partie de l\'équipe de district : son statut est géré par l\'administration.' },
+        { status: 403 },
+      )
+    }
 
     const utilisateur = await prisma.utilisateur.update({
       where: { id },

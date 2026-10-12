@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@/app/generated/prisma/client'
 import { ROLES_GROUPE_ETENDU as ROLES_AUTORISES } from '@/lib/roles'
 import { logger } from '@/lib/logger'
 import { enregistrerAudit } from '@/lib/audit'
@@ -77,6 +78,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(scout)
   } catch (error) {
+    // Attribution concurrente du même matricule : la contrainte unique a tranché.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json({ error: 'Ce matricule est déjà attribué à un autre scout' }, { status: 409 })
+    }
     logger.error('PUT /api/scouts/[id]/matricule', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }

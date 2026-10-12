@@ -62,23 +62,26 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       principal?: boolean
     }
 
-    // Si passage en principal, retirer le statut des autres
-    if (principal === true && !contact.principal) {
-      await prisma.contactUrgence.updateMany({
-        where: { scoutId: id, principal: true, NOT: { id: contactId } },
-        data: { principal: false },
-      })
-    }
+    // Si passage en principal, retirer le statut des autres — dans la même
+    // transaction que la mise à jour, pour rester cohérent en cas d'échec.
+    const contactMisAJour = await prisma.$transaction(async (tx) => {
+      if (principal === true && !contact.principal) {
+        await tx.contactUrgence.updateMany({
+          where: { scoutId: id, principal: true, NOT: { id: contactId } },
+          data: { principal: false },
+        })
+      }
 
-    const contactMisAJour = await prisma.contactUrgence.update({
-      where: { id: contactId },
-      data: {
-        ...(nom !== undefined ? { nom: nom.trim() } : {}),
-        ...(prenom !== undefined ? { prenom: prenom?.trim() || null } : {}),
-        ...(telephone !== undefined ? { telephone: telephone.trim() } : {}),
-        ...(relation !== undefined ? { relation: relation?.trim() || null } : {}),
-        ...(principal !== undefined ? { principal } : {}),
-      },
+      return tx.contactUrgence.update({
+        where: { id: contactId },
+        data: {
+          ...(nom !== undefined ? { nom: nom.trim() } : {}),
+          ...(prenom !== undefined ? { prenom: prenom?.trim() || null } : {}),
+          ...(telephone !== undefined ? { telephone: telephone.trim() } : {}),
+          ...(relation !== undefined ? { relation: relation?.trim() || null } : {}),
+          ...(principal !== undefined ? { principal } : {}),
+        },
+      })
     })
 
     return NextResponse.json(contactMisAJour)

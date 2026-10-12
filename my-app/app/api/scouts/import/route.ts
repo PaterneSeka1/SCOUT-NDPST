@@ -3,7 +3,10 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { BrancheType, Sexe } from '@/app/generated/prisma/client'
-import { ROLES_TOUT_STAFF as ROLES_AUTORISES } from '@/lib/roles'
+import { estValeurEnum } from '@/lib/validation'
+import { ROLES_TOUT_STAFF as ROLES_AUTORISES, ROLES_BRANCHE } from '@/lib/roles'
+import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
+import { enregistrerAudit } from '@/lib/audit'
 import { logger } from '@/lib/logger'
 import { paroisseIdRequise } from '@/lib/session'
 
@@ -48,10 +51,10 @@ function validerLigne(row: LigneImport): { erreur: string } | {
   if (Number.isNaN(dateNaissance.getTime())) return { erreur: 'Date de naissance invalide (format attendu : AAAA-MM-JJ)' }
 
   const sexe = row.sexe?.trim().toUpperCase()
-  if (!sexe || !(sexe in Sexe)) return { erreur: 'Sexe invalide (MASCULIN ou FEMININ attendu)' }
+  if (!sexe || !estValeurEnum(Sexe, sexe)) return { erreur: 'Sexe invalide (MASCULIN ou FEMININ attendu)' }
 
   const brancheType = row.brancheType?.trim().toUpperCase()
-  if (!brancheType || !(brancheType in BrancheType)) {
+  if (!brancheType || !estValeurEnum(BrancheType, brancheType)) {
     return { erreur: 'Branche invalide (OISILLONS, LOUVETEAUX, ECLAIREURS, CHEMINOTS, COMPAGNONS ou RESSOURCES_ADULTES attendu)' }
   }
 
@@ -93,6 +96,16 @@ export async function POST(request: NextRequest) {
     }
 
     const paroisseId = paroisseIdRequise(session)
+
+    // Comme POST /api/scouts : un responsable de branche n'inscrit que dans sa
+    // propre branche — la branche du fichier est ignorée et forcée.
+    let brancheForcee: BrancheType | null = null
+    if (ROLES_BRANCHE.includes(session.user.role)) {
+      const bt = await getBrancheUtilisateur(session.user.id, paroisseId)
+      if (!bt) return NextResponse.json({ error: 'Aucune branche assignée' }, { status: 403 })
+      brancheForcee = bt as BrancheType
+    }
+
     const matriculesVus = new Set<string>()
     const resultats: ResultatLigne[] = []
 
@@ -126,7 +139,7 @@ export async function POST(request: NextRequest) {
               prenom: validation.prenom,
               dateNaissance: validation.dateNaissance,
               sexe: validation.sexe,
-              brancheType: validation.brancheType,
+              brancheType: brancheForcee ?? validation.brancheType,
               matricule: validation.matricule,
               paroisseId,
             },
@@ -152,6 +165,16 @@ export async function POST(request: NextRequest) {
     }
 
     const nbSucces = resultats.filter((r) => r.succes).length
+
+    if (nbSucces > 0) {
+      await enregistrerAudit({
+        paroisseId,
+        acteurId: session.user.id,
+        action: 'SCOUTS_IMPORTES',
+        entite: 'Scout',
+        details: { nbSucces, nbEchecs: resultats.length - nbSucces, brancheForcee },
+      })
+    }
     return NextResponse.json({ resultats, nbSucces, nbEchecs: resultats.length - nbSucces })
   } catch (error) {
     logger.error('POST /api/scouts/import', error)

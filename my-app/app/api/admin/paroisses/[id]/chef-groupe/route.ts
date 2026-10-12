@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { hash } from 'bcryptjs'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@/app/generated/prisma/client'
 import { ROLES_PLATEFORME } from '@/lib/roles'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { logger } from '@/lib/logger'
@@ -94,6 +95,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(chefGroupe, { status: 201 })
   } catch (error) {
+    // Désignation concurrente : l'index partiel « 1 Chef de Groupe actif par
+    // paroisse » (ou un identifiant unique) a tranché en base.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json(
+        { erreur: 'Conflit : cette paroisse a déjà un Chef de Groupe actif, ou ce matricule, ce téléphone ou cette adresse e-mail est déjà utilisé.' },
+        { status: 409 },
+      )
+    }
     logger.error('POST /api/admin/paroisses/[id]/chef-groupe', error)
     return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
   }

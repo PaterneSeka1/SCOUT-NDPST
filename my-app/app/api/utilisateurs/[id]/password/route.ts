@@ -28,11 +28,20 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const existant = await prisma.utilisateur.findFirst({
       where: { id, paroisseId },
-      select: { id: true },
+      select: { id: true, roleDistrict: true },
     })
 
     if (!existant) {
       return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 })
+    }
+
+    // Un compte de l'équipe de district (roleDistrict renseigné) est géré par
+    // l'administration plateforme / le district, pas par le Chef de Groupe.
+    if (existant.roleDistrict && id !== session.user.id) {
+      return NextResponse.json(
+        { error: 'Ce compte fait partie de l\'équipe de district : son mot de passe est géré par l\'administration.' },
+        { status: 403 },
+      )
     }
 
     const body = await request.json()

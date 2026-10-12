@@ -61,23 +61,27 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Le téléphone du contact est requis' }, { status: 400 })
     }
 
-    // Si le nouveau contact est principal, retirer le statut des autres
-    if (principal) {
-      await prisma.contactUrgence.updateMany({
-        where: { scoutId: id, principal: true },
-        data: { principal: false },
-      })
-    }
+    // Si le nouveau contact est principal, retirer le statut des autres — dans
+    // la même transaction, pour ne jamais laisser le scout sans contact
+    // principal si la création échoue.
+    const contact = await prisma.$transaction(async (tx) => {
+      if (principal) {
+        await tx.contactUrgence.updateMany({
+          where: { scoutId: id, principal: true },
+          data: { principal: false },
+        })
+      }
 
-    const contact = await prisma.contactUrgence.create({
-      data: {
-        nom: nom.trim(),
-        prenom: prenom?.trim() || null,
-        telephone: telephone.trim(),
-        relation: relation?.trim() || null,
-        principal: principal ?? false,
-        scoutId: id,
-      },
+      return tx.contactUrgence.create({
+        data: {
+          nom: nom.trim(),
+          prenom: prenom?.trim() || null,
+          telephone: telephone.trim(),
+          relation: relation?.trim() || null,
+          principal: principal === true,
+          scoutId: id,
+        },
+      })
     })
 
     return NextResponse.json(contact, { status: 201 })

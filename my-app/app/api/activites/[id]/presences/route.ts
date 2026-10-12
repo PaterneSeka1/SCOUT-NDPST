@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { ROLES_TOUT_STAFF, ROLES_BRANCHE } from '@/lib/roles'
 import { getBrancheUtilisateur } from '@/lib/brancheUtilisateur'
 import { paroisseIdRequise } from '@/lib/session'
+import { logger } from '@/lib/logger'
 
 export async function GET(
   request: NextRequest,
@@ -126,29 +127,65 @@ export async function POST(
     }
   }
 
-  const corps = await request.json()
-  const { presences } = corps as {
-    presences: Array<{ scoutId: string; present: boolean; commentaire?: string }>
-  }
+  try {
+    const corps = await request.json()
+    const { presences } = corps as {
+      presences: Array<{ scoutId: string; present: boolean; commentaire?: string | null }>
+    }
 
-  if (!Array.isArray(presences)) {
-    return NextResponse.json({ error: 'Format invalide' }, { status: 400 })
-  }
+    if (
+      !Array.isArray(presences) ||
+      presences.some(
+        (p) =>
+          !p ||
+          typeof p.scoutId !== 'string' ||
+          !p.scoutId ||
+          typeof p.present !== 'boolean' ||
+          (p.commentaire != null && typeof p.commentaire !== 'string')
+      )
+    ) {
+      return NextResponse.json({ error: 'Format invalide' }, { status: 400 })
+    }
 
-  const resultats = await Promise.all(
-    presences.map((p) =>
-      prisma.presence.upsert({
-        where: { scoutId_activiteId: { scoutId: p.scoutId, activiteId: id } },
-        update: { present: p.present, commentaire: p.commentaire ?? null },
-        create: {
-          scoutId: p.scoutId,
-          activiteId: id,
-          present: p.present,
-          commentaire: p.commentaire ?? null,
-        },
-      })
+    // Seuls les scouts de la paroisse appartenant à la branche de l'activité
+    // (tous pour une activité inter-branches, comme la liste du GET) peuvent
+    // être pointés — plus ceux déjà pointés sur cette activité, qui ont pu
+    // changer de branche depuis. Empêche d'écrire une présence pour un scout
+    // d'une autre paroisse ou d'une autre branche.
+    const scoutIds = [...new Set(presences.map((p) => p.scoutId))]
+    const autorises = await prisma.scout.findMany({
+      where: {
+        id: { in: scoutIds },
+        paroisseId,
+        OR: [
+          activite.brancheType ? { brancheType: activite.brancheType } : {},
+          { presences: { some: { activiteId: id } } },
+        ],
+      },
+      select: { id: true },
+    })
+    if (autorises.length !== scoutIds.length) {
+      return NextResponse.json({ error: 'Certains scouts ne font pas partie de cette activité' }, { status: 400 })
+    }
+
+    const resultats = await prisma.$transaction(
+      presences.map((p) =>
+        prisma.presence.upsert({
+          where: { scoutId_activiteId: { scoutId: p.scoutId, activiteId: id } },
+          update: { present: p.present, commentaire: p.commentaire ?? null },
+          create: {
+            scoutId: p.scoutId,
+            activiteId: id,
+            present: p.present,
+            commentaire: p.commentaire ?? null,
+          },
+        })
+      )
     )
-  )
 
-  return NextResponse.json({ enregistrees: resultats.length })
+    return NextResponse.json({ enregistrees: resultats.length })
+  } catch (error) {
+    logger.error('POST /api/activites/[id]/presences', error)
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+  }
 }

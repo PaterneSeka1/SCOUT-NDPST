@@ -47,7 +47,9 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
     // Presences déjà enregistrées
     const presences = await prisma.presenceReunion.findMany({
-      where: { jourReunionId: id },
+      // Filtre paroisse en défense en profondeur : scoutsHistoriques ne doit
+      // jamais exposer un scout d'une autre paroisse.
+      where: { jourReunionId: id, scout: { paroisseId } },
       select: {
         scoutId: true,
         statut: true,
@@ -102,8 +104,30 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     }
 
     if (!Array.isArray(presences)) return NextResponse.json({ erreur: 'Format invalide' }, { status: 400 })
-    if (presences.some((p) => !p.scoutId || !StatutPresenceReunionSchema.safeParse(p.statut).success)) {
+    if (presences.some((p) => !p || typeof p.scoutId !== 'string' || !p.scoutId || (p.note != null && typeof p.note !== 'string'))) {
+      return NextResponse.json({ erreur: 'Format invalide' }, { status: 400 })
+    }
+    if (presences.some((p) => !StatutPresenceReunionSchema.safeParse(p.statut).success)) {
       return NextResponse.json({ erreur: 'Statut de présence invalide' }, { status: 400 })
+    }
+
+    // Seuls les scouts de la paroisse de la branche de la réunion (tous pour une
+    // réunion inter-branches), ou déjà pointés sur cette réunion (cf.
+    // scoutsHistoriques du GET), peuvent être pointés.
+    const scoutIds = [...new Set(presences.map((p) => p.scoutId))]
+    const autorises = await prisma.scout.findMany({
+      where: {
+        id: { in: scoutIds },
+        paroisseId,
+        OR: [
+          reunion.brancheType ? { brancheType: reunion.brancheType } : {},
+          { presencesReunion: { some: { jourReunionId: id } } },
+        ],
+      },
+      select: { id: true },
+    })
+    if (autorises.length !== scoutIds.length) {
+      return NextResponse.json({ erreur: 'Certains scouts ne font pas partie de cette réunion' }, { status: 400 })
     }
 
     await prisma.$transaction(

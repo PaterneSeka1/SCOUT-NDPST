@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { RoleUtilisateur, BrancheType } from '@/app/generated/prisma/client'
+import { Prisma, RoleUtilisateur, BrancheType } from '@/app/generated/prisma/client'
 import {
   ROLES_PLATEFORME,
   ROLES_ASSIGNABLES_PAROISSE,
@@ -159,6 +159,43 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           : existant.fonctionDistrict
         : null
 
+    // Unicité des postes « 1 Chef de Groupe actif par paroisse » et « 1
+    // Responsable de Branche actif par (paroisse, branche) » : garantie en base
+    // par des index partiels (migration 20260713150000_fixes_pre_production),
+    // vérifiée ici en amont pour renvoyer un message clair.
+    if (existant.actif && existant.paroisseId) {
+      if (roleFinal === 'CHEF_GROUPE') {
+        const autre = await prisma.utilisateur.findFirst({
+          where: { paroisseId: existant.paroisseId, role: 'CHEF_GROUPE', actif: true, NOT: { id } },
+          select: { id: true },
+        })
+        if (autre) {
+          return NextResponse.json(
+            { erreur: 'Cette paroisse a déjà un Chef de Groupe actif. Désactivez-le avant d\'en désigner un nouveau.' },
+            { status: 409 },
+          )
+        }
+      }
+      if (roleFinal === 'RESPONSABLE_BRANCHE' && brancheParoisseFinale) {
+        const autre = await prisma.utilisateur.findFirst({
+          where: {
+            paroisseId: existant.paroisseId,
+            role: 'RESPONSABLE_BRANCHE',
+            brancheType: brancheParoisseFinale as BrancheType,
+            actif: true,
+            NOT: { id },
+          },
+          select: { id: true },
+        })
+        if (autre) {
+          return NextResponse.json(
+            { erreur: 'Cette branche a déjà un Responsable de Branche actif dans la paroisse.' },
+            { status: 409 },
+          )
+        }
+      }
+    }
+
     let commissairesRemplaces: string[] = []
     const utilisateur = await prisma.$transaction(async (tx) => {
       if (roleDistrictFinal === 'COMMISSAIRE_DISTRICT' && existant.paroisse?.districtId) {
@@ -231,6 +268,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(utilisateur)
   } catch (error) {
+    // Nomination concurrente : la contrainte d'unicité en base a tranché.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json({ erreur: 'Ce poste unique vient d\'être attribué à un autre compte.' }, { status: 409 })
+    }
     logger.error('PUT /api/admin/utilisateurs/[id]/nominations', error)
     return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
   }

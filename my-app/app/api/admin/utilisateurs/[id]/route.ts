@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { RoleUtilisateur, BrancheType } from '@/app/generated/prisma/client'
+import { Prisma, RoleUtilisateur, BrancheType } from '@/app/generated/prisma/client'
 import { ROLES_PLATEFORME, ROLES_ASSIGNABLES_PAROISSE, ROLES_BRANCHE } from '@/lib/roles'
 import { BrancheTypeSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
@@ -16,8 +16,30 @@ type RouteParams = { params: Promise<{ id: string }> }
 async function trouverCible(id: string) {
   return prisma.utilisateur.findFirst({
     where: { id, role: { not: 'ADMIN_PLATEFORME' } },
-    select: { id: true, role: true, actif: true, fonction: true, brancheType: true },
+    select: { id: true, role: true, actif: true, fonction: true, brancheType: true, paroisseId: true },
   })
+}
+
+// Unicité des postes « 1 Chef de Groupe actif par paroisse » et « 1 Responsable
+// de Branche actif par (paroisse, branche) » : garantie en base par des index
+// partiels (migration 20260713150000_fixes_pre_production), vérifiée ici en
+// amont pour renvoyer un message clair plutôt qu'une violation de contrainte.
+async function conflitPosteUnique(paroisseId: string, role: string, brancheType: string | null, exclureId: string) {
+  if (role === 'CHEF_GROUPE') {
+    const autre = await prisma.utilisateur.findFirst({
+      where: { paroisseId, role: 'CHEF_GROUPE', actif: true, NOT: { id: exclureId } },
+      select: { id: true },
+    })
+    if (autre) return 'Cette paroisse a déjà un Chef de Groupe actif. Désactivez-le avant d\'en désigner un nouveau.'
+  }
+  if (role === 'RESPONSABLE_BRANCHE' && brancheType) {
+    const autre = await prisma.utilisateur.findFirst({
+      where: { paroisseId, role: 'RESPONSABLE_BRANCHE', brancheType: brancheType as BrancheType, actif: true, NOT: { id: exclureId } },
+      select: { id: true },
+    })
+    if (autre) return 'Cette branche a déjà un Responsable de Branche actif dans la paroisse.'
+  }
+  return null
 }
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
@@ -129,6 +151,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       if (doublon) return NextResponse.json({ erreur: 'Cette adresse e-mail est déjà utilisée' }, { status: 400 })
     }
 
+    const actifFinal = actif !== undefined ? actif : existant.actif
+    if (actifFinal && existant.paroisseId) {
+      const conflitPoste = await conflitPosteUnique(existant.paroisseId, roleFinal, brancheTypeFinal, id)
+      if (conflitPoste) return NextResponse.json({ erreur: conflitPoste }, { status: 409 })
+    }
+
     const { paroisseId: paroisseIdCible, ...utilisateur } = await prisma.utilisateur.update({
       where: { id },
       data: {
@@ -180,6 +208,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(utilisateur)
   } catch (error) {
+    // Modification concurrente : la contrainte d'unicité en base a tranché.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json(
+        { erreur: 'Conflit avec un compte existant : adresse e-mail ou poste unique déjà attribué.' },
+        { status: 409 },
+      )
+    }
     logger.error('PUT /api/admin/utilisateurs/[id]', error)
     return NextResponse.json({ erreur: 'Erreur serveur' }, { status: 500 })
   }
