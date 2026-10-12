@@ -1,5 +1,18 @@
 import { describe, it, expect } from 'vitest'
-import { anneeScolaireCourante, formatMontantFCFA } from './cotisations'
+import { anneeScolaireCourante, anneeScolaireValide, formatMontantFCFA } from './cotisations'
+
+describe('anneeScolaireValide', () => {
+  it('accepte deux années consécutives', () => {
+    expect(anneeScolaireValide('2025-2026')).toBe(true)
+  })
+
+  it('refuse un format ou un écart incorrect', () => {
+    expect(anneeScolaireValide('2025-2027')).toBe(false)
+    expect(anneeScolaireValide('2025')).toBe(false)
+    expect(anneeScolaireValide('2025-2026 ')).toBe(false)
+    expect(anneeScolaireValide('')).toBe(false)
+  })
+})
 
 describe('anneeScolaireCourante', () => {
   it('renvoie l\'année en cours quand on est après septembre', () => {
