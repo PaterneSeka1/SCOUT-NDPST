@@ -14,6 +14,7 @@ import {
 } from '@/lib/roles'
 import { LABELS_BRANCHES } from '@/lib/branches'
 import { Pagination } from '@/app/components/ui/Pagination'
+import { PERIMETRE_V1 } from '@/lib/perimetreV1'
 
 interface UtilisateurListe {
   id: string
@@ -54,7 +55,9 @@ const CATEGORIES_FILTRE = [
   { value: 'nommables-district', label: 'Nommables au district' },
   { value: 'equipe-district', label: 'Équipe district' },
   { value: 'commissaires-branche', label: 'Commissaires de branche' },
-]
+// Périmètre V1 : l'espace district est masqué, ses filtres et nominations aussi
+// (la désignation du commissaire reste dans /admin/districts).
+].filter((c) => !(PERIMETRE_V1 && ['nommables-district', 'equipe-district', 'commissaires-branche'].includes(c.value)))
 const AFFECTATIONS_DISTRICT_FILTRE = [
   { value: '', label: 'Toutes les affectations' },
   { value: 'AUCUNE', label: 'Sans affectation district' },
@@ -277,6 +280,9 @@ export default function UtilisateursPlateformePage() {
       e.brancheTypeDistrict = 'La branche est requise'
     }
     setErreursNomination(e)
+    // Section district masquée en V1 : ses erreurs ne seraient pas visibles.
+    const erreurDistrictMasquee = PERIMETRE_V1 ? (e.roleDistrict ?? e.brancheTypeDistrict) : undefined
+    if (erreurDistrictMasquee) toast.error(erreurDistrictMasquee)
     return Object.keys(e).length === 0
   }
 
@@ -505,18 +511,20 @@ export default function UtilisateursPlateformePage() {
                 </select>
               </div>
 
-              <div>
-                <label className={CLS_LABEL}>Affectation district</label>
-                <select
-                  value={roleDistrictFiltre}
-                  onChange={(e) => changerFiltre(setRoleDistrictFiltre)(e.target.value)}
-                  className={CLS_SELECT}
-                >
-                  {AFFECTATIONS_DISTRICT_FILTRE.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-              </div>
+              {!PERIMETRE_V1 && (
+                <div>
+                  <label className={CLS_LABEL}>Affectation district</label>
+                  <select
+                    value={roleDistrictFiltre}
+                    onChange={(e) => changerFiltre(setRoleDistrictFiltre)(e.target.value)}
+                    className={CLS_SELECT}
+                  >
+                    {AFFECTATIONS_DISTRICT_FILTRE.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className={CLS_LABEL}>Branche</label>
@@ -652,18 +660,20 @@ export default function UtilisateursPlateformePage() {
             </select>
           </div>
 
-          <div className="lg:col-span-3">
-            <label className={CLS_LABEL}>Affectation district</label>
-            <select
-              value={roleDistrictFiltre}
-              onChange={(e) => changerFiltre(setRoleDistrictFiltre)(e.target.value)}
-              className={CLS_SELECT}
-            >
-              {AFFECTATIONS_DISTRICT_FILTRE.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </div>
+          {!PERIMETRE_V1 && (
+            <div className="lg:col-span-3">
+              <label className={CLS_LABEL}>Affectation district</label>
+              <select
+                value={roleDistrictFiltre}
+                onChange={(e) => changerFiltre(setRoleDistrictFiltre)(e.target.value)}
+                className={CLS_SELECT}
+              >
+                {AFFECTATIONS_DISTRICT_FILTRE.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="lg:col-span-3">
             <label className={CLS_LABEL}>Branche</label>
@@ -900,87 +910,89 @@ export default function UtilisateursPlateformePage() {
                   )}
                 </section>
 
-                <section className="space-y-3 border-t border-gray-100 pt-5">
-                  <h3 className="text-sm font-semibold text-gray-800">Affectation district</h3>
-                  <div>
-                    <label className={CLS_LABEL}>Nomination</label>
-                    <select
-                      name="roleDistrict"
-                      value={formNomination.roleDistrict}
-                      onChange={handleNominationChange}
-                      className={erreursNomination.roleDistrict ? CLS_SELECT_ERR : CLS_SELECT}
-                    >
-                      <option value="">Aucune affectation district</option>
-                      {ROLES_DISTRICT_ETENDU.map((role) => (
-                        <option key={role} value={role}>
-                          {role === 'ASSISTANT_DISTRICT'
-                            ? 'Commissaire de branche / Assistant de district'
-                            : LABELS_ROLES[role]}
-                        </option>
-                      ))}
-                    </select>
-                    {erreursNomination.roleDistrict && <p className="mt-1 text-xs text-red-600">{erreursNomination.roleDistrict}</p>}
-                  </div>
-
-                  {nominationEstAssistantDistrict && (
-                    <div className="space-y-3">
-                      <div>
-                        <label className={CLS_LABEL}>Type d&apos;assistant</label>
-                        <div className="flex flex-col gap-2 sm:flex-row sm:gap-5">
-                          <label className="flex items-center gap-2 text-sm text-gray-700">
-                            <input
-                              type="radio"
-                              name="modeDistrict"
-                              checked={nominationModeBranche}
-                              onChange={() => setFormNomination((p) => ({ ...p, modeDistrict: 'branche', fonctionDistrict: '' }))}
-                              className="accent-(--cp)"
-                            />
-                            Commissaire de branche
-                          </label>
-                          <label className="flex items-center gap-2 text-sm text-gray-700">
-                            <input
-                              type="radio"
-                              name="modeDistrict"
-                              checked={!nominationModeBranche}
-                              onChange={() => setFormNomination((p) => ({ ...p, modeDistrict: 'fonction', brancheTypeDistrict: '' }))}
-                              className="accent-(--cp)"
-                            />
-                            Autre fonction
-                          </label>
-                        </div>
-                      </div>
-
-                      {nominationModeBranche ? (
-                        <div>
-                          <label className={CLS_LABEL}>Branche de district <span className="text-red-500">*</span></label>
-                          <select
-                            name="brancheTypeDistrict"
-                            value={formNomination.brancheTypeDistrict}
-                            onChange={handleNominationChange}
-                            className={erreursNomination.brancheTypeDistrict ? CLS_SELECT_ERR : CLS_SELECT}
-                          >
-                            <option value="">Sélectionner une branche</option>
-                            {Object.entries(LABELS_BRANCHES).map(([valeur, libelle]) => (
-                              <option key={valeur} value={valeur}>{libelle}</option>
-                            ))}
-                          </select>
-                          {erreursNomination.brancheTypeDistrict && <p className="mt-1 text-xs text-red-600">{erreursNomination.brancheTypeDistrict}</p>}
-                        </div>
-                      ) : (
-                        <div>
-                          <label className={CLS_LABEL}>Fonction <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
-                          <input
-                            name="fonctionDistrict"
-                            value={formNomination.fonctionDistrict}
-                            onChange={handleNominationChange}
-                            placeholder="Ex. Spiritualité, Secrétariat…"
-                            className={CLS_INPUT}
-                          />
-                        </div>
-                      )}
+                {!PERIMETRE_V1 && (
+                  <section className="space-y-3 border-t border-gray-100 pt-5">
+                    <h3 className="text-sm font-semibold text-gray-800">Affectation district</h3>
+                    <div>
+                      <label className={CLS_LABEL}>Nomination</label>
+                      <select
+                        name="roleDistrict"
+                        value={formNomination.roleDistrict}
+                        onChange={handleNominationChange}
+                        className={erreursNomination.roleDistrict ? CLS_SELECT_ERR : CLS_SELECT}
+                      >
+                        <option value="">Aucune affectation district</option>
+                        {ROLES_DISTRICT_ETENDU.map((role) => (
+                          <option key={role} value={role}>
+                            {role === 'ASSISTANT_DISTRICT'
+                              ? 'Commissaire de branche / Assistant de district'
+                              : LABELS_ROLES[role]}
+                          </option>
+                        ))}
+                      </select>
+                      {erreursNomination.roleDistrict && <p className="mt-1 text-xs text-red-600">{erreursNomination.roleDistrict}</p>}
                     </div>
-                  )}
-                </section>
+
+                    {nominationEstAssistantDistrict && (
+                      <div className="space-y-3">
+                        <div>
+                          <label className={CLS_LABEL}>Type d&apos;assistant</label>
+                          <div className="flex flex-col gap-2 sm:flex-row sm:gap-5">
+                            <label className="flex items-center gap-2 text-sm text-gray-700">
+                              <input
+                                type="radio"
+                                name="modeDistrict"
+                                checked={nominationModeBranche}
+                                onChange={() => setFormNomination((p) => ({ ...p, modeDistrict: 'branche', fonctionDistrict: '' }))}
+                                className="accent-(--cp)"
+                              />
+                              Commissaire de branche
+                            </label>
+                            <label className="flex items-center gap-2 text-sm text-gray-700">
+                              <input
+                                type="radio"
+                                name="modeDistrict"
+                                checked={!nominationModeBranche}
+                                onChange={() => setFormNomination((p) => ({ ...p, modeDistrict: 'fonction', brancheTypeDistrict: '' }))}
+                                className="accent-(--cp)"
+                              />
+                              Autre fonction
+                            </label>
+                          </div>
+                        </div>
+
+                        {nominationModeBranche ? (
+                          <div>
+                            <label className={CLS_LABEL}>Branche de district <span className="text-red-500">*</span></label>
+                            <select
+                              name="brancheTypeDistrict"
+                              value={formNomination.brancheTypeDistrict}
+                              onChange={handleNominationChange}
+                              className={erreursNomination.brancheTypeDistrict ? CLS_SELECT_ERR : CLS_SELECT}
+                            >
+                              <option value="">Sélectionner une branche</option>
+                              {Object.entries(LABELS_BRANCHES).map(([valeur, libelle]) => (
+                                <option key={valeur} value={valeur}>{libelle}</option>
+                              ))}
+                            </select>
+                            {erreursNomination.brancheTypeDistrict && <p className="mt-1 text-xs text-red-600">{erreursNomination.brancheTypeDistrict}</p>}
+                          </div>
+                        ) : (
+                          <div>
+                            <label className={CLS_LABEL}>Fonction <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
+                            <input
+                              name="fonctionDistrict"
+                              value={formNomination.fonctionDistrict}
+                              onChange={handleNominationChange}
+                              placeholder="Ex. Spiritualité, Secrétariat…"
+                              className={CLS_INPUT}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </section>
+                )}
               </div>
 
               <div className="flex flex-col gap-2 border-t border-gray-100 px-5 py-4 sm:flex-row sm:justify-end">

@@ -23,7 +23,7 @@ export interface PresenceScout {
     id: string
     nom: string
     prenom: string
-    numeroAdhesion: string | null
+    matricule: string | null
     brancheType: string | null
     autorisationCamp?: { ficheMedicale: boolean; autorisationParentale: boolean }
   }
@@ -44,6 +44,20 @@ export interface DonneesCreerActivite {
   lieu?: string
   type: string
   brancheType?: string
+}
+
+/**
+ * Modification partielle : un champ absent (undefined) est conservé par l'API,
+ * un champ optionnel à null (ou chaîne vide) est effacé.
+ */
+export interface DonneesModifierActivite {
+  titre?: string
+  description?: string | null
+  dateDebut?: string
+  dateFin?: string | null
+  lieu?: string | null
+  type?: string
+  brancheType?: string | null
 }
 
 async function fetchAvecErreur(url: string, options?: RequestInit) {
@@ -94,7 +108,7 @@ export function useCreerActivite() {
 export function useModifierActivite(id: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (donnees: Partial<DonneesCreerActivite>) =>
+    mutationFn: (donnees: DonneesModifierActivite) =>
       fetchAvecErreur(`/api/activites/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },

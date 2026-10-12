@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_TYPE_ACTIVITE } from '@/lib/activites'
+import { PERIMETRE_V1 } from '@/lib/perimetreV1'
 import { Church } from '@/lib/icons'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
@@ -67,10 +68,14 @@ export default function PageParoisse() {
 
       if (inclureActivites) {
         const maintenant = new Date()
-        const aVenir = (activitesData.activites ?? []).filter((a: Activite) => {
-          const fin = a.dateFin ? new Date(a.dateFin) : new Date(a.dateDebut)
-          return fin >= maintenant
-        })
+        // L'API trie par date décroissante : on remet les activités à venir
+        // dans l'ordre chronologique pour afficher les plus proches en premier.
+        const aVenir = (activitesData.activites ?? [])
+          .filter((a: Activite) => {
+            const fin = a.dateFin ? new Date(a.dateFin) : new Date(a.dateDebut)
+            return fin >= maintenant
+          })
+          .sort((a: Activite, b: Activite) => new Date(a.dateDebut).getTime() - new Date(b.dateDebut).getTime())
         setActivitesAVenir(aVenir)
       }
     }).catch(() => { toast.error('Impossible de charger les informations'); setChargementErreur(true) })
@@ -89,8 +94,15 @@ export default function PageParoisse() {
       const res = await fetch('/api/upload', { method: 'POST', body: fd })
       const data = await res.json()
       if (!res.ok) { toast.error(data.erreur ?? 'Erreur upload'); setLogoPreview(paroisse?.logo ?? ''); return }
-      await fetch('/api/paroisse', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ logo: data.url }) })
+      const resLogo = await fetch('/api/paroisse', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ logo: data.url }) })
+      if (!resLogo.ok) {
+        const erreur = await resLogo.json().catch(() => ({}))
+        toast.error(erreur.erreur ?? 'Impossible d’enregistrer le logo')
+        setLogoPreview(paroisse?.logo ?? '')
+        return
+      }
       setParoisse((p) => p ? { ...p, logo: data.url } : p)
+      setLogoPreview(data.url)
     } catch {
       toast.error("Erreur lors de l'envoi du logo")
       setLogoPreview(paroisse?.logo ?? '')
@@ -303,7 +315,12 @@ export default function PageParoisse() {
       {/* Activités à venir — visible pour tous les rôles */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
         <h2 className="text-sm font-semibold text-gray-800 mb-4">Prochaines activités</h2>
-        {estParent ? (
+        {PERIMETRE_V1 && (estParent || role === 'SCOUT') ? (
+          // Espaces parent et scout hors périmètre V1 : pas de renvoi vers leurs pages.
+          <p className="text-sm text-gray-500 text-center py-4">
+            Les prochaines activités vous sont communiquées par l’encadrement de votre branche.
+          </p>
+        ) : estParent ? (
           <p className="text-sm text-gray-500 text-center py-4">
             Consultez les prochaines activités de vos enfants depuis{' '}
             <Link href="/dashboard/mes-enfants" className="text-(--cp) hover:underline font-medium">Mes enfants</Link>.

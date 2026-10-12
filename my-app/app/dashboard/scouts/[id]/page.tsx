@@ -11,7 +11,7 @@ import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@/lib/branches'
 import { LABELS_TYPE_DOCUMENT } from '@/lib/documents'
 import { ICONES_TYPE_DOCUMENT, Camera, AlertTriangle, Check, Paperclip, ArrowRight } from '@/lib/icons'
 import { LABELS_TYPE_COTISATION, LABELS_STATUT_COTISATION, COULEURS_STATUT_COTISATION, formatMontantFCFA, anneeScolaireCourante, STATUTS_COTISANT } from '@/lib/cotisations'
-import { ROLES_BRANCHE, ROLES_GROUPE } from '@/lib/roles'
+import { ROLES_BRANCHE, ROLES_GROUPE, ROLES_GROUPE_ETENDU } from '@/lib/roles'
 import { PERIMETRE_V1, pageHorsPerimetreV1 } from '@/lib/perimetreV1'
 import { PasswordInput } from '@/app/components/PasswordInput'
 import { REGLE_MOT_DE_PASSE } from '@/lib/password'
@@ -89,6 +89,8 @@ export default function FicheScoutPage() {
   // Cotisations V1 : statut cotisant par année (adhésion annuelle), année en
   // cours toujours affichée, même sans ligne enregistrée.
   const estChefGroupe = ROLES_GROUPE.includes(session?.user?.role ?? '')
+  // Aligné sur PUT /api/scouts/[id]/matricule (équipe de groupe uniquement).
+  const peutGererMatricule = ROLES_GROUPE_ETENDU.includes(session?.user?.role ?? '')
   const adhesions = scout.cotisations.filter((c) => c.type === 'ADHESION_ANNUELLE')
   const anneesCotisation = [...new Set([anneeScolaireCourante(), ...adhesions.map((c) => c.anneeScolaire)])]
     .sort((a, b) => b.localeCompare(a))
@@ -260,15 +262,17 @@ export default function FicheScoutPage() {
             <span className="font-mono text-lg font-bold text-(--cp) bg-(--cp)/5 px-3 py-1 rounded">
               {scout.matricule}
             </span>
-            <button onClick={() => setAfficherFormulaireMatricule(!afficherFormulaireMatricule)} className="text-sm text-gray-500 underline hover:text-gray-700">
-              Modifier
-            </button>
+            {peutGererMatricule && (
+              <button onClick={() => setAfficherFormulaireMatricule(!afficherFormulaireMatricule)} className="text-sm text-gray-500 underline hover:text-gray-700">
+                Modifier
+              </button>
+            )}
           </div>
         ) : (
           <p className="text-sm text-gray-500 mb-2">Aucun matricule attribué pour l&apos;instant.</p>
         )}
 
-        {!scout.matricule && !afficherFormulaireMatricule && (
+        {peutGererMatricule && !scout.matricule && !afficherFormulaireMatricule && (
           <button
             onClick={() => setAfficherFormulaireMatricule(true)}
             className="mt-2 text-sm bg-(--cp) text-white px-3 py-1.5 rounded-md hover:brightness-110 transition-all"
@@ -277,7 +281,7 @@ export default function FicheScoutPage() {
           </button>
         )}
 
-        {afficherFormulaireMatricule && (
+        {peutGererMatricule && afficherFormulaireMatricule && (
           <form onSubmit={handleAttribuerMatricule} className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-start">
             <div className="w-full sm:w-auto">
               <input

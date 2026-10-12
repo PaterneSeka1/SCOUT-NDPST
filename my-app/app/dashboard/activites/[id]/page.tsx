@@ -2,6 +2,7 @@
 
 import { use } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useActivite, useSupprimerActivite } from '@/hooks/useActivites'
@@ -16,6 +17,9 @@ export default function PageDetailActivite({ params }: { params: Promise<{ id: s
   const router = useRouter()
   const { data: activite, isLoading } = useActivite(id)
   const supprimerActivite = useSupprimerActivite()
+  const { data: session } = useSession()
+  // Aligné sur DELETE /api/activites/[id] : créateur ou Chef de Groupe.
+  const peutSupprimer = Boolean(activite) && (session?.user?.role === 'CHEF_GROUPE' || activite?.creePar === session?.user?.id)
 
   function formaterDate(dateStr: string) {
     return new Date(dateStr).toLocaleDateString('fr-FR', {
@@ -104,13 +108,15 @@ export default function PageDetailActivite({ params }: { params: Promise<{ id: s
           >
             Modifier
           </Link>
-          <button
-            onClick={handleSupprimer}
-            disabled={supprimerActivite.isPending}
-            className="px-3 py-2 border border-red-300 text-red-600 rounded-lg text-sm hover:bg-red-50 transition-colors disabled:opacity-50"
-          >
-            Supprimer
-          </button>
+          {peutSupprimer && (
+            <button
+              onClick={handleSupprimer}
+              disabled={supprimerActivite.isPending}
+              className="px-3 py-2 border border-red-300 text-red-600 rounded-lg text-sm hover:bg-red-50 transition-colors disabled:opacity-50"
+            >
+              Supprimer
+            </button>
+          )}
         </div>
       </div>
 

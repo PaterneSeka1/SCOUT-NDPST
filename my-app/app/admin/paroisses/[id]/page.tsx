@@ -10,6 +10,7 @@ import { confirmer } from '@/app/components/ConfirmDialog'
 import { COULEURS_ROLES, LABELS_ROLES, ROLES_BRANCHE, ROLES_TOUT_STAFF, libelleRoleAvecFonction } from '@/lib/roles'
 import { BackLink } from '@/app/components/ui/BackLink'
 import { Download } from '@/lib/icons'
+import { PERIMETRE_V1 } from '@/lib/perimetreV1'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
@@ -58,6 +59,8 @@ interface FormChefGroupe {
 
 const CHEF_VIDE: FormChefGroupe = { nom: '', prenom: '', matricule: '', telephone: '', email: '', motDePasse: '' }
 const OPTIONS_MEMBRES_PAR_PAGE = [10, 20, 50]
+// Espaces parent et scout hors périmètre V1 : filtres masqués.
+const PROFILS_HORS_V1 = ['parents', 'scouts']
 const PROFILS_MEMBRES = [
   { value: '', label: 'Tous les membres' },
   { value: 'staff', label: 'Staff paroissial' },
@@ -67,7 +70,7 @@ const PROFILS_MEMBRES = [
   { value: 'scouts', label: 'Scouts' },
   { value: 'district', label: 'Affectation district' },
   { value: 'inactifs', label: 'Comptes inactifs' },
-]
+].filter((p) => !(PERIMETRE_V1 && PROFILS_HORS_V1.includes(p.value)))
 
 function normaliser(valeur: string): string {
   return valeur.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()

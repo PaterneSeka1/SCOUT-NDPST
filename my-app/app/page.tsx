@@ -2,7 +2,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { ParoisseLogoImage } from '@/app/components/ParoisseLogoImage'
-import { Users, CalendarRange, CheckSquare, Award, ArrowRight, type LucideIcon } from '@/lib/icons'
+import { Users, CalendarRange, CheckSquare, Award, Wallet, ArrowRight, type LucideIcon } from '@/lib/icons'
+import { PERIMETRE_V1 } from '@/lib/perimetreV1'
 
 // Sans ceci, Next.js prérend cette page une seule fois au build (aucune API
 // dynamique utilisée ici) et fige la config lue en base à cet instant : les
@@ -31,8 +32,9 @@ const DEFAULT_CONFIG: SiteConfig = {
     imageAlt: "Responsables et scouts réunis dans une cour de paroisse – ASCCI Côte d'Ivoire",
     badge: 'Suivi pédagogique paroissial',
     titre: 'SCOUT ASCCI',
-    sousTitre:
-      "Une application claire pour gérer les scouts catholiques de Côte d'Ivoire, suivre les activités, les présences et la progression pédagogique depuis un même espace.",
+    sousTitre: PERIMETRE_V1
+      ? "Une application claire pour gérer les scouts catholiques de Côte d'Ivoire : effectifs, activités, réunions, présences et cotisations, depuis un même espace."
+      : "Une application claire pour gérer les scouts catholiques de Côte d'Ivoire, suivre les activités, les présences et la progression pédagogique depuis un même espace.",
   },
   stats: [
     { value: '5', label: 'Branches suivies' },
@@ -82,25 +84,35 @@ const modules: { title: string; text: string; accent: string; icone: LucideIcon 
     accent: 'bg-[#2563eb]',
     icone: CheckSquare,
   },
-  {
-    title: 'Progression',
-    text: 'Accompagnez les badges, étapes pédagogiques et validations selon les responsabilités de chaque équipe.',
-    accent: 'bg-[#b45309]',
-    icone: Award,
-  },
+  // Périmètre V1 : progression et badges masqués, remplacés par l'offre réelle.
+  PERIMETRE_V1
+    ? {
+      title: 'Réunions et cotisations',
+      text: 'Fixez les jours de réunion de chaque branche et repérez, année après année, les scouts à jour de leur cotisation.',
+      accent: 'bg-[#b45309]',
+      icone: Wallet,
+    }
+    : {
+      title: 'Progression',
+      text: 'Accompagnez les badges, étapes pédagogiques et validations selon les responsabilités de chaque équipe.',
+      accent: 'bg-[#b45309]',
+      icone: Award,
+    },
 ]
 
 const audiences = [
   'Administrateurs paroissiaux',
   'Chefs de groupe',
   'Responsables de branche',
-  'Parents et scouts',
+  PERIMETRE_V1 ? 'Adjoints et assistants de groupe' : 'Parents et scouts',
 ]
 
 const steps = [
   'Créer les comptes et rattacher les jeunes à leur paroisse.',
   'Organiser les activités et enregistrer les présences.',
-  'Suivre les progressions et garder les informations à jour.',
+  PERIMETRE_V1
+    ? 'Suivre les cotisations et garder les informations à jour.'
+    : 'Suivre les progressions et garder les informations à jour.',
 ]
 
 export default async function Home() {
@@ -222,8 +234,9 @@ export default async function Home() {
             </h2>
           </div>
           <p className="max-w-2xl text-base leading-8 text-[#5d6d62]">
-            La plateforme centralise tout ce dont les équipes ont besoin : effectifs, activités,
-            présences et suivi pédagogique, sans carnets dispersés.
+            {PERIMETRE_V1
+              ? 'La plateforme centralise tout ce dont les équipes ont besoin : effectifs, activités, réunions, présences et cotisations, sans carnets dispersés.'
+              : 'La plateforme centralise tout ce dont les équipes ont besoin : effectifs, activités, présences et suivi pédagogique, sans carnets dispersés.'}
           </p>
         </div>
 
@@ -253,7 +266,9 @@ export default async function Home() {
               Parcours terrain
             </p>
             <h2 className="mt-3 text-3xl font-black leading-tight sm:text-4xl">
-              De l&apos;inscription au suivi pédagogique, sans perdre le fil.
+              {PERIMETRE_V1
+                ? 'De l’inscription au suivi des cotisations, sans perdre le fil.'
+                : 'De l’inscription au suivi pédagogique, sans perdre le fil.'}
             </h2>
           </div>
 

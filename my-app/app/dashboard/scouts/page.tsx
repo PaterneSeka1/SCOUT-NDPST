@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+import { toast } from 'sonner'
 import { LABELS_BRANCHES, COULEURS_BRANCHES, ORDRE_BRANCHES } from '@/lib/branches'
 import { useScouts, useModifierScout } from '@/hooks/useScouts'
 import type { Scout } from '@/hooks/useScouts'
@@ -43,7 +45,13 @@ function SkeletonRow() {
 
 function CarteScout({ scout }: { scout: Scout }) {
   const { mutateAsync, isPending } = useModifierScout(scout.id)
-  const handleToggle = async () => { await mutateAsync({ actif: !scout.actif }) }
+  const handleToggle = async () => {
+    try {
+      await mutateAsync({ actif: !scout.actif })
+    } catch (err) {
+      toast.error((err as Error).message || 'Impossible de modifier le statut du scout')
+    }
+  }
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2.5">
@@ -100,7 +108,13 @@ function CarteScout({ scout }: { scout: Scout }) {
 
 function LigneScout({ scout }: { scout: Scout }) {
   const { mutateAsync, isPending } = useModifierScout(scout.id)
-  const handleToggle = async () => { await mutateAsync({ actif: !scout.actif }) }
+  const handleToggle = async () => {
+    try {
+      await mutateAsync({ actif: !scout.actif })
+    } catch (err) {
+      toast.error((err as Error).message || 'Impossible de modifier le statut du scout')
+    }
+  }
 
   return (
     <tr className="hover:bg-gray-50 transition-colors">
@@ -145,8 +159,22 @@ function LigneScout({ scout }: { scout: Scout }) {
   )
 }
 
+// useSearchParams impose une frontière Suspense pour le pré-rendu.
 export default function ScoutsPage() {
-  const [brancheFiltre, setBrancheFiltre] = useState('')
+  return (
+    <Suspense>
+      <ContenuScouts />
+    </Suspense>
+  )
+}
+
+function ContenuScouts() {
+  const searchParams = useSearchParams()
+  // Filtre initial depuis l'URL (lien « Voir les scouts » de la page Branches).
+  const [brancheFiltre, setBrancheFiltre] = useState(() => {
+    const branche = searchParams.get('branche') ?? ''
+    return ORDRE_BRANCHES.includes(branche) ? branche : ''
+  })
   const [recherche, setRecherche] = useState('')
   const [rechercheDebounce, setRechercheDebounce] = useState('')
   const [page, setPage] = useState(1)

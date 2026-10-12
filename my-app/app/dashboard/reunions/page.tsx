@@ -58,6 +58,8 @@ export default function PageReunions() {
   const estGroupe = ROLES_GROUPE.includes(role)
   const estBranche = ROLES_BRANCHE.includes(role)
   const peutCreer = estGroupe || estBranche
+  // Configuration des jours de réunion : PUT /api/reunions/config réservé au Chef de Groupe.
+  const peutConfigurer = estGroupe
 
   const [reunions, setReunions] = useState<Reunion[]>([])
   const [configs, setConfigs] = useState<Config[]>([])
@@ -96,29 +98,48 @@ export default function PageReunions() {
       danger: true,
     })
     if (!ok) return
-    const res = await fetch(`/api/reunions/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ statut: 'ANNULEE' }),
-    })
-    if (res.ok) setReunions((prev) => prev.map((r) => r.id === id ? { ...r, statut: 'ANNULEE' } : r))
+    try {
+      const res = await fetch(`/api/reunions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statut: 'ANNULEE' }),
+      })
+      if (res.ok) {
+        setReunions((prev) => prev.map((r) => r.id === id ? { ...r, statut: 'ANNULEE' } : r))
+        toast.success('Réunion annulée')
+      } else {
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.erreur ?? 'Impossible d’annuler la réunion')
+      }
+    } catch {
+      toast.error('Impossible d’annuler la réunion')
+    }
   }
 
   const handleReporter = async () => {
     if (!modalReport || !nouvelleDate) return
     setSoumissionReport(true)
-    const res = await fetch(`/api/reunions/${modalReport.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ statut: 'REPORTEE', dateReportee: new Date(nouvelleDate).toISOString() }),
-    })
-    if (res.ok) {
-      const updated = await res.json()
-      setReunions((prev) => prev.map((r) => r.id === updated.id ? { ...r, statut: 'REPORTEE', dateReportee: updated.dateReportee } : r))
-      setModalReport(null)
-      setNouvelleDate('')
+    try {
+      const res = await fetch(`/api/reunions/${modalReport.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statut: 'REPORTEE', dateReportee: new Date(nouvelleDate).toISOString() }),
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setReunions((prev) => prev.map((r) => r.id === updated.id ? { ...r, statut: 'REPORTEE', dateReportee: updated.dateReportee } : r))
+        setModalReport(null)
+        setNouvelleDate('')
+        toast.success('Réunion reportée')
+      } else {
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.erreur ?? 'Impossible de reporter la réunion')
+      }
+    } catch {
+      toast.error('Impossible de reporter la réunion')
+    } finally {
+      setSoumissionReport(false)
     }
-    setSoumissionReport(false)
   }
 
   const handleSaveConfig = (updated: Config) => {
@@ -159,7 +180,7 @@ export default function PageReunions() {
       </div>
 
       {/* Onglets */}
-      {peutCreer && (
+      {peutConfigurer && (
         <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
           {([['reunions', 'Réunions'], ['config', 'Configuration']] as const).map(([k, label]) => (
             <button key={k} onClick={() => setOnglet(k)}
@@ -171,7 +192,7 @@ export default function PageReunions() {
       )}
 
       {/* === Onglet Configuration === */}
-      {onglet === 'config' && peutCreer && (
+      {onglet === 'config' && peutConfigurer && (
         <div className="space-y-4">
           <p className="text-sm text-gray-500">
             Définissez le jour et l&apos;heure habituels de réunion pour chaque branche. Cette configuration s&apos;applique à toutes les années et pré-remplit le formulaire de planification.
@@ -268,18 +289,26 @@ function CarteConfig({ branche, config, onSave }: {
 
   const handleSave = async () => {
     setSauvegarde(true)
-    const res = await fetch('/api/reunions/config', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ brancheType: branche, jourSemaine, heureDebut, dureeMinutes, lieu: lieu || null }),
-    })
-    if (res.ok) {
-      const data = await res.json()
-      onSave(data)
-      toast.success('Enregistré')
-      setOuvert(false)
+    try {
+      const res = await fetch('/api/reunions/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brancheType: branche, jourSemaine, heureDebut, dureeMinutes, lieu: lieu || null }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        onSave(data)
+        toast.success('Enregistré')
+        setOuvert(false)
+      } else {
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.erreur ?? 'Impossible d’enregistrer la configuration')
+      }
+    } catch {
+      toast.error('Impossible d’enregistrer la configuration')
+    } finally {
+      setSauvegarde(false)
     }
-    setSauvegarde(false)
   }
 
   return (

@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { formatMontantFCFA } from '@/lib/cotisations'
 import { GraphiqueUtilisateursParCategorie, GraphiqueCotisations, GraphiqueScoutsParParoisse } from './KpiCharts'
 import { ICONES_KPI, ICONE_KPI_DEFAUT } from '@/lib/icons'
+import { PERIMETRE_V1 } from '@/lib/perimetreV1'
 
 interface Totaux {
   paroisses: number
@@ -63,8 +64,11 @@ export default function AdminAccueil() {
     { label: 'Activités', value: totaux?.activites ?? 0, couleur: '#3498db' },
     { label: 'Taux de présence', value: `${kpis?.tauxPresence ?? 0} %`, couleur: '#27ae60' },
     { label: 'Activités ce mois', value: kpis?.activitesMois ?? 0, couleur: '#3498db' },
-    { label: 'Cotisations payées', value: formatMontantFCFA(kpis?.cotisationsPayees ?? 0), couleur: '#27ae60' },
-    { label: 'Cotisations en attente', value: formatMontantFCFA(kpis?.cotisationsEnAttente ?? 0), couleur: '#f39c12' },
+    // Montants en FCFA hors périmètre V1 (marquage cotisant / non cotisant uniquement).
+    ...(PERIMETRE_V1 ? [] : [
+      { label: 'Cotisations payées', value: formatMontantFCFA(kpis?.cotisationsPayees ?? 0), couleur: '#27ae60' },
+      { label: 'Cotisations en attente', value: formatMontantFCFA(kpis?.cotisationsEnAttente ?? 0), couleur: '#f39c12' },
+    ]),
   ]
 
   return (
@@ -93,7 +97,7 @@ export default function AdminAccueil() {
 
       <div>
         <h2 className="text-sm font-semibold text-gray-700 mb-3">Indicateurs clés</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className={`grid grid-cols-2 gap-3 ${PERIMETRE_V1 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
           {cartes.map((c) => {
             const Icone = ICONES_KPI[c.label] ?? ICONE_KPI_DEFAUT
             return (
@@ -112,14 +116,17 @@ export default function AdminAccueil() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <GraphiqueUtilisateursParCategorie
-          staff={kpis?.utilisateursParCategorie.staff ?? 0}
-          parents={kpis?.utilisateursParCategorie.parents ?? 0}
-          comptesScouts={kpis?.utilisateursParCategorie.comptesScouts ?? 0}
-        />
-        <GraphiqueCotisations payees={kpis?.cotisationsPayees ?? 0} enAttente={kpis?.cotisationsEnAttente ?? 0} />
-      </div>
+      {/* Comptes parents/scouts et montants de cotisation : hors périmètre V1. */}
+      {!PERIMETRE_V1 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <GraphiqueUtilisateursParCategorie
+            staff={kpis?.utilisateursParCategorie.staff ?? 0}
+            parents={kpis?.utilisateursParCategorie.parents ?? 0}
+            comptesScouts={kpis?.utilisateursParCategorie.comptesScouts ?? 0}
+          />
+          <GraphiqueCotisations payees={kpis?.cotisationsPayees ?? 0} enAttente={kpis?.cotisationsEnAttente ?? 0} />
+        </div>
+      )}
 
       <GraphiqueScoutsParParoisse paroisses={paroisses} />
     </div>

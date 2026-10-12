@@ -8,6 +8,7 @@ import { confirmer } from '@/app/components/ConfirmDialog'
 import { SelecteurMembre } from '@/app/components/SelecteurMembre'
 import { COULEURS_ROLES, LABELS_ROLES, ROLES_TOUT_STAFF, libelleRoleAvecFonction } from '@/lib/roles'
 import { BackLink } from '@/app/components/ui/BackLink'
+import { PERIMETRE_V1 } from '@/lib/perimetreV1'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
 
@@ -73,6 +74,8 @@ interface District {
   membres: MembreDistrict[]
 }
 
+// Espaces parent et scout hors périmètre V1 : filtres masqués.
+const PROFILS_HORS_V1 = ['parents', 'scouts']
 const PROFILS_MEMBRES = [
   { value: '', label: 'Tous les membres' },
   { value: 'equipe-district', label: 'Équipe district' },
@@ -80,7 +83,7 @@ const PROFILS_MEMBRES = [
   { value: 'parents', label: 'Parents' },
   { value: 'scouts', label: 'Scouts' },
   { value: 'inactifs', label: 'Comptes inactifs' },
-]
+].filter((p) => !(PERIMETRE_V1 && PROFILS_HORS_V1.includes(p.value)))
 
 const OPTIONS_MEMBRES_PAR_PAGE = [10, 20, 50]
 

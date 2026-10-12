@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_BRANCHES } from '@/lib/branches'
+import { ROLES_BRANCHE } from '@/lib/roles'
 import { useCreerScout } from '@/hooks/useScouts'
 import type { DonneesContact } from '@/hooks/useScouts'
 import { BackLink } from '@/app/components/ui/BackLink'
@@ -54,6 +56,25 @@ export default function NouveauScoutPage() {
   const [erreurPhoto, setErreurPhoto] = useState('')
   const [contacts, setContacts] = useState<ContactForm[]>([contactVide()])
   const [erreurs, setErreurs] = useState<FormErrors>({})
+
+  // L'encadrement de branche ne peut inscrire que dans sa propre branche (le
+  // serveur l'impose) : on présélectionne et verrouille la branche.
+  const { data: session } = useSession()
+  const estRoleBranche = ROLES_BRANCHE.includes(session?.user?.role ?? '')
+  const [brancheImposee, setBrancheImposee] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!estRoleBranche) return
+    fetch('/api/me/branche')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.brancheType) {
+          setBrancheImposee(data.brancheType)
+          setBrancheType(data.brancheType)
+        }
+      })
+      .catch(() => toast.error('Impossible de charger votre branche'))
+  }, [estRoleBranche])
 
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fichier = e.target.files?.[0]
@@ -193,10 +214,12 @@ export default function NouveauScoutPage() {
             <div>
               <label className={CLS_LABEL}>Branche <span className="text-red-500">*</span></label>
               <select value={brancheType} onChange={(e) => { setBrancheType(e.target.value); setErreurs((p) => ({ ...p, brancheType: undefined })) }}
-                className={erreurs.brancheType ? CLS_SELECT_ERR : CLS_SELECT}>
+                disabled={brancheImposee !== null}
+                className={`${erreurs.brancheType ? CLS_SELECT_ERR : CLS_SELECT} disabled:bg-gray-50 disabled:text-gray-500`}>
                 <option value="">Sélectionner une branche</option>
                 {BRANCHES_LISTE.map((b) => <option key={b} value={b}>{LABELS_BRANCHES[b]}</option>)}
               </select>
+              {brancheImposee && <p className="mt-1 text-xs text-gray-400">Inscription limitée à votre branche.</p>}
               {erreurs.brancheType && <p className="mt-1 text-xs text-red-600">{erreurs.brancheType}</p>}
             </div>
           </div>

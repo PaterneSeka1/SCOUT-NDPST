@@ -19,23 +19,27 @@ export default function LoginPage() {
     e.preventDefault()
     setChargement(true)
 
-    const result = await signIn('credentials', {
-      identifiant,
-      password,
-      redirect: false,
-    })
+    try {
+      const result = await signIn('credentials', {
+        identifiant,
+        password,
+        redirect: false,
+      })
 
-    setChargement(false)
-
-    if (result?.error) {
-      toast.error(
-        result.error === 'CredentialsSignin'
-          ? 'Identifiant ou mot de passe incorrect.'
-          : result.error,
-      )
-    } else {
-      const session = await getSession()
-      router.push(session?.user?.role === 'ADMIN_PLATEFORME' ? '/admin' : '/dashboard')
+      if (result?.error) {
+        toast.error(
+          result.error === 'CredentialsSignin'
+            ? 'Identifiant ou mot de passe incorrect.'
+            : result.error,
+        )
+      } else {
+        const session = await getSession()
+        router.push(session?.user?.role === 'ADMIN_PLATEFORME' ? '/admin' : '/dashboard')
+      }
+    } catch {
+      toast.error('Connexion impossible. Vérifiez votre accès à Internet, puis réessayez.')
+    } finally {
+      setChargement(false)
     }
   }
 

@@ -49,12 +49,16 @@ export default function PageModifierActivite({ params }: { params: Promise<{ id:
     try {
       await modifierActivite.mutateAsync({
         titre: titre.trim(),
-        description: description.trim() || undefined,
+        // Champs optionnels vidés : null (ou chaîne vide) pour que l'API les
+        // efface — undefined signifierait « inchangé ».
+        description: description.trim() || null,
         dateDebut,
-        dateFin: dateFin || undefined,
-        lieu: lieu.trim() || undefined,
+        // PUT /api/activites/[id] refuse dateFin: null (contrôle typeof
+        // string) mais traite la chaîne vide comme un effacement.
+        dateFin: dateFin || '',
+        lieu: lieu.trim() || null,
         type,
-        brancheType: brancheType || undefined,
+        brancheType: brancheType || null,
       })
       toast.success('Activité mise à jour.')
       router.push(`/dashboard/activites/${id}`)

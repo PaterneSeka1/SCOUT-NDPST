@@ -10,6 +10,7 @@ import { PasswordInput } from '@/app/components/PasswordInput'
 import { SelecteurEnfants } from '@/app/components/SelecteurEnfants'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@/lib/password'
 import { BackLink } from '@/app/components/ui/BackLink'
+import { PERIMETRE_V1 } from '@/lib/perimetreV1'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
 const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
@@ -185,9 +186,12 @@ export default function ModifierUtilisateurPage() {
             <span className="text-sm text-gray-700">Compte actif</span>
           </label>
 
-          <div className="border-t border-gray-100 pt-4">
-            <SelecteurEnfants scoutIds={scoutIds} onChange={setScoutIds} scoutsInitiaux={utilisateur.enfants} />
-          </div>
+          {/* Espace parent hors périmètre V1 : les rattachements existants sont renvoyés tels quels. */}
+          {!PERIMETRE_V1 && (
+            <div className="border-t border-gray-100 pt-4">
+              <SelecteurEnfants scoutIds={scoutIds} onChange={setScoutIds} scoutsInitiaux={utilisateur.enfants} />
+            </div>
+          )}
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={soumissionInfos}

@@ -6,6 +6,7 @@ import { LABELS_ACTIONS_AUDIT } from '@/lib/audit-labels'
 import { LABELS_ROLES } from '@/lib/roles'
 import { History } from '@/lib/icons'
 import { EmptyState } from '@/app/components/ui/EmptyState'
+import { PERIMETRE_V1 } from '@/lib/perimetreV1'
 
 interface EntreeAudit {
   id: string
@@ -22,7 +23,10 @@ interface ParoisseOption { id: string; nom: string }
 
 // Toutes les entités tracées dans le journal, tous rôles confondus (paroisse
 // et plateforme) — voir les appels à enregistrerAudit() dans app/api.
+// Documents et rapports plateforme : fonctionnalités hors périmètre V1.
+const ENTITES_HORS_V1 = ['Document', 'RapportPlateforme']
 const ENTITES = ['Utilisateur', 'Scout', 'Document', 'Cotisation', 'JourReunion', 'Paroisse', 'District', 'RapportPlateforme']
+  .filter((e) => !(PERIMETRE_V1 && ENTITES_HORS_V1.includes(e)))
 
 function formatDetails(details: Record<string, unknown> | null): string {
   if (!details) return ''
