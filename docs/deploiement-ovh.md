@@ -1,0 +1,381 @@
+# Déploiement sur le VPS OVH
+
+Procédure complète pour remplacer l'ancienne installation (application Next.js unique `scout-ndpst`) par la nouvelle **installation paroisse**, en **repartant d'une base vide**. Elle sert aussi de référence pour les mises à jour suivantes (section 10). L'installation district, autonome (autre base), est décrite à la section 13.
+
+## Ce qui sera en place
+
+| Élément | Où | Rôle |
+| --- | --- | --- |
+| PostgreSQL 16 | Docker, `127.0.0.1:5434` | Seule donnée conservée sur le VPS, sauvegardée chaque nuit hors du VPS |
+| `scout-api` | pm2, `127.0.0.1:4000` | API NestJS, seule à accéder à la base |
+| `scout-web` | pm2, `127.0.0.1:3002` | Espace paroisse — `https://paroisse.example.ci` |
+| Fichiers téléversés | Cloudflare R2 | Photos, fiches médicales, autorisations, logos : **rien sur le VPS** |
+| Sauvegardes de la base | Cloudflare R2 | Chiffrées sur le VPS avant envoi, chaque nuit et avant chaque migration |
+| Nginx + Let's Encrypt | VPS | HTTPS vers l'espace paroisse ; l'API n'est pas exposée |
+
+L'administrateur plateforme n'a **pas de compte dans cette installation** : son compte unique vivra dans l'installation district, d'où il administrera aussi la paroisse (section 13). L'installation paroisse fait confiance à sa clé publique dès maintenant (étape 2.10).
+
+Dans tout ce document, remplacez `paroisse.example.ci` et `fichiers.example.ci` par vos domaines réels, et `/chemin/ancienne-installation` par le dossier actuel de l'application sur le VPS.
+
+> **Règle de prudence.** Rien n'est supprimé définitivement avant que la nouvelle installation ait été validée (section 9). Jusque-là, l'ancienne installation reste restaurable (section 11).
+
+---
+
+## 1. Préparer les domaines
+
+Chez le gestionnaire DNS, créer deux enregistrements :
+
+1. `paroisse.example.ci` → adresse IP du VPS (enregistrement A) ;
+2. `fichiers.example.ci` → **configuré depuis Cloudflare** à l'étape 2.3 (pas vers le VPS).
+
+Vérifier la propagation avant l'étape 7 : `dig +short paroisse.example.ci`.
+
+## 2. Préparer Cloudflare R2
+
+1. Dans le tableau de bord Cloudflare, ouvrir **R2** et créer trois buckets :
+   - `scout-prive` : photos des scouts, fiches médicales, autorisations ;
+   - `scout-public` : logos et image d'accueil ;
+   - `scout-sauvegardes` : sauvegardes chiffrées de la base.
+2. Sur `scout-prive` et `scout-sauvegardes` : **ne jamais activer l'accès public**.
+3. Sur `scout-public` : **Settings → Public access → Custom domain**, puis ajouter `fichiers.example.ci`.
+4. Vérifier que le domaine personnalisé est actif (statut « Active »).
+5. Sur `scout-sauvegardes` : **Settings → Object lifecycle rules**, ajouter une règle qui supprime les objets après 60 jours (durée de conservation des sauvegardes, à ajuster).
+6. **R2 → Manage API tokens → Create API token** :
+   - permission : *Object Read & Write* ;
+   - portée : uniquement les buckets `scout-prive` et `scout-public`.
+7. Créer un second jeton, de même permission, limité au seul bucket `scout-sauvegardes`.
+8. Noter l'**Account ID** et, pour chaque jeton, l'**Access Key ID** et le **Secret Access Key**. Les secrets ne sont affichés qu'une fois : les conserver dans un gestionnaire de mots de passe, jamais dans un courriel ni dans le dépôt.
+9. Choisir une **phrase secrète de sauvegarde** (au moins 20 caractères) et l'enregistrer dans le gestionnaire de mots de passe. Elle chiffre les sauvegardes : **sans elle, aucune sauvegarde ne peut être relue**, y compris après la perte du VPS.
+10. Générer, **une seule fois et sur votre poste** (pas sur le VPS), la paire de clés de l'administrateur plateforme :
+
+    ```bash
+    openssl ecparam -name prime256v1 -genkey -noout -out admin-prive.pem
+    openssl ec -in admin-prive.pem -pubout -out admin-public.pem
+    ```
+
+    - `admin-prive.pem` : à conserver dans le gestionnaire de mots de passe. Elle ne servira qu'à l'installation district (section 13) et ne doit **jamais** être copiée sur l'installation paroisse.
+    - `admin-public.pem` : à copier sur le VPS à l'étape 6.2. Elle ne permet que de vérifier les jetons de l'administrateur, pas d'en fabriquer.
+
+## 3. Sauvegarder l'ancienne production
+
+Même en repartant de zéro, on garde une archive complète de l'ancienne production, au cas où une donnée serait réclamée plus tard.
+
+Sur le VPS :
+
+```bash
+cd /chemin/ancienne-installation
+ARCHIVE=~/archive-scout-$(date +%Y%m%d)
+mkdir -p "$ARCHIVE"
+
+# Base de données (format compressé, restaurable avec pg_restore)
+docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T db \
+  pg_dump -U scout -Fc scout_db > "$ARCHIVE/base.dump"
+
+# Fichiers téléversés et configuration
+tar czf "$ARCHIVE/fichiers.tar.gz" my-app/uploads-prives my-app/uploads-publiques my-app/public/uploads 2>/dev/null
+cp .env.prod my-app/.env "$ARCHIVE/" 2>/dev/null
+sudo cp /etc/nginx/sites-available/* "$ARCHIVE/" 2>/dev/null
+
+# Contrôle : la sauvegarde de la base ne doit pas être vide
+ls -lh "$ARCHIVE"
+docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T db pg_restore --list < "$ARCHIVE/base.dump" | head
+```
+
+Copier ensuite l'archive **hors du VPS**, depuis votre poste :
+
+```bash
+scp -r utilisateur@ip-du-vps:~/archive-scout-AAAAMMJJ .
+```
+
+L'archive contient des données personnelles (mineurs, fiches médicales) : la stocker chiffrée, avec un accès restreint.
+
+## 4. Retirer l'ancienne production
+
+```bash
+# 4.1 Arrêter l'application
+pm2 delete scout-ndpst
+pm2 save
+
+# 4.2 Désactiver son site Nginx (nom du fichier à adapter)
+ls /etc/nginx/sites-enabled/
+sudo rm /etc/nginx/sites-enabled/<ancien-site>
+sudo nginx -t && sudo systemctl reload nginx
+
+# 4.3 Arrêter l'ancienne base (libère le conteneur scout_db et le port 5434).
+#     SANS -v : le volume de données est conservé jusqu'à la section 12.
+cd /chemin/ancienne-installation
+docker compose --env-file .env.prod -f docker-compose.prod.yml down
+
+# 4.4 Mettre l'ancien dossier de côté
+mv /chemin/ancienne-installation /chemin/ancienne-installation.ancien
+```
+
+## 5. Préparer le serveur
+
+```bash
+node -v                     # 20.9 ou plus récent ; sinon installer Node.js 20 LTS (NodeSource ou nvm)
+sudo corepack enable        # rend la commande pnpm disponible
+pm2 -v || sudo npm install -g pm2
+docker compose version
+sudo nginx -v
+certbot --version || sudo apt install certbot python3-certbot-nginx
+
+# Pare-feu : seuls SSH, HTTP et HTTPS sont ouverts
+sudo ufw allow OpenSSH && sudo ufw allow 'Nginx Full' && sudo ufw enable
+sudo ufw status
+```
+
+## 6. Installer la nouvelle version
+
+### 6.1 Récupérer le code
+
+```bash
+sudo mkdir -p /srv/scout-ascci && sudo chown "$USER" /srv/scout-ascci
+git clone <url-du-depot> /srv/scout-ascci
+cd /srv/scout-ascci
+git checkout <tag-ou-commit-a-deployer>    # une version précise, pas « ce qu'il y a sur main »
+```
+
+### 6.2 Fichiers d'environnement
+
+```bash
+cp .env.prod.example .env.prod
+cp apps/api/.env.example apps/api/.env
+cp apps/web-paroisse/.env.example apps/web-paroisse/.env
+chmod 600 .env.prod apps/api/.env apps/web-paroisse/.env
+
+# Clé PUBLIQUE de l'administrateur plateforme (étape 2.10), depuis votre poste :
+#   scp admin-public.pem utilisateur@ip-du-vps:/tmp/
+sudo mkdir -p /etc/scout-ascci
+sudo mv /tmp/admin-public.pem /etc/scout-ascci/admin-public.pem
+sudo chmod 644 /etc/scout-ascci/admin-public.pem
+
+# Secrets à générer (une valeur différente pour chacun)
+node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+```
+
+Valeurs à renseigner :
+
+| Fichier | Variable | Valeur |
+| --- | --- | --- |
+| `.env.prod` | `POSTGRES_PASSWORD` | secret généré |
+| `apps/api/.env` | `NODE_ENV` | `production` |
+| | `DATABASE_URL` | `postgresql://scout:<POSTGRES_PASSWORD>@127.0.0.1:5434/scout_db` |
+| | `JWT_ACCESS_SECRET` | secret généré, propre à cette installation |
+| | `INSTALLATION_ID` | `paroisse-wiradjuri` |
+| | `ADMIN_EMETTEUR_CONFIANCE` | `district-abidjan` (identifiant que portera l'installation district) |
+| | `ADMIN_CLE_PUBLIQUE_FICHIER` | `/etc/scout-ascci/admin-public.pem` |
+| | `URL_FRONTEND_PAROISSE` | `https://paroisse.example.ci` |
+| | `TRUST_PROXY` | `loopback` |
+| | `SWAGGER_ACTIF` | `false` |
+| | `CRON_SECRET` | secret généré |
+| | `SMTP_*` | compte d'envoi des courriels (mot de passe oublié, bienvenue) |
+| | `STORAGE_S3_BUCKET` | `scout-prive` |
+| | `STORAGE_S3_BUCKET_PUBLIC` | `scout-public` |
+| | `STORAGE_S3_REGION` | `auto` |
+| | `STORAGE_S3_ENDPOINT` | `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` |
+| | `STORAGE_S3_ACCESS_KEY_ID`, `STORAGE_S3_SECRET_ACCESS_KEY` | premier jeton R2 (étape 2.6) |
+| | `SAUVEGARDE_S3_BUCKET` | `scout-sauvegardes` |
+| | `SAUVEGARDE_S3_ACCESS_KEY_ID`, `SAUVEGARDE_S3_SECRET_ACCESS_KEY` | second jeton R2 (étape 2.7) |
+| | `SAUVEGARDE_PHRASE` | phrase secrète de l'étape 2.9 |
+| | `STORAGE_PUBLIC_URL_BASE` | `https://fichiers.example.ci` |
+| | `STORAGE_DOSSIER_LOCAL` | supprimer la ligne (inutilisé en production) |
+| `apps/web-paroisse/.env` | `API_URL_INTERNE` | `http://127.0.0.1:4000` |
+| | `NEXT_PUBLIC_SITE_URL` | `https://paroisse.example.ci` |
+| | `STORAGE_PUBLIC_URL_BASE` | `https://fichiers.example.ci` |
+
+L'API vérifie cette configuration au démarrage. Une valeur manquante (R2 incomplet, secret trop court…) l'empêche de démarrer, avec un message qui nomme la variable en cause.
+
+### 6.3 Déployer
+
+```bash
+./deploy-ovh.sh
+```
+
+Le script contrôle les fichiers d’environnement, la configuration R2 et celle des sauvegardes, démarre la base, installe les dépendances, compile l'API et l'espace paroisse, envoie une sauvegarde chiffrée de la base dans R2, applique les migrations, puis démarre `scout-api` et `scout-web`. Il s'arrête au premier problème avec un message explicite.
+
+### 6.4 Initialiser la plateforme (une seule fois)
+
+```bash
+cd /srv/scout-ascci/apps/api
+corepack pnpm initialiser --sans-admin
+```
+
+`--sans-admin` : aucun compte administrateur n'est créé ici, il sera hébergé par l'installation district. Le script demande, dans le terminal :
+
+- le **district** et la **paroisse** ;
+- le **Chef de Groupe** : il se connecte à `paroisse.example.ci` et gère la paroisse (membres, branches, logo et couleurs de la paroisse).
+
+Les mots de passe sont saisis sans affichage (8 caractères minimum, avec une lettre et un chiffre). Le script refuse de s'exécuter si la base contient déjà des comptes.
+
+## 7. Nginx et HTTPS
+
+```bash
+cd /srv/scout-ascci
+sudo cp deploy/nginx-scout.conf /etc/nginx/sites-available/scout-ascci
+sudo sed -i 's/paroisse\.example\.ci/VOTRE-DOMAINE/g' /etc/nginx/sites-available/scout-ascci
+
+# Certificat (avant d'activer le site, qui y fait référence)
+sudo certbot certonly --nginx -d VOTRE-DOMAINE
+# En cas d'échec (« Could not automatically find a matching server block ») :
+#   sudo systemctl stop nginx
+#   sudo certbot certonly --standalone -d VOTRE-DOMAINE
+#   sudo systemctl start nginx
+# puis adapter les chemins ssl_certificate de la configuration au dossier créé
+# (sudo certbot certificates les affiche).
+
+sudo ln -s /etc/nginx/sites-available/scout-ascci /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot renew --dry-run      # le renouvellement automatique fonctionne
+```
+
+## 8. Persistance et journaux
+
+```bash
+pm2 startup          # exécuter la commande affichée, une seule fois
+pm2 save
+pm2 install pm2-logrotate
+pm2 set pm2-logrotate:max_size 20M
+pm2 set pm2-logrotate:retain 14
+```
+
+### 8.1 Sauvegarde quotidienne de la base
+
+Programmer la sauvegarde chiffrée chaque nuit à 2 h 30 (heure du serveur) :
+
+```bash
+crontab -e
+```
+
+Ajouter la ligne suivante (une seule ligne) :
+
+```text
+30 2 * * * cd /srv/scout-ascci/apps/api && /usr/bin/env corepack pnpm sauvegarder >> "$HOME/sauvegarde-scout.log" 2>&1
+```
+
+Deux conditions pour que la tâche fonctionne sous cron :
+
+- l'utilisateur appartient au groupe `docker` (`groups` doit l'afficher), car la sauvegarde lit la base dans son conteneur ;
+- `corepack` est accessible avec le PATH minimal de cron. Si Node.js est installé avec nvm, remplacer `/usr/bin/env corepack` par le chemin complet donné par `which corepack`.
+
+Lancer une fois la commande à la main pour vérifier, puis le lendemain contrôler le journal. Le journal `~/sauvegarde-scout.log` contient une ligne par sauvegarde : `sauvegarde.terminee` en cas de succès, `sauvegarde.echec` avec la cause sinon. Le consulter régulièrement (`tail ~/sauvegarde-scout.log`).
+
+## 9. Vérifier
+
+| Contrôle | Commande ou action | Attendu |
+| --- | --- | --- |
+| Processus | `pm2 ls` | `scout-api` et `scout-web` `online`, compteur de redémarrages stable après 5 minutes |
+| API | `curl -fsS http://127.0.0.1:4000/api/sante` | `{"statut":"ok"}` |
+| Journaux | `pm2 logs --lines 50` | aucune erreur au démarrage |
+| Espace paroisse | connexion du Chef de Groupe sur `https://paroisse.example.ci` | tableau de bord affiché |
+| Fichiers publics | téléverser le logo depuis la fiche de la paroisse | logo affiché, adresse en `https://fichiers.example.ci/public/…` |
+| Fichiers privés | ajouter la photo d'un scout | photo affichée ; objet visible dans `scout-prive` sur Cloudflare |
+| Rien sur le VPS | `ls /srv/scout-ascci/apps/api/uploads-* 2>&1` | « No such file or directory » |
+| Certificat | `sudo certbot certificates` | certificat valide pour `paroisse.example.ci` |
+| Sauvegarde | `cd apps/api && corepack pnpm sauvegarder` | ligne `sauvegarde.terminee` |
+| Relecture | `corepack pnpm restaurer-sauvegarde --derniere --sortie /tmp/essai.dump` puis `rm /tmp/essai.dump` | « empreinte vérifiée » : la phrase secrète et la sauvegarde sont bonnes |
+
+## 10. Mises à jour suivantes
+
+```bash
+cd /srv/scout-ascci
+git fetch --tags && git checkout <nouveau-tag>
+./deploy-ovh.sh
+```
+
+Le script envoie une sauvegarde chiffrée de la base dans R2 avant chaque migration ; sans sauvegarde réussie, la migration n'est pas appliquée.
+
+## 10 bis. Restaurer une sauvegarde de la base
+
+À faire posément : une restauration remplace les données présentes dans la base cible. Restaurer d'abord dans une base de vérification, jamais directement en production sans l'avoir contrôlée.
+
+```bash
+cd /srv/scout-ascci/apps/api
+corepack pnpm restaurer-sauvegarde --lister
+corepack pnpm restaurer-sauvegarde --cle <clé choisie> --sortie /tmp/base.dump
+
+# Vérification dans une base séparée
+docker exec scout_db psql -U scout -d scout_db -c "create database scout_verification"
+docker exec -i scout_db pg_restore -U scout -d scout_verification --no-owner < /tmp/base.dump
+docker exec scout_db psql -U scout -d scout_verification -c 'select count(*) from "Utilisateur"'
+
+# Une fois le contenu validé, et seulement alors : arrêter l'API, restaurer en production, redémarrer
+pm2 stop scout-api
+docker exec -i scout_db pg_restore -U scout -d scout_db --clean --if-exists --no-owner < /tmp/base.dump
+pm2 start scout-api
+
+# Nettoyage : le vidage contient des données personnelles
+docker exec scout_db psql -U scout -d scout_db -c "drop database scout_verification"
+rm /tmp/base.dump
+```
+
+Sur un nouveau serveur (VPS perdu), suivre les sections 5 et 6 sans l'étape 6.4, puis restaurer la dernière sauvegarde : il suffit de la configuration R2 et de la phrase secrète, conservées dans le gestionnaire de mots de passe.
+
+Tester une restauration complète au moins une fois par trimestre : une sauvegarde jamais relue n'est pas une sauvegarde.
+
+## 11. Retour arrière (avant la section 12 uniquement)
+
+Si la nouvelle installation ne fonctionne pas et que l'ancienne doit être remise en ligne :
+
+```bash
+pm2 delete scout-api scout-web && pm2 save
+cd /srv/scout-ascci && docker compose --env-file .env.prod -f docker-compose.prod.yml down
+sudo rm /etc/nginx/sites-enabled/scout-ascci
+
+mv /chemin/ancienne-installation.ancien /chemin/ancienne-installation
+cd /chemin/ancienne-installation
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d db
+cd my-app && pm2 start npm --name scout-ndpst --cwd "$PWD" -- run start -- -p 3002 && pm2 save
+sudo ln -s /etc/nginx/sites-available/<ancien-site> /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+## 12. Nettoyage définitif de l'ancienne installation
+
+**Après validation complète** de la nouvelle installation (au moins une semaine d'utilisation réelle), et une fois l'archive de la section 3 vérifiée hors du VPS :
+
+```bash
+# Repérer l'ancien volume : surtout PAS scout-ascci_postgres_data (nouvelle base)
+docker volume ls | grep postgres_data
+docker volume rm <ancien-volume>
+rm -rf /chemin/ancienne-installation.ancien
+rm -rf ~/archive-scout-AAAAMMJJ        # la copie hors VPS fait foi
+```
+
+Ces commandes sont irréversibles.
+
+## 13. Installation district (à venir)
+
+L'application district (`apps/web-district`) est une **installation autonome** : même code que l'API, mais sa propre base, ses propres buckets et ses propres secrets. Elle héberge le compte unique de l'administrateur plateforme, qui y règle l'apparence et administre aussi l'installation paroisse depuis la même console.
+
+Ce qui doit être **distinct** de l'installation paroisse :
+
+| Élément | Installation district |
+| --- | --- |
+| Dossier | par exemple `/srv/scout-district` (clone séparé) |
+| Base PostgreSQL | autre conteneur, autre port (par exemple 5436) et autre volume : adapter `container_name`, `ports` et `name` dans une copie de `docker-compose.prod.yml` |
+| API | autre port (par exemple 4100), processus pm2 `scout-district-api` |
+| Frontend | `apps/web-district`, autre port (par exemple 3004), processus pm2 `scout-district-web`, sous-domaine `district.example.ci` |
+| `JWT_ACCESS_SECRET` | **différent** : une session paroisse ne doit jamais être acceptée par le district, et inversement |
+| `INSTALLATION_ID` | `district-abidjan` (la valeur déclarée dans `ADMIN_EMETTEUR_CONFIANCE` côté paroisse) |
+| `ADMIN_CLE_PRIVEE_FICHIER` | `admin-prive.pem` de l'étape 2.10, en `chmod 600` |
+| Buckets R2 | `district-prive`, `district-public`, `district-sauvegardes` et leurs jetons |
+| Sauvegardes | sa propre tâche cron |
+
+Côté `apps/web-district/.env`, déclarer l'installation paroisse administrée :
+
+```text
+API_URL_INTERNE="http://127.0.0.1:4100"
+INSTALLATIONS_GEREES='[{"id":"paroisse-wiradjuri","nom":"Paroisse Wiradjuri","api":"http://127.0.0.1:4000"}]'
+```
+
+Initialisation : `corepack pnpm initialiser` **avec** l'administrateur cette fois.
+
+Une fois connecté à la console district, l'administrateur choisit « Paroisse Wiradjuri » dans le menu : les écrans d'administration agissent alors sur la base de la paroisse, et un bandeau le rappelle en permanence. Ses actions y sont journalisées comme celles d'un acteur externe (`acteurExterneId` dans le journal d'audit de la paroisse).
+
+`deploy-ovh.sh` et `deploy/ecosystem.config.cjs` ne couvrent aujourd'hui que l'installation paroisse : leurs équivalents pour le district seront à écrire au démarrage de cette installation.
+
+## Points ouverts
+
+- **Alerte en cas d'échec de sauvegarde.** Les échecs sont écrits dans `~/sauvegarde-scout.log`, sans notification. Une alerte (courriel, service de surveillance) reste à mettre en place.
+- **Rappels de documents.** La tâche planifiée `GET /api/cron/rappels-documents` (en-tête `x-cron-secret`) est hors du périmètre V1 et n'est pas programmée.
