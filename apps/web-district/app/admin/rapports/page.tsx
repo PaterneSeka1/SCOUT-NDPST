@@ -6,12 +6,22 @@ import { formatMontantFCFA } from '@scout/shared'
 import { ICONES_KPI, ICONE_KPI_DEFAUT } from '@/lib/icons'
 
 interface LigneParoisse {
-  id: string; nom: string; ville: string; actif: boolean
-  scouts: number; utilisateurs: number; activites: number; cotisations: number
+  id: string
+  nom: string
+  ville: string
+  actif: boolean
+  scouts: number
+  utilisateurs: number
+  activites: number
+  cotisations: number
 }
 
 interface Totaux {
-  paroisses: number; paroissesActives: number; scouts: number; utilisateurs: number; activites: number
+  paroisses: number
+  paroissesActives: number
+  scouts: number
+  utilisateurs: number
+  activites: number
 }
 
 interface KpisRapport {
@@ -42,7 +52,11 @@ export default function RapportsPlateforme() {
         if (!r.ok) throw new Error('Erreur serveur')
         return r.json()
       })
-      .then((data) => { setTotaux(data.totaux); setKpis(data.kpis); setParoisses(data.paroisses) })
+      .then((data) => {
+        setTotaux(data.totaux)
+        setKpis(data.kpis)
+        setParoisses(data.paroisses)
+      })
       .catch(() => toast.error('Impossible de charger les rapports.'))
       .finally(() => setChargement(false))
   }, [])
@@ -50,7 +64,7 @@ export default function RapportsPlateforme() {
   if (chargement) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--cp)' }} />
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2" style={{ borderColor: 'var(--cp)' }} />
       </div>
     )
   }
@@ -59,8 +73,8 @@ export default function RapportsPlateforme() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Rapports consolidés</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Comparatif de toutes les paroisses de la plateforme</p>
+          <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Rapports consolidés</h1>
+          <p className="mt-0.5 text-sm text-gray-500">Comparatif de toutes les paroisses de la plateforme</p>
         </div>
       </div>
 
@@ -68,7 +82,11 @@ export default function RapportsPlateforme() {
         {/* Palette catégorielle fixe (indépendante du thème par paroisse) —
             sert uniquement à distinguer visuellement les 4 indicateurs. */}
         {[
-          { label: 'Paroisses actives', value: `${totaux?.paroissesActives ?? 0} / ${totaux?.paroisses ?? 0}`, couleur: 'bg-[#1a4731]' },
+          {
+            label: 'Paroisses actives',
+            value: `${totaux?.paroissesActives ?? 0} / ${totaux?.paroisses ?? 0}`,
+            couleur: 'bg-[#1a4731]',
+          },
           { label: 'Scouts', value: totaux?.scouts ?? 0, couleur: 'bg-[#27ae60]' },
           { label: 'Utilisateurs', value: totaux?.utilisateurs ?? 0, couleur: 'bg-[#f39c12]' },
           { label: 'Activités', value: totaux?.activites ?? 0, couleur: 'bg-[#3498db]' },
@@ -76,9 +94,9 @@ export default function RapportsPlateforme() {
           const Icone = ICONES_KPI[label] ?? ICONE_KPI_DEFAUT
           return (
             <div key={label} className={`rounded-xl ${couleur} p-3 text-center text-white sm:p-4`}>
-              <Icone className="h-5 w-5 mx-auto mb-1.5 opacity-90" strokeWidth={2} />
+              <Icone className="mx-auto mb-1.5 h-5 w-5 opacity-90" strokeWidth={2} />
               <p className="text-2xl font-bold">{value}</p>
-              <p className="text-xs opacity-90 mt-0.5">{label}</p>
+              <p className="mt-0.5 text-xs opacity-90">{label}</p>
             </div>
           )
         })}
@@ -87,7 +105,7 @@ export default function RapportsPlateforme() {
       <section className="rounded-xl border border-gray-200 bg-white p-4">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-sm font-bold uppercase tracking-wide text-gray-700">Exports</h2>
+            <h2 className="text-sm font-bold tracking-wide text-gray-700 uppercase">Exports</h2>
             <p className="mt-0.5 text-xs text-gray-500">Téléchargements CSV compatibles Excel</p>
           </div>
         </div>
@@ -100,7 +118,9 @@ export default function RapportsPlateforme() {
             >
               <span className="font-semibold text-gray-900">{exportRapport.titre}</span>
               <span className="mt-1 text-xs text-gray-500">{exportRapport.description}</span>
-              <span className="mt-2 text-xs font-bold" style={{ color: 'var(--cp)' }}>Télécharger CSV</span>
+              <span className="mt-2 text-xs font-bold" style={{ color: 'var(--cp)' }}>
+                Télécharger CSV
+              </span>
             </a>
           ))}
         </div>
@@ -109,22 +129,24 @@ export default function RapportsPlateforme() {
       {kpis && (
         <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Ce mois</p>
+            <p className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Ce mois</p>
             <p className="mt-2 text-2xl font-bold text-gray-900">{kpis.activitesMois}</p>
-            <p className="text-sm text-gray-500">activité{kpis.activitesMois > 1 ? 's' : ''} enregistrée{kpis.activitesMois > 1 ? 's' : ''}</p>
+            <p className="text-sm text-gray-500">
+              activité{kpis.activitesMois > 1 ? 's' : ''} enregistrée{kpis.activitesMois > 1 ? 's' : ''}
+            </p>
           </div>
           <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Présence</p>
+            <p className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Présence</p>
             <p className="mt-2 text-2xl font-bold text-gray-900">{kpis.tauxPresence}%</p>
             <p className="text-sm text-gray-500">taux consolidé</p>
           </div>
           <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Cotisations payées</p>
+            <p className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Cotisations payées</p>
             <p className="mt-2 text-xl font-bold text-gray-900">{formatMontantFCFA(kpis.cotisationsPayees)}</p>
             <p className="text-sm text-gray-500">{formatMontantFCFA(kpis.cotisationsEnAttente)} en attente</p>
           </div>
           <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Comptes</p>
+            <p className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Comptes</p>
             <p className="mt-2 text-sm font-semibold text-gray-900">Staff : {kpis.utilisateursParCategorie.staff}</p>
             <p className="text-sm text-gray-600">Parents : {kpis.utilisateursParCategorie.parents}</p>
             <p className="text-sm text-gray-600">Scouts : {kpis.utilisateursParCategorie.comptesScouts}</p>
@@ -137,28 +159,30 @@ export default function RapportsPlateforme() {
           <article key={p.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h2 className="break-words text-base font-semibold text-gray-900">{p.nom}</h2>
+                <h2 className="text-base font-semibold wrap-break-word text-gray-900">{p.nom}</h2>
                 <p className="mt-1 text-sm text-gray-500">{p.ville}</p>
               </div>
-              <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${p.actif ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
+              <span
+                className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${p.actif ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}
+              >
                 {p.actif ? 'Active' : 'Désactivée'}
               </span>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2">
               <div className="rounded-lg bg-gray-50 px-3 py-2">
-                <p className="text-xs uppercase tracking-wide text-gray-500">Scouts</p>
+                <p className="text-xs tracking-wide text-gray-500 uppercase">Scouts</p>
                 <p className="mt-1 text-lg font-bold text-gray-900">{p.scouts}</p>
               </div>
               <div className="rounded-lg bg-gray-50 px-3 py-2">
-                <p className="text-xs uppercase tracking-wide text-gray-500">Utilisateurs</p>
+                <p className="text-xs tracking-wide text-gray-500 uppercase">Utilisateurs</p>
                 <p className="mt-1 text-lg font-bold text-gray-900">{p.utilisateurs}</p>
               </div>
               <div className="rounded-lg bg-gray-50 px-3 py-2">
-                <p className="text-xs uppercase tracking-wide text-gray-500">Activités</p>
+                <p className="text-xs tracking-wide text-gray-500 uppercase">Activités</p>
                 <p className="mt-1 text-lg font-bold text-gray-900">{p.activites}</p>
               </div>
               <div className="rounded-lg bg-gray-50 px-3 py-2">
-                <p className="text-xs uppercase tracking-wide text-gray-500">Cotisations</p>
+                <p className="text-xs tracking-wide text-gray-500 uppercase">Cotisations</p>
                 <p className="mt-1 text-lg font-bold text-gray-900">{p.cotisations}</p>
               </div>
             </div>
@@ -175,7 +199,7 @@ export default function RapportsPlateforme() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-200 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <tr className="border-b border-gray-200 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase">
                 <th className="px-4 py-3">Paroisse</th>
                 <th className="px-4 py-3 text-center">Scouts</th>
                 <th className="px-4 py-3 text-center">Utilisateurs</th>
@@ -196,7 +220,9 @@ export default function RapportsPlateforme() {
                   <td className="px-4 py-3 text-center text-gray-700">{p.activites}</td>
                   <td className="px-4 py-3 text-center text-gray-700">{p.cotisations}</td>
                   <td className="px-4 py-3 text-center">
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${p.actif ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
+                    <span
+                      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${p.actif ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}
+                    >
                       {p.actif ? 'Active' : 'Désactivée'}
                     </span>
                   </td>
@@ -204,7 +230,9 @@ export default function RapportsPlateforme() {
               ))}
               {paroisses.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400">Aucune paroisse enregistrée</td>
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                    Aucune paroisse enregistrée
+                  </td>
                 </tr>
               )}
             </tbody>

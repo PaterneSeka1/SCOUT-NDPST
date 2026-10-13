@@ -1,16 +1,6 @@
 'use client'
 
-import {
-  BarChart,
-  Bar,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  LabelList,
-  ResponsiveContainer,
-} from 'recharts'
+import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, LabelList, ResponsiveContainer } from 'recharts'
 import { formatMontantFCFA } from '@scout/shared'
 
 // Encre/grille reprises de la charte du dashboard — hairline, jamais en pointillés.
@@ -27,21 +17,20 @@ function hauteurGraphique(nbBarres: number): number {
   return Math.max(3, nbBarres) * 44 + 40
 }
 
-interface EtiquetteValeurProps {
-  x: number
-  y: number
-  width: number
-  height: number
-  value: number
-  formatter?: (v: number) => string
-}
-
-function EtiquetteValeur({ x, y, width, height, value, formatter }: EtiquetteValeurProps) {
+function EtiquetteValeur({
+  x = 0,
+  y = 0,
+  width = 0,
+  height = 0,
+  value,
+  formatter,
+}: Omit<import('recharts').LabelProps, 'formatter'> & { formatter?: (v: number) => string }) {
+  if (typeof value !== 'number') return null
   const texte = formatter ? formatter(value) : value
   return (
     <text
-      x={x + width + 8}
-      y={y + height / 2}
+      x={Number(x) + Number(width) + 8}
+      y={Number(y) + Number(height) / 2}
       dy={4}
       fill={TEXTE_CATEGORIE}
       fontSize={13}
@@ -96,7 +85,7 @@ function GraphiqueBarresHorizontal({ data, formatterValeur, formatterTooltip }: 
           {data.map((d) => (
             <Cell key={d.name} fill={d.couleur} />
           ))}
-          <LabelList dataKey="value" content={(props: any) => <EtiquetteValeur {...props} formatter={formatterValeur} />} />
+          <LabelList dataKey="value" content={(props) => <EtiquetteValeur {...props} formatter={formatterValeur} />} />
         </Bar>
       </BarChart>
     </ResponsiveContainer>

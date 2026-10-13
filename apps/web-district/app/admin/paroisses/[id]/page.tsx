@@ -12,11 +12,18 @@ import { BackLink } from '@/app/components/ui/BackLink'
 import { Download } from '@/lib/icons'
 import { PERIMETRE_V1 } from '@scout/shared'
 
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_INPUT =
+  'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 interface ChefGroupe {
-  id: string; nom: string; prenom: string; matricule: string | null; telephone: string | null; email: string | null; actif: boolean
+  id: string
+  nom: string
+  prenom: string
+  matricule: string | null
+  telephone: string | null
+  email: string | null
+  actif: boolean
 }
 
 interface MembreParoisse {
@@ -37,24 +44,44 @@ interface MembreParoisse {
 }
 
 interface Paroisse {
-  id: string; nom: string; ville: string; diocese: string
-  ocean: string | null; district: { id: string; nom: string }
-  adresse: string | null; telephone: string | null; email: string | null
+  id: string
+  nom: string
+  ville: string
+  diocese: string
+  ocean: string | null
+  district: { id: string; nom: string }
+  adresse: string | null
+  telephone: string | null
+  email: string | null
   actif: boolean
   counts: { scouts: number; utilisateurs: number; activites: number }
   chefsGroupe: ChefGroupe[]
   membres: MembreParoisse[]
 }
 
-interface DistrictOption { id: string; nom: string }
+interface DistrictOption {
+  id: string
+  nom: string
+}
 
 interface FormParoisse {
-  nom: string; ville: string; diocese: string; ocean: string; districtId: string
-  adresse: string; telephone: string; email: string
+  nom: string
+  ville: string
+  diocese: string
+  ocean: string
+  districtId: string
+  adresse: string
+  telephone: string
+  email: string
 }
 
 interface FormChefGroupe {
-  nom: string; prenom: string; matricule: string; telephone: string; email: string; motDePasse: string
+  nom: string
+  prenom: string
+  matricule: string
+  telephone: string
+  email: string
+  motDePasse: string
 }
 
 const CHEF_VIDE: FormChefGroupe = { nom: '', prenom: '', matricule: '', telephone: '', email: '', motDePasse: '' }
@@ -73,7 +100,10 @@ const PROFILS_MEMBRES = [
 ].filter((p) => !(PERIMETRE_V1 && PROFILS_HORS_V1.includes(p.value)))
 
 function normaliser(valeur: string): string {
-  return valeur.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  return valeur
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
 }
 
 export default function FicheParoissePage() {
@@ -106,18 +136,23 @@ export default function FicheParoissePage() {
   }, [])
 
   const charger = useCallback(() => {
-    setErreurChargement(false)
     fetch(`/api/admin/paroisses/${id}`)
       .then((r) => {
         if (!r.ok) throw new Error('Erreur serveur')
         return r.json()
       })
       .then((data: Paroisse) => {
+        setErreurChargement(false)
         setParoisse(data)
         setForm({
-          nom: data.nom, ville: data.ville, diocese: data.diocese,
-          ocean: data.ocean ?? '', districtId: data.district.id,
-          adresse: data.adresse ?? '', telephone: data.telephone ?? '', email: data.email ?? '',
+          nom: data.nom,
+          ville: data.ville,
+          diocese: data.diocese,
+          ocean: data.ocean ?? '',
+          districtId: data.district.id,
+          adresse: data.adresse ?? '',
+          telephone: data.telephone ?? '',
+          email: data.email ?? '',
         })
       })
       .catch(() => {
@@ -127,7 +162,9 @@ export default function FicheParoissePage() {
       .finally(() => setChargement(false))
   }, [id])
 
-  useEffect(() => { charger() }, [charger])
+  useEffect(() => {
+    charger()
+  }, [charger])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -140,7 +177,10 @@ export default function FicheParoissePage() {
         body: JSON.stringify(form),
       })
       const data = await res.json()
-      if (!res.ok) { toast.error(data.erreur ?? 'Erreur serveur'); return }
+      if (!res.ok) {
+        toast.error(data.erreur ?? 'Erreur serveur')
+        return
+      }
       toast.success('Paroisse mise à jour.')
       setModeEdition(false)
       charger()
@@ -168,7 +208,11 @@ export default function FicheParoissePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ actif: !paroisse.actif }),
       })
-      if (!res.ok) { const d = await res.json(); toast.error(d.erreur ?? 'Erreur serveur'); return }
+      if (!res.ok) {
+        const d = await res.json()
+        toast.error(d.erreur ?? 'Erreur serveur')
+        return
+      }
       toast.success(paroisse.actif ? 'Paroisse désactivée.' : 'Paroisse réactivée.')
       charger()
     } catch {
@@ -189,7 +233,10 @@ export default function FicheParoissePage() {
     try {
       const res = await fetch(`/api/admin/paroisses/${id}`, { method: 'DELETE' })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) { toast.error(data.erreur ?? 'Erreur serveur'); return }
+      if (!res.ok) {
+        toast.error(data.erreur ?? 'Erreur serveur')
+        return
+      }
       toast.success('Paroisse supprimée.')
       router.push('/admin/paroisses')
     } catch {
@@ -215,13 +262,19 @@ export default function FicheParoissePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          nom: formChef.nom, prenom: formChef.prenom, matricule: formChef.matricule,
-          telephone: formChef.telephone || undefined, email: formChef.email || undefined,
+          nom: formChef.nom,
+          prenom: formChef.prenom,
+          matricule: formChef.matricule,
+          telephone: formChef.telephone || undefined,
+          email: formChef.email || undefined,
           password: formChef.motDePasse,
         }),
       })
       const data = await res.json()
-      if (!res.ok) { toast.error(data.erreur ?? 'Erreur serveur'); return }
+      if (!res.ok) {
+        toast.error(data.erreur ?? 'Erreur serveur')
+        return
+      }
       toast.success('Chef de Groupe créé. Communiquez-lui ses identifiants.')
       setFormChef(CHEF_VIDE)
       setAfficherFormChef(false)
@@ -264,17 +317,21 @@ export default function FicheParoissePage() {
       if (profilMembre === 'inactifs' && membre.actif) return false
       if (!requete) return true
 
-      const texte = normaliser([
-        membre.nom,
-        membre.prenom,
-        membre.matricule,
-        membre.telephone,
-        membre.email,
-        LABELS_ROLES[membre.role],
-        membre.roleDistrict ? LABELS_ROLES[membre.roleDistrict] : '',
-        membre.fonction,
-        membre.fonctionDistrict,
-      ].filter(Boolean).join(' '))
+      const texte = normaliser(
+        [
+          membre.nom,
+          membre.prenom,
+          membre.matricule,
+          membre.telephone,
+          membre.email,
+          LABELS_ROLES[membre.role],
+          membre.roleDistrict ? LABELS_ROLES[membre.roleDistrict] : '',
+          membre.fonction,
+          membre.fonctionDistrict,
+        ]
+          .filter(Boolean)
+          .join(' '),
+      )
 
       return texte.includes(requete)
     })
@@ -290,14 +347,14 @@ export default function FicheParoissePage() {
   if (chargement) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--cp)' }} />
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2" style={{ borderColor: 'var(--cp)' }} />
       </div>
     )
   }
 
   if (erreurChargement || !paroisse || !form) {
     return (
-      <div className="max-w-3xl mx-auto space-y-4">
+      <div className="mx-auto max-w-3xl space-y-4">
         <p className="text-sm text-gray-600">Impossible de charger cette paroisse.</p>
         <BackLink href="/admin/paroisses">Retour aux paroisses</BackLink>
       </div>
@@ -311,13 +368,17 @@ export default function FicheParoissePage() {
           <div className="min-w-0">
             <BackLink href="/admin/paroisses">Retour aux paroisses</BackLink>
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Paroisse</p>
-              <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${paroisse.actif ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
+              <p className="text-xs font-bold tracking-widest text-gray-400 uppercase">Paroisse</p>
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-medium ${paroisse.actif ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}
+              >
                 {paroisse.actif ? 'Active' : 'Désactivée'}
               </span>
             </div>
-            <h1 className="mt-1 break-words text-2xl font-bold text-gray-900 sm:text-3xl">{paroisse.nom}</h1>
-            <p className="mt-1 text-sm text-gray-500">{paroisse.ville} — {paroisse.diocese}</p>
+            <h1 className="mt-1 text-2xl font-bold wrap-break-word text-gray-900 sm:text-3xl">{paroisse.nom}</h1>
+            <p className="mt-1 text-sm text-gray-500">
+              {paroisse.ville} — {paroisse.diocese}
+            </p>
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -340,27 +401,27 @@ export default function FicheParoissePage() {
 
         <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-6">
           <div className="rounded-xl bg-gray-50 px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Scouts</p>
+            <p className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Scouts</p>
             <p className="mt-1 text-2xl font-bold text-gray-900">{statistiques.scouts}</p>
           </div>
           <div className="rounded-xl bg-gray-50 px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Membres</p>
+            <p className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Membres</p>
             <p className="mt-1 text-2xl font-bold text-gray-900">{statistiques.utilisateurs}</p>
           </div>
           <div className="rounded-xl bg-gray-50 px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Staff</p>
+            <p className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Staff</p>
             <p className="mt-1 text-2xl font-bold text-gray-900">{statistiques.staff}</p>
           </div>
           <div className="rounded-xl bg-gray-50 px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">District</p>
+            <p className="text-xs font-semibold tracking-wide text-gray-500 uppercase">District</p>
             <p className="mt-1 text-2xl font-bold text-gray-900">{statistiques.equipeDistrict}</p>
           </div>
           <div className="rounded-xl bg-gray-50 px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Activités</p>
+            <p className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Activités</p>
             <p className="mt-1 text-2xl font-bold text-gray-900">{statistiques.activites}</p>
           </div>
           <div className="rounded-xl bg-gray-50 px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Inactifs</p>
+            <p className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Inactifs</p>
             <p className="mt-1 text-2xl font-bold text-gray-900">{statistiques.inactifs}</p>
           </div>
         </div>
@@ -370,11 +431,14 @@ export default function FicheParoissePage() {
         <section className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500">Chef de Groupe</h2>
+              <h2 className="text-sm font-bold tracking-widest text-gray-500 uppercase">Chef de Groupe</h2>
               <p className="mt-1 text-sm text-gray-500">Compte de référence pour piloter la paroisse.</p>
             </div>
             {!afficherFormChef && (
-              <button onClick={() => setAfficherFormChef(true)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+              <button
+                onClick={() => setAfficherFormChef(true)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+              >
                 {paroisse.chefsGroupe.length > 0 ? 'Désigner un autre' : 'Désigner un Chef'}
               </button>
             )}
@@ -396,10 +460,14 @@ export default function FicheParoissePage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="break-words text-sm font-semibold text-gray-900">{c.prenom} {c.nom}</p>
+                      <p className="text-sm font-semibold wrap-break-word text-gray-900">
+                        {c.prenom} {c.nom}
+                      </p>
                       <p className="mt-1 text-xs text-gray-500">{c.matricule ?? c.telephone ?? c.email ?? '—'}</p>
                     </div>
-                    <span className={`shrink-0 text-xs font-medium ${c.actif ? 'text-green-700' : 'text-gray-400'}`}>{c.actif ? 'Actif' : 'Inactif'}</span>
+                    <span className={`shrink-0 text-xs font-medium ${c.actif ? 'text-green-700' : 'text-gray-400'}`}>
+                      {c.actif ? 'Actif' : 'Inactif'}
+                    </span>
                   </div>
                 </Link>
               ))}
@@ -411,31 +479,60 @@ export default function FicheParoissePage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className={CLS_LABEL}>Prénom *</label>
-                  <input className={CLS_INPUT} value={formChef.prenom} onChange={(e) => setFormChef({ ...formChef, prenom: e.target.value })} />
+                  <input
+                    className={CLS_INPUT}
+                    value={formChef.prenom}
+                    onChange={(e) => setFormChef({ ...formChef, prenom: e.target.value })}
+                  />
                 </div>
                 <div>
                   <label className={CLS_LABEL}>Nom *</label>
-                  <input className={CLS_INPUT} value={formChef.nom} onChange={(e) => setFormChef({ ...formChef, nom: e.target.value })} />
+                  <input
+                    className={CLS_INPUT}
+                    value={formChef.nom}
+                    onChange={(e) => setFormChef({ ...formChef, nom: e.target.value })}
+                  />
                 </div>
                 <div>
                   <label className={CLS_LABEL}>Matricule *</label>
-                  <input className={CLS_INPUT} value={formChef.matricule} onChange={(e) => setFormChef({ ...formChef, matricule: e.target.value })} />
+                  <input
+                    className={CLS_INPUT}
+                    value={formChef.matricule}
+                    onChange={(e) => setFormChef({ ...formChef, matricule: e.target.value })}
+                  />
                 </div>
                 <div>
                   <label className={CLS_LABEL}>Téléphone</label>
-                  <input className={CLS_INPUT} value={formChef.telephone} onChange={(e) => setFormChef({ ...formChef, telephone: e.target.value })} />
+                  <input
+                    className={CLS_INPUT}
+                    value={formChef.telephone}
+                    onChange={(e) => setFormChef({ ...formChef, telephone: e.target.value })}
+                  />
                 </div>
                 <div>
                   <label className={CLS_LABEL}>E-mail</label>
-                  <input type="email" className={CLS_INPUT} value={formChef.email} onChange={(e) => setFormChef({ ...formChef, email: e.target.value })} />
+                  <input
+                    type="email"
+                    className={CLS_INPUT}
+                    value={formChef.email}
+                    onChange={(e) => setFormChef({ ...formChef, email: e.target.value })}
+                  />
                 </div>
                 <div>
                   <label className={CLS_LABEL}>Mot de passe temporaire *</label>
-                  <PasswordInput className={CLS_INPUT} value={formChef.motDePasse} onChange={(e) => setFormChef({ ...formChef, motDePasse: e.target.value })} />
+                  <PasswordInput
+                    className={CLS_INPUT}
+                    value={formChef.motDePasse}
+                    onChange={(e) => setFormChef({ ...formChef, motDePasse: e.target.value })}
+                  />
                 </div>
               </div>
               <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:justify-end">
-                <button type="button" onClick={() => setAfficherFormChef(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
+                <button
+                  type="button"
+                  onClick={() => setAfficherFormChef(false)}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                >
                   Annuler
                 </button>
                 <button
@@ -455,11 +552,14 @@ export default function FicheParoissePage() {
         <section className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500">Informations</h2>
+              <h2 className="text-sm font-bold tracking-widest text-gray-500 uppercase">Informations</h2>
               <p className="mt-1 text-sm text-gray-500">Identité administrative de la paroisse.</p>
             </div>
             {!modeEdition && (
-              <button onClick={() => setModeEdition(true)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+              <button
+                onClick={() => setModeEdition(true)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+              >
                 Modifier
               </button>
             )}
@@ -468,26 +568,97 @@ export default function FicheParoissePage() {
           {modeEdition ? (
             <form onSubmit={handleSubmit} className="mt-5 space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
-                <div><label className={CLS_LABEL}>Nom *</label><input className={CLS_INPUT} value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} required /></div>
-                <div><label className={CLS_LABEL}>Ville *</label><input className={CLS_INPUT} value={form.ville} onChange={(e) => setForm({ ...form, ville: e.target.value })} required /></div>
-                <div><label className={CLS_LABEL}>Diocèse *</label><input className={CLS_INPUT} value={form.diocese} onChange={(e) => setForm({ ...form, diocese: e.target.value })} required /></div>
+                <div>
+                  <label className={CLS_LABEL}>Nom *</label>
+                  <input
+                    className={CLS_INPUT}
+                    value={form.nom}
+                    onChange={(e) => setForm({ ...form, nom: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className={CLS_LABEL}>Ville *</label>
+                  <input
+                    className={CLS_INPUT}
+                    value={form.ville}
+                    onChange={(e) => setForm({ ...form, ville: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className={CLS_LABEL}>Diocèse *</label>
+                  <input
+                    className={CLS_INPUT}
+                    value={form.diocese}
+                    onChange={(e) => setForm({ ...form, diocese: e.target.value })}
+                    required
+                  />
+                </div>
                 <div>
                   <label className={CLS_LABEL}>District *</label>
-                  <select className={CLS_INPUT} value={form.districtId} onChange={(e) => setForm({ ...form, districtId: e.target.value })} required>
+                  <select
+                    className={CLS_INPUT}
+                    value={form.districtId}
+                    onChange={(e) => setForm({ ...form, districtId: e.target.value })}
+                    required
+                  >
                     <option value="">— Choisir un district —</option>
-                    {districts.map((d) => <option key={d.id} value={d.id}>{d.nom}</option>)}
+                    {districts.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.nom}
+                      </option>
+                    ))}
                   </select>
                 </div>
-                <div><label className={CLS_LABEL}>Océan / secteur</label><input className={CLS_INPUT} value={form.ocean} onChange={(e) => setForm({ ...form, ocean: e.target.value })} /></div>
-                <div><label className={CLS_LABEL}>Téléphone</label><input className={CLS_INPUT} value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} /></div>
-                <div><label className={CLS_LABEL}>E-mail</label><input type="email" className={CLS_INPUT} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-                <div className="sm:col-span-2"><label className={CLS_LABEL}>Adresse</label><input className={CLS_INPUT} value={form.adresse} onChange={(e) => setForm({ ...form, adresse: e.target.value })} /></div>
+                <div>
+                  <label className={CLS_LABEL}>Océan / secteur</label>
+                  <input
+                    className={CLS_INPUT}
+                    value={form.ocean}
+                    onChange={(e) => setForm({ ...form, ocean: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className={CLS_LABEL}>Téléphone</label>
+                  <input
+                    className={CLS_INPUT}
+                    value={form.telephone}
+                    onChange={(e) => setForm({ ...form, telephone: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className={CLS_LABEL}>E-mail</label>
+                  <input
+                    type="email"
+                    className={CLS_INPUT}
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className={CLS_LABEL}>Adresse</label>
+                  <input
+                    className={CLS_INPUT}
+                    value={form.adresse}
+                    onChange={(e) => setForm({ ...form, adresse: e.target.value })}
+                  />
+                </div>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-                <button type="button" onClick={() => setModeEdition(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
+                <button
+                  type="button"
+                  onClick={() => setModeEdition(false)}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                >
                   Annuler
                 </button>
-                <button type="submit" disabled={soumission} className="flex items-center justify-center gap-2 rounded-lg px-5 py-2 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-50" style={{ backgroundColor: 'var(--cp)' }}>
+                <button
+                  type="submit"
+                  disabled={soumission}
+                  className="flex items-center justify-center gap-2 rounded-lg px-5 py-2 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-50"
+                  style={{ backgroundColor: 'var(--cp)' }}
+                >
                   {soumission && <span className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" />}
                   {soumission ? 'Sauvegarde…' : 'Sauvegarder'}
                 </button>
@@ -498,13 +669,27 @@ export default function FicheParoissePage() {
               <div>
                 <dt className="text-gray-400">District</dt>
                 <dd className="font-medium text-gray-800">
-                  <Link href={`/admin/districts/${paroisse.district.id}`} className="hover:underline">{paroisse.district.nom}</Link>
+                  <Link href={`/admin/districts/${paroisse.district.id}`} className="hover:underline">
+                    {paroisse.district.nom}
+                  </Link>
                 </dd>
               </div>
-              <div><dt className="text-gray-400">Océan / secteur</dt><dd className="text-gray-800">{paroisse.ocean || '—'}</dd></div>
-              <div><dt className="text-gray-400">Téléphone</dt><dd className="text-gray-800">{paroisse.telephone || '—'}</dd></div>
-              <div><dt className="text-gray-400">E-mail</dt><dd className="break-words text-gray-800">{paroisse.email || '—'}</dd></div>
-              <div className="sm:col-span-2"><dt className="text-gray-400">Adresse</dt><dd className="text-gray-800">{paroisse.adresse || '—'}</dd></div>
+              <div>
+                <dt className="text-gray-400">Océan / secteur</dt>
+                <dd className="text-gray-800">{paroisse.ocean || '—'}</dd>
+              </div>
+              <div>
+                <dt className="text-gray-400">Téléphone</dt>
+                <dd className="text-gray-800">{paroisse.telephone || '—'}</dd>
+              </div>
+              <div>
+                <dt className="text-gray-400">E-mail</dt>
+                <dd className="wrap-break-word text-gray-800">{paroisse.email || '—'}</dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-gray-400">Adresse</dt>
+                <dd className="text-gray-800">{paroisse.adresse || '—'}</dd>
+              </div>
             </dl>
           )}
         </section>
@@ -514,17 +699,26 @@ export default function FicheParoissePage() {
         <div className="rounded-xl border border-gray-200 bg-white p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500">Membres de la paroisse</h2>
+              <h2 className="text-sm font-bold tracking-widest text-gray-500 uppercase">Membres de la paroisse</h2>
               <p className="mt-1 text-sm text-gray-500">
-                {membresFiltres.length} résultat{membresFiltres.length > 1 ? 's' : ''} sur {paroisse.membres.length} compte{paroisse.membres.length > 1 ? 's' : ''}
+                {membresFiltres.length} résultat{membresFiltres.length > 1 ? 's' : ''} sur {paroisse.membres.length}{' '}
+                compte{paroisse.membres.length > 1 ? 's' : ''}
                 {membresFiltres.length > 0 && (
-                  <> · {premierMembreAffiche}-{indexFinMembres} affiché{membresPage.length > 1 ? 's' : ''}</>
+                  <>
+                    {' '}
+                    · {premierMembreAffiche}-{indexFinMembres} affiché{membresPage.length > 1 ? 's' : ''}
+                  </>
                 )}
               </p>
             </div>
             <button
               type="button"
-              onClick={() => { setRechercheMembre(''); setProfilMembre(''); setStatutMembre(''); setPageMembres(1) }}
+              onClick={() => {
+                setRechercheMembre('')
+                setProfilMembre('')
+                setStatutMembre('')
+                setPageMembres(1)
+              }}
               disabled={!rechercheMembre && !profilMembre && !statutMembre}
               className="h-10 rounded-lg border border-gray-300 px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
@@ -536,28 +730,52 @@ export default function FicheParoissePage() {
             <input
               type="search"
               value={rechercheMembre}
-              onChange={(e) => { setRechercheMembre(e.target.value); setPageMembres(1) }}
+              onChange={(e) => {
+                setRechercheMembre(e.target.value)
+                setPageMembres(1)
+              }}
               placeholder="Rechercher nom, matricule, téléphone, rôle…"
               className={CLS_INPUT}
             />
-            <select value={profilMembre} onChange={(e) => { setProfilMembre(e.target.value); setPageMembres(1) }} className={CLS_INPUT}>
+            <select
+              value={profilMembre}
+              onChange={(e) => {
+                setProfilMembre(e.target.value)
+                setPageMembres(1)
+              }}
+              className={CLS_INPUT}
+            >
               {PROFILS_MEMBRES.map((profil) => (
-                <option key={profil.value} value={profil.value}>{profil.label}</option>
+                <option key={profil.value} value={profil.value}>
+                  {profil.label}
+                </option>
               ))}
             </select>
-            <select value={statutMembre} onChange={(e) => { setStatutMembre(e.target.value); setPageMembres(1) }} className={CLS_INPUT}>
+            <select
+              value={statutMembre}
+              onChange={(e) => {
+                setStatutMembre(e.target.value)
+                setPageMembres(1)
+              }}
+              className={CLS_INPUT}
+            >
               <option value="">Tous les statuts</option>
               <option value="actifs">Actifs</option>
               <option value="inactifs">Inactifs</option>
             </select>
             <select
               value={membresParPage}
-              onChange={(e) => { setMembresParPage(Number(e.target.value)); setPageMembres(1) }}
+              onChange={(e) => {
+                setMembresParPage(Number(e.target.value))
+                setPageMembres(1)
+              }}
               aria-label="Nombre de membres par page"
               className={CLS_INPUT}
             >
               {OPTIONS_MEMBRES_PAR_PAGE.map((option) => (
-                <option key={option} value={option}>{option} / page</option>
+                <option key={option} value={option}>
+                  {option} / page
+                </option>
               ))}
             </select>
           </div>
@@ -567,7 +785,7 @@ export default function FicheParoissePage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <tr className="border-b border-gray-200 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase">
                   <th className="px-4 py-3">Membre</th>
                   <th className="px-4 py-3">Rôle paroissial</th>
                   <th className="px-4 py-3">Affectation district</th>
@@ -580,18 +798,28 @@ export default function FicheParoissePage() {
                 {membresPage.map((membre) => (
                   <tr key={membre.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
-                      <p className="font-medium text-gray-900">{membre.prenom} {membre.nom}</p>
+                      <p className="font-medium text-gray-900">
+                        {membre.prenom} {membre.nom}
+                      </p>
                       <p className="text-xs text-gray-500">{membre.matricule ?? membre.telephone ?? '—'}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex max-w-xs rounded-full px-2 py-0.5 text-xs font-medium ${COULEURS_ROLES[membre.role] ?? 'bg-gray-100 text-gray-700'}`}>
+                      <span
+                        className={`inline-flex max-w-xs rounded-full px-2 py-0.5 text-xs font-medium ${COULEURS_ROLES[membre.role] ?? 'bg-gray-100 text-gray-700'}`}
+                      >
                         {libelleRoleAvecFonction(membre.role, membre.fonction, membre.brancheType)}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       {membre.roleDistrict ? (
-                        <span className={`inline-flex max-w-xs rounded-full px-2 py-0.5 text-xs font-medium ${COULEURS_ROLES[membre.roleDistrict] ?? 'bg-gray-100 text-gray-700'}`}>
-                          {libelleRoleAvecFonction(membre.roleDistrict, membre.fonctionDistrict, membre.brancheTypeDistrict)}
+                        <span
+                          className={`inline-flex max-w-xs rounded-full px-2 py-0.5 text-xs font-medium ${COULEURS_ROLES[membre.roleDistrict] ?? 'bg-gray-100 text-gray-700'}`}
+                        >
+                          {libelleRoleAvecFonction(
+                            membre.roleDistrict,
+                            membre.fonctionDistrict,
+                            membre.brancheTypeDistrict,
+                          )}
                         </span>
                       ) : (
                         <span className="text-xs text-gray-400">—</span>
@@ -602,12 +830,17 @@ export default function FicheParoissePage() {
                       {membre.telephone && <p className="text-xs text-gray-500">{membre.telephone}</p>}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${membre.actif ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
+                      <span
+                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${membre.actif ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}
+                      >
                         {membre.actif ? 'Actif' : 'Inactif'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Link href={`/admin/utilisateurs/${membre.id}`} className="text-xs font-semibold text-(--cp) hover:underline">
+                      <Link
+                        href={`/admin/utilisateurs/${membre.id}`}
+                        className="text-xs font-semibold text-(--cp) hover:underline"
+                      >
                         Fiche
                       </Link>
                     </td>
@@ -615,7 +848,9 @@ export default function FicheParoissePage() {
                 ))}
                 {membresFiltres.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-gray-400">Aucun membre ne correspond aux filtres.</td>
+                    <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                      Aucun membre ne correspond aux filtres.
+                    </td>
                   </tr>
                 )}
               </tbody>
@@ -628,28 +863,53 @@ export default function FicheParoissePage() {
             <article key={membre.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h3 className="break-words text-base font-semibold text-gray-900">{membre.prenom} {membre.nom}</h3>
+                  <h3 className="text-base font-semibold wrap-break-word text-gray-900">
+                    {membre.prenom} {membre.nom}
+                  </h3>
                   <p className="mt-1 text-sm text-gray-500">{membre.matricule ?? membre.telephone ?? '—'}</p>
                 </div>
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${membre.actif ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${membre.actif ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}
+                >
                   {membre.actif ? 'Actif' : 'Inactif'}
                 </span>
               </div>
               <div className="mt-3 flex flex-wrap gap-1.5">
-                <span className={`inline-flex max-w-full rounded-full px-2 py-0.5 text-xs font-medium ${COULEURS_ROLES[membre.role] ?? 'bg-gray-100 text-gray-700'}`}>
-                  <span className="break-words">{libelleRoleAvecFonction(membre.role, membre.fonction, membre.brancheType)}</span>
+                <span
+                  className={`inline-flex max-w-full rounded-full px-2 py-0.5 text-xs font-medium ${COULEURS_ROLES[membre.role] ?? 'bg-gray-100 text-gray-700'}`}
+                >
+                  <span className="wrap-break-word">
+                    {libelleRoleAvecFonction(membre.role, membre.fonction, membre.brancheType)}
+                  </span>
                 </span>
                 {membre.roleDistrict && (
-                  <span className={`inline-flex max-w-full rounded-full px-2 py-0.5 text-xs font-medium ${COULEURS_ROLES[membre.roleDistrict] ?? 'bg-gray-100 text-gray-700'}`}>
-                    <span className="break-words">{libelleRoleAvecFonction(membre.roleDistrict, membre.fonctionDistrict, membre.brancheTypeDistrict)}</span>
+                  <span
+                    className={`inline-flex max-w-full rounded-full px-2 py-0.5 text-xs font-medium ${COULEURS_ROLES[membre.roleDistrict] ?? 'bg-gray-100 text-gray-700'}`}
+                  >
+                    <span className="wrap-break-word">
+                      {libelleRoleAvecFonction(
+                        membre.roleDistrict,
+                        membre.fonctionDistrict,
+                        membre.brancheTypeDistrict,
+                      )}
+                    </span>
                   </span>
                 )}
               </div>
               <div className="mt-3 grid gap-1 text-sm text-gray-600">
-                <p><span className="text-gray-400">E-mail : </span>{membre.email ?? '—'}</p>
-                <p><span className="text-gray-400">Téléphone : </span>{membre.telephone ?? '—'}</p>
+                <p>
+                  <span className="text-gray-400">E-mail : </span>
+                  {membre.email ?? '—'}
+                </p>
+                <p>
+                  <span className="text-gray-400">Téléphone : </span>
+                  {membre.telephone ?? '—'}
+                </p>
               </div>
-              <Link href={`/admin/utilisateurs/${membre.id}`} className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+              <Link
+                href={`/admin/utilisateurs/${membre.id}`}
+                className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
                 Ouvrir la fiche
               </Link>
             </article>
@@ -664,7 +924,8 @@ export default function FicheParoissePage() {
         {membresFiltres.length > 0 && (
           <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-gray-500">
-              {premierMembreAffiche}-{indexFinMembres} sur {membresFiltres.length} membre{membresFiltres.length > 1 ? 's' : ''}
+              {premierMembreAffiche}-{indexFinMembres} sur {membresFiltres.length} membre
+              {membresFiltres.length > 1 ? 's' : ''}
             </p>
             <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:flex">
               <button
@@ -692,7 +953,7 @@ export default function FicheParoissePage() {
       </section>
 
       <section className="rounded-xl border border-red-100 bg-white p-5 sm:p-6">
-        <h2 className="text-sm font-bold uppercase tracking-widest text-red-500">Zone sensible</h2>
+        <h2 className="text-sm font-bold tracking-widest text-red-500 uppercase">Zone sensible</h2>
         <div className="mt-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <p className="text-sm text-gray-600">
             {paroisse.actif
@@ -709,7 +970,8 @@ export default function FicheParoissePage() {
 
         <div className="mt-4 flex flex-col justify-between gap-3 border-t border-red-100 pt-4 sm:flex-row sm:items-center">
           <p className="text-sm text-gray-600">
-            Supprimer définitivement n&apos;est possible que si cette paroisse n&apos;a encore aucune donnée (scouts, membres, activités…). Dans tous les autres cas, désactivez-la plutôt.
+            Supprimer définitivement n&apos;est possible que si cette paroisse n&apos;a encore aucune donnée (scouts,
+            membres, activités…). Dans tous les autres cas, désactivez-la plutôt.
           </p>
           <button
             onClick={handleSupprimer}

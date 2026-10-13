@@ -44,7 +44,8 @@ const DEFAULT_CONFIG: SiteConfig = {
     imageAlt: "Responsables et scouts réunis dans une cour de paroisse – ASCCI Côte d'Ivoire",
     badge: 'Suivi pédagogique paroissial',
     titre: 'SCOUT ASCCI',
-    sousTitre: "Une application claire pour gérer les scouts catholiques de Côte d'Ivoire, suivre les activités, les présences et la progression pédagogique depuis un même espace.",
+    sousTitre:
+      "Une application claire pour gérer les scouts catholiques de Côte d'Ivoire, suivre les activités, les présences et la progression pédagogique depuis un même espace.",
   },
   stats: [
     { value: '5', label: 'Branches suivies' },
@@ -67,10 +68,10 @@ type ColorKey = keyof Theme
 type ColorDef = { key: ColorKey; label: string; hint: string }
 
 const COLORS: ColorDef[] = [
-  { key: 'couleurPrimaire', label: 'Couleur primaire',        hint: 'Sidebar, boutons, avatar' },
-  { key: 'couleurHover',   label: 'Couleur des hovers',      hint: 'Liens actifs, survol menu' },
-  { key: 'couleurAccent',  label: "Couleur d'accentuation",   hint: 'Badges, détails secondaires' },
-  { key: 'couleurFond',    label: 'Couleur de fond',          hint: 'Arrière-plan pages auth' },
+  { key: 'couleurPrimaire', label: 'Couleur primaire', hint: 'Sidebar, boutons, avatar' },
+  { key: 'couleurHover', label: 'Couleur des hovers', hint: 'Liens actifs, survol menu' },
+  { key: 'couleurAccent', label: "Couleur d'accentuation", hint: 'Badges, détails secondaires' },
+  { key: 'couleurFond', label: 'Couleur de fond', hint: 'Arrière-plan pages auth' },
 ]
 
 export default function SiteConfigPage() {
@@ -86,7 +87,9 @@ export default function SiteConfigPage() {
     fetch('/api/admin/site-config')
       .then((r) => {
         if (!r.ok) {
-          toast.error('Impossible de charger la configuration actuelle — les valeurs affichées sont des valeurs par défaut, vérifiez avant de sauvegarder.')
+          toast.error(
+            'Impossible de charger la configuration actuelle — les valeurs affichées sont des valeurs par défaut, vérifiez avant de sauvegarder.',
+          )
           return null
         }
         return r.json()
@@ -104,7 +107,9 @@ export default function SiteConfigPage() {
         setChargement(false)
       })
       .catch(() => {
-        toast.error('Impossible de charger la configuration actuelle — les valeurs affichées sont des valeurs par défaut, vérifiez avant de sauvegarder.')
+        toast.error(
+          'Impossible de charger la configuration actuelle — les valeurs affichées sont des valeurs par défaut, vérifiez avant de sauvegarder.',
+        )
         setChargement(false)
       })
   }, [])
@@ -123,13 +128,11 @@ export default function SiteConfigPage() {
     root.style.setProperty('--ch-rgb', hexToRgb(ch))
   }, [config.theme, chargement])
 
-  async function handleUpload(
-    e: React.ChangeEvent<HTMLInputElement>,
-    dest: 'hero' | 'logo',
-  ) {
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>, dest: 'hero' | 'logo') {
     const fichier = e.target.files?.[0]
     if (!fichier) return
-    dest === 'hero' ? setUploadHero(true) : setUploadLogo(true)
+    if (dest === 'hero') setUploadHero(true)
+    else setUploadLogo(true)
     const form = new FormData()
     form.append('fichier', fichier)
     form.append('visibilite', 'publique')
@@ -146,7 +149,8 @@ export default function SiteConfigPage() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erreur lors de l'upload")
     } finally {
-      dest === 'hero' ? setUploadHero(false) : setUploadLogo(false)
+      if (dest === 'hero') setUploadHero(false)
+      else setUploadLogo(false)
       const ref = dest === 'hero' ? heroRef : logoRef
       if (ref.current) ref.current.value = ''
     }
@@ -195,13 +199,13 @@ export default function SiteConfigPage() {
   if (chargement) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--cp)' }} />
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2" style={{ borderColor: 'var(--cp)' }} />
       </div>
     )
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8">
+    <div className="mx-auto max-w-3xl space-y-8">
       <div>
         <h1 className="text-2xl font-black text-gray-900">Apparence du site</h1>
         <p className="mt-1 text-sm text-gray-500">
@@ -210,19 +214,17 @@ export default function SiteConfigPage() {
       </div>
 
       <form onSubmit={handleSauvegarder} className="space-y-8">
-
         {/* ── Logo du site ── */}
         <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-1">
-            Logo du site
-          </h2>
-          <p className="text-xs text-gray-400 mb-4">
-            Utilisé comme favicon (onglet navigateur) et image de partage (Open Graph). Privilégiez un carré PNG/SVG sur fond transparent.
+          <h2 className="mb-1 text-sm font-bold tracking-widest text-gray-500 uppercase">Logo du site</h2>
+          <p className="mb-4 text-xs text-gray-400">
+            Utilisé comme favicon (onglet navigateur) et image de partage (Open Graph). Privilégiez un carré PNG/SVG sur
+            fond transparent.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-start gap-5">
+          <div className="flex flex-col items-start gap-5 sm:flex-row">
             {/* Aperçu logo */}
-            <div className="shrink-0 w-20 h-20 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-gray-200 bg-gray-50">
               {config.logoSite ? (
                 <Image
                   src={config.logoSite}
@@ -230,7 +232,7 @@ export default function SiteConfigPage() {
                   width={72}
                   height={72}
                   unoptimized
-                  className="w-full h-full object-contain"
+                  className="h-full w-full object-contain"
                 />
               ) : (
                 <ImageOff className="h-7 w-7 text-gray-300" strokeWidth={1.75} />
@@ -239,12 +241,12 @@ export default function SiteConfigPage() {
 
             <div className="flex-1 space-y-3">
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1.5 block">URL du logo</label>
+                <label className="mb-1.5 block text-xs font-semibold text-gray-600">URL du logo</label>
                 <input
                   type="text"
                   value={config.logoSite}
                   onChange={(e) => setConfig((prev) => ({ ...prev, logoSite: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 text-gray-900 placeholder:text-gray-400"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm text-gray-900 placeholder:text-gray-400 focus:ring-1 focus:outline-none"
                   placeholder="/api/fichiers-publics/logo.png"
                 />
               </div>
@@ -260,18 +262,20 @@ export default function SiteConfigPage() {
                   type="button"
                   onClick={() => logoRef.current?.click()}
                   disabled={uploadLogo}
-                  className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition"
+                  className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
                 >
-                  {uploadLogo
-                    ? <span className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-gray-500" />
-                    : <Upload className="h-3.5 w-3.5" strokeWidth={2} />}
+                  {uploadLogo ? (
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-b-2 border-gray-500" />
+                  ) : (
+                    <Upload className="h-3.5 w-3.5" strokeWidth={2} />
+                  )}
                   {uploadLogo ? 'Téléversement…' : 'Téléverser un logo'}
                 </button>
                 {config.logoSite && (
                   <button
                     type="button"
                     onClick={() => setConfig((prev) => ({ ...prev, logoSite: '' }))}
-                    className="text-xs text-red-500 hover:text-red-700 transition"
+                    className="text-xs text-red-500 transition hover:text-red-700"
                   >
                     Supprimer
                   </button>
@@ -282,31 +286,29 @@ export default function SiteConfigPage() {
 
           {/* Simulation onglet navigateur */}
           {config.logoSite && (
-            <div className="mt-4 flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 w-fit">
+            <div className="mt-4 flex w-fit items-center gap-2 rounded-lg bg-gray-100 px-3 py-2">
               <Image
                 src={config.logoSite}
                 alt="favicon"
                 width={16}
                 height={16}
                 unoptimized
-                className="w-4 h-4 object-contain"
+                className="h-4 w-4 object-contain"
               />
-              <span className="text-xs text-gray-600 font-medium truncate max-w-50">
+              <span className="max-w-50 truncate text-xs font-medium text-gray-600">
                 {config.nomSite} — Suivi pédagogique
               </span>
-              <span className="text-gray-400 text-xs ml-1">×</span>
+              <span className="ml-1 text-xs text-gray-400">×</span>
             </div>
           )}
         </section>
 
         {/* ── Identité du site ── */}
         <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-4">
-            Identité du site
-          </h2>
+          <h2 className="mb-4 text-sm font-bold tracking-widest text-gray-500 uppercase">Identité du site</h2>
           <div className="space-y-4">
             <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1.5 block">
+              <label className="mb-1.5 block text-xs font-semibold text-gray-600">
                 Nom du site
                 <span className="ml-1 font-normal text-gray-400">(sidebar, onglet, en-tête)</span>
               </label>
@@ -314,12 +316,12 @@ export default function SiteConfigPage() {
                 type="text"
                 value={config.nomSite}
                 onChange={(e) => setConfig((prev) => ({ ...prev, nomSite: e.target.value }))}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-bold focus:outline-none focus:ring-1 text-gray-900 placeholder:text-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:ring-1 focus:outline-none"
                 placeholder="SCOUT ASCCI"
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1.5 block">
+              <label className="mb-1.5 block text-xs font-semibold text-gray-600">
                 Sous-titre
                 <span className="ml-1 font-normal text-gray-400">(région, pays ou diocèse)</span>
               </label>
@@ -327,7 +329,7 @@ export default function SiteConfigPage() {
                 type="text"
                 value={config.sousTitreSite}
                 onChange={(e) => setConfig((prev) => ({ ...prev, sousTitreSite: e.target.value }))}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 text-gray-900 placeholder:text-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-1 focus:outline-none"
                 placeholder="Côte d'Ivoire"
               />
             </div>
@@ -336,26 +338,24 @@ export default function SiteConfigPage() {
 
         {/* ── Couleurs ── */}
         <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500">
-              Couleurs du thème
-            </h2>
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-bold tracking-widest text-gray-500 uppercase">Couleurs du thème</h2>
             <button
               type="button"
               onClick={reinitialiserCouleurs}
-              className="text-xs text-gray-500 hover:text-gray-800 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition"
+              className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500 transition hover:bg-gray-50 hover:text-gray-800"
             >
               Réinitialiser ASCCI
             </button>
           </div>
-          <p className="text-xs text-gray-400 mb-5">
+          <p className="mb-5 text-xs text-gray-400">
             La prévisualisation est immédiate sur cette page — la sidebar reflète vos choix en temps réel.
           </p>
 
           <div className="grid gap-5 sm:grid-cols-2">
             {COLORS.map(({ key, label, hint }) => (
               <div key={key}>
-                <label className="text-xs font-semibold text-gray-600 mb-2 block">
+                <label className="mb-2 block text-xs font-semibold text-gray-600">
                   {label}
                   <span className="ml-1 font-normal text-gray-400">({hint})</span>
                 </label>
@@ -364,7 +364,7 @@ export default function SiteConfigPage() {
                     type="color"
                     value={config.theme[key]}
                     onChange={(e) => updateTheme(key, e.target.value)}
-                    className="h-10 w-12 cursor-pointer rounded-lg border border-gray-300 p-0.5 shrink-0"
+                    className="h-10 w-12 shrink-0 cursor-pointer rounded-lg border border-gray-300 p-0.5"
                   />
                   <input
                     type="text"
@@ -373,27 +373,24 @@ export default function SiteConfigPage() {
                       const v = e.target.value
                       if (/^#[0-9A-Fa-f]{0,6}$/.test(v)) updateTheme(key, v)
                     }}
-                    className="flex-1 rounded-lg border border-gray-300 px-2 py-2 text-xs font-mono focus:outline-none focus:ring-1 text-gray-900 placeholder:text-gray-400"
+                    className="flex-1 rounded-lg border border-gray-300 px-2 py-2 font-mono text-xs text-gray-900 placeholder:text-gray-400 focus:ring-1 focus:outline-none"
                     maxLength={7}
                   />
                 </div>
-                <div
-                  className="mt-2 h-1.5 w-full rounded-full"
-                  style={{ backgroundColor: config.theme[key] }}
-                />
+                <div className="mt-2 h-1.5 w-full rounded-full" style={{ backgroundColor: config.theme[key] }} />
               </div>
             ))}
           </div>
 
           {/* Aperçu sidebar */}
-          <div className="mt-6 rounded-lg overflow-hidden border border-gray-200 flex flex-col sm:flex-row sm:h-24">
+          <div className="mt-6 flex flex-col overflow-hidden rounded-lg border border-gray-200 sm:h-24 sm:flex-row">
             <div
-              className="w-full sm:w-36 shrink-0 flex flex-col justify-center px-3 py-3 sm:py-0 gap-1.5"
+              className="flex w-full shrink-0 flex-col justify-center gap-1.5 px-3 py-3 sm:w-36 sm:py-0"
               style={{ backgroundColor: config.theme.couleurPrimaire }}
             >
               <div className="h-1.5 w-16 rounded-full bg-white/30" />
               <div
-                className="h-5 w-24 rounded-md flex items-center px-2 gap-1"
+                className="flex h-5 w-24 items-center gap-1 rounded-md px-2"
                 style={{ backgroundColor: config.theme.couleurHover }}
               >
                 <div className="h-1.5 w-3 rounded-full bg-white/60" />
@@ -402,21 +399,21 @@ export default function SiteConfigPage() {
               <div className="h-1.5 w-14 rounded-full bg-white/20" />
               <div className="h-1.5 w-18 rounded-full bg-white/20" />
             </div>
-            <div className="flex-1 min-w-0 flex items-center px-5 py-3 sm:py-0 bg-white">
+            <div className="flex min-w-0 flex-1 items-center bg-white px-5 py-3 sm:py-0">
               <div className="space-y-2">
                 <div className="h-2.5 w-36 max-w-full rounded bg-gray-200" />
                 <div className="h-2 w-24 max-w-full rounded bg-gray-100" />
               </div>
             </div>
           </div>
-          <p className="text-xs text-gray-400 mt-1.5 text-center">
+          <p className="mt-1.5 text-center text-xs text-gray-400">
             Aperçu — item actif en couleur hover, fond en couleur primaire
           </p>
         </section>
 
         {/* ── Image héro ── */}
         <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-4">
+          <h2 className="mb-4 text-sm font-bold tracking-widest text-gray-500 uppercase">
             Image d&apos;arrière-plan (page d&apos;accueil)
           </h2>
 
@@ -430,49 +427,55 @@ export default function SiteConfigPage() {
                 className="object-cover object-center opacity-80"
               />
             ) : (
-              <div className="flex h-full items-center justify-center text-white/40 text-sm">
-                Aucune image
-              </div>
+              <div className="flex h-full items-center justify-center text-sm text-white/40">Aucune image</div>
             )}
             <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(9,32,22,0.85)_0%,rgba(9,32,22,0.4)_60%,rgba(9,32,22,0.05)_100%)]" />
-            <span className="absolute bottom-3 left-3 text-white text-xs font-bold opacity-70">
-              Aperçu
-            </span>
+            <span className="absolute bottom-3 left-3 text-xs font-bold text-white opacity-70">Aperçu</span>
           </div>
 
           <div className="space-y-3">
             <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1.5 block">URL de l&apos;image</label>
+              <label className="mb-1.5 block text-xs font-semibold text-gray-600">URL de l&apos;image</label>
               <input
                 type="text"
                 value={config.hero.imageUrl}
                 onChange={(e) => updateHero('imageUrl', e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 text-gray-900 placeholder:text-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm text-gray-900 placeholder:text-gray-400 focus:ring-1 focus:outline-none"
                 placeholder="/api/fichiers-publics/ma-photo.jpg"
               />
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <input ref={heroRef} type="file" accept="image/*" onChange={(e) => handleUpload(e, 'hero')} className="hidden" />
+              <input
+                ref={heroRef}
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleUpload(e, 'hero')}
+                className="hidden"
+              />
               <button
                 type="button"
                 onClick={() => heroRef.current?.click()}
                 disabled={uploadHero}
-                className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition"
+                className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
               >
-                {uploadHero
-                  ? <span className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-gray-500" />
-                  : <Upload className="h-3.5 w-3.5" strokeWidth={2} />}
+                {uploadHero ? (
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-b-2 border-gray-500" />
+                ) : (
+                  <Upload className="h-3.5 w-3.5" strokeWidth={2} />
+                )}
                 {uploadHero ? 'Téléversement…' : 'Téléverser une nouvelle photo'}
               </button>
               <span className="text-xs text-gray-400">JPEG, PNG, WebP, SVG — max 5 Mo</span>
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Texte alternatif (accessibilité)</label>
+              <label className="mb-1.5 block text-xs font-semibold text-gray-600">
+                Texte alternatif (accessibilité)
+              </label>
               <input
                 type="text"
                 value={config.hero.imageAlt}
                 onChange={(e) => updateHero('imageAlt', e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 text-gray-900 placeholder:text-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-1 focus:outline-none"
               />
             </div>
           </div>
@@ -480,35 +483,35 @@ export default function SiteConfigPage() {
 
         {/* ── Textes héro ── */}
         <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-4">
-            Textes de la bannière
-          </h2>
+          <h2 className="mb-4 text-sm font-bold tracking-widest text-gray-500 uppercase">Textes de la bannière</h2>
           <div className="space-y-4">
             <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Badge (petit libellé au-dessus du titre)</label>
+              <label className="mb-1.5 block text-xs font-semibold text-gray-600">
+                Badge (petit libellé au-dessus du titre)
+              </label>
               <input
                 type="text"
                 value={config.hero.badge}
                 onChange={(e) => updateHero('badge', e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 text-gray-900 placeholder:text-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-1 focus:outline-none"
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Titre principal</label>
+              <label className="mb-1.5 block text-xs font-semibold text-gray-600">Titre principal</label>
               <input
                 type="text"
                 value={config.hero.titre}
                 onChange={(e) => updateHero('titre', e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-bold focus:outline-none focus:ring-1 text-gray-900 placeholder:text-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:ring-1 focus:outline-none"
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Sous-titre / description</label>
+              <label className="mb-1.5 block text-xs font-semibold text-gray-600">Sous-titre / description</label>
               <textarea
                 value={config.hero.sousTitre}
                 onChange={(e) => updateHero('sousTitre', e.target.value)}
                 rows={3}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm leading-relaxed focus:outline-none focus:ring-1 text-gray-900 placeholder:text-gray-400 resize-none"
+                className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm leading-relaxed text-gray-900 placeholder:text-gray-400 focus:ring-1 focus:outline-none"
               />
             </div>
           </div>
@@ -516,7 +519,7 @@ export default function SiteConfigPage() {
 
         {/* ── Statistiques ── */}
         <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-4">
+          <h2 className="mb-4 text-sm font-bold tracking-widest text-gray-500 uppercase">
             Statistiques (bandeau sous la bannière)
           </h2>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -526,14 +529,14 @@ export default function SiteConfigPage() {
                   type="text"
                   value={stat.value}
                   onChange={(e) => updateStat(i, 'value', e.target.value)}
-                  className="w-20 rounded-lg border border-gray-300 px-2 py-2 text-sm font-bold text-center focus:outline-none focus:ring-1 text-gray-900 placeholder:text-gray-400"
+                  className="w-20 rounded-lg border border-gray-300 px-2 py-2 text-center text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:ring-1 focus:outline-none"
                   placeholder="100%"
                 />
                 <input
                   type="text"
                   value={stat.label}
                   onChange={(e) => updateStat(i, 'label', e.target.value)}
-                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 text-gray-900 placeholder:text-gray-400"
+                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-1 focus:outline-none"
                   placeholder="Libellé"
                 />
               </div>
@@ -542,12 +545,12 @@ export default function SiteConfigPage() {
         </section>
 
         {/* ── Actions ── */}
-        <div className="flex flex-col sm:flex-row sm:justify-end gap-3 pb-4">
+        <div className="flex flex-col gap-3 pb-4 sm:flex-row sm:justify-end">
           <a
             href="/"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
           >
             Voir la page d&apos;accueil
             <ExternalLink className="h-3.5 w-3.5" strokeWidth={2} />
@@ -555,10 +558,10 @@ export default function SiteConfigPage() {
           <button
             type="submit"
             disabled={sauvegarde}
-            className="rounded-lg px-6 py-2.5 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50 transition flex items-center justify-center gap-2"
+            className="flex items-center justify-center gap-2 rounded-lg px-6 py-2.5 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-50"
             style={{ backgroundColor: 'var(--cp)' }}
           >
-            {sauvegarde && <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />}
+            {sauvegarde && <span className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" />}
             {sauvegarde ? 'Sauvegarde…' : 'Sauvegarder les modifications'}
           </button>
         </div>

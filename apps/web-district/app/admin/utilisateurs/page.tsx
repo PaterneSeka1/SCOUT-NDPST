@@ -55,8 +55,8 @@ const CATEGORIES_FILTRE = [
   { value: 'nommables-district', label: 'Nommables au district' },
   { value: 'equipe-district', label: 'Équipe district' },
   { value: 'commissaires-branche', label: 'Commissaires de branche' },
-// Périmètre V1 : l'espace district est masqué, ses filtres et nominations aussi
-// (la désignation du commissaire reste dans /admin/districts).
+  // Périmètre V1 : l'espace district est masqué, ses filtres et nominations aussi
+  // (la désignation du commissaire reste dans /admin/districts).
 ].filter((c) => !(PERIMETRE_V1 && ['nommables-district', 'equipe-district', 'commissaires-branche'].includes(c.value)))
 const AFFECTATIONS_DISTRICT_FILTRE = [
   { value: '', label: 'Toutes les affectations' },
@@ -68,9 +68,12 @@ const AFFECTATIONS_DISTRICT_FILTRE = [
   { value: 'ASSISTANT_DISTRICT', label: 'Assistants de district' },
 ]
 const LIMITES_PAGE = [20, 50, 100]
-const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
-const CLS_SELECT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_SELECT =
+  'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_SELECT_ERR =
+  'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_INPUT =
+  'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
 const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
 
 interface FormNomination {
@@ -148,8 +151,12 @@ export default function UtilisateursPlateformePage() {
     recherche.trim() ? `Recherche : ${recherche.trim()}` : '',
     categorieFiltre ? CATEGORIES_FILTRE.find((categorie) => categorie.value === categorieFiltre)?.label : '',
     libelleStatutActif ? `Statut : ${libelleStatutActif}` : '',
-    districtFiltre ? `District : ${districts.find((district) => district.id === districtFiltre)?.nom ?? 'sélectionné'}` : '',
-    paroisseFiltre ? `Paroisse : ${paroisses.find((paroisse) => paroisse.id === paroisseFiltre)?.nom ?? 'sélectionnée'}` : '',
+    districtFiltre
+      ? `District : ${districts.find((district) => district.id === districtFiltre)?.nom ?? 'sélectionné'}`
+      : '',
+    paroisseFiltre
+      ? `Paroisse : ${paroisses.find((paroisse) => paroisse.id === paroisseFiltre)?.nom ?? 'sélectionnée'}`
+      : '',
     roleFiltre ? `Rôle : ${LABELS_ROLES[roleFiltre] ?? roleFiltre}` : '',
     roleDistrictFiltre ? AFFECTATIONS_DISTRICT_FILTRE.find((option) => option.value === roleDistrictFiltre)?.label : '',
     brancheFiltre ? `Branche : ${LABELS_BRANCHES[brancheFiltre] ?? brancheFiltre}` : '',
@@ -158,7 +165,10 @@ export default function UtilisateursPlateformePage() {
   const handleRechercheChange = (valeur: string) => {
     setRecherche(valeur)
     if (debounceTimer) clearTimeout(debounceTimer)
-    const timer = setTimeout(() => { setRechercheDebounce(valeur); setPage(1) }, 300)
+    const timer = setTimeout(() => {
+      setRechercheDebounce(valeur)
+      setPage(1)
+    }, 300)
     setDebounceTimer(timer)
   }
 
@@ -205,9 +215,22 @@ export default function UtilisateursPlateformePage() {
       })
       .catch(() => toast.error('Impossible de charger les utilisateurs.'))
       .finally(() => setChargement(false))
-  }, [page, limite, rechercheDebounce, categorieFiltre, statutFiltre, districtFiltre, roleFiltre, roleDistrictFiltre, brancheFiltre, paroisseFiltre])
+  }, [
+    page,
+    limite,
+    rechercheDebounce,
+    categorieFiltre,
+    statutFiltre,
+    districtFiltre,
+    roleFiltre,
+    roleDistrictFiltre,
+    brancheFiltre,
+    paroisseFiltre,
+  ])
 
-  useEffect(() => { charger() }, [charger])
+  useEffect(() => {
+    charger()
+  }, [charger])
 
   const changerFiltre = (setter: (valeur: string) => void) => (valeur: string) => {
     setter(valeur)
@@ -327,23 +350,23 @@ export default function UtilisateursPlateformePage() {
   if (chargement) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--cp)' }} />
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2" style={{ borderColor: 'var(--cp)' }} />
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Utilisateurs</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Utilisateurs</h1>
+          <p className="mt-0.5 text-sm text-gray-500">
             {total} utilisateur{total !== 1 ? 's' : ''} sur l&apos;ensemble des paroisses
           </p>
         </div>
         <Link
           href="/admin/utilisateurs/nouveau"
-          className="shrink-0 rounded-lg px-4 py-2.5 text-sm font-bold text-white hover:brightness-110 transition"
+          className="shrink-0 rounded-lg px-4 py-2.5 text-sm font-bold text-white transition hover:brightness-110"
           style={{ backgroundColor: 'var(--cp)' }}
         >
           + Nouvel utilisateur
@@ -450,7 +473,9 @@ export default function UtilisateursPlateformePage() {
                     className={CLS_SELECT}
                   >
                     {LIMITES_PAGE.map((valeur) => (
-                      <option key={valeur} value={valeur}>{valeur} / page</option>
+                      <option key={valeur} value={valeur}>
+                        {valeur} / page
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -464,7 +489,9 @@ export default function UtilisateursPlateformePage() {
                   className={CLS_SELECT}
                 >
                   {CATEGORIES_FILTRE.map((categorie) => (
-                    <option key={categorie.value} value={categorie.value}>{categorie.label}</option>
+                    <option key={categorie.value} value={categorie.value}>
+                      {categorie.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -478,7 +505,9 @@ export default function UtilisateursPlateformePage() {
                 >
                   <option value="">Tous les districts</option>
                   {districts.map((district) => (
-                    <option key={district.id} value={district.id}>{district.nom}</option>
+                    <option key={district.id} value={district.id}>
+                      {district.nom}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -492,7 +521,9 @@ export default function UtilisateursPlateformePage() {
                 >
                   <option value="">Toutes les paroisses</option>
                   {paroisses.map((p) => (
-                    <option key={p.id} value={p.id}>{p.nom}</option>
+                    <option key={p.id} value={p.id}>
+                      {p.nom}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -506,7 +537,9 @@ export default function UtilisateursPlateformePage() {
                 >
                   <option value="">Tous les rôles</option>
                   {ROLES_FILTRE.map((role) => (
-                    <option key={role} value={role}>{LABELS_ROLES[role]}</option>
+                    <option key={role} value={role}>
+                      {LABELS_ROLES[role]}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -520,7 +553,9 @@ export default function UtilisateursPlateformePage() {
                     className={CLS_SELECT}
                   >
                     {AFFECTATIONS_DISTRICT_FILTRE.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -535,7 +570,9 @@ export default function UtilisateursPlateformePage() {
                 >
                   <option value="">Toutes les branches</option>
                   {Object.entries(LABELS_BRANCHES).map(([valeur, libelle]) => (
-                    <option key={valeur} value={valeur}>{libelle}</option>
+                    <option key={valeur} value={valeur}>
+                      {libelle}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -584,7 +621,9 @@ export default function UtilisateursPlateformePage() {
               className={CLS_SELECT}
             >
               {CATEGORIES_FILTRE.map((categorie) => (
-                <option key={categorie.value} value={categorie.value}>{categorie.label}</option>
+                <option key={categorie.value} value={categorie.value}>
+                  {categorie.label}
+                </option>
               ))}
             </select>
           </div>
@@ -613,7 +652,9 @@ export default function UtilisateursPlateformePage() {
               className={CLS_SELECT}
             >
               {LIMITES_PAGE.map((valeur) => (
-                <option key={valeur} value={valeur}>{valeur} / page</option>
+                <option key={valeur} value={valeur}>
+                  {valeur} / page
+                </option>
               ))}
             </select>
           </div>
@@ -627,7 +668,9 @@ export default function UtilisateursPlateformePage() {
             >
               <option value="">Tous les districts</option>
               {districts.map((district) => (
-                <option key={district.id} value={district.id}>{district.nom}</option>
+                <option key={district.id} value={district.id}>
+                  {district.nom}
+                </option>
               ))}
             </select>
           </div>
@@ -641,7 +684,9 @@ export default function UtilisateursPlateformePage() {
             >
               <option value="">Toutes les paroisses</option>
               {paroisses.map((p) => (
-                <option key={p.id} value={p.id}>{p.nom}</option>
+                <option key={p.id} value={p.id}>
+                  {p.nom}
+                </option>
               ))}
             </select>
           </div>
@@ -655,7 +700,9 @@ export default function UtilisateursPlateformePage() {
             >
               <option value="">Tous les rôles</option>
               {ROLES_FILTRE.map((role) => (
-                <option key={role} value={role}>{LABELS_ROLES[role]}</option>
+                <option key={role} value={role}>
+                  {LABELS_ROLES[role]}
+                </option>
               ))}
             </select>
           </div>
@@ -669,7 +716,9 @@ export default function UtilisateursPlateformePage() {
                 className={CLS_SELECT}
               >
                 {AFFECTATIONS_DISTRICT_FILTRE.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
                 ))}
               </select>
             </div>
@@ -684,7 +733,9 @@ export default function UtilisateursPlateformePage() {
             >
               <option value="">Toutes les branches</option>
               {Object.entries(LABELS_BRANCHES).map(([valeur, libelle]) => (
-                <option key={valeur} value={valeur}>{libelle}</option>
+                <option key={valeur} value={valeur}>
+                  {libelle}
+                </option>
               ))}
             </select>
           </div>
@@ -709,10 +760,7 @@ export default function UtilisateursPlateformePage() {
 
       <div className="space-y-3 md:hidden">
         {utilisateurs.map((u) => (
-          <div
-            key={u.id}
-            className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
-          >
+          <div key={u.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
             <button
               type="button"
               onClick={() => (window.location.href = `/admin/utilisateurs/${u.id}`)}
@@ -720,27 +768,37 @@ export default function UtilisateursPlateformePage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="break-words text-base font-semibold text-gray-900">{u.nom} {u.prenom}</p>
-                  <p className="mt-1 break-words text-sm text-gray-500">{u.paroisse.nom}</p>
+                  <p className="text-base font-semibold wrap-break-word text-gray-900">
+                    {u.nom} {u.prenom}
+                  </p>
+                  <p className="mt-1 text-sm wrap-break-word text-gray-500">{u.paroisse.nom}</p>
                 </div>
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                  u.actif ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'
-                }`}>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                    u.actif ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'
+                  }`}
+                >
                   {u.actif ? 'Actif' : 'Inactif'}
                 </span>
               </div>
 
               <div className="mt-3 flex flex-wrap gap-1.5">
-                <span className={`inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                  COULEURS_ROLES[u.role] ?? 'bg-gray-100 text-gray-700'
-                }`}>
-                  <span className="break-words">{libelleRoleAvecFonction(u.role, u.fonction, u.brancheType)}</span>
+                <span
+                  className={`inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                    COULEURS_ROLES[u.role] ?? 'bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  <span className="wrap-break-word">{libelleRoleAvecFonction(u.role, u.fonction, u.brancheType)}</span>
                 </span>
                 {u.roleDistrict && (
-                  <span className={`inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                    COULEURS_ROLES[u.roleDistrict] ?? 'bg-gray-100 text-gray-700'
-                  }`}>
-                    <span className="break-words">{libelleAffectationDistrict(u.roleDistrict, u.fonctionDistrict, u.brancheTypeDistrict)}</span>
+                  <span
+                    className={`inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      COULEURS_ROLES[u.roleDistrict] ?? 'bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    <span className="wrap-break-word">
+                      {libelleAffectationDistrict(u.roleDistrict, u.fonctionDistrict, u.brancheTypeDistrict)}
+                    </span>
                   </span>
                 )}
               </div>
@@ -751,7 +809,10 @@ export default function UtilisateursPlateformePage() {
                   {u.matricule ? <span className="font-mono">{u.matricule}</span> : (u.telephone ?? '—')}
                 </p>
                 {u.paroisse.district && (
-                  <p><span className="text-gray-400">District : </span>{u.paroisse.district.nom}</p>
+                  <p>
+                    <span className="text-gray-400">District : </span>
+                    {u.paroisse.district.nom}
+                  </p>
                 )}
               </div>
             </button>
@@ -776,7 +837,7 @@ export default function UtilisateursPlateformePage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-200 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <tr className="border-b border-gray-200 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase">
                 <th className="px-4 py-3">Nom / Prénom</th>
                 <th className="px-4 py-3">Paroisse</th>
                 <th className="px-4 py-3">Rôle</th>
@@ -789,24 +850,30 @@ export default function UtilisateursPlateformePage() {
               {utilisateurs.map((u) => (
                 <tr
                   key={u.id}
-                  className="hover:bg-gray-50 cursor-pointer"
+                  className="cursor-pointer hover:bg-gray-50"
                   onClick={() => (window.location.href = `/admin/utilisateurs/${u.id}`)}
                 >
                   <td className="px-4 py-3">
-                    <p className="font-medium text-gray-900">{u.nom} {u.prenom}</p>
+                    <p className="font-medium text-gray-900">
+                      {u.nom} {u.prenom}
+                    </p>
                   </td>
                   <td className="px-4 py-3 text-gray-700">{u.paroisse.nom}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col items-start gap-1">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                        COULEURS_ROLES[u.role] ?? 'bg-gray-100 text-gray-700'
-                      }`}>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          COULEURS_ROLES[u.role] ?? 'bg-gray-100 text-gray-700'
+                        }`}
+                      >
                         {libelleRoleAvecFonction(u.role, u.fonction, u.brancheType)}
                       </span>
                       {u.roleDistrict && (
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                          COULEURS_ROLES[u.roleDistrict] ?? 'bg-gray-100 text-gray-700'
-                        }`}>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                            COULEURS_ROLES[u.roleDistrict] ?? 'bg-gray-100 text-gray-700'
+                          }`}
+                        >
                           {libelleAffectationDistrict(u.roleDistrict, u.fonctionDistrict, u.brancheTypeDistrict)}
                         </span>
                       )}
@@ -816,9 +883,11 @@ export default function UtilisateursPlateformePage() {
                     {u.matricule ? <span className="font-mono">{u.matricule}</span> : (u.telephone ?? '—')}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-                      u.actif ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'
-                    }`}>
+                    <span
+                      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                        u.actif ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'
+                      }`}
+                    >
                       {u.actif ? 'Actif' : 'Inactif'}
                     </span>
                   </td>
@@ -838,7 +907,9 @@ export default function UtilisateursPlateformePage() {
               ))}
               {utilisateurs.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400">Aucun utilisateur trouvé.</td>
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                    Aucun utilisateur trouvé.
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -855,10 +926,14 @@ export default function UtilisateursPlateformePage() {
               <div className="border-b border-gray-100 px-5 py-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <h2 className="text-lg font-bold text-gray-900">Nommer {utilisateurNomination.prenom} {utilisateurNomination.nom}</h2>
+                    <h2 className="text-lg font-bold text-gray-900">
+                      Nommer {utilisateurNomination.prenom} {utilisateurNomination.nom}
+                    </h2>
                     <p className="text-sm text-gray-500">
                       {utilisateurNomination.paroisse.nom}
-                      {utilisateurNomination.paroisse.district ? ` — District ${utilisateurNomination.paroisse.district.nom}` : ''}
+                      {utilisateurNomination.paroisse.district
+                        ? ` — District ${utilisateurNomination.paroisse.district.nom}`
+                        : ''}
                     </p>
                   </div>
                   <button
@@ -876,7 +951,9 @@ export default function UtilisateursPlateformePage() {
                 <section className="space-y-3">
                   <h3 className="text-sm font-semibold text-gray-800">Rôle paroissial</h3>
                   <div>
-                    <label className={CLS_LABEL}>Rôle <span className="text-red-500">*</span></label>
+                    <label className={CLS_LABEL}>
+                      Rôle <span className="text-red-500">*</span>
+                    </label>
                     <select
                       name="role"
                       value={formNomination.role}
@@ -885,7 +962,9 @@ export default function UtilisateursPlateformePage() {
                     >
                       <option value="">Sélectionner un rôle</option>
                       {ROLES_ASSIGNABLES_PAROISSE.map((role) => (
-                        <option key={role} value={role}>{LABELS_ROLES[role]}</option>
+                        <option key={role} value={role}>
+                          {LABELS_ROLES[role]}
+                        </option>
                       ))}
                     </select>
                     {erreursNomination.role && <p className="mt-1 text-xs text-red-600">{erreursNomination.role}</p>}
@@ -893,7 +972,9 @@ export default function UtilisateursPlateformePage() {
 
                   {roleNominationEstBranche && (
                     <div>
-                      <label className={CLS_LABEL}>Branche <span className="text-red-500">*</span></label>
+                      <label className={CLS_LABEL}>
+                        Branche <span className="text-red-500">*</span>
+                      </label>
                       <select
                         name="brancheType"
                         value={formNomination.brancheType}
@@ -902,10 +983,14 @@ export default function UtilisateursPlateformePage() {
                       >
                         <option value="">Sélectionner une branche</option>
                         {Object.entries(LABELS_BRANCHES).map(([valeur, libelle]) => (
-                          <option key={valeur} value={valeur}>{libelle}</option>
+                          <option key={valeur} value={valeur}>
+                            {libelle}
+                          </option>
                         ))}
                       </select>
-                      {erreursNomination.brancheType && <p className="mt-1 text-xs text-red-600">{erreursNomination.brancheType}</p>}
+                      {erreursNomination.brancheType && (
+                        <p className="mt-1 text-xs text-red-600">{erreursNomination.brancheType}</p>
+                      )}
                     </div>
                   )}
                 </section>
@@ -930,7 +1015,9 @@ export default function UtilisateursPlateformePage() {
                           </option>
                         ))}
                       </select>
-                      {erreursNomination.roleDistrict && <p className="mt-1 text-xs text-red-600">{erreursNomination.roleDistrict}</p>}
+                      {erreursNomination.roleDistrict && (
+                        <p className="mt-1 text-xs text-red-600">{erreursNomination.roleDistrict}</p>
+                      )}
                     </div>
 
                     {nominationEstAssistantDistrict && (
@@ -943,7 +1030,9 @@ export default function UtilisateursPlateformePage() {
                                 type="radio"
                                 name="modeDistrict"
                                 checked={nominationModeBranche}
-                                onChange={() => setFormNomination((p) => ({ ...p, modeDistrict: 'branche', fonctionDistrict: '' }))}
+                                onChange={() =>
+                                  setFormNomination((p) => ({ ...p, modeDistrict: 'branche', fonctionDistrict: '' }))
+                                }
                                 className="accent-(--cp)"
                               />
                               Commissaire de branche
@@ -953,7 +1042,13 @@ export default function UtilisateursPlateformePage() {
                                 type="radio"
                                 name="modeDistrict"
                                 checked={!nominationModeBranche}
-                                onChange={() => setFormNomination((p) => ({ ...p, modeDistrict: 'fonction', brancheTypeDistrict: '' }))}
+                                onChange={() =>
+                                  setFormNomination((p) => ({
+                                    ...p,
+                                    modeDistrict: 'fonction',
+                                    brancheTypeDistrict: '',
+                                  }))
+                                }
                                 className="accent-(--cp)"
                               />
                               Autre fonction
@@ -963,7 +1058,9 @@ export default function UtilisateursPlateformePage() {
 
                         {nominationModeBranche ? (
                           <div>
-                            <label className={CLS_LABEL}>Branche de district <span className="text-red-500">*</span></label>
+                            <label className={CLS_LABEL}>
+                              Branche de district <span className="text-red-500">*</span>
+                            </label>
                             <select
                               name="brancheTypeDistrict"
                               value={formNomination.brancheTypeDistrict}
@@ -972,14 +1069,20 @@ export default function UtilisateursPlateformePage() {
                             >
                               <option value="">Sélectionner une branche</option>
                               {Object.entries(LABELS_BRANCHES).map(([valeur, libelle]) => (
-                                <option key={valeur} value={valeur}>{libelle}</option>
+                                <option key={valeur} value={valeur}>
+                                  {libelle}
+                                </option>
                               ))}
                             </select>
-                            {erreursNomination.brancheTypeDistrict && <p className="mt-1 text-xs text-red-600">{erreursNomination.brancheTypeDistrict}</p>}
+                            {erreursNomination.brancheTypeDistrict && (
+                              <p className="mt-1 text-xs text-red-600">{erreursNomination.brancheTypeDistrict}</p>
+                            )}
                           </div>
                         ) : (
                           <div>
-                            <label className={CLS_LABEL}>Fonction <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
+                            <label className={CLS_LABEL}>
+                              Fonction <span className="text-xs font-normal text-gray-400">(optionnel)</span>
+                            </label>
                             <input
                               name="fonctionDistrict"
                               value={formNomination.fonctionDistrict}
