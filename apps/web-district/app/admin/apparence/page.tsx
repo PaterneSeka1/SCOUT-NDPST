@@ -291,7 +291,7 @@ export default function SiteConfigPage() {
                 unoptimized
                 className="w-4 h-4 object-contain"
               />
-              <span className="text-xs text-gray-600 font-medium truncate max-w-[200px]">
+              <span className="text-xs text-gray-600 font-medium truncate max-w-50">
                 {config.nomSite} — Suivi pédagogique
               </span>
               <span className="text-gray-400 text-xs ml-1">×</span>
