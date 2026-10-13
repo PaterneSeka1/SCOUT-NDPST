@@ -2,8 +2,7 @@
 // paroisse : Chef de Groupe, maîtrise de groupe (adjoint/assistants) et
 // encadrement de branche. Tout le reste (espace district, programmes,
 // progression/badges, documents et rappels, autorisations de camp, espaces
-// parent et scout, calendrier iCal, cartes QR, apparence plateforme,
-// rapports) reste dans le code et en base, mais est MASQUÉ :
+// parent et scout, calendrier iCal, cartes QR, rapports) reste dans le code et en base, mais est MASQUÉ :
 //   - côté serveur, par proxy.ts (404 JSON pour les routes API, redirection
 //     pour les pages) — c'est la vraie barrière, l'interface ne fait que suivre ;
 //   - côté interface, par les tests `PERIMETRE_V1` dans les menus et les fiches.
@@ -18,7 +17,9 @@ const PAGES_HORS_V1: RegExp[] = [
   /^\/district(\/|$)/,
   /^\/dashboard\/(parents|documents|programmes|rapports|mes-enfants|ma-progression)(\/|$)/,
   /^\/dashboard\/scouts\/[^/]+\/carte(\/|$)/,
-  /^\/admin\/(rapports|apparence)(\/|$)/,
+  // Apparence plateforme : réactivée pour l'application district, où
+  // l'administrateur plateforme règle l'identité visuelle.
+  /^\/admin\/rapports(\/|$)/,
 ]
 
 const API_HORS_V1: RegExp[] = [

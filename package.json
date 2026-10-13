@@ -1,0 +1,21 @@
+{
+  "name": "scout-ascci",
+  "private": true,
+  "description": "Monorepo SCOUT ASCCI : API (NestJS) commune, frontend paroissial et application district (Next.js), chaque plateforme sur sa propre installation.",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @scout/shared build && pnpm --parallel --filter @scout/shared --filter @scout/api --filter @scout/web-paroisse --filter @scout/web-district dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm --filter @scout/shared build && pnpm -r typecheck",
+    "test": "pnpm --filter @scout/shared build && pnpm -r test",
+    "db:generate": "pnpm --filter @scout/api prisma:generate",
+    "db:deploy": "pnpm --filter @scout/api prisma:deploy",
+    "db:seed": "pnpm --filter @scout/api prisma:seed",
+    "db:diff": "pnpm --filter @scout/api prisma:diff",
+    "db:status": "pnpm --filter @scout/api prisma:status"
+  }
+}

@@ -3,6 +3,7 @@
 // lib/prisma, qui embarque le driver `pg`, incompatible avec un bundle navigateur).
 
 export const LABELS_ACTIONS_AUDIT: Record<string, string> = {
+  PLATEFORME_INITIALISEE: 'Initialisation de la plateforme',
   UTILISATEUR_CREE: 'Création utilisateur',
   UTILISATEUR_ROLE_MODIFIE: 'Changement de rôle',
   UTILISATEUR_DESACTIVE: 'Désactivation utilisateur',

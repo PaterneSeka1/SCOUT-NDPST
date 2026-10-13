@@ -1,4 +1,5 @@
-import type { StatutCotisation } from '@/app/generated/prisma/client'
+// Miroir de l'enum Prisma StatutCotisation (apps/api/prisma/schema.prisma).
+export type StatutCotisation = 'EN_ATTENTE' | 'PARTIELLEMENT_PAYEE' | 'PAYEE' | 'EXONEREE'
 
 export const LABELS_TYPE_COTISATION: Record<string, string> = {
   ADHESION_ANNUELLE: 'Adhésion annuelle',

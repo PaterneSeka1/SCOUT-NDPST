@@ -1,0 +1,12 @@
+**/node_modules
+**/.next
+**/dist
+**/.env
+**/.env.*
+!**/.env.example
+.git
+backups
+**/uploads-prives
+**/uploads-publiques
+**/src/generated
+**/app/generated

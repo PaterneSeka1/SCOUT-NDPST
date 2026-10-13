@@ -18,7 +18,6 @@ describe.runIf(PERIMETRE_V1)('périmètre V1', () => {
       '/dashboard/ma-progression',
       '/dashboard/scouts/abc/carte',
       '/admin/rapports',
-      '/admin/apparence',
     ]) {
       expect(pageHorsPerimetreV1(chemin), chemin).toBe(true)
     }
@@ -41,6 +40,7 @@ describe.runIf(PERIMETRE_V1)('périmètre V1', () => {
       '/admin/districts',
       '/admin/utilisateurs',
       '/admin/audit',
+      '/admin/apparence',
       '/districts-inexistant',
     ]) {
       expect(pageHorsPerimetreV1(chemin), chemin).toBe(false)
