@@ -1,0 +1,127 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useSession } from '@/lib/session-client'
+import Link from 'next/link'
+import { toast } from 'sonner'
+import { ROLES_GROUPE, ROLES_BRANCHE } from '@scout/shared'
+import { LABELS_BRANCHES as BRANCHES, COULEURS_BRANCHES as COULEURS_BRANCHE } from '@scout/shared'
+import { Plus } from '@/lib/icons'
+
+interface Programme {
+  id: string
+  titre: string
+  description: string | null
+  periodeDebut: string
+  periodeFin: string
+  brancheType: string | null
+  _count: { lignes: number }
+  creeParUtilisateur: { prenom: string; nom: string }
+}
+
+function formatPeriode(debut: string, fin: string) {
+  const opts: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', year: 'numeric' }
+  return `${new Date(debut).toLocaleDateString('fr-FR', opts)} → ${new Date(fin).toLocaleDateString('fr-FR', opts)}`
+}
+
+export default function PageProgrammes() {
+  const { data: session } = useSession()
+  const role = session?.user?.role ?? ''
+  const estGroupe = ROLES_GROUPE.includes(role)
+  const estBranche = ROLES_BRANCHE.includes(role)
+  const peutCreer = estGroupe || estBranche
+
+  const [programmes, setProgrammes] = useState<Programme[]>([])
+  const [chargement, setChargement] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/programmes')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.erreur) { toast.error(data.erreur); return }
+        setProgrammes(data)
+      })
+      .catch(() => toast.error('Impossible de charger les programmes'))
+      .finally(() => setChargement(false))
+  }, [])
+
+  const programmeGroupe = programmes.filter((p) => !p.brancheType)
+  const programmesBranches = programmes.filter((p) => p.brancheType)
+
+  if (chargement) return (
+    <div className="flex items-center justify-center h-48">
+      <div className="w-6 h-6 border-2 border-(--cp) border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Programmes d&apos;activités</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Programme du groupe et programmes propres à chaque branche</p>
+        </div>
+        {peutCreer && (
+          <Link href="/dashboard/programmes/nouveau"
+            className="shrink-0 flex items-center gap-1.5 bg-(--cp) text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all text-sm font-medium">
+            <Plus className="h-4 w-4" strokeWidth={2} />
+            Nouveau programme
+          </Link>
+        )}
+      </div>
+
+      <section>
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Programme du groupe</h2>
+        {programmeGroupe.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+            <p className="text-gray-400 text-sm">Aucun programme de groupe</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {programmeGroupe.map((p) => <CarteProgramme key={p.id} programme={p} />)}
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Programmes des branches</h2>
+        {programmesBranches.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+            <p className="text-gray-400 text-sm">Aucun programme de branche</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {programmesBranches.map((p) => <CarteProgramme key={p.id} programme={p} />)}
+          </div>
+        )}
+      </section>
+    </div>
+  )
+}
+
+function CarteProgramme({ programme: p }: { programme: Programme }) {
+  return (
+    <Link href={`/dashboard/programmes/${p.id}`}
+      className="block bg-white rounded-xl border border-gray-200 p-4 sm:p-5 hover:border-(--cp)/40 transition-colors">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-sm font-semibold text-gray-900 truncate">{p.titre}</p>
+            {p.brancheType ? (
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${COULEURS_BRANCHE[p.brancheType] ?? 'bg-gray-100 text-gray-600'}`}>
+                {BRANCHES[p.brancheType]}
+              </span>
+            ) : (
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0 bg-gray-100 text-gray-600">Groupe</span>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 mt-1">{formatPeriode(p.periodeDebut, p.periodeFin)}</p>
+          {p.description && <p className="text-xs text-gray-400 mt-1 truncate">{p.description}</p>}
+        </div>
+        <div className="shrink-0 text-right">
+          <span className="text-xs font-medium text-gray-500">{p._count.lignes} thème{p._count.lignes !== 1 ? 's' : ''}</span>
+        </div>
+      </div>
+    </Link>
+  )
+}
