@@ -1,3 +1,9 @@
+# Nom de projet fixe : le volume de données s'appelle toujours
+# scout-ascci_postgres_data, quel que soit le dossier d'installation. Une
+# installation dans un autre dossier ne crée donc pas une base vide par erreur,
+# et ne réutilise jamais le volume d'une ancienne installation (autre nom).
+name: scout-ascci
+
 services:
   db:
     image: postgres:16-alpine

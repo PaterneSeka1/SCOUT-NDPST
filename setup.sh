@@ -24,7 +24,7 @@ echo ""
 # --- Vérifications préalables ---
 
 command -v node >/dev/null 2>&1 || err "Node.js n'est pas installé. Télécharge-le sur https://nodejs.org"
-command -v npm  >/dev/null 2>&1 || err "npm n'est pas installé."
+command -v corepack >/dev/null 2>&1 || err "corepack est introuvable (fourni avec Node.js ≥ 20)."
 command -v docker >/dev/null 2>&1 || err "Docker n'est pas installé. Télécharge-le sur https://docker.com"
 
 if docker compose version >/dev/null 2>&1; then
@@ -42,34 +42,32 @@ ok "Docker détecté"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# --- Fichier .env ---
-if [ ! -f "my-app/.env" ]; then
-  info "Création du fichier .env..."
-  cp my-app/.env.example my-app/.env
-  ok ".env créé depuis .env.example"
-  echo ""
-  echo -e "${JAUNE}  ⚠ Ouvre my-app/.env et change NEXTAUTH_SECRET par une valeur secrète.${RESET}"
-  echo ""
+# --- Fichiers .env ---
+if [ ! -f "apps/api/.env" ]; then
+  info "Création de apps/api/.env..."
+  cp apps/api/.env.example apps/api/.env
+  # Secret de signature des jetons généré localement, jamais commité.
+  SECRET=$(node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))")
+  sed -i.bak "s#^JWT_ACCESS_SECRET=.*#JWT_ACCESS_SECRET=\"$SECRET\"#" apps/api/.env && rm -f apps/api/.env.bak
+  ok "apps/api/.env créé (secret JWT généré)"
 else
-  ok ".env déjà présent"
+  ok "apps/api/.env déjà présent"
 fi
+for FRONT in web-paroisse web-district; do
+  if [ ! -f "apps/$FRONT/.env" ]; then
+    cp "apps/$FRONT/.env.example" "apps/$FRONT/.env"
+    ok "apps/$FRONT/.env créé"
+  else
+    ok "apps/$FRONT/.env déjà présent"
+  fi
+done
 
-# --- Dépendances npm ---
-info "Installation des dépendances npm..."
-cd my-app
-npm install --silent
+# --- Dépendances (pnpm via corepack) ---
+# Le client Prisma est généré par le postinstall de @scout/api.
+info "Installation des dépendances..."
+corepack pnpm install
+corepack pnpm --filter @scout/shared build
 ok "Dépendances installées"
-
-# --- Client Prisma ---
-# Généré dans app/generated/prisma (voir schema.prisma), ignoré par git : doit
-# être régénéré à chaque installation, npm n'a pas de hook postinstall pour ça
-# (voir Dockerfile — le client est généré explicitement au build, pas via
-# postinstall, car l'étape "deps" du Dockerfile ne copie pas prisma/schema.prisma).
-info "Génération du client Prisma..."
-npx prisma generate
-ok "Client Prisma généré"
-
-cd "$SCRIPT_DIR"
 
 # --- Démarrage de la base de données ---
 info "Démarrage de la base de données PostgreSQL..."
@@ -88,17 +86,13 @@ ok "PostgreSQL prêt"
 
 # --- Migrations Prisma ---
 info "Création des tables (migration Prisma)..."
-cd my-app
-if find prisma/migrations -mindepth 1 -maxdepth 1 -type d 2>/dev/null | read; then
-  npx prisma migrate deploy
-else
-  npx prisma db push
-fi
+cd apps/api
+corepack pnpm prisma:deploy
 ok "Base de données initialisée"
 
 # --- Seed ---
 info "Création du compte admin..."
-npx prisma db seed
+corepack pnpm prisma:seed
 ok "Compte admin créé"
 
 cd "$SCRIPT_DIR"
@@ -109,7 +103,7 @@ echo -e "${VERT}  Installation terminée avec succès !${RESET}"
 echo "=================================================="
 echo ""
 echo "  Compte admin → matricule: ADMIN001A  / mot de passe: Admin1234!"
-echo "  (personnalisable via ADMIN_* dans my-app/.env — voir .env.example)"
+echo "  (personnalisable via ADMIN_* dans apps/api/.env — voir apps/api/.env.example)"
 echo ""
 echo "  Pour lancer l'application : ./start.sh"
 echo ""

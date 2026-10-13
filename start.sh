@@ -51,12 +51,13 @@ ok "PostgreSQL prêt"
 
 echo ""
 echo "  Application  → http://localhost:3000"
+echo "  District     → http://localhost:3001"
+echo "  API          → http://localhost:4000/api (documentation : /api/docs)"
 echo "  Adminer (DB) → http://localhost:8080"
 echo ""
-echo "  Appuie sur Ctrl+C pour arrêter le serveur."
+echo "  Appuie sur Ctrl+C pour arrêter l’API et les frontends."
 echo "  (Les conteneurs Docker restent actifs — lance './stop.sh' pour tout arrêter)"
 echo ""
 
-# --- Lancement du serveur Next.js ---
-cd my-app
-npm run dev
+# --- Lancement de l'API et du frontend (en parallèle) ---
+corepack pnpm dev
