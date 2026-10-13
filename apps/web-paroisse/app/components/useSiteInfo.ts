@@ -15,26 +15,48 @@ const DEFAUT: SiteInfo = {
   sousTitreSite: "Côte d'Ivoire",
 }
 
-// Mise en cache simple pour éviter de multiples requêtes sur la même page
+// Partage aussi la requête en cours entre les composants de la page.
 let cache: SiteInfo | null = null
+let requete: Promise<SiteInfo> | null = null
+
+async function chargerSiteInfo(): Promise<SiteInfo> {
+  if (cache) return cache
+  if (!requete) {
+    requete = fetch('/api/public/logo')
+      .then((r) => {
+        if (!r.ok) throw new Error('Impossible de charger le logo')
+        return r.json() as Promise<Partial<SiteInfo>>
+      })
+      .then((d) => {
+        cache = {
+          logoUrl: d.logoUrl || LOGO_OFFICIEL,
+          nomSite: d.nomSite ?? DEFAUT.nomSite,
+          sousTitreSite: d.sousTitreSite ?? DEFAUT.sousTitreSite,
+        }
+        return cache
+      })
+      .finally(() => {
+        requete = null
+      })
+  }
+  return requete
+}
 
 export function useSiteInfo(): SiteInfo {
   const [info, setInfo] = useState<SiteInfo>(cache ?? DEFAUT)
 
   useEffect(() => {
-    if (cache) { setInfo(cache); return }
-    fetch('/api/public/logo')
-      .then((r) => r.json())
-      .then((d: Partial<SiteInfo>) => {
-        const result: SiteInfo = {
-          logoUrl: d.logoUrl || LOGO_OFFICIEL,
-          nomSite: d.nomSite ?? DEFAUT.nomSite,
-          sousTitreSite: d.sousTitreSite ?? DEFAUT.sousTitreSite,
-        }
-        cache = result
-        setInfo(result)
+    let actif = true
+    chargerSiteInfo()
+      .then((result) => {
+        if (actif) setInfo(result)
       })
-      .catch(() => setInfo(DEFAUT))
+      .catch(() => {
+        if (actif) setInfo(DEFAUT)
+      })
+    return () => {
+      actif = false
+    }
   }, [])
 
   return info

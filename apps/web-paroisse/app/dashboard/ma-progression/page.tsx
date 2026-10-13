@@ -1,5 +1,7 @@
 'use client'
 
+import Image from 'next/image'
+
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { LABELS_BRANCHES, COULEURS_BRANCHES } from '@scout/shared'
@@ -12,21 +14,46 @@ const LABELS_STATUT_REUNION: Record<string, { label: string; cls: string; dot: s
   EXCUSE: { label: 'Excusé', cls: 'text-orange-700 bg-orange-50', dot: 'bg-orange-400' },
 }
 
-interface Badge { id: string; nom: string; description: string | null; brancheType: string; ordre: number }
+interface Badge {
+  id: string
+  nom: string
+  description: string | null
+  brancheType: string
+  ordre: number
+}
 interface Progression {
-  id: string; dateValidation: string; commentaire: string | null
+  id: string
+  dateValidation: string
+  commentaire: string | null
   badge: Badge
   validePar: { nom: string; prenom: string } | null
 }
 interface ProchaineActivite {
-  id: string; titre: string; dateDebut: string; lieu: string | null; type: string; brancheType: string | null
+  id: string
+  titre: string
+  dateDebut: string
+  lieu: string | null
+  type: string
+  brancheType: string | null
 }
 interface DerniereReunion {
   statut: string
-  jourReunion: { id: string; titre: string | null; dateHeure: string; dateReportee: string | null; brancheType: string | null }
+  jourReunion: {
+    id: string
+    titre: string | null
+    dateHeure: string
+    dateReportee: string | null
+    brancheType: string | null
+  }
 }
 interface Scout {
-  id: string; nom: string; prenom: string; brancheType: string; photo: string | null; matricule: string | null; actif: boolean
+  id: string
+  nom: string
+  prenom: string
+  brancheType: string
+  photo: string | null
+  matricule: string | null
+  actif: boolean
   progressions: Progression[]
   presences: { activite: { id: string; titre: string; dateDebut: string; type: string } }[]
   _count: { presences: number }
@@ -44,7 +71,10 @@ export default function PageMaProgression() {
     fetch('/api/ma-progression')
       .then((r) => r.json())
       .then((data) => {
-        if (data.erreur) { setErreur(data.erreur); return }
+        if (data.erreur) {
+          setErreur(data.erreur)
+          return
+        }
         setScout(data.scout)
         setBadgesBranche(data.badgesBranche ?? [])
         setProchainesActivites(data.prochainesActivites ?? [])
@@ -54,13 +84,15 @@ export default function PageMaProgression() {
       .finally(() => setChargement(false))
   }, [])
 
-  if (chargement) return (
-    <div className="flex items-center justify-center h-48">
-      <div className="w-6 h-6 border-2 border-(--cp) border-t-transparent rounded-full animate-spin" />
-    </div>
-  )
+  if (chargement)
+    return (
+      <div className="flex h-48 items-center justify-center">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-(--cp) border-t-transparent" />
+      </div>
+    )
 
-  if (erreur) return <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreur}</div>
+  if (erreur)
+    return <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{erreur}</div>
   if (!scout) return null
 
   const badgesObtenus = new Set(scout.progressions.map((p) => p.badge.id))
@@ -70,25 +102,42 @@ export default function PageMaProgression() {
   return (
     <div className="space-y-6">
       {/* Profil */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
+      <div className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center text-2xl font-bold text-gray-500 shrink-0 overflow-hidden">
-            {scout.photo ? <img src={scout.photo} className="w-full h-full object-cover" alt="" /> : `${scout.prenom[0]}${scout.nom[0]}`}
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-2xl font-bold text-gray-500">
+            {scout.photo ? (
+              <Image
+                width={64}
+                height={64}
+                unoptimized
+                src={scout.photo}
+                className="h-full w-full object-cover"
+                alt=""
+              />
+            ) : (
+              `${scout.prenom[0]}${scout.nom[0]}`
+            )}
           </div>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold text-gray-900">{scout.prenom} {scout.nom}</h1>
-            <div className="flex flex-wrap items-center gap-2 mt-1">
-              <span className={`text-xs px-2 py-0.5 rounded-full ${bgCls} ${textCls}`}>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl font-bold text-gray-900">
+              {scout.prenom} {scout.nom}
+            </h1>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <span className={`rounded-full px-2 py-0.5 text-xs ${bgCls} ${textCls}`}>
                 {LABELS_BRANCHES[scout.brancheType] ?? scout.brancheType}
               </span>
-              {scout.matricule && <span className="text-xs text-gray-500 font-mono">{scout.matricule}</span>}
-              <span className={`text-xs px-2 py-0.5 rounded-full ${scout.actif ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+              {scout.matricule && <span className="font-mono text-xs text-gray-500">{scout.matricule}</span>}
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs ${scout.actif ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
+              >
                 {scout.actif ? 'Actif' : 'Inactif'}
               </span>
             </div>
           </div>
-          <Link href={`/dashboard/scouts/${scout.id}/carte`}
-            className="shrink-0 border border-gray-300 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+          <Link
+            href={`/dashboard/scouts/${scout.id}/carte`}
+            className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+          >
             Ma carte
           </Link>
         </div>
@@ -96,52 +145,68 @@ export default function PageMaProgression() {
 
       {/* Statistiques */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="bg-(--cp) text-white rounded-xl p-4 text-center">
+        <div className="rounded-xl bg-(--cp) p-4 text-center text-white">
           <p className="text-2xl font-bold">{badgesObtenus.size}</p>
-          <p className="text-xs opacity-90 mt-0.5">Badge{badgesObtenus.size > 1 ? 's' : ''} obtenu{badgesObtenus.size > 1 ? 's' : ''}</p>
+          <p className="mt-0.5 text-xs opacity-90">
+            Badge{badgesObtenus.size > 1 ? 's' : ''} obtenu{badgesObtenus.size > 1 ? 's' : ''}
+          </p>
         </div>
-        <div className="bg-(--ca) text-white rounded-xl p-4 text-center">
+        <div className="rounded-xl bg-(--ca) p-4 text-center text-white">
           <p className="text-2xl font-bold">{scout._count.presences}</p>
-          <p className="text-xs opacity-90 mt-0.5">Activité{scout._count.presences > 1 ? 's' : ''}</p>
+          <p className="mt-0.5 text-xs opacity-90">Activité{scout._count.presences > 1 ? 's' : ''}</p>
         </div>
-        <div className="bg-(--ca) text-white rounded-xl p-4 text-center">
+        <div className="rounded-xl bg-(--ca) p-4 text-center text-white">
           <p className="text-2xl font-bold">{pct}%</p>
-          <p className="text-xs opacity-90 mt-0.5">Progression</p>
+          <p className="mt-0.5 text-xs opacity-90">Progression</p>
         </div>
       </div>
 
       {/* Parcours badges */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
+      <div className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
         {badgesBranche.length === 0 ? (
-          <div className="text-center py-6">
-            <Award className="h-8 w-8 mx-auto mb-2 text-gray-300" strokeWidth={2} />
+          <div className="py-6 text-center">
+            <Award className="mx-auto mb-2 h-8 w-8 text-gray-300" strokeWidth={2} />
             <p className="text-sm text-gray-500">Aucun badge configuré pour ta branche pour le moment.</p>
-            <p className="text-xs text-gray-400 mt-1">Demande à ton responsable de branche.</p>
+            <p className="mt-1 text-xs text-gray-400">Demande à ton responsable de branche.</p>
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between mb-2">
+            <div className="mb-2 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-gray-800">Parcours de badges</h2>
-              <span className="text-xs text-gray-400">{badgesObtenus.size} / {badgesBranche.length}</span>
+              <span className="text-xs text-gray-400">
+                {badgesObtenus.size} / {badgesBranche.length}
+              </span>
             </div>
-            <div className="w-full bg-gray-100 rounded-full h-2 mb-4">
-              <div className="bg-(--cp) h-2 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+            <div className="mb-4 h-2 w-full rounded-full bg-gray-100">
+              <div className="h-2 rounded-full bg-(--cp) transition-all duration-500" style={{ width: `${pct}%` }} />
             </div>
             <div className="space-y-2">
               {badgesBranche.map((badge) => {
                 const obtenu = badgesObtenus.has(badge.id)
                 const prog = scout.progressions.find((p) => p.badge.id === badge.id)
                 return (
-                  <div key={badge.id} className={`flex items-start gap-3 p-3 rounded-lg ${obtenu ? 'bg-green-50 border border-green-100' : 'bg-gray-50 border border-gray-100'}`}>
-                    <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs mt-0.5 ${obtenu ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                  <div
+                    key={badge.id}
+                    className={`flex items-start gap-3 rounded-lg p-3 ${obtenu ? 'border border-green-100 bg-green-50' : 'border border-gray-100 bg-gray-50'}`}
+                  >
+                    <div
+                      className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs ${obtenu ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400'}`}
+                    >
                       {obtenu ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} /> : badge.ordre}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium ${obtenu ? 'text-green-800' : 'text-gray-600'}`}>{badge.nom}</p>
-                      {badge.description && <p className="text-xs text-gray-400 mt-0.5">{badge.description}</p>}
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-sm font-medium ${obtenu ? 'text-green-800' : 'text-gray-600'}`}>
+                        {badge.nom}
+                      </p>
+                      {badge.description && <p className="mt-0.5 text-xs text-gray-400">{badge.description}</p>}
                       {obtenu && prog && (
-                        <p className="text-xs text-green-600 mt-1">
-                          Obtenu le {new Date(prog.dateValidation).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        <p className="mt-1 text-xs text-green-600">
+                          Obtenu le{' '}
+                          {new Date(prog.dateValidation).toLocaleDateString('fr-FR', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                          })}
                           {prog.validePar ? ` par ${prog.validePar.prenom} ${prog.validePar.nom}` : ''}
                         </p>
                       )}
@@ -155,18 +220,22 @@ export default function PageMaProgression() {
       </div>
 
       {/* Prochaines activités */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
-        <h2 className="text-sm font-semibold text-gray-800 mb-4">Prochaines activités</h2>
+      <div className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
+        <h2 className="mb-4 text-sm font-semibold text-gray-800">Prochaines activités</h2>
         {prochainesActivites.length === 0 ? (
-          <p className="text-sm text-gray-400 italic text-center py-4">Aucune activité à venir pour le moment.</p>
+          <p className="py-4 text-center text-sm text-gray-400 italic">Aucune activité à venir pour le moment.</p>
         ) : (
           <div className="space-y-2">
             {prochainesActivites.map((a) => (
               <div key={a.id} className="flex items-center gap-3 py-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-(--ca) shrink-0" />
-                <span className="flex-1 text-sm text-gray-700 truncate">{a.titre}</span>
-                <span className="text-xs text-gray-400 shrink-0">
-                  {new Date(a.dateDebut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-(--ca)" />
+                <span className="flex-1 truncate text-sm text-gray-700">{a.titre}</span>
+                <span className="shrink-0 text-xs text-gray-400">
+                  {new Date(a.dateDebut).toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  })}
                 </span>
                 {a.lieu && <span className="text-xs text-gray-400">· {a.lieu}</span>}
               </div>
@@ -176,20 +245,26 @@ export default function PageMaProgression() {
       </div>
 
       {/* Dernières participations (activités) */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
-        <h2 className="text-sm font-semibold text-gray-800 mb-4">Mes dernières participations</h2>
+      <div className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
+        <h2 className="mb-4 text-sm font-semibold text-gray-800">Mes dernières participations</h2>
         {scout.presences.length === 0 ? (
-          <p className="text-sm text-gray-400 italic text-center py-4">Aucune participation enregistrée.</p>
+          <p className="py-4 text-center text-sm text-gray-400 italic">Aucune participation enregistrée.</p>
         ) : (
           <div className="space-y-2">
             {scout.presences.map((p, i) => (
               <div key={i} className="flex items-center gap-3 py-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-(--ca) shrink-0" />
-                <span className="flex-1 text-sm text-gray-700 truncate">{p.activite.titre}</span>
-                <span className="text-xs text-gray-400 shrink-0">
-                  {new Date(p.activite.dateDebut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-(--ca)" />
+                <span className="flex-1 truncate text-sm text-gray-700">{p.activite.titre}</span>
+                <span className="shrink-0 text-xs text-gray-400">
+                  {new Date(p.activite.dateDebut).toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  })}
                 </span>
-                <span className="text-xs text-gray-400">{LABELS_TYPE_ACTIVITE[p.activite.type] ?? p.activite.type}</span>
+                <span className="text-xs text-gray-400">
+                  {LABELS_TYPE_ACTIVITE[p.activite.type] ?? p.activite.type}
+                </span>
               </div>
             ))}
           </div>
@@ -197,10 +272,10 @@ export default function PageMaProgression() {
       </div>
 
       {/* Dernières réunions */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
-        <h2 className="text-sm font-semibold text-gray-800 mb-4">Mes dernières réunions</h2>
+      <div className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
+        <h2 className="mb-4 text-sm font-semibold text-gray-800">Mes dernières réunions</h2>
         {dernieresReunions.length === 0 ? (
-          <p className="text-sm text-gray-400 italic text-center py-4">Aucune participation enregistrée.</p>
+          <p className="py-4 text-center text-sm text-gray-400 italic">Aucune participation enregistrée.</p>
         ) : (
           <div className="space-y-2">
             {dernieresReunions.map((r, i) => {
@@ -208,14 +283,15 @@ export default function PageMaProgression() {
               const cfg = LABELS_STATUT_REUNION[r.statut] ?? LABELS_STATUT_REUNION.ABSENT
               return (
                 <div key={i} className="flex items-center gap-3 py-1">
-                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${cfg.dot}`} />
-                  <span className="flex-1 text-sm text-gray-700 truncate">
-                    {r.jourReunion.titre || `Réunion ${r.jourReunion.brancheType ? (LABELS_BRANCHES[r.jourReunion.brancheType] ?? r.jourReunion.brancheType) : ''}`}
+                  <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${cfg.dot}`} />
+                  <span className="flex-1 truncate text-sm text-gray-700">
+                    {r.jourReunion.titre ||
+                      `Réunion ${r.jourReunion.brancheType ? (LABELS_BRANCHES[r.jourReunion.brancheType] ?? r.jourReunion.brancheType) : ''}`}
                   </span>
-                  <span className="text-xs text-gray-400 shrink-0">
+                  <span className="shrink-0 text-xs text-gray-400">
                     {date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cfg.cls}`}>{cfg.label}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${cfg.cls}`}>{cfg.label}</span>
                 </div>
               )
             })}

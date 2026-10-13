@@ -26,7 +26,6 @@ export function InstallationPwa({ nomSite, logoSite }: { nomSite: string; logoSi
     if (modeStandalone || localStorage.getItem(CLE_STOCKAGE)) return
 
     const ios = /iphone|ipad|ipod/i.test(window.navigator.userAgent)
-    setEstIOS(ios)
 
     function onBeforeInstallPrompt(e: Event) {
       e.preventDefault()
@@ -38,7 +37,12 @@ export function InstallationPwa({ nomSite, logoSite }: { nomSite: string; logoSi
     // iOS Safari n'émet jamais "beforeinstallprompt" (pas d'installation
     // programmatique) : on affiche quand même les instructions manuelles,
     // après un court délai pour ne pas gêner l'arrivée sur le site.
-    const minuteur = ios ? setTimeout(() => setVisible(true), 2500) : undefined
+    const minuteur = ios
+      ? setTimeout(() => {
+          setEstIOS(true)
+          setVisible(true)
+        }, 2500)
+      : undefined
 
     return () => {
       window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt)
@@ -67,7 +71,7 @@ export function InstallationPwa({ nomSite, logoSite }: { nomSite: string; logoSi
         <button
           onClick={ecarter}
           aria-label="Fermer"
-          className="absolute right-3 top-3 text-gray-400 transition hover:text-gray-600"
+          className="absolute top-3 right-3 text-gray-400 transition hover:text-gray-600"
         >
           <X className="h-4 w-4" strokeWidth={2} />
         </button>

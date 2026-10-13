@@ -8,10 +8,18 @@ import { LABELS_BRANCHES } from '@scout/shared'
 import { LABELS_ROLES } from '@scout/shared'
 
 interface ScoutResultat {
-  id: string; nom: string; prenom: string; matricule: string | null; brancheType: string
+  id: string
+  nom: string
+  prenom: string
+  matricule: string | null
+  brancheType: string
 }
 interface UtilisateurResultat {
-  id: string; nom: string; prenom: string; matricule: string | null; role: string
+  id: string
+  nom: string
+  prenom: string
+  matricule: string | null
+  role: string
 }
 
 const DELAI_DEBOUNCE_MS = 300
@@ -33,33 +41,43 @@ export function RechercheGlobale() {
   const peutVoirUtilisateurs = ROLES_GROUPE.includes(role)
 
   useEffect(() => {
-    if (requete.trim().length < TAILLE_MIN_REQUETE) {
-      setScouts([])
-      setUtilisateurs([])
-      return
-    }
+    if (requete.trim().length < TAILLE_MIN_REQUETE) return
 
+    const controller = new AbortController()
     const identifiant = setTimeout(() => {
       setChargement(true)
       const q = encodeURIComponent(requete.trim())
       const requetes: Promise<void>[] = [
-        fetch(`/api/scouts?recherche=${q}&limite=5`)
+        fetch(`/api/scouts?recherche=${q}&limite=5`, { signal: controller.signal })
           .then((r) => r.json())
-          .then((data) => setScouts(data.scouts ?? []))
-          .catch(() => setScouts([])),
+          .then((data) => {
+            if (!controller.signal.aborted) setScouts(data.scouts ?? [])
+          })
+          .catch(() => {
+            if (!controller.signal.aborted) setScouts([])
+          }),
       ]
       if (peutVoirUtilisateurs) {
         requetes.push(
-          fetch(`/api/utilisateurs?recherche=${q}&limite=5`)
+          fetch(`/api/utilisateurs?recherche=${q}&limite=5`, { signal: controller.signal })
             .then((r) => r.json())
-            .then((data) => setUtilisateurs(data.utilisateurs ?? []))
-            .catch(() => setUtilisateurs([])),
+            .then((data) => {
+              if (!controller.signal.aborted) setUtilisateurs(data.utilisateurs ?? [])
+            })
+            .catch(() => {
+              if (!controller.signal.aborted) setUtilisateurs([])
+            }),
         )
       }
-      Promise.all(requetes).finally(() => setChargement(false))
+      Promise.all(requetes).finally(() => {
+        if (!controller.signal.aborted) setChargement(false)
+      })
     }, DELAI_DEBOUNCE_MS)
 
-    return () => clearTimeout(identifiant)
+    return () => {
+      clearTimeout(identifiant)
+      controller.abort()
+    }
   }, [requete, peutVoirUtilisateurs])
 
   useEffect(() => {
@@ -72,36 +90,58 @@ export function RechercheGlobale() {
 
   if (!estStaff) return null
 
-  const aucunResultat = requete.trim().length >= TAILLE_MIN_REQUETE && !chargement && scouts.length === 0 && utilisateurs.length === 0
+  const aucunResultat =
+    requete.trim().length >= TAILLE_MIN_REQUETE && !chargement && scouts.length === 0 && utilisateurs.length === 0
 
   const allerA = (chemin: string) => {
     router.push(chemin)
     setRequete('')
+    setScouts([])
+    setUtilisateurs([])
+    setChargement(false)
     setOuvert(false)
   }
 
   return (
     <div ref={conteneurRef} className="relative w-full max-w-xs">
       <div className="relative">
-        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
+        <svg
+          className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"
+          />
         </svg>
         <input
           type="search"
           value={requete}
-          onChange={(e) => { setRequete(e.target.value); setOuvert(true) }}
+          onChange={(e) => {
+            setRequete(e.target.value)
+            setScouts([])
+            setUtilisateurs([])
+            setChargement(false)
+            setOuvert(true)
+          }}
           onFocus={() => setOuvert(true)}
-          onKeyDown={(e) => { if (e.key === 'Escape') setOuvert(false) }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setOuvert(false)
+          }}
           placeholder="Rechercher un scout, un membre…"
-          className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent focus:bg-white transition-colors"
+          className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pr-3 pl-9 text-sm transition-colors focus:border-transparent focus:bg-white focus:ring-2 focus:ring-(--cp) focus:outline-none"
         />
       </div>
 
       {ouvert && requete.trim().length >= TAILLE_MIN_REQUETE && (
-        <div className="absolute z-40 mt-1.5 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-96 overflow-y-auto">
+        <div className="absolute z-40 mt-1.5 max-h-96 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
           {chargement && (
-            <div className="px-4 py-3 text-sm text-gray-400 flex items-center gap-2">
-              <span className="w-3.5 h-3.5 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
+            <div className="flex items-center gap-2 px-4 py-3 text-sm text-gray-400">
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-gray-300 border-t-transparent" />
               Recherche…
             </div>
           )}
@@ -112,31 +152,39 @@ export function RechercheGlobale() {
 
           {scouts.length > 0 && (
             <div className="py-1.5">
-              <p className="px-4 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Scouts</p>
+              <p className="px-4 py-1 text-xs font-semibold tracking-wide text-gray-400 uppercase">Scouts</p>
               {scouts.map((s) => (
                 <button
                   key={s.id}
                   onClick={() => allerA(`/dashboard/scouts/${s.id}`)}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors flex items-center justify-between gap-2"
+                  className="flex w-full items-center justify-between gap-2 px-4 py-2 text-left transition-colors hover:bg-gray-50"
                 >
-                  <span className="text-sm text-gray-800 truncate">{s.prenom} {s.nom}</span>
-                  <span className="text-xs text-gray-400 shrink-0">{LABELS_BRANCHES[s.brancheType] ?? s.brancheType}</span>
+                  <span className="truncate text-sm text-gray-800">
+                    {s.prenom} {s.nom}
+                  </span>
+                  <span className="shrink-0 text-xs text-gray-400">
+                    {LABELS_BRANCHES[s.brancheType] ?? s.brancheType}
+                  </span>
                 </button>
               ))}
             </div>
           )}
 
           {utilisateurs.length > 0 && (
-            <div className="py-1.5 border-t border-gray-100">
-              <p className="px-4 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Membres</p>
+            <div className="border-t border-gray-100 py-1.5">
+              <p className="px-4 py-1 text-xs font-semibold tracking-wide text-gray-400 uppercase">Membres</p>
               {utilisateurs.map((u) => (
                 <button
                   key={u.id}
-                  onClick={() => allerA(u.role === 'PARENT' ? `/dashboard/parents/${u.id}` : `/dashboard/utilisateurs/${u.id}`)}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors flex items-center justify-between gap-2"
+                  onClick={() =>
+                    allerA(u.role === 'PARENT' ? `/dashboard/parents/${u.id}` : `/dashboard/utilisateurs/${u.id}`)
+                  }
+                  className="flex w-full items-center justify-between gap-2 px-4 py-2 text-left transition-colors hover:bg-gray-50"
                 >
-                  <span className="text-sm text-gray-800 truncate">{u.prenom} {u.nom}</span>
-                  <span className="text-xs text-gray-400 shrink-0">{LABELS_ROLES[u.role] ?? u.role}</span>
+                  <span className="truncate text-sm text-gray-800">
+                    {u.prenom} {u.nom}
+                  </span>
+                  <span className="shrink-0 text-xs text-gray-400">{LABELS_ROLES[u.role] ?? u.role}</span>
                 </button>
               ))}
             </div>

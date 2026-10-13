@@ -49,12 +49,11 @@ export default function PageCotisations() {
     if (!session?.user) return
     const params = new URLSearchParams({ anneeScolaire })
     if (filtreBranche) params.set('branche', filtreBranche)
-    setChargement(true)
-    setErreur('')
     fetch(`/api/cotisations/statuts?${params.toString()}`)
       .then(async (r) => {
         const data = await r.json()
         if (!r.ok) throw new Error(data.erreur ?? 'Erreur de chargement')
+        setErreur('')
         setScouts(data.scouts ?? [])
       })
       .catch((e: unknown) => setErreur(e instanceof Error ? e.message : 'Impossible de charger les cotisations.'))
@@ -101,8 +100,8 @@ export default function PageCotisations() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Cotisations</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
+        <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Cotisations</h1>
+        <p className="mt-0.5 text-sm text-gray-500">
           {peutModifier
             ? 'Indiquez pour chaque scout s’il est à jour de sa cotisation annuelle.'
             : 'Situation des cotisations annuelles. Seul le Chef de Groupe peut la modifier.'}
@@ -110,37 +109,74 @@ export default function PageCotisations() {
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
           <p className="text-xs text-gray-500">Cotisants</p>
           <p className="text-xl font-bold text-green-700">{totaux.cotisants}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
           <p className="text-xs text-gray-500">Non cotisants</p>
           <p className="text-xl font-bold text-amber-700">{totaux.nonCotisants}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
           <p className="text-xs text-gray-500">Scouts actifs</p>
           <p className="text-xl font-bold text-gray-900">{totaux.total}</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 space-y-4">
+      <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-3">
-          <label className="text-sm text-gray-600" htmlFor="annee">Année scolaire :</label>
-          <select id="annee" value={anneeScolaire} onChange={(e) => setAnneeScolaire(e.target.value)} className={champ}>
-            {optionsAnnees().map((a) => <option key={a} value={a}>{a}</option>)}
+          <label className="text-sm text-gray-600" htmlFor="annee">
+            Année scolaire :
+          </label>
+          <select
+            id="annee"
+            value={anneeScolaire}
+            onChange={(e) => {
+              setChargement(true)
+              setErreur('')
+              setAnneeScolaire(e.target.value)
+            }}
+            className={champ}
+          >
+            {optionsAnnees().map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
           </select>
           {!estBranche && (
             <>
-              <label className="text-sm text-gray-600 sm:ml-2" htmlFor="branche">Branche :</label>
-              <select id="branche" value={filtreBranche} onChange={(e) => setFiltreBranche(e.target.value)} className={champ}>
+              <label className="text-sm text-gray-600 sm:ml-2" htmlFor="branche">
+                Branche :
+              </label>
+              <select
+                id="branche"
+                value={filtreBranche}
+                onChange={(e) => {
+                  setChargement(true)
+                  setErreur('')
+                  setFiltreBranche(e.target.value)
+                }}
+                className={champ}
+              >
                 <option value="">Toutes</option>
-                {BRANCHES.map((b) => <option key={b} value={b}>{LABELS_BRANCHES[b]}</option>)}
+                {BRANCHES.map((b) => (
+                  <option key={b} value={b}>
+                    {LABELS_BRANCHES[b]}
+                  </option>
+                ))}
               </select>
             </>
           )}
-          <label className="text-sm text-gray-600 sm:ml-2" htmlFor="statut">Statut :</label>
-          <select id="statut" value={filtreStatut} onChange={(e) => setFiltreStatut(e.target.value as FiltreStatut)} className={champ}>
+          <label className="text-sm text-gray-600 sm:ml-2" htmlFor="statut">
+            Statut :
+          </label>
+          <select
+            id="statut"
+            value={filtreStatut}
+            onChange={(e) => setFiltreStatut(e.target.value as FiltreStatut)}
+            className={champ}
+          >
             <option value="">Tous</option>
             <option value="cotisants">Cotisants</option>
             <option value="non-cotisants">Non cotisants</option>
@@ -148,16 +184,16 @@ export default function PageCotisations() {
         </div>
 
         {erreur && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{erreur}</div>
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{erreur}</div>
         )}
 
         {chargement ? (
           <div className="flex items-center justify-center py-12">
-            <div className="w-6 h-6 border-2 border-(--cp) border-t-transparent rounded-full animate-spin" />
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-(--cp) border-t-transparent" />
           </div>
         ) : scoutsAffiches.length === 0 ? (
-          <div className="text-center py-12">
-            <Wallet className="h-10 w-10 mx-auto mb-3 text-gray-300" strokeWidth={2} />
+          <div className="py-12 text-center">
+            <Wallet className="mx-auto mb-3 h-10 w-10 text-gray-300" strokeWidth={2} />
             <p className="text-sm text-gray-500">Aucun scout pour ces critères.</p>
           </div>
         ) : (
@@ -165,10 +201,13 @@ export default function PageCotisations() {
             {scoutsAffiches.map((s) => (
               <li key={s.id} className="flex items-center justify-between gap-3 py-2.5">
                 <div className="min-w-0">
-                  <Link href={`/dashboard/scouts/${s.id}`} className="block truncate text-sm font-medium text-gray-900 hover:text-(--cp) hover:underline">
+                  <Link
+                    href={`/dashboard/scouts/${s.id}`}
+                    className="block truncate text-sm font-medium text-gray-900 hover:text-(--cp) hover:underline"
+                  >
                     {s.prenom} {s.nom}
                   </Link>
-                  <p className="text-xs text-gray-500 truncate">
+                  <p className="truncate text-xs text-gray-500">
                     {LABELS_BRANCHES[s.brancheType] ?? s.brancheType}
                     {s.matricule ? ` · ${s.matricule}` : ''}
                   </p>
@@ -181,16 +220,18 @@ export default function PageCotisations() {
                     aria-label={`${s.prenom} ${s.nom} cotisant`}
                     disabled={enCours === s.id}
                     onClick={() => basculer(s)}
-                    className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors disabled:opacity-50 ${
+                    className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
                       s.cotisant
-                        ? 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200'
-                        : 'bg-white text-amber-700 border-amber-200 hover:bg-amber-50'
+                        ? 'border-green-200 bg-green-100 text-green-800 hover:bg-green-200'
+                        : 'border-amber-200 bg-white text-amber-700 hover:bg-amber-50'
                     }`}
                   >
                     {s.cotisant ? 'Cotisant' : 'Non cotisant'}
                   </button>
                 ) : (
-                  <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full ${s.cotisant ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${s.cotisant ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}
+                  >
                     {s.cotisant ? 'Cotisant' : 'Non cotisant'}
                   </span>
                 )}
