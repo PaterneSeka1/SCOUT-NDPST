@@ -1,0 +1,15 @@
+# Fins de ligne LF pour tous les fichiers texte, quel que soit le poste
+# (Windows compris) : identique à « endOfLine: lf » de Prettier, ce qui évite
+# les différences « toutes les lignes ont changé ».
+* text=auto eol=lf
+
+# Scripts shell : LF obligatoire pour s'exécuter sur le VPS.
+*.sh text eol=lf
+
+# Binaires
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.pdf binary

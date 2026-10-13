@@ -1,0 +1,16 @@
+# Dépendances, builds et fichiers générés
+node_modules/
+dist/
+.next/
+coverage/
+apps/api/src/generated/
+next-env.d.ts
+
+# Verrou de dépendances : géré par pnpm
+pnpm-lock.yaml
+
+# Migrations déjà appliquées en production : ne jamais les modifier
+apps/api/prisma/migrations/
+
+# Fichiers publics fournis tels quels (images, service worker)
+apps/*/public/

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/prettierrc",
+  "semi": false,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "printWidth": 120,
+  "endOfLine": "lf",
+  "plugins": ["prettier-plugin-tailwindcss"],
+  "overrides": [
+    {
+      "files": "apps/web-paroisse/**",
+      "options": { "tailwindStylesheet": "./apps/web-paroisse/app/globals.css" }
+    },
+    {
+      "files": "apps/web-district/**",
+      "options": { "tailwindStylesheet": "./apps/web-district/app/globals.css" }
+    }
+  ]
+}

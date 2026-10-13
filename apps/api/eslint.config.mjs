@@ -1,4 +1,5 @@
 import tseslint from 'typescript-eslint'
+import eslintConfigPrettier from 'eslint-config-prettier/flat'
 
 export default tseslint.config(
   { ignores: ['dist/**', 'src/generated/**'] },
@@ -10,4 +11,5 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'error',
     },
   },
+  eslintConfigPrettier,
 )

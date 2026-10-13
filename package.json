@@ -16,6 +16,12 @@
     "db:deploy": "pnpm --filter @scout/api prisma:deploy",
     "db:seed": "pnpm --filter @scout/api prisma:seed",
     "db:diff": "pnpm --filter @scout/api prisma:diff",
-    "db:status": "pnpm --filter @scout/api prisma:status"
+    "db:status": "pnpm --filter @scout/api prisma:status",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "3.9.10",
+    "prettier-plugin-tailwindcss": "0.8.1"
   }
 }
