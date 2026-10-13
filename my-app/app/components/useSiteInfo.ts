@@ -1,15 +1,16 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { LOGO_OFFICIEL } from '@/lib/theme'
 
 export type SiteInfo = {
-  logoUrl: string | null
+  logoUrl: string
   nomSite: string
   sousTitreSite: string
 }
 
 const DEFAUT: SiteInfo = {
-  logoUrl: null,
+  logoUrl: LOGO_OFFICIEL,
   nomSite: 'SCOUT ASCCI',
   sousTitreSite: "Côte d'Ivoire",
 }
@@ -26,7 +27,7 @@ export function useSiteInfo(): SiteInfo {
       .then((r) => r.json())
       .then((d: Partial<SiteInfo>) => {
         const result: SiteInfo = {
-          logoUrl: d.logoUrl ?? null,
+          logoUrl: d.logoUrl || LOGO_OFFICIEL,
           nomSite: d.nomSite ?? DEFAUT.nomSite,
           sousTitreSite: d.sousTitreSite ?? DEFAUT.sousTitreSite,
         }

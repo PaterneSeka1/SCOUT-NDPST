@@ -6,7 +6,7 @@ import { ConfirmDialogHost } from '@/app/components/ConfirmDialog'
 import { InstallationPwa } from '@/app/components/InstallationPwa'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
-import { THEME_DEFAUT, couleurSure, hexToRgb, type Theme } from '@/lib/theme'
+import { LOGO_OFFICIEL, THEME_DEFAUT, couleurSure, hexToRgb, type Theme } from '@/lib/theme'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -41,9 +41,9 @@ function getMetadataBase(): URL {
 // données). Le layout racine est donc rendu dynamiquement à chaque requête.
 export const dynamic = 'force-dynamic'
 
-const IDENTITE_DEFAUT = { theme: THEME_DEFAUT, nomSite: 'SCOUT ASCCI', logoSite: null }
+const IDENTITE_DEFAUT = { theme: THEME_DEFAUT, nomSite: 'SCOUT ASCCI', logoSite: LOGO_OFFICIEL }
 
-async function getTheme(): Promise<{ theme: Theme; nomSite: string; logoSite: string | null }> {
+async function getTheme(): Promise<{ theme: Theme; nomSite: string; logoSite: string }> {
   let cfg
   try {
     cfg = await prisma.configurationPlateforme.findUnique({ where: { id: 'platform' } })
@@ -61,7 +61,7 @@ async function getTheme(): Promise<{ theme: Theme; nomSite: string; logoSite: st
     couleurFond: couleurSure(cfg.couleurFond, THEME_DEFAUT.couleurFond),
     couleurHover: couleurSure(cfg.couleurHover, THEME_DEFAUT.couleurHover),
   }
-  return { theme, nomSite: cfg.nomSite, logoSite: cfg.logoUrl }
+  return { theme, nomSite: cfg.nomSite, logoSite: cfg.logoUrl || LOGO_OFFICIEL }
 }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -70,15 +70,12 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: getMetadataBase(),
     title: `${nomSite} — Suivi pédagogique`,
     description: "Application de suivi pédagogique des scouts catholiques de Côte d'Ivoire",
-    ...(logoSite
-      ? {
-          icons: {
-            icon: logoSite,
-            shortcut: logoSite,
-            apple: logoSite,
-          },
-        }
-      : {}),
+    // Logo officiel par défaut : app/favicon.ico et les PNG de public/icons/
+    // en sont dérivés (formats attendus par les navigateurs et iOS).
+    icons:
+      logoSite === LOGO_OFFICIEL
+        ? { icon: '/favicon.ico', shortcut: '/favicon.ico', apple: '/icons/apple-icon-180.png' }
+        : { icon: logoSite, shortcut: logoSite, apple: logoSite },
     // iOS ignore manifest.webmanifest pour le mode standalone/le titre à
     // l'écran d'accueil : ces balises meta apple-* sont le seul moyen de les
     // couvrir sur Safari (voir app/manifest.ts pour Android/Chrome).
@@ -90,7 +87,7 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       title: `${nomSite} — Suivi pédagogique`,
       description: "Application de suivi pédagogique des scouts catholiques de Côte d'Ivoire",
-      ...(logoSite ? { images: [{ url: logoSite }] } : {}),
+      images: [{ url: logoSite }],
     },
   }
 }

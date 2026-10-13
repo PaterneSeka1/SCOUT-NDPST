@@ -17,6 +17,11 @@ export const THEME_DEFAUT: Theme = {
   couleurHover: '#27ae60',
 }
 
+// Logo officiel de la paroisse, utilisé partout tant qu'aucun autre logo n'est
+// configuré (plateforme depuis /admin/apparence, ou paroisse). Les icônes PNG
+// de public/icons/ et app/favicon.ico en sont dérivées.
+export const LOGO_OFFICIEL = '/wiradjuri.webp'
+
 // Ces valeurs sont injectées telles quelles dans une balise <style> (voir
 // app/layout.tsx, dangerouslySetInnerHTML) : sans ce contrôle strict, une
 // valeur comme "#fff} </style><script>…</script>" permettrait une injection

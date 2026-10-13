@@ -18,7 +18,17 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const nomSite = cfg?.nomSite || 'SCOUT ASCCI'
   const couleurPrimaire = couleurSure(cfg?.couleurPrimaire, THEME_DEFAUT.couleurPrimaire)
   const couleurFond = couleurSure(cfg?.couleurFond, THEME_DEFAUT.couleurFond)
-  const logo = cfg?.logoUrl || '/favicon.ico'
+  // Sans logo configuré : icônes PNG dérivées du logo officiel (lib/theme.ts).
+  const icons: MetadataRoute.Manifest['icons'] = cfg?.logoUrl
+    ? [
+        { src: cfg.logoUrl, sizes: 'any', purpose: 'any' },
+        { src: cfg.logoUrl, sizes: '192x192', purpose: 'any' },
+        { src: cfg.logoUrl, sizes: '512x512', purpose: 'any' },
+      ]
+    : [
+        { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      ]
 
   return {
     name: `${nomSite} — Suivi pédagogique`,
@@ -29,10 +39,6 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     background_color: couleurFond,
     theme_color: couleurPrimaire,
     lang: 'fr',
-    icons: [
-      { src: logo, sizes: 'any', purpose: 'any' },
-      { src: logo, sizes: '192x192', purpose: 'any' },
-      { src: logo, sizes: '512x512', purpose: 'any' },
-    ],
+    icons,
   }
 }

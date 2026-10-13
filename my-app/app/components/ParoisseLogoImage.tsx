@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
-import { Compass } from '@/lib/icons'
+import { LOGO_OFFICIEL } from '@/lib/theme'
 
 // Tailles prédéfinies (px)
 const TAILLES = {
@@ -15,8 +15,8 @@ const TAILLES = {
 type Taille = keyof typeof TAILLES
 
 // ──────────────────────────────────────────────────────────────────
-// Composant "muet" : affiche le logo si logoUrl fourni, sinon une icône
-// de repli (boussole scoute).
+// Composant "muet" : affiche le logo si logoUrl fourni, sinon le logo
+// officiel de la paroisse.
 // ──────────────────────────────────────────────────────────────────
 export function ParoisseLogoImage({
   logoUrl,
@@ -29,26 +29,16 @@ export function ParoisseLogoImage({
 }) {
   const px = TAILLES[taille]
 
-  if (logoUrl) {
-    return (
-      <Image
-        src={logoUrl}
-        alt="Logo de la paroisse"
-        width={px}
-        height={px}
-        unoptimized
-        className={`object-contain ${className}`}
-        style={{ width: px, height: px }}
-      />
-    )
-  }
-
-  // Fallback : icône de repli, taille proportionnelle au conteneur
-  const iconPx = Math.round(px * 0.55)
   return (
-    <span className={`inline-flex items-center justify-center ${className}`}>
-      <Compass style={{ width: iconPx, height: iconPx }} strokeWidth={1.75} />
-    </span>
+    <Image
+      src={logoUrl || LOGO_OFFICIEL}
+      alt="Logo de la paroisse"
+      width={px}
+      height={px}
+      unoptimized
+      className={`object-contain ${className}`}
+      style={{ width: px, height: px }}
+    />
   )
 }
 

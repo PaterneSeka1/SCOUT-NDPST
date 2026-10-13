@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { ParoisseLogoImage } from '@/app/components/ParoisseLogoImage'
 import { Users, CalendarRange, CheckSquare, Award, Wallet, ArrowRight, type LucideIcon } from '@/lib/icons'
 import { PERIMETRE_V1 } from '@/lib/perimetreV1'
+import { LOGO_OFFICIEL } from '@/lib/theme'
 
 // Sans ceci, Next.js prérend cette page une seule fois au build (aucune API
 // dynamique utilisée ici) et fige la config lue en base à cet instant : les
@@ -46,14 +47,14 @@ const DEFAULT_CONFIG: SiteConfig = {
 
 // Identité de la PLATEFORME (pas d'une paroisse en particulier) : un visiteur
 // non connecté n'a aucun moyen d'indiquer à quelle paroisse il appartient.
-async function getSiteConfig(): Promise<SiteConfig & { logoUrl: string | null }> {
+async function getSiteConfig(): Promise<SiteConfig & { logoUrl: string }> {
   const cfg = await prisma.configurationPlateforme.findUnique({ where: { id: 'platform' } })
-  if (!cfg) return { ...DEFAULT_CONFIG, logoUrl: null }
+  if (!cfg) return { ...DEFAULT_CONFIG, logoUrl: LOGO_OFFICIEL }
 
   return {
     nomSite: cfg.nomSite,
     sousTitreSite: cfg.sousTitreSite,
-    logoUrl: cfg.logoUrl,
+    logoUrl: cfg.logoUrl || LOGO_OFFICIEL,
     hero: {
       imageUrl: cfg.heroImageUrl || DEFAULT_CONFIG.hero.imageUrl,
       imageAlt: cfg.heroImageAlt || DEFAULT_CONFIG.hero.imageAlt,
@@ -145,11 +146,7 @@ export default async function Home() {
           <header className="flex items-center justify-between gap-4">
             <Link href="/" className="flex items-center gap-3 transition-opacity hover:opacity-80" aria-label={nomSite}>
               <span className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/25 bg-white/12 text-sm font-bold backdrop-blur overflow-hidden">
-                {logoUrl ? (
-                  <ParoisseLogoImage logoUrl={logoUrl} taille="md" />
-                ) : (
-                  nomSite.slice(0, 2).toUpperCase()
-                )}
+                <ParoisseLogoImage logoUrl={logoUrl} taille="md" />
               </span>
               <span>
                 <span className="block text-sm font-bold tracking-[0.18em]">

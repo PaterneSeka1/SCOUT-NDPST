@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { THEME_DEFAUT, couleurSure, hexToRgb } from '@/lib/theme'
+import { LOGO_OFFICIEL, THEME_DEFAUT, couleurSure, hexToRgb } from '@/lib/theme'
 import { DashboardShell } from './DashboardShell'
 
 // Identité propre à la paroisse de l'utilisateur connecté (logo + couleurs),
@@ -55,7 +55,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const nomSite = paroisse?.nom ?? plateforme?.nomSite ?? 'SCOUT ASCCI'
   const sousTitreSite = paroisse?.ville ?? plateforme?.sousTitreSite ?? "Côte d'Ivoire"
-  const logoUrl = paroisse?.logo ?? plateforme?.logoUrl ?? null
+  const logoUrl = paroisse?.logo || plateforme?.logoUrl || LOGO_OFFICIEL
 
   const { couleurPrimaire: cp, couleurAccent: ca, couleurFond: cf, couleurHover: ch } = theme
   const cssVars = `
