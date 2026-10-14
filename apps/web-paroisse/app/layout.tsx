@@ -18,17 +18,20 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 })
 
-function getMetadataBase(): URL {
-  const urlConfiguree = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXTAUTH_URL
+// URL publique du site (liens absolus des métadonnées Open Graph). Le repli
+// sur localhost n'est utilisé qu'en développement : en production, une valeur
+// absente ou invalide laisse Next.js résoudre les URL sans base (avertissement
+// au rendu) plutôt que de publier des liens vers localhost.
+function getMetadataBase(): URL | undefined {
+  const urlConfiguree = process.env.NEXT_PUBLIC_SITE_URL?.trim()
   if (urlConfiguree) {
     try {
       return new URL(urlConfiguree)
     } catch {
-      // Valeur d'environnement invalide : on garde un fallback stable pour
-      // éviter l'avertissement Next.js sans faire échouer le rendu.
+      // Valeur d'environnement invalide : repli ci-dessous.
     }
   }
-  return new URL('http://localhost:3000')
+  return process.env.NODE_ENV === 'production' ? undefined : new URL('http://localhost:3000')
 }
 
 // Identité de la PLATEFORME (commune à toutes les paroisses, pas celle d'une
@@ -113,7 +116,9 @@ export default async function RootLayout({
     .snav-active { background-color: var(--ch) !important; color: white !important; }
     .btn-primary { background-color: var(--cp); }
     .btn-primary:hover { filter: brightness(1.12); }
-  `.replace(/\s+/g, ' ').trim()
+  `
+    .replace(/\s+/g, ' ')
+    .trim()
 
   return (
     <html lang="fr">

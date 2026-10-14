@@ -76,6 +76,8 @@ export interface Scout {
   traitementsMedicaux: string | null
   consentementImage: boolean
   consentementImageDate: string | null
+  consentementSante: boolean
+  consentementSanteDate: string | null
   paroisseId: string
   utilisateurId: string | null
   contactsUrgence: ContactUrgence[]
@@ -133,6 +135,7 @@ export interface DonneesModifierScout {
   allergies?: string
   traitementsMedicaux?: string
   consentementImage?: boolean
+  consentementSante?: boolean
 }
 
 // ---- Clés de cache --------------------------------------------------------

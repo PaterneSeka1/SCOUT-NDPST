@@ -17,13 +17,11 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const nomSite = identite.nomSite
   const couleurPrimaire = identite.theme.couleurPrimaire
   const couleurFond = identite.theme.couleurFond
+  // Logo configuré (fichier distant de dimensions et de format inconnus) :
+  // déclaré en « any » plutôt qu'avec des tailles fixes non garanties.
   // Sans logo configuré : icônes PNG dérivées du logo officiel (lib/theme.ts).
   const icons: MetadataRoute.Manifest['icons'] = cfg?.logoUrl
-    ? [
-        { src: cfg.logoUrl, sizes: 'any', purpose: 'any' },
-        { src: cfg.logoUrl, sizes: '192x192', purpose: 'any' },
-        { src: cfg.logoUrl, sizes: '512x512', purpose: 'any' },
-      ]
+    ? [{ src: cfg.logoUrl, sizes: 'any', purpose: 'any' }]
     : [
         { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
         { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },

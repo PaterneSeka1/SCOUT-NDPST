@@ -50,6 +50,7 @@ function FormulaireScout({ id, scout }: { id: string; scout: Scout }) {
   const [photo, setPhoto] = useState<string | null>(scout.photo)
   const [photoPreview, setPhotoPreview] = useState(scout.photo ?? '')
   const [consentementImage, setConsentementImage] = useState(scout.consentementImage)
+  const [consentementSante, setConsentementSante] = useState(scout.consentementSante)
   const [uploadEnCours, setUploadEnCours] = useState(false)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
@@ -83,7 +84,7 @@ function FormulaireScout({ id, scout }: { id: string; scout: Scout }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await mutateAsync({ ...form, photo: photo ?? undefined, consentementImage })
+      await mutateAsync({ ...form, photo: photo ?? undefined, consentementImage, consentementSante })
       toast.success('Modifications enregistrées.')
       router.push(`/dashboard/scouts/${id}`)
     } catch (err) {
@@ -273,6 +274,24 @@ function FormulaireScout({ id, scout }: { id: string; scout: Scout }) {
           {scout?.consentementImageDate && (
             <p className="-mt-2 text-xs text-gray-400">
               Dernière confirmation le {new Date(scout.consentementImageDate).toLocaleDateString('fr-FR')}
+            </p>
+          )}
+
+          <label className="flex cursor-pointer items-center gap-2.5">
+            <input
+              type="checkbox"
+              checked={consentementSante}
+              onChange={(e) => setConsentementSante(e.target.checked)}
+              className="h-4 w-4 rounded accent-(--cp)"
+            />
+            <span className="text-sm text-gray-700">
+              Consentement des parents au traitement des données de santé (allergies, traitements, fiche
+              médicale), recueilli par écrit
+            </span>
+          </label>
+          {scout?.consentementSanteDate && (
+            <p className="-mt-2 text-xs text-gray-400">
+              Dernière confirmation le {new Date(scout.consentementSanteDate).toLocaleDateString('fr-FR')}
             </p>
           )}
 

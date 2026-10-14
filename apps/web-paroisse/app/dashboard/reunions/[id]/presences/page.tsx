@@ -146,6 +146,7 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
   const dateAffichee = reunion ? new Date(reunion.dateReportee ?? reunion.dateHeure) : null
 
   const handleExportCSV = () => {
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- téléchargement d'un fichier servi par l'API, pas une page
     window.location.href = `/api/reunions/${id}/presences/export`
   }
 
