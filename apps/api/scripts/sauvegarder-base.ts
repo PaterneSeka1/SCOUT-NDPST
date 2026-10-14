@@ -9,7 +9,7 @@
 //   bucket R2 : ce script n'efface jamais rien.
 //
 // Usage, depuis apps/api avec son .env chargé :
-//   corepack pnpm sauvegarder [--motif avant-migration]
+//   npm run sauvegarder [-- --motif avant-migration]
 // Code de sortie non nul en cas d'échec (cron et deploy-ovh.sh s'y fient).
 
 import 'dotenv/config'
@@ -17,6 +17,7 @@ import { spawn } from 'child_process'
 import { createHash } from 'crypto'
 import { HeadObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 import { chiffrerSauvegarde } from '../src/common/lib/chiffrement-sauvegarde'
+import { echapperHtml, envoyerEmailBrut } from '../src/common/lib/email'
 import { configSauvegarde, PREFIXE_SAUVEGARDES } from './sauvegarde-config'
 
 const CONTENEUR = process.env.SAUVEGARDE_CONTENEUR?.trim() || 'scout_db'
@@ -48,7 +49,9 @@ function vider(): Promise<Buffer> {
 
 async function main() {
   const { client, bucket, phrase } = configSauvegarde()
-  const motif = argument('--motif')?.replace(/[^a-z0-9-]/gi, '').slice(0, 40)
+  const motif = argument('--motif')
+    ?.replace(/[^a-z0-9-]/gi, '')
+    .slice(0, 40)
 
   const debut = Date.now()
   const vidage = await vider()
@@ -86,13 +89,25 @@ async function main() {
   )
 }
 
-main().catch((erreur) => {
-  console.error(
-    JSON.stringify({
-      horodatage: new Date().toISOString(),
-      evenement: 'sauvegarde.echec',
-      message: erreur instanceof Error ? erreur.message : String(erreur),
-    }),
+// Une sauvegarde qui échoue sans que personne ne le sache n'est découverte
+// qu'au moment d'en avoir besoin : alerte par e-mail si SAUVEGARDE_ALERTE_EMAIL
+// est renseigné (SMTP de l'API). L'alerte ne contient que la cause technique.
+async function alerter(message: string) {
+  const destinataire = process.env.SAUVEGARDE_ALERTE_EMAIL?.trim()
+  if (!destinataire) return
+  const installation = process.env.INSTALLATION_ID?.trim() || 'installation inconnue'
+  await envoyerEmailBrut(
+    destinataire,
+    `[SCOUT ASCCI] Échec de la sauvegarde (${installation})`,
+    `<p>La sauvegarde de la base de l'installation <strong>${echapperHtml(installation)}</strong> a échoué le ${new Date().toISOString()}.</p>` +
+      `<p>Cause : <code>${echapperHtml(message)}</code></p>` +
+      `<p>Vérifier sur le serveur : <code>tail ~/sauvegarde-*.log</code>, puis relancer <code>npm run sauvegarder</code> dans apps/api.</p>`,
   )
+}
+
+main().catch(async (erreur) => {
+  const message = erreur instanceof Error ? erreur.message : String(erreur)
+  console.error(JSON.stringify({ horodatage: new Date().toISOString(), evenement: 'sauvegarde.echec', message }))
+  await alerter(message).catch(() => undefined)
   process.exit(1)
 })

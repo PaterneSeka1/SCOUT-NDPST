@@ -1,30 +1,37 @@
-# Nom de projet fixe : le volume de données s'appelle toujours
-# scout-ascci_postgres_data, quel que soit le dossier d'installation. Une
-# installation dans un autre dossier ne crée donc pas une base vide par erreur,
-# et ne réutilise jamais le volume d'une ancienne installation (autre nom).
-name: scout-ascci
+# Base PostgreSQL de production d'UNE installation (paroisse ou district).
+#
+# Nom de projet fixe par installation : le volume de données s'appelle
+# toujours <COMPOSE_PROJET>_postgres_data, quel que soit le dossier
+# d'installation. Une installation dans un autre dossier ne crée donc pas une
+# base vide par erreur, et ne réutilise jamais le volume d'une autre.
+#
+# Les valeurs par défaut sont celles de l'installation paroisse. L'installation
+# district les remplace dans son propre .env.prod (COMPOSE_PROJET,
+# CONTENEUR_DB, PORT_DB) : deux installations sur le même VPS ont ainsi deux
+# conteneurs, deux ports et deux volumes distincts.
+name: ${COMPOSE_PROJET:-scout-ascci}
 
 services:
   db:
     image: postgres:16-alpine
-    container_name: scout_db
+    container_name: ${CONTENEUR_DB:-scout_db}
     restart: unless-stopped
     environment:
       POSTGRES_USER: scout
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD manquant dans .env.prod}
       POSTGRES_DB: scout_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U scout -d scout_db"]
+      test: ['CMD-SHELL', 'pg_isready -U scout -d scout_db']
       interval: 10s
       timeout: 5s
       retries: 5
-    # Publié sur localhost uniquement : l'app tourne directement sur l'hôte
-    # (pm2, pas de conteneur), et s'y connecte via 127.0.0.1:5434 — jamais
-    # exposé à l'extérieur du VPS.
+    # Publié sur localhost uniquement : l'API tourne directement sur l'hôte
+    # (pm2, pas de conteneur) et s'y connecte via 127.0.0.1 — jamais exposé à
+    # l'extérieur du VPS.
     ports:
-      - "127.0.0.1:5434:5432"
+      - '127.0.0.1:${PORT_DB:-5434}:5432'
 
 volumes:
   postgres_data:

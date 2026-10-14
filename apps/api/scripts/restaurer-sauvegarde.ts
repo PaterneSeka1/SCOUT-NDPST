@@ -3,9 +3,9 @@
 // décision humaine, jamais automatique (voir docs/deploiement-ovh.md).
 //
 // Usage, depuis apps/api avec son .env chargé :
-//   corepack pnpm restaurer-sauvegarde --lister
-//   corepack pnpm restaurer-sauvegarde --derniere --sortie /chemin/base.dump
-//   corepack pnpm restaurer-sauvegarde --cle base/2026/10/scout-....dump.chiffre --sortie /chemin/base.dump
+//   npm run restaurer-sauvegarde -- --lister
+//   npm run restaurer-sauvegarde -- --derniere --sortie /chemin/base.dump
+//   npm run restaurer-sauvegarde -- --cle base/2026/10/scout-....dump.chiffre --sortie /chemin/base.dump
 
 import 'dotenv/config'
 import { createHash } from 'crypto'
@@ -50,13 +50,17 @@ async function main() {
 
   const attendue = reponse.Metadata?.sha256
   const obtenue = createHash('sha256').update(vidage).digest('hex')
-  if (attendue && attendue !== obtenue) throw new Error('Empreinte différente de celle enregistrée : sauvegarde corrompue.')
+  if (attendue && attendue !== obtenue)
+    throw new Error('Empreinte différente de celle enregistrée : sauvegarde corrompue.')
 
   // Données personnelles : fichier lisible par le seul propriétaire.
   await writeFile(sortie, vidage, { mode: 0o600 })
-  console.log(`Sauvegarde ${cle} déchiffrée dans ${sortie} (${Math.round(vidage.length / 1024)} Ko, empreinte vérifiée).`)
+  console.log(
+    `Sauvegarde ${cle} déchiffrée dans ${sortie} (${Math.round(vidage.length / 1024)} Ko, empreinte vérifiée).`,
+  )
   console.log('Restauration (décision humaine, base cible à choisir avec soin) :')
-  console.log(`  docker exec -i scout_db pg_restore -U scout -d <base_cible> --clean --if-exists < ${sortie}`)
+  const conteneur = process.env.SAUVEGARDE_CONTENEUR?.trim() || 'scout_db'
+  console.log(`  docker exec -i ${conteneur} pg_restore -U scout -d <base_cible> --clean --if-exists < ${sortie}`)
 }
 
 main().catch((erreur) => {
