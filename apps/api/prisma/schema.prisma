@@ -237,6 +237,7 @@ model Utilisateur {
   programmesCrees             Programme[]             @relation("ProgrammeCreePar")
   autorisationsCampConfirmees AutorisationCamp[]      @relation("AutorisationCampConfirmePar")
   consentementsImageConfirmes Scout[]                 @relation("ScoutConsentementImageConfirmePar")
+  consentementsSanteConfirmes Scout[]                 @relation("ScoutConsentementSanteConfirmePar")
   actionsAudit                JournalAudit[]
   cotisationsEnregistrees     Cotisation[]            @relation("CotisationEnregistreePar")
 
@@ -275,6 +276,18 @@ model Scout {
   consentementImage     Boolean   @default(false)
   consentementImageDate DateTime?
 
+  // Consentement des parents au traitement des données de santé du scout
+  // (allergies, traitements, fiches médicales). Enregistré et journalisé, sans
+  // bloquer la saisie : une information médicale manquante au camp serait
+  // plus dangereuse qu'une fiche signalée « sans consentement ».
+  consentementSante     Boolean   @default(false)
+  consentementSanteDate DateTime?
+
+  // Conservation (loi n° 2013-450) : date de désactivation, point de départ
+  // du délai avant anonymisation, et date de l'anonymisation effectuée.
+  desactiveLe DateTime?
+  anonymiseLe DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -290,6 +303,10 @@ model Scout {
   consentementImageParId String?
   consentementImagePar   Utilisateur? @relation("ScoutConsentementImageConfirmePar", fields: [consentementImageParId], references: [id], onDelete: SetNull)
 
+  // Qui a confirmé le consentement aux données de santé (parent ou staff)
+  consentementSanteParId String?
+  consentementSantePar   Utilisateur? @relation("ScoutConsentementSanteConfirmePar", fields: [consentementSanteParId], references: [id], onDelete: SetNull)
+
   // Relations
   liensParents      LienParentScout[] // Parents avec compte dans l'application
   contactsUrgence   ContactUrgence[] // Contacts d'urgence (avec ou sans compte)
@@ -303,6 +320,9 @@ model Scout {
   @@index([paroisseId])
   @@index([brancheType])
   @@index([actif])
+  @@index([photo])
+  @@index([desactiveLe])
+  @@index([consentementSanteParId])
 }
 
 // ---------------------------------------------------------------------------
@@ -464,6 +484,7 @@ model Document {
   url            String
   dateUpload     DateTime     @default(now())
   dateExpiration DateTime? // Ex : certificat médical valable 1 an. Null = pas de péremption connue.
+  rappelEnvoyeLe DateTime? // Rappel d'expiration envoyé aux parents (une seule fois)
   valide         Boolean      @default(false)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
@@ -475,6 +496,7 @@ model Document {
   @@index([type])
   @@index([valide])
   @@index([dateExpiration])
+  @@index([url])
 }
 
 // ---------------------------------------------------------------------------
@@ -684,6 +706,7 @@ model AutorisationCamp {
   @@index([activiteId])
   @@index([scoutId])
   @@index([confirmeParId])
+  @@index([documentUrl])
 }
 
 // ---------------------------------------------------------------------------
@@ -716,6 +739,7 @@ model JournalAudit {
   @@index([paroisseId, createdAt])
   @@index([entite, entiteId])
   @@index([acteurId])
+  @@index([createdAt]) // Purge selon la durée de conservation (RETENTION_AUDIT_JOURS)
 }
 
 // ---------------------------------------------------------------------------

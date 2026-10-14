@@ -1,6 +1,9 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
+import { randomBytes } from 'crypto'
 import path from 'path'
 import { ROLES_GROUPE, ROLES_PLATEFORME } from '@scout/shared'
+import { AccesFichiersService, nomFichierPriveGenere } from '../../common/acces-fichiers.service'
+import { AuditService } from '../../common/audit.service'
 import { detecterTypeFichier } from '../../common/lib/fileSignature'
 import {
   lireFichierPrive,
@@ -44,6 +47,11 @@ function typeMimeDe(nomFichier: string): string {
 
 @Injectable()
 export class FichiersService {
+  constructor(
+    private readonly acces: AccesFichiersService,
+    private readonly audit: AuditService,
+  ) {}
+
   async televerser(
     utilisateur: UtilisateurSession,
     fichier: FichierRecu | undefined,
@@ -75,31 +83,47 @@ export class FichiersService {
       throw new BadRequestException('Les fichiers publics doivent être des images (JPEG, PNG, WebP ou GIF)')
     }
 
-    const nomFichier = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${detecte.ext}`
-
     if (visibilite === 'publique') {
       // Fichiers de branding (logo, image d'accueil) : visibles sans
       // authentification, affichés notamment sur la page de connexion.
-      return { url: await sauvegarderFichierPublic(nomFichier, fichier.buffer, detecte.mime) }
+      const nomPublic = `${Date.now()}-${randomBytes(8).toString('hex')}.${detecte.ext}`
+      return { url: await sauvegarderFichierPublic(nomPublic, fichier.buffer, detecte.mime) }
     }
+
+    // Nom imprévisible portant le préfixe de son auteur (voir AccesFichiersService).
+    const nomFichier = nomFichierPriveGenere(utilisateur.id, detecte.ext)
 
     // Fichier privé (photo de scout, document, autorisation de camp…) : jamais
     // servi directement, cloisonné par paroisse, accessible uniquement via
-    // /api/fichiers, qui vérifie la session. paroisseId est non nul ici
+    // /api/fichiers, qui vérifie les droits sur le scout. paroisseId est non nul ici
     // (vérifié plus haut pour les fichiers privés).
     return { url: await sauvegarderFichierPrive(paroisseId as string, nomFichier, fichier.buffer, detecte.mime) }
   }
 
-  // Fichier privé : réservé aux membres de la paroisse propriétaire.
+  // Fichier privé : réservé à ceux qui peuvent agir sur le scout auquel il est
+  // rattaché (voir AccesFichiersService). La consultation d'un document
+  // sensible (fiche médicale, autorisation) est journalisée.
   async lirePrive(utilisateur: UtilisateurSession, paroisseId: string, fichier: string): Promise<FichierLu> {
-    if (utilisateur.paroisseId !== paroisseId) throw new ForbiddenException('Accès refusé')
     const nomFichier = nomFichierSur(fichier)
+    const autorisation = await this.acces.autorisationLecture(utilisateur, paroisseId, nomFichier)
+    if (!autorisation) throw new ForbiddenException('Accès refusé')
 
     let contenu: Buffer
     try {
       contenu = await lireFichierPrive(paroisseId, nomFichier)
     } catch {
       throw new NotFoundException('Fichier introuvable')
+    }
+
+    if (autorisation.sensible) {
+      await this.audit.enregistrer({
+        paroisseId,
+        acteurId: utilisateur.id,
+        action: 'DOCUMENT_CONSULTE',
+        entite: 'Scout',
+        entiteId: autorisation.scoutId,
+        details: { fichier: nomFichier },
+      })
     }
     return { contenu, typeMime: typeMimeDe(nomFichier) }
   }

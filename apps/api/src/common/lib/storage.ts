@@ -1,6 +1,6 @@
-import { readFile, writeFile, mkdir } from 'fs/promises'
+import { readFile, writeFile, mkdir, rm } from 'fs/promises'
 import path from 'path'
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 
 // Couche d'abstraction du stockage de fichiers. Par défaut (aucune variable
 // STORAGE_S3_* définie), les fichiers vont sur le disque local — adapté à un
@@ -142,7 +142,12 @@ export async function sauvegarderFichierPrive(
 ): Promise<string> {
   if (utiliseS3()) {
     await getClientS3().send(
-      new PutObjectCommand({ Bucket: bucketS3(), Key: cleFichierPrive(paroisseId, nomFichier), Body: buffer, ContentType: contentType }),
+      new PutObjectCommand({
+        Bucket: bucketS3(),
+        Key: cleFichierPrive(paroisseId, nomFichier),
+        Body: buffer,
+        ContentType: contentType,
+      }),
     )
   } else {
     const dossier = path.join(dossierStockageLocal(), 'uploads-prives', paroisseId)
@@ -164,6 +169,18 @@ export async function lireFichierPrive(paroisseId: string, nomFichier: string): 
 
   const chemin = path.join(dossierStockageLocal(), 'uploads-prives', paroisseId, nomFichier)
   return readFile(chemin)
+}
+
+// Suppression définitive d'un fichier privé (document retiré d'une fiche) :
+// une fiche médicale supprimée ne doit pas survivre dans le stockage.
+export async function supprimerFichierPrive(paroisseId: string, nomFichier: string): Promise<void> {
+  if (utiliseS3()) {
+    await getClientS3().send(
+      new DeleteObjectCommand({ Bucket: bucketS3(), Key: cleFichierPrive(paroisseId, nomFichier) }),
+    )
+    return
+  }
+  await rm(path.join(dossierStockageLocal(), 'uploads-prives', paroisseId, nomFichier), { force: true })
 }
 
 // Racine du stockage disque local (pilote par défaut). Configurable pour que

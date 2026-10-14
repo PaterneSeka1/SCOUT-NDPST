@@ -1,9 +1,9 @@
-import { Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common'
-import { timingSafeEqual } from 'crypto'
+import { Injectable } from '@nestjs/common'
 import { entierBorne, LABELS_TYPE_DOCUMENT, ROLES_BRANCHE } from '@scout/shared'
 import { env } from '../../config/env'
 import { paroisseIdRequise } from '../../common/paroisse'
 import { PerimetreService } from '../../common/perimetre.service'
+import { verifierSecretCron } from '../../common/lib/cron'
 import { logger } from '../../common/lib/logger'
 import { envoyerEmailRappelDocuments, type DocumentARenouveler } from '../../common/lib/notifications'
 import type { UtilisateurSession } from '../../common/types'
@@ -15,13 +15,7 @@ const FENETRE_RAPPEL_JOURS = 7
 // date seuil n'a plus de sens et ferait échouer la requête.
 const JOURS_AVANT_MAX = 3650
 
-// Comparaison en temps constant : la durée ne dépend pas du nombre de
-// caractères corrects, ce qui empêche de deviner le secret par mesure de temps.
-export function secretsCorrespondent(a: string, b: string): boolean {
-  const bufA = Buffer.from(a)
-  const bufB = Buffer.from(b)
-  return bufA.length === bufB.length && timingSafeEqual(bufA, bufB)
-}
+export { secretsCorrespondent } from '../../common/lib/cron'
 
 @Injectable()
 export class DocumentsService {
@@ -80,20 +74,13 @@ export class DocumentsService {
 
   // Vérifie le secret partagé du déclencheur externe (en-tête x-cron-secret).
   verifierSecretCron(secretRecu: string | undefined): void {
-    const secretAttendu = env().CRON_SECRET
-    if (!secretAttendu) throw new InternalServerErrorException('CRON_SECRET non configuré côté serveur')
-    if (!secretRecu || !secretsCorrespondent(secretRecu, secretAttendu)) {
-      throw new UnauthorizedException('Non autorisé')
-    }
+    verifierSecretCron(secretRecu)
   }
 
   // Envoie un rappel par e-mail à chaque parent dont un enfant a un document
-  // expirant dans les 7 prochains jours.
-  //
-  // Cadence recommandée : hebdomadaire. Sans suivi d'un « dernier rappel
-  // envoyé » par document, un appel plus fréquent renverrait le même rappel
-  // plusieurs fois — choix délibéré pour garder l'implémentation simple, à
-  // corriger si le rythme d'envoi doit un jour être plus fin.
+  // expirant dans les 7 prochains jours. Chaque document n'est rappelé qu'une
+  // fois (rappelEnvoyeLe) : le déclencheur peut tourner chaque jour sans
+  // renvoyer les mêmes e-mails.
   async envoyerRappels(): Promise<{ documentsConcernes: number; parentsNotifies: number }> {
     const seuil = new Date()
     seuil.setDate(seuil.getDate() + FENETRE_RAPPEL_JOURS)
@@ -103,9 +90,11 @@ export class DocumentsService {
     const documents = await this.prisma.document.findMany({
       where: {
         dateExpiration: { gte: maintenant, lte: seuil },
+        rappelEnvoyeLe: null,
         scout: { actif: true },
       },
       select: {
+        id: true,
         type: true,
         dateExpiration: true,
         scout: {
@@ -140,6 +129,15 @@ export class DocumentsService {
     for (const { email, prenom, documents: docsParent } of parDestinataire.values()) {
       await envoyerEmailRappelDocuments({ email, prenom, nomSite: 'SCOUT ASCCI', documents: docsParent, urlDocuments })
       envoyes += 1
+    }
+
+    // Marqués après l'envoi : un échec en cours de route n'empêche pas le
+    // rappel au prochain passage.
+    if (documents.length > 0) {
+      await this.prisma.document.updateMany({
+        where: { id: { in: documents.map((d) => d.id) } },
+        data: { rappelEnvoyeLe: maintenant },
+      })
     }
 
     logger.info('cron.rappels_documents', { documentsConcernes: documents.length, parentsNotifies: envoyes })

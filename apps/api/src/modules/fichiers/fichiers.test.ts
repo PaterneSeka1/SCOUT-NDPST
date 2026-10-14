@@ -5,6 +5,8 @@ import { Test } from '@nestjs/testing'
 import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { FiltreErreurs } from '../../common/filters/erreurs.filter'
+import { AccesFichiersService } from '../../common/acces-fichiers.service'
+import { AuditService } from '../../common/audit.service'
 import type { RequeteAuthentifiee, UtilisateurSession } from '../../common/types'
 import { FichiersController } from './fichiers.controller'
 import { FichiersService, nomFichierSur } from './fichiers.service'
@@ -28,8 +30,25 @@ const utilisateur: UtilisateurSession = {
   paroisseId: 'paroisse-a',
 }
 
+// Règles fines d'accès (scout, branche, parent) : voir acces-fichiers.service.test.ts.
+// Ici, seul le cloisonnement par paroisse est simulé.
+const accesSimule = {
+  autorisationLecture: vi.fn(async (u: UtilisateurSession, paroisseId: string) =>
+    u.paroisseId === paroisseId ? { scoutId: null as string | null, sensible: false } : null,
+  ),
+}
+const auditSimule = { enregistrer: vi.fn() }
+
 describe('FichiersService', () => {
-  const service = new FichiersService()
+  const service = new FichiersService(accesSimule as never, auditSimule as never)
+
+  it("journalise la consultation d'un document sensible", async () => {
+    accesSimule.autorisationLecture.mockResolvedValueOnce({ scoutId: 's1', sensible: true })
+    await service.lirePrive(utilisateur, 'paroisse-a', 'fiche.pdf')
+    expect(auditSimule.enregistrer).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'DOCUMENT_CONSULTE', entiteId: 's1', acteurId: 'u1' }),
+    )
+  })
 
   it("refuse un fichier privé d'une autre paroisse", async () => {
     await expect(service.lirePrive(utilisateur, 'paroisse-b', 'photo.png')).rejects.toBeInstanceOf(ForbiddenException)
@@ -57,7 +76,11 @@ describe('FichiersService', () => {
   it("refuse le dépôt public à un rôle qui n'est pas autorisé à publier", async () => {
     const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
     await expect(
-      service.televerser({ ...utilisateur, role: 'RESPONSABLE_BRANCHE' }, { buffer: png, size: png.length }, 'publique'),
+      service.televerser(
+        { ...utilisateur, role: 'RESPONSABLE_BRANCHE' },
+        { buffer: png, size: png.length },
+        'publique',
+      ),
     ).rejects.toBeInstanceOf(ForbiddenException)
   })
 })
@@ -70,6 +93,8 @@ describe('FichiersController (HTTP)', () => {
       controllers: [FichiersController],
       providers: [
         FichiersService,
+        { provide: AccesFichiersService, useValue: accesSimule },
+        { provide: AuditService, useValue: auditSimule },
         { provide: APP_FILTER, useClass: FiltreErreurs },
         {
           // Remplace AuthGuard : session simulée de paroisse-a.
@@ -134,6 +159,6 @@ describe('FichiersController (HTTP)', () => {
     const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0])
     const res = await request(app.getHttpServer()).post('/api/upload').attach('fichier', png, 'photo.png')
     expect(res.status).toBe(200)
-    expect(res.body.url).toMatch(/^\/api\/fichiers\/paroisse-a\/\d+-[a-z0-9]+\.png$/)
+    expect(res.body.url).toMatch(/^\/api\/fichiers\/paroisse-a\/[0-9a-f]{16}-[0-9a-f]{32}\.png$/)
   })
 })

@@ -13,6 +13,7 @@ import { CotisationsModule } from './modules/cotisations/cotisations.module'
 import { DistrictModule } from './modules/district/district.module'
 import { DocumentsModule } from './modules/documents/documents.module'
 import { FichiersModule } from './modules/fichiers/fichiers.module'
+import { MaintenanceModule } from './modules/maintenance/maintenance.module'
 import { ParoisseModule } from './modules/paroisse/paroisse.module'
 import { PlateformePubliqueModule } from './modules/plateforme-publique/plateforme-publique.module'
 import { ProfilModule } from './modules/profil/profil.module'
@@ -39,6 +40,7 @@ import { SanteController } from './sante/sante.controller'
     DistrictModule,
     DocumentsModule,
     FichiersModule,
+    MaintenanceModule,
     ParoisseModule,
     PlateformePubliqueModule,
     ProfilModule,
