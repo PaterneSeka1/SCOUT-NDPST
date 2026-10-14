@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   LABELS_ROLES,
@@ -100,6 +101,7 @@ function libelleAffectationDistrict(role: string, fonction?: string | null, bran
 }
 
 export default function UtilisateursPlateformePage() {
+  const router = useRouter()
   const [utilisateurs, setUtilisateurs] = useState<UtilisateurListe[]>([])
   const [paroisses, setParoisses] = useState<ParoisseOption[]>([])
   const [districts, setDistricts] = useState<DistrictOption[]>([])
@@ -763,7 +765,7 @@ export default function UtilisateursPlateformePage() {
           <div key={u.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
             <button
               type="button"
-              onClick={() => (window.location.href = `/admin/utilisateurs/${u.id}`)}
+              onClick={() => router.push(`/admin/utilisateurs/${u.id}`)}
               className="block w-full text-left"
             >
               <div className="flex items-start justify-between gap-3">
@@ -851,7 +853,7 @@ export default function UtilisateursPlateformePage() {
                 <tr
                   key={u.id}
                   className="cursor-pointer hover:bg-gray-50"
-                  onClick={() => (window.location.href = `/admin/utilisateurs/${u.id}`)}
+                  onClick={() => router.push(`/admin/utilisateurs/${u.id}`)}
                 >
                   <td className="px-4 py-3">
                     <p className="font-medium text-gray-900">

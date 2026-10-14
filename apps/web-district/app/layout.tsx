@@ -20,9 +20,26 @@ const geistMono = Geist_Mono({
 // chaque requête plutôt que figé au build (le build n'a pas accès à l'API).
 export const dynamic = 'force-dynamic'
 
+// URL publique de la console (liens absolus des métadonnées). Le repli sur
+// localhost n'est utilisé qu'en développement : en production, une valeur
+// absente ou invalide laisse Next.js résoudre les URL sans base plutôt que de
+// publier des liens vers localhost.
+function getMetadataBase(): URL | undefined {
+  const urlConfiguree = process.env.NEXT_PUBLIC_SITE_URL?.trim()
+  if (urlConfiguree) {
+    try {
+      return new URL(urlConfiguree)
+    } catch {
+      // Valeur d'environnement invalide : repli ci-dessous.
+    }
+  }
+  return process.env.NODE_ENV === 'production' ? undefined : new URL('http://localhost:3001')
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   const { nomSite } = await getIdentitePlateforme()
   return {
+    metadataBase: getMetadataBase(),
     title: `${nomSite} — Administration`,
     description: 'Administration de la plateforme SCOUT ASCCI',
     icons: { icon: '/favicon.ico', shortcut: '/favicon.ico', apple: '/icons/apple-icon-180.png' },
@@ -66,7 +83,9 @@ export default async function RootLayout({
     .snav-active { background-color: var(--ch) !important; color: white !important; }
     .btn-primary { background-color: var(--cp); }
     .btn-primary:hover { filter: brightness(1.12); }
-  `.replace(/\s+/g, ' ').trim()
+  `
+    .replace(/\s+/g, ' ')
+    .trim()
 
   return (
     <html lang="fr">

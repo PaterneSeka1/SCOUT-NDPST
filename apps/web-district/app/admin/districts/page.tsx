@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { MONO_PAROISSE } from '@scout/shared'
 import { ArrowRight } from '@/lib/icons'
@@ -47,6 +48,7 @@ function EtatVide({ rechercheActive }: { rechercheActive: boolean }) {
 }
 
 export default function ListeDistricts() {
+  const router = useRouter()
   const [districts, setDistricts] = useState<District[]>([])
   const [chargement, setChargement] = useState(true)
   const [recherche, setRecherche] = useState('')
@@ -236,7 +238,7 @@ export default function ListeDistricts() {
                     <tr
                       key={d.id}
                       className="cursor-pointer transition-colors hover:bg-gray-50"
-                      onClick={() => (window.location.href = `/admin/districts/${d.id}`)}
+                      onClick={() => router.push(`/admin/districts/${d.id}`)}
                     >
                       <td className="px-4 py-3">
                         <p className="font-medium text-gray-900">{d.nom}</p>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { MONO_PAROISSE } from '@scout/shared'
 import { ArrowRight } from '@/lib/icons'
@@ -42,6 +43,7 @@ function EtatVide({ rechercheActive }: { rechercheActive: boolean }) {
 }
 
 export default function ListeParoisses() {
+  const router = useRouter()
   const [paroisses, setParoisses] = useState<Paroisse[]>([])
   const [chargement, setChargement] = useState(true)
   const [recherche, setRecherche] = useState('')
@@ -186,7 +188,7 @@ export default function ListeParoisses() {
                     <tr
                       key={p.id}
                       className="cursor-pointer transition-colors hover:bg-gray-50"
-                      onClick={() => (window.location.href = `/admin/paroisses/${p.id}`)}
+                      onClick={() => router.push(`/admin/paroisses/${p.id}`)}
                     >
                       <td className="px-4 py-3">
                         <p className="font-medium text-gray-900">{p.nom}</p>

@@ -25,6 +25,7 @@ export function ChoixInstallation({
   const choisir = (id: string) => {
     const securise = window.location.protocol === 'https:' ? '; secure' : ''
     document.cookie = `${COOKIE_INSTALLATION}=${encodeURIComponent(id)}; path=/; samesite=lax; max-age=2592000${securise}`
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- rechargement complet : le relais /api doit relire le cookie d'installation
     window.location.assign('/admin')
   }
 

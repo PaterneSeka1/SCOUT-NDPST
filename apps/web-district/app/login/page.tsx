@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import { ParoisseLogoImageAuto } from '@/app/components/ParoisseLogoImage'
 import { useSiteInfo } from '@/app/components/useSiteInfo'
@@ -57,25 +58,25 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--cf)' }}>
+    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: 'var(--cf)' }}>
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 overflow-hidden" style={{ backgroundColor: 'var(--cp)' }}>
+        <div className="rounded-2xl bg-white p-8 shadow-2xl">
+          <div className="mb-8 text-center">
+            <div
+              className="mb-4 inline-flex h-16 w-16 items-center justify-center overflow-hidden rounded-full"
+              style={{ backgroundColor: 'var(--cp)' }}
+            >
               <ParoisseLogoImageAuto taille="lg" />
             </div>
-            <h1 className="text-2xl font-bold" style={{ color: 'var(--cp)' }}>{nomSite}</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Administration de la plateforme
-            </p>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--cp)' }}>
+              {nomSite}
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">Administration de la plateforme</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label
-                htmlFor="identifiant"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label htmlFor="identifiant" className="mb-1 block text-sm font-medium text-gray-700">
                 Matricule ou numéro de téléphone
               </label>
               <input
@@ -86,15 +87,12 @@ export default function LoginPage() {
                 required
                 autoComplete="username"
                 placeholder="Ex : 0545247O ou 0712345678"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-(--ca) focus:border-transparent transition text-gray-700 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 transition focus:border-transparent focus:ring-2 focus:ring-(--ca) focus:outline-none"
               />
             </div>
 
             <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
                 Mot de passe
               </label>
               <PasswordInput
@@ -104,7 +102,7 @@ export default function LoginPage() {
                 required
                 autoComplete="current-password"
                 placeholder="••••••••"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-(--ca) focus:border-transparent transition text-gray-700 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-700 placeholder-gray-400 transition focus:border-transparent focus:ring-2 focus:ring-(--ca) focus:outline-none"
               />
             </div>
 
@@ -112,11 +110,11 @@ export default function LoginPage() {
               type="submit"
               disabled={chargement}
               style={{ backgroundColor: 'var(--cp)' }}
-              className="w-full py-3 px-4 hover:brightness-110 text-white font-semibold rounded-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 font-semibold text-white transition-all duration-200 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {chargement ? (
                 <>
-                  <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
                   Connexion en cours…
                 </>
               ) : (
@@ -124,11 +122,14 @@ export default function LoginPage() {
               )}
             </button>
 
+            <div className="text-center">
+              <Link href="/mot-de-passe-oublie" className="text-sm text-gray-500 transition-colors hover:text-(--cp)">
+                Mot de passe oublié ?
+              </Link>
+            </div>
           </form>
 
-          <p className="text-center text-xs text-gray-400 mt-6">
-            Association Scouts Catholiques de Côte d&apos;Ivoire
-          </p>
+          <p className="mt-6 text-center text-xs text-gray-400">Association Scouts Catholiques de Côte d&apos;Ivoire</p>
         </div>
       </div>
     </div>
