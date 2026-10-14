@@ -3,6 +3,9 @@ import { z } from 'zod'
 // Variables d'environnement de l'API, validées au démarrage : un secret
 // manquant ou trop court doit empêcher le lancement, pas faire échouer la
 // première requête en production.
+// Une ligne « CLE= » du .env vaut absence de valeur, pas chaîne vide à valider.
+const videEnAbsent = (valeur: unknown) => (typeof valeur === 'string' && valeur.trim() === '' ? undefined : valeur)
+
 const SchemaEnv = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
@@ -30,7 +33,12 @@ const SchemaEnv = z.object({
   ADMIN_CLE_PRIVEE_FICHIER: z.string().optional(),
   ADMIN_EMETTEUR_CONFIANCE: z.string().optional(),
   ADMIN_CLE_PUBLIQUE_FICHIER: z.string().optional(),
-  SESSION_TTL_SECONDES: z.coerce.number().int().min(600).max(7 * 24 * 3600).default(12 * 3600),
+  SESSION_TTL_SECONDES: z.coerce
+    .number()
+    .int()
+    .min(600)
+    .max(7 * 24 * 3600)
+    .default(12 * 3600),
 
   // Origines autorisées à appeler l'API avec des cookies (frontends des
   // différentes plateformes), séparées par des virgules. Vide = aucune
@@ -57,6 +65,15 @@ const SchemaEnv = z.object({
     .transform((v) => v === 'true'),
 
   CRON_SECRET: z.string().min(16).optional(),
+
+  // Durées de conservation (loi n° 2013-450), en jours, appliquées par la
+  // tâche quotidienne POST /api/cron/purge. Non définies = rien n'est supprimé :
+  // ces durées relèvent d'une décision de l'association, pas d'un défaut technique.
+  RETENTION_AUDIT_JOURS: z.preprocess(videEnAbsent, z.coerce.number().int().min(365).optional()),
+  ANONYMISATION_SCOUTS_INACTIFS_JOURS: z.preprocess(videEnAbsent, z.coerce.number().int().min(365).optional()),
+  // Redis facultatif : limitation de débit partagée entre plusieurs instances.
+  // Sans REDIS_URL, compteurs en mémoire (une seule instance de l'API).
+  REDIS_URL: z.preprocess(videEnAbsent, z.string().url().optional()),
 
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().optional(),
@@ -89,6 +106,19 @@ const SchemaEnvValide = SchemaEnv.superRefine((cfg, ctx) => {
   // VPS perdu ou réinstallé ne fasse perdre aucun document.
   if (cfg.NODE_ENV === 'production' && !renseigne(cfg.STORAGE_S3_BUCKET)) {
     manque('STORAGE_S3_BUCKET', 'stockage externe obligatoire en production (aucun fichier sur le serveur)')
+  }
+
+  // Production : ce qui, mal réglé, échouerait sans bruit. Liens des e-mails
+  // pointant vers localhost, réinitialisation de mot de passe impossible faute
+  // de SMTP, tâches planifiées appelables sans secret.
+  if (cfg.NODE_ENV === 'production') {
+    if (!cfg.URL_FRONTEND_PAROISSE.startsWith('https://') || /localhost|127.0.0.1/.test(cfg.URL_FRONTEND_PAROISSE)) {
+      manque('URL_FRONTEND_PAROISSE', 'URL publique en https obligatoire en production (liens des e-mails)')
+    }
+    if (!renseigne(cfg.SMTP_HOST))
+      manque('SMTP_HOST', 'serveur SMTP obligatoire en production (réinitialisation du mot de passe)')
+    if (!renseigne(cfg.SMTP_FROM)) manque('SMTP_FROM', "adresse d'expédition obligatoire en production")
+    if (!renseigne(cfg.CRON_SECRET)) manque('CRON_SECRET', 'secret des tâches planifiées obligatoire en production')
   }
 
   if (renseigne(cfg.ADMIN_EMETTEUR_CONFIANCE) !== renseigne(cfg.ADMIN_CLE_PUBLIQUE_FICHIER)) {
