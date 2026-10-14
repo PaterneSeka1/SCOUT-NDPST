@@ -2,26 +2,53 @@
   "name": "scout-ascci",
   "private": true,
   "description": "Monorepo SCOUT ASCCI : API (NestJS) commune, frontend paroissial et application district (Next.js), chaque plateforme sur sa propre installation.",
-  "packageManager": "pnpm@12.11.2",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.12",
+    "npm": ">=10"
   },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
-    "dev": "pnpm --filter @scout/shared build && pnpm --parallel --filter @scout/shared --filter @scout/api --filter @scout/web-paroisse --filter @scout/web-district dev",
-    "build": "pnpm -r build",
-    "lint": "pnpm -r lint",
-    "typecheck": "pnpm --filter @scout/shared build && pnpm -r typecheck",
-    "test": "pnpm --filter @scout/shared build && pnpm -r test",
-    "db:generate": "pnpm --filter @scout/api prisma:generate",
-    "db:deploy": "pnpm --filter @scout/api prisma:deploy",
-    "db:seed": "pnpm --filter @scout/api prisma:seed",
-    "db:diff": "pnpm --filter @scout/api prisma:diff",
-    "db:status": "pnpm --filter @scout/api prisma:status",
+    "dev": "npm run build -w @scout/shared && concurrently -k -n shared,api,paroisse,district -c gray,blue,green,magenta \"npm run dev -w @scout/shared\" \"npm run dev -w @scout/api\" \"npm run dev -w @scout/web-paroisse\" \"npm run dev -w @scout/web-district\"",
+    "build": "npm run build -w @scout/shared && npm run build -w @scout/api -w @scout/web-paroisse -w @scout/web-district",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run build -w @scout/shared && npm run typecheck --workspaces --if-present",
+    "test": "npm run build -w @scout/shared && npm run test --workspaces --if-present",
+    "db:generate": "npm run prisma:generate -w @scout/api",
+    "db:deploy": "npm run prisma:deploy -w @scout/api",
+    "db:seed": "npm run prisma:seed -w @scout/api",
+    "db:diff": "npm run prisma:diff -w @scout/api",
+    "db:status": "npm run prisma:status -w @scout/api",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "concurrently": "10.0.6",
     "prettier": "3.9.10",
     "prettier-plugin-tailwindcss": "0.8.1"
+  },
+  "scarfSettings": {
+    "enabled": false
+  },
+  "allowScripts": {
+    "@swc/core": true,
+    "prisma": true,
+    "unrs-resolver": true,
+    "sharp": true,
+    "@prisma/engines": true,
+    "@scarf/scarf": false
+  },
+  "overrides": {
+    "prisma": {
+      "mysql2": "3.24.4"
+    },
+    "@prisma/config": {
+      "deepmerge-ts": "8.0.2"
+    },
+    "@nestjs/swagger": {
+      "js-yaml": "5.4.2"
+    }
   }
 }

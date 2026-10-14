@@ -21,8 +21,10 @@ fi
 echo "Application des migrations Prisma en attente..."
 # Appel direct du point d'entrée du CLI (plutôt que `npx prisma` / le lien
 # symbolique node_modules/.bin/prisma) : le script résout ses fichiers
-# annexes (moteurs .wasm) via un chemin relatif à son propre dossier, qui
-# doit donc rester node_modules/prisma/build.
-node node_modules/prisma/build/index.js migrate deploy --schema prisma/schema.prisma
+# annexes (moteurs .wasm) via un chemin relatif à son propre dossier. Les
+# workspaces npm remontent le paquet à la racine du dépôt : on le localise
+# par la résolution de modules de Node plutôt que par un chemin en dur.
+PRISMA_DIR=$(node -p "require('path').dirname(require.resolve('prisma/package.json'))")
+node "$PRISMA_DIR/build/index.js" migrate deploy --schema prisma/schema.prisma
 
 exec "$@"

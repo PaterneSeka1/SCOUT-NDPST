@@ -2,9 +2,11 @@
 // Suivi pédagogique du mouvement scout catholique
 
 generator client {
-  provider     = "prisma-client"
-  output       = "../src/generated/prisma"
-  moduleFormat = "cjs"
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "cjs"
+  // NestJS compile les sources TypeScript en JavaScript avant leur exécution.
+  importFileExtension = "js"
 }
 
 datasource db {

@@ -15,7 +15,7 @@
 // après vérification.
 //
 // Usage (depuis apps/api, avec le .env de production chargé) :
-//   pnpm fichiers:migrer-r2 --source ../../my-app [--public-ancien ../../my-app/public/uploads] [--appliquer]
+//   npm run fichiers:migrer-r2 -- --source ../../my-app [--public-ancien ../../my-app/public/uploads] [--appliquer]
 
 import 'dotenv/config'
 import { readdir, readFile } from 'fs/promises'
@@ -88,7 +88,11 @@ async function main() {
     const paroisseId = paroisse.name
     const dossierParoisse = path.join(dossierPrive, paroisseId)
     for (const nom of await lister(dossierParoisse)) {
-      aEnvoyer.push({ local: path.join(dossierParoisse, nom), bucket: bucketPrive, cle: cleFichierPrive(paroisseId, nom) })
+      aEnvoyer.push({
+        local: path.join(dossierParoisse, nom),
+        bucket: bucketPrive,
+        cle: cleFichierPrive(paroisseId, nom),
+      })
     }
   }
   const nomsPublics = new Set<string>()
@@ -120,7 +124,9 @@ async function main() {
     }
     envoyes++
   }
-  console.log(`Fichiers : ${aEnvoyer.length} trouvés, ${dejaPresents} déjà dans R2, ${envoyes} ${APPLIQUER ? 'envoyés' : 'à envoyer'}`)
+  console.log(
+    `Fichiers : ${aEnvoyer.length} trouvés, ${dejaPresents} déjà dans R2, ${envoyes} ${APPLIQUER ? 'envoyés' : 'à envoyer'}`,
+  )
 
   // 3. Réécriture des URL publiques en base (seulement pour les fichiers
   // effectivement repris, jamais sur la base d'un simple préfixe).
@@ -146,7 +152,9 @@ async function main() {
       const logoUrl = nouvelleUrl(config.logoUrl)
       const heroImageUrl = nouvelleUrl(config.heroImageUrl)
       if (logoUrl || heroImageUrl) {
-        console.log(`  Plateforme : ${[logoUrl && 'logo', heroImageUrl && 'image d’accueil'].filter(Boolean).join(', ')}`)
+        console.log(
+          `  Plateforme : ${[logoUrl && 'logo', heroImageUrl && 'image d’accueil'].filter(Boolean).join(', ')}`,
+        )
         if (APPLIQUER) {
           await prisma.configurationPlateforme.update({
             where: { id: 'platform' },
@@ -156,7 +164,10 @@ async function main() {
         reecritures += (logoUrl ? 1 : 0) + (heroImageUrl ? 1 : 0)
       }
     }
-    for (const scout of await prisma.scout.findMany({ where: { photo: { not: null } }, select: { id: true, photo: true } })) {
+    for (const scout of await prisma.scout.findMany({
+      where: { photo: { not: null } },
+      select: { id: true, photo: true },
+    })) {
       const url = nouvelleUrl(scout.photo)
       if (!url) continue
       if (APPLIQUER) await prisma.scout.update({ where: { id: scout.id }, data: { photo: url } })

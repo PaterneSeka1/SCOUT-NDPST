@@ -24,7 +24,8 @@ echo ""
 # --- Vérifications préalables ---
 
 command -v node >/dev/null 2>&1 || err "Node.js n'est pas installé. Télécharge-le sur https://nodejs.org"
-command -v corepack >/dev/null 2>&1 || err "corepack est introuvable (fourni avec Node.js ≥ 20)."
+command -v npm >/dev/null 2>&1 || err "npm est introuvable (fourni avec Node.js ≥ 22.12)."
+node -e 'const [majeur, mineur] = process.versions.node.split(".").map(Number); process.exit(majeur > 22 || (majeur === 22 && mineur >= 12) ? 0 : 1)' || err "Node.js ≥ 22.12 est requis."
 command -v docker >/dev/null 2>&1 || err "Docker n'est pas installé. Télécharge-le sur https://docker.com"
 
 if docker compose version >/dev/null 2>&1; then
@@ -62,11 +63,11 @@ for FRONT in web-paroisse web-district; do
   fi
 done
 
-# --- Dépendances (pnpm via corepack) ---
+# --- Dépendances (workspaces npm) ---
 # Le client Prisma est généré par le postinstall de @scout/api.
 info "Installation des dépendances..."
-corepack pnpm install
-corepack pnpm --filter @scout/shared build
+npm install
+npm run build -w @scout/shared
 ok "Dépendances installées"
 
 # --- Démarrage de la base de données ---
@@ -87,12 +88,12 @@ ok "PostgreSQL prêt"
 # --- Migrations Prisma ---
 info "Création des tables (migration Prisma)..."
 cd apps/api
-corepack pnpm prisma:deploy
+npm run prisma:deploy
 ok "Base de données initialisée"
 
 # --- Seed ---
 info "Création du compte admin..."
-corepack pnpm prisma:seed
+npm run prisma:seed
 ok "Compte admin créé"
 
 cd "$SCRIPT_DIR"

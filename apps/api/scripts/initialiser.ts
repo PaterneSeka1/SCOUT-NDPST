@@ -9,8 +9,8 @@
 // Refuse de s'exécuter si la base contient déjà un compte.
 //
 // Usage, depuis apps/api avec son .env chargé :
-//   corepack pnpm initialiser                # installation qui héberge l'administrateur (district)
-//   corepack pnpm initialiser --sans-admin   # installation administrée à distance (paroisse)
+//   npm run initialiser                     # installation qui héberge l'administrateur (district)
+//   npm run initialiser -- --sans-admin     # installation administrée à distance (paroisse)
 
 import 'dotenv/config'
 import { createInterface } from 'readline'
@@ -92,7 +92,9 @@ async function main() {
 
   try {
     if ((await prisma.utilisateur.count()) > 0 || (await prisma.paroisse.count()) > 0) {
-      throw new Error('La base contient déjà des comptes ou des paroisses : initialisation refusée (installation neuve uniquement).')
+      throw new Error(
+        'La base contient déjà des comptes ou des paroisses : initialisation refusée (installation neuve uniquement).',
+      )
     }
 
     console.log('\n=== Initialisation de SCOUT ASCCI ===\n')
@@ -129,7 +131,8 @@ async function main() {
       telephone: await question('Téléphone', { optionnel: true }),
       email: await question('E-mail', { optionnel: true }),
     }
-    if (chef.matricule === admin?.matricule) throw new Error('Les deux comptes doivent avoir des matricules différents.')
+    if (chef.matricule === admin?.matricule)
+      throw new Error('Les deux comptes doivent avoir des matricules différents.')
     const passwordChef = await motDePasse('le Chef de Groupe')
 
     const [hashAdmin, hashChef] = await Promise.all([admin ? hash(admin.password, 12) : null, hash(passwordChef, 12)])

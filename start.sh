@@ -60,4 +60,4 @@ echo "  (Les conteneurs Docker restent actifs — lance './stop.sh' pour tout ar
 echo ""
 
 # --- Lancement de l'API et du frontend (en parallèle) ---
-corepack pnpm dev
+npm run dev

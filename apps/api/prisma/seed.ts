@@ -47,10 +47,10 @@ async function upsert(table: string, columns: ColumnValue[]): Promise<Record<str
 
 async function main() {
   // Développement uniquement : mot de passe par défaut affiché en clair. En
-  // production, l'installation se fait avec `corepack pnpm initialiser`
+  // production, l'installation se fait avec `npm run initialiser`
   // (scripts/initialiser.ts), qui exige des mots de passe saisis à la main.
   if (process.env.NODE_ENV === 'production') {
-    throw new Error('Seed interdit en production : utiliser `corepack pnpm initialiser` (apps/api).')
+    throw new Error('Seed interdit en production : utiliser `npm run initialiser` (apps/api).')
   }
 
   await client.connect()

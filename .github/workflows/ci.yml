@@ -14,33 +14,39 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-
-      - name: Activer pnpm (corepack)
-        run: corepack enable
+          node-version: 22
+          cache: npm
 
       # Génère aussi le client Prisma (postinstall de @scout/api).
-      - run: pnpm install --frozen-lockfile
+      - run: npm ci
+
+      # Bloque les failles connues élevées ou critiques des dépendances livrées.
+      - name: Audit des dépendances de production
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Paquet partagé
-        run: pnpm --filter @scout/shared build
+        run: npm run build -w @scout/shared
 
       - name: Validation du schéma Prisma
-        run: pnpm --filter @scout/api exec prisma validate
+        run: npm exec -w @scout/api -- prisma validate
         env:
           DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
 
       - name: Lint
-        run: pnpm -r lint
+        run: npm run lint --workspaces --if-present
 
       - name: Vérification des types
-        run: pnpm -r typecheck
+        run: npm run typecheck --workspaces --if-present
 
       - name: Tests unitaires
-        run: pnpm -r test
+        run: npm run test --workspaces --if-present
 
       - name: Build
-        run: pnpm --filter @scout/api build && pnpm --filter @scout/web-paroisse build && pnpm --filter @scout/web-district build
+        run: npm run build -w @scout/api -w @scout/web-paroisse -w @scout/web-district
+        env:
+          # Obligatoire pour un build de production des frontends (relais /api).
+          API_URL_INTERNE: http://127.0.0.1:4000
+          NEXT_PUBLIC_SITE_URL: https://ci.example.invalid
 
   docker-build:
     name: Build des images Docker
@@ -51,8 +57,11 @@ jobs:
       - name: API (sans publication)
         run: docker build -f apps/api/Dockerfile -t scout-api:ci .
 
+      - name: Chargement du client Prisma compilé
+        run: docker run --rm --entrypoint node scout-api:ci -e "require('./dist/generated/prisma/client.js')"
+
       - name: Frontend paroissial (sans publication)
-        run: docker build -f apps/web-paroisse/Dockerfile -t scout-web:ci .
+        run: docker build -f apps/web-paroisse/Dockerfile --build-arg API_URL_INTERNE=http://api:4000 --build-arg NEXT_PUBLIC_SITE_URL=https://paroisse.example.invalid -t scout-web:ci .
 
       - name: Application district (sans publication)
-        run: docker build -f apps/web-district/Dockerfile -t scout-district:ci .
+        run: docker build -f apps/web-district/Dockerfile --build-arg API_URL_INTERNE=http://api:4000 --build-arg NEXT_PUBLIC_SITE_URL=https://district.example.invalid -t scout-district:ci .
