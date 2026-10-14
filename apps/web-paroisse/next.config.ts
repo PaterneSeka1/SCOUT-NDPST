@@ -1,7 +1,14 @@
 import path from 'path'
 import type { NextConfig } from 'next'
+import { urlApiInterne } from './lib/api-interne'
 
 const EN_PRODUCTION = process.env.NODE_ENV === 'production'
+
+// URL interne de l'API, évaluée au chargement de la configuration : en
+// production (dont `next build`), une API_URL_INTERNE absente fait échouer
+// immédiatement avec un message explicite, au lieu de figer un relais /api
+// vers 127.0.0.1 dans le manifeste des réécritures.
+const API_INTERNE = urlApiInterne()
 
 // Origine du bucket public de stockage (Supabase, R2, Spaces...), dérivée de
 // la même variable que lib/storage.ts — jamais d'hôte distant en dur ici : si
@@ -49,11 +56,10 @@ const nextConfig: NextConfig = {
   // tiers). En « fallback », une route encore servie par app/api/ reste
   // prioritaire : chaque route supprimée bascule automatiquement vers l'API.
   async rewrites() {
-    const api = (process.env.API_URL_INTERNE ?? 'http://127.0.0.1:4000').replace(/\/$/, '')
     return {
       beforeFiles: [],
       afterFiles: [],
-      fallback: [{ source: '/api/:path*', destination: `${api}/api/:path*` }],
+      fallback: [{ source: '/api/:path*', destination: `${API_INTERNE}/api/:path*` }],
     }
   },
   async headers() {

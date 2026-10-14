@@ -1,12 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { apiHorsPerimetreV1, pageHorsPerimetreV1 } from '@scout/shared'
+import { DELAI_API_INTERNE_MS, urlApiInterne } from './lib/api-interne'
 
 const COOKIE_ACCES = 'scout_acces'
 const COOKIE_SESSION = 'scout_session'
-
-function urlApiInterne(): string {
-  return (process.env.API_URL_INTERNE ?? 'http://127.0.0.1:4000').replace(/\/$/, '')
-}
 
 // Middleware du frontend paroissial :
 // 1. périmètre produit V1 (voir @scout/shared perimetreV1) : fonctionnalités
@@ -65,8 +62,13 @@ async function rafraichir(
   req: NextRequest,
   jetonSession: string,
 ): Promise<{ jetonAcces: string; setCookies: string[] } | null> {
+  // Hors du try : une configuration manquante en production doit échouer
+  // franchement plutôt que de déconnecter silencieusement chaque utilisateur.
+  const url = `${urlApiInterne()}/api/auth/rafraichir`
+  // API injoignable ou trop lente (délai dépassé) : même traitement qu'un
+  // rafraîchissement refusé (null), sans bloquer la requête en cours.
   try {
-    const reponse = await fetch(`${urlApiInterne()}/api/auth/rafraichir`, {
+    const reponse = await fetch(url, {
       method: 'POST',
       headers: {
         cookie: `${COOKIE_SESSION}=${encodeURIComponent(jetonSession)}`,
@@ -74,6 +76,7 @@ async function rafraichir(
         ...(req.headers.get('x-forwarded-for') ? { 'x-forwarded-for': req.headers.get('x-forwarded-for')! } : {}),
       },
       cache: 'no-store',
+      signal: AbortSignal.timeout(DELAI_API_INTERNE_MS),
     })
     if (!reponse.ok) return null
     const setCookies = reponse.headers.getSetCookie()
