@@ -5,50 +5,12 @@ import { paroisseIdRequise } from '../../common/paroisse'
 import { PerimetreService } from '../../common/perimetre.service'
 import type { UtilisateurSession } from '../../common/types'
 import { PrismaService } from '../../prisma/prisma.service'
-
-export interface CorpsCreationProgramme {
-  titre?: unknown
-  description?: unknown
-  periodeDebut?: unknown
-  periodeFin?: unknown
-  brancheType?: unknown
-  paroisseId?: unknown
-}
-
-export interface CorpsModificationProgramme {
-  titre?: unknown
-  description?: unknown
-  periodeDebut?: unknown
-  periodeFin?: unknown
-}
-
-export interface CorpsLigne {
-  theme?: unknown
-  objectif?: unknown
-  datePrevue?: unknown
-  ordre?: unknown
-  activiteId?: unknown
-}
-
-// Correspondance explicite des champs du corps : chaque champ texte doit être
-// une chaîne (ou null quand le champ l'autorise), jamais un objet transmis tel
-// quel à Prisma.
-function texte(valeur: unknown, champ: string): string | undefined {
-  if (valeur === undefined) return undefined
-  if (typeof valeur !== 'string') throw new BadRequestException(`${champ} doit être une chaîne de caractères`)
-  return valeur
-}
-
-function texteNullable(valeur: unknown, champ: string): string | null | undefined {
-  if (valeur === null) return null
-  return texte(valeur, champ)
-}
-
-function date(valeur: string): Date {
-  const d = new Date(valeur)
-  if (Number.isNaN(d.getTime())) throw new BadRequestException('Date invalide')
-  return d
-}
+import type {
+  CorpsCreationLigne,
+  CorpsCreationProgramme,
+  CorpsModificationLigne,
+  CorpsModificationProgramme,
+} from './programmes.schemas'
 
 const SELECTION_ACTIVITE = {
   select: { id: true, titre: true, dateDebut: true },
@@ -99,32 +61,16 @@ export class ProgrammesService {
   async creer(utilisateur: UtilisateurSession, corps: CorpsCreationProgramme) {
     const estGroupe = ROLES_GROUPE.includes(utilisateur.role)
     const estBranche = ROLES_BRANCHE.includes(utilisateur.role)
-    const paroisseIdCorps = typeof corps.paroisseId === 'string' ? corps.paroisseId : undefined
+    const paroisseIdCorps = corps.paroisseId
     const estAssistantDistrict = utilisateur.roleDistrict === 'ASSISTANT_DISTRICT'
     const creationDistrict = estAssistantDistrict && !!paroisseIdCorps
     if (!estGroupe && !estBranche && !creationDistrict) throw new ForbiddenException('Accès refusé')
 
-    const titre = texte(corps.titre, 'titre')
-    const description = texteNullable(corps.description, 'description')
-    const periodeDebut = texte(corps.periodeDebut, 'periodeDebut')
-    const periodeFin = texte(corps.periodeFin, 'periodeFin')
-    const brancheType = corps.brancheType
-
-    if (!titre || !periodeDebut || !periodeFin) {
-      throw new BadRequestException('Le titre et la période sont obligatoires')
-    }
-    const debut = date(periodeDebut)
-    const fin = date(periodeFin)
-    if (fin <= debut) {
-      throw new BadRequestException('La date de fin doit être après la date de début')
-    }
-    const brancheValidee = brancheType != null ? BrancheTypeSchema.safeParse(brancheType) : null
-    if (brancheValidee && !brancheValidee.success) {
-      throw new BadRequestException('Branche invalide')
-    }
+    // Forme, dates et ordre des dates déjà validés par SchemaCreationProgramme.
+    const { titre, description, periodeDebut: debut, periodeFin: fin, brancheType } = corps
 
     let paroisseId: string
-    let brancheEffective: string | null = brancheValidee?.success ? brancheValidee.data : null
+    let brancheEffective: string | null = brancheType ?? null
 
     // La création via le district (choix de la paroisse cible) n'est utilisée
     // que par /district/ma-branche/programmes/nouveau, seule à envoyer
@@ -187,15 +133,12 @@ export class ProgrammesService {
 
   async modifier(utilisateur: UtilisateurSession, id: string, corps: CorpsModificationProgramme) {
     const paroisseId = paroisseIdRequise(utilisateur)
-    const titre = texte(corps.titre, 'titre')
-    const description = texteNullable(corps.description, 'description')
-    const periodeDebut = texte(corps.periodeDebut, 'periodeDebut')
-    const periodeFin = texte(corps.periodeFin, 'periodeFin')
+    const { titre, description, periodeDebut, periodeFin } = corps
 
     const existant = await this.programmeAutorise(utilisateur, paroisseId, id)
 
-    const debut = periodeDebut !== undefined ? date(periodeDebut) : existant.periodeDebut
-    const fin = periodeFin !== undefined ? date(periodeFin) : existant.periodeFin
+    const debut = periodeDebut ?? existant.periodeDebut
+    const fin = periodeFin ?? existant.periodeFin
     if (fin <= debut) {
       throw new BadRequestException('La date de fin doit être après la date de début')
     }
@@ -218,14 +161,11 @@ export class ProgrammesService {
     return { ok: true }
   }
 
-  async ajouterLigne(utilisateur: UtilisateurSession, programmeId: string, corps: CorpsLigne) {
+  async ajouterLigne(utilisateur: UtilisateurSession, programmeId: string, corps: CorpsCreationLigne) {
     const paroisseId = paroisseIdRequise(utilisateur)
     await this.programmeAutorise(utilisateur, paroisseId, programmeId)
 
-    const theme = texte(corps.theme, 'theme')
-    const objectif = texteNullable(corps.objectif, 'objectif')
-    const datePrevue = texteNullable(corps.datePrevue, 'datePrevue')
-    if (!theme) throw new BadRequestException('Le thème est obligatoire')
+    const { theme, objectif, datePrevue } = corps
 
     const dernier = await this.prisma.ligneProgramme.findFirst({
       where: { programmeId },
@@ -238,24 +178,22 @@ export class ProgrammesService {
         programmeId,
         theme,
         objectif: objectif ?? null,
-        datePrevue: datePrevue ? date(datePrevue) : null,
+        datePrevue: datePrevue ?? null,
         ordre: (dernier?.ordre ?? -1) + 1,
       },
     })
   }
 
-  async modifierLigne(utilisateur: UtilisateurSession, programmeId: string, ligneId: string, corps: CorpsLigne) {
+  async modifierLigne(
+    utilisateur: UtilisateurSession,
+    programmeId: string,
+    ligneId: string,
+    corps: CorpsModificationLigne,
+  ) {
     const paroisseId = paroisseIdRequise(utilisateur)
     await this.ligneAutorisee(utilisateur, paroisseId, programmeId, ligneId)
 
-    const theme = texte(corps.theme, 'theme')
-    const objectif = texteNullable(corps.objectif, 'objectif')
-    const datePrevue = texteNullable(corps.datePrevue, 'datePrevue')
-    const activiteId = texteNullable(corps.activiteId, 'activiteId')
-    const { ordre } = corps
-    if (ordre !== undefined && (typeof ordre !== 'number' || !Number.isInteger(ordre))) {
-      throw new BadRequestException('ordre doit être un entier')
-    }
+    const { theme, objectif, datePrevue, ordre, activiteId } = corps
 
     if (activiteId) {
       const activite = await this.prisma.activite.findFirst({
@@ -269,7 +207,7 @@ export class ProgrammesService {
       data: {
         ...(theme !== undefined ? { theme } : {}),
         ...(objectif !== undefined ? { objectif } : {}),
-        ...(datePrevue !== undefined ? { datePrevue: datePrevue ? date(datePrevue) : null } : {}),
+        ...(datePrevue !== undefined ? { datePrevue } : {}),
         ...(ordre !== undefined ? { ordre } : {}),
         ...(activiteId !== undefined ? { activiteId } : {}),
       },

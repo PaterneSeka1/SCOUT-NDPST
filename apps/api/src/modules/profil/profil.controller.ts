@@ -2,9 +2,17 @@ import { Body, Controller, Get, HttpCode, Param, Post, Put, Res } from '@nestjs/
 import { ApiTags } from '@nestjs/swagger'
 import type { Response } from 'express'
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator'
+import { ZodPipe } from '../../common/pipes/zod.pipe'
 import type { UtilisateurSession } from '../../common/types'
 import { effacerCookies } from '../../auth/cookies'
-import { corpsObjet } from '../utilisateurs/corps'
+import {
+  SchemaChangementMotDePasse,
+  SchemaConsentement,
+  SchemaModificationProfil,
+  type CorpsChangementMotDePasse,
+  type CorpsConsentement,
+  type CorpsModificationProfil,
+} from './profil.schemas'
 import { ProfilService } from './profil.service'
 
 // Espace personnel : accessible à tout utilisateur authentifié, sans
@@ -22,8 +30,11 @@ export class ProfilController {
   }
 
   @Put('me')
-  modifier(@UtilisateurCourant() utilisateur: UtilisateurSession, @Body() corps: unknown) {
-    return this.profil.modifierProfil(utilisateur, corpsObjet(corps))
+  modifier(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Body(new ZodPipe(SchemaModificationProfil)) corps: CorpsModificationProfil,
+  ) {
+    return this.profil.modifierProfil(utilisateur, corps)
   }
 
   @Get('me/branche')
@@ -36,10 +47,10 @@ export class ProfilController {
   @Put('me/password')
   async changerMotDePasse(
     @UtilisateurCourant() utilisateur: UtilisateurSession,
-    @Body() corps: unknown,
+    @Body(new ZodPipe(SchemaChangementMotDePasse)) corps: CorpsChangementMotDePasse,
     @Res({ passthrough: true }) reponse: Response,
   ) {
-    const resultat = await this.profil.changerMotDePasse(utilisateur, corpsObjet(corps))
+    const resultat = await this.profil.changerMotDePasse(utilisateur, corps)
     effacerCookies(reponse)
     return resultat
   }
@@ -55,9 +66,21 @@ export class ProfilController {
   consentementImage(
     @UtilisateurCourant() utilisateur: UtilisateurSession,
     @Param('scoutId') scoutId: string,
-    @Body() corps: unknown,
+    @Body(new ZodPipe(SchemaConsentement)) corps: CorpsConsentement,
   ) {
-    return this.profil.consentementImage(utilisateur, scoutId, corpsObjet(corps))
+    return this.profil.consentementImage(utilisateur, scoutId, corps)
+  }
+
+  // Consentement parental au traitement des données de santé de l'enfant ;
+  // même contrat que consentement-image.
+  @Post('mes-enfants/:scoutId/consentement-sante')
+  @HttpCode(200)
+  consentementSante(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Param('scoutId') scoutId: string,
+    @Body(new ZodPipe(SchemaConsentement)) corps: CorpsConsentement,
+  ) {
+    return this.profil.consentementSante(utilisateur, scoutId, corps)
   }
 
   @Get('ma-progression')

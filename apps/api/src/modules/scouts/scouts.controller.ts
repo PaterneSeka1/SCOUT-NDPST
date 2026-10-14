@@ -4,6 +4,20 @@ import { ROLES_GROUPE, ROLES_GROUPE_ETENDU, ROLES_TOUT_STAFF } from '@scout/shar
 import { Roles } from '../../common/decorators/roles.decorator'
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator'
 import type { UtilisateurSession } from '../../common/types'
+import { ZodPipe } from '../../common/pipes/zod.pipe'
+import { z } from 'zod'
+import {
+  SchemaCreationScout,
+  SchemaModificationScout,
+  SchemaImportScouts,
+  SchemaCreationCompteScout,
+  SchemaMatriculeScout,
+  SchemaCreationContact,
+  SchemaModificationContact,
+  SchemaAjoutDocument,
+  SchemaPassagesBranche,
+  SchemaValidationProgression,
+} from './scouts.schemas'
 import { premiereValeur } from './corps'
 import { FicheScoutService } from './fiche-scout.service'
 import { PassageBrancheService } from './passage-branche.service'
@@ -45,7 +59,10 @@ export class ScoutsController {
   @Post()
   @HttpCode(201)
   @Roles(...ROLES_TOUT_STAFF)
-  creer(@UtilisateurCourant() utilisateur: UtilisateurSession, @Body() corps: unknown) {
+  creer(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Body(new ZodPipe(SchemaCreationScout)) corps: z.infer<typeof SchemaCreationScout>,
+  ) {
     return this.scouts.creer(utilisateur, corps)
   }
 
@@ -54,7 +71,10 @@ export class ScoutsController {
   @Post('import')
   @HttpCode(200)
   @Roles(...ROLES_TOUT_STAFF)
-  importer(@UtilisateurCourant() utilisateur: UtilisateurSession, @Body() corps: unknown) {
+  importer(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Body(new ZodPipe(SchemaImportScouts)) corps: z.infer<typeof SchemaImportScouts>,
+  ) {
     return this.scouts.importer(utilisateur, corps)
   }
 
@@ -70,7 +90,10 @@ export class ScoutsController {
   @Post('passage-branche')
   @HttpCode(200)
   @Roles(...ROLES_GROUPE)
-  appliquerPassages(@UtilisateurCourant() utilisateur: UtilisateurSession, @Body() corps: unknown) {
+  appliquerPassages(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Body(new ZodPipe(SchemaPassagesBranche)) corps: z.infer<typeof SchemaPassagesBranche>,
+  ) {
     return this.passages.appliquer(utilisateur, corps)
   }
 
@@ -82,14 +105,22 @@ export class ScoutsController {
 
   @Put(':id')
   @Roles(...ROLES_TOUT_STAFF)
-  modifier(@UtilisateurCourant() utilisateur: UtilisateurSession, @Param('id') id: string, @Body() corps: unknown) {
+  modifier(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Param('id') id: string,
+    @Body(new ZodPipe(SchemaModificationScout)) corps: z.infer<typeof SchemaModificationScout>,
+  ) {
     return this.scouts.modifier(utilisateur, id, corps)
   }
 
   @Post(':id/compte')
   @HttpCode(201)
   @Roles(...ROLES_GROUPE_ETENDU)
-  creerCompte(@UtilisateurCourant() utilisateur: UtilisateurSession, @Param('id') id: string, @Body() corps: unknown) {
+  creerCompte(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Param('id') id: string,
+    @Body(new ZodPipe(SchemaCreationCompteScout)) corps: z.infer<typeof SchemaCreationCompteScout>,
+  ) {
     return this.scouts.creerCompte(utilisateur, id, corps)
   }
 
@@ -98,7 +129,7 @@ export class ScoutsController {
   attribuerMatricule(
     @UtilisateurCourant() utilisateur: UtilisateurSession,
     @Param('id') id: string,
-    @Body() corps: unknown,
+    @Body(new ZodPipe(SchemaMatriculeScout)) corps: z.infer<typeof SchemaMatriculeScout>,
   ) {
     return this.scouts.attribuerMatricule(utilisateur, id, corps)
   }
@@ -106,7 +137,11 @@ export class ScoutsController {
   @Post(':id/contacts')
   @HttpCode(201)
   @Roles(...ROLES_TOUT_STAFF)
-  ajouterContact(@UtilisateurCourant() utilisateur: UtilisateurSession, @Param('id') id: string, @Body() corps: unknown) {
+  ajouterContact(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Param('id') id: string,
+    @Body(new ZodPipe(SchemaCreationContact)) corps: z.infer<typeof SchemaCreationContact>,
+  ) {
     return this.fiche.ajouterContact(utilisateur, id, corps)
   }
 
@@ -116,7 +151,7 @@ export class ScoutsController {
     @UtilisateurCourant() utilisateur: UtilisateurSession,
     @Param('id') id: string,
     @Param('contactId') contactId: string,
-    @Body() corps: unknown,
+    @Body(new ZodPipe(SchemaModificationContact)) corps: z.infer<typeof SchemaModificationContact>,
   ) {
     return this.fiche.modifierContact(utilisateur, id, contactId, corps)
   }
@@ -137,7 +172,7 @@ export class ScoutsController {
   ajouterDocument(
     @UtilisateurCourant() utilisateur: UtilisateurSession,
     @Param('id') id: string,
-    @Body() corps: unknown,
+    @Body(new ZodPipe(SchemaAjoutDocument)) corps: z.infer<typeof SchemaAjoutDocument>,
   ) {
     return this.fiche.ajouterDocument(utilisateur, id, corps)
   }
@@ -164,7 +199,7 @@ export class ScoutsController {
   validerProgression(
     @UtilisateurCourant() utilisateur: UtilisateurSession,
     @Param('id') id: string,
-    @Body() corps: unknown,
+    @Body(new ZodPipe(SchemaValidationProgression)) corps: z.infer<typeof SchemaValidationProgression>,
   ) {
     return this.progressions.valider(utilisateur, id, corps)
   }

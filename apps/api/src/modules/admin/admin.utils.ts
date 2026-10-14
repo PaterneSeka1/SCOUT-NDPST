@@ -1,36 +1,9 @@
-import { BadRequestException } from '@nestjs/common'
 import type { Response } from 'express'
 import { contentDispositionTelechargement } from '../../common/lib/csv'
 import { env } from '../../config/env'
 
-// Corps JSON d'une requête d'administration, lu champ par champ : jamais
-// transmis tel quel à Prisma.
-export type Corps = Record<string, unknown>
-
-export function corpsObjet(corps: unknown): Corps {
-  if (typeof corps !== 'object' || corps === null || Array.isArray(corps)) {
-    throw new BadRequestException('Données invalides')
-  }
-  return corps as Corps
-}
-
-// Champ texte optionnel : undefined s'il est absent, chaîne vide s'il vaut
-// null (effacement), rejet en 400 s'il est d'un autre type — la route Next
-// échouait alors en 500 sur un `.trim()` appliqué à un non-texte.
-export function texteOptionnel(corps: Corps, cle: string): string | undefined {
-  const valeur = corps[cle]
-  if (valeur === undefined) return undefined
-  if (valeur === null) return ''
-  if (typeof valeur !== 'string') throw new BadRequestException(`Le champ ${cle} est invalide`)
-  return valeur
-}
-
-export function booleenOptionnel(corps: Corps, cle: string): boolean | undefined {
-  const valeur = corps[cle]
-  if (valeur === undefined) return undefined
-  if (typeof valeur !== 'boolean') throw new BadRequestException(`Le champ ${cle} est invalide`)
-  return valeur
-}
+// Les corps JSON des routes d'administration sont validés par les schémas Zod
+// (*.schemas.ts) au niveau des contrôleurs.
 
 // Paramètre de requête (query string) : Express peut fournir un tableau ou un
 // objet pour un paramètre répété ou imbriqué — seule une chaîne est retenue.

@@ -3,7 +3,20 @@ import { ApiTags } from '@nestjs/swagger'
 import { ROLES_TOUT_STAFF } from '@scout/shared'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator'
+import { ZodPipe } from '../../common/pipes/zod.pipe'
 import type { UtilisateurSession } from '../../common/types'
+import {
+  SchemaConfirmationAutorisation,
+  SchemaCreationActivite,
+  SchemaModificationActivite,
+  SchemaPresencesActivite,
+  SchemaRetraitAutorisation,
+  type CorpsConfirmationAutorisation,
+  type CorpsCreationActivite,
+  type CorpsModificationActivite,
+  type CorpsPresencesActivite,
+  type CorpsRetraitAutorisation,
+} from './activites.schemas'
 import { ActivitesService } from './activites.service'
 
 // Paramètre de query unique (une valeur répétée ?a=1&a=2 arrive en tableau).
@@ -33,7 +46,10 @@ export class ActivitesController {
   // (règle « l'un ou l'autre » vérifiée dans le service).
   @Post()
   @HttpCode(201)
-  creer(@UtilisateurCourant() utilisateur: UtilisateurSession, @Body() corps: unknown) {
+  creer(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Body(new ZodPipe(SchemaCreationActivite)) corps: CorpsCreationActivite,
+  ) {
     return this.activites.creer(utilisateur, corps)
   }
 
@@ -45,7 +61,11 @@ export class ActivitesController {
 
   @Put(':id')
   @Roles(...ROLES_TOUT_STAFF)
-  modifier(@UtilisateurCourant() utilisateur: UtilisateurSession, @Param('id') id: string, @Body() corps: unknown) {
+  modifier(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Param('id') id: string,
+    @Body(new ZodPipe(SchemaModificationActivite)) corps: CorpsModificationActivite,
+  ) {
     return this.activites.modifier(utilisateur, id, corps)
   }
 
@@ -62,7 +82,7 @@ export class ActivitesController {
   confirmerAutorisation(
     @UtilisateurCourant() utilisateur: UtilisateurSession,
     @Param('id') id: string,
-    @Body() corps: unknown,
+    @Body(new ZodPipe(SchemaConfirmationAutorisation)) corps: CorpsConfirmationAutorisation,
   ) {
     return this.activites.confirmerAutorisation(utilisateur, id, corps)
   }
@@ -71,7 +91,7 @@ export class ActivitesController {
   retirerAutorisation(
     @UtilisateurCourant() utilisateur: UtilisateurSession,
     @Param('id') id: string,
-    @Body() corps: unknown,
+    @Body(new ZodPipe(SchemaRetraitAutorisation)) corps: CorpsRetraitAutorisation,
   ) {
     return this.activites.retirerAutorisation(utilisateur, id, corps)
   }
@@ -88,7 +108,7 @@ export class ActivitesController {
   enregistrerPresences(
     @UtilisateurCourant() utilisateur: UtilisateurSession,
     @Param('id') id: string,
-    @Body() corps: unknown,
+    @Body(new ZodPipe(SchemaPresencesActivite)) corps: CorpsPresencesActivite,
   ) {
     return this.activites.enregistrerPresences(utilisateur, id, corps)
   }

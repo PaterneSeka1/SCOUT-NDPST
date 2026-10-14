@@ -1,11 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
-import { estCheminLocalValide, estValeurEnum } from '@scout/shared'
-import { TypeDocument } from '../../generated/prisma/client'
+import { AccesFichiersService } from '../../common/acces-fichiers.service'
 import { AuditService } from '../../common/audit.service'
 import type { UtilisateurSession } from '../../common/types'
 import { PrismaService } from '../../prisma/prisma.service'
 import { AccesScoutsService } from './acces-scouts.service'
-import { corpsObjet, booleen, texte, texteOuNull } from './corps'
+import type { DonneesCreationContact, DonneesModificationContact, DonneesAjoutDocument } from './scouts.schemas'
 
 // Contacts d'urgence et documents d'un scout. Chaque opération vérifie d'abord
 // que le scout appartient à la paroisse de l'utilisateur, et à sa branche pour
@@ -17,20 +16,12 @@ export class FicheScoutService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly acces: AccesScoutsService,
+    private readonly fichiers: AccesFichiersService,
   ) {}
 
-  async ajouterContact(utilisateur: UtilisateurSession, scoutId: string, brut: unknown) {
+  async ajouterContact(utilisateur: UtilisateurSession, scoutId: string, corps: DonneesCreationContact) {
     await this.acces.verifierScoutGere(utilisateur, scoutId)
-    const corps = corpsObjet(brut)
-
-    const nom = texte(corps, 'nom')
-    const prenom = texteOuNull(corps, 'prenom')
-    const telephone = texte(corps, 'telephone')
-    const relation = texteOuNull(corps, 'relation')
-    const principal = corps.principal === true
-
-    if (!nom?.trim()) throw new BadRequestException('Le nom du contact est requis')
-    if (!telephone?.trim()) throw new BadRequestException('Le téléphone du contact est requis')
+    const { nom, prenom, telephone, relation, principal } = corps
 
     // Si le nouveau contact est principal, retirer le statut des autres — dans
     // la même transaction, pour ne jamais laisser le scout sans contact
@@ -56,18 +47,17 @@ export class FicheScoutService {
     })
   }
 
-  async modifierContact(utilisateur: UtilisateurSession, scoutId: string, contactId: string, brut: unknown) {
+  async modifierContact(
+    utilisateur: UtilisateurSession,
+    scoutId: string,
+    contactId: string,
+    corps: DonneesModificationContact,
+  ) {
     await this.acces.verifierScoutGere(utilisateur, scoutId)
 
     const contact = await this.prisma.contactUrgence.findFirst({ where: { id: contactId, scoutId } })
     if (!contact) throw new NotFoundException('Contact introuvable')
-    const corps = corpsObjet(brut)
-
-    const nom = texte(corps, 'nom')
-    const prenom = texteOuNull(corps, 'prenom')
-    const telephone = texte(corps, 'telephone')
-    const relation = texteOuNull(corps, 'relation')
-    const principal = booleen(corps, 'principal')
+    const { nom, prenom, telephone, relation, principal } = corps
 
     // Si passage en principal, retirer le statut des autres — dans la même
     // transaction que la mise à jour, pour rester cohérent en cas d'échec.
@@ -106,37 +96,31 @@ export class FicheScoutService {
     return { message: 'Contact supprimé' }
   }
 
-  async ajouterDocument(utilisateur: UtilisateurSession, scoutId: string, brut: unknown) {
-    await this.acces.verifierScoutGere(utilisateur, scoutId)
-    const corps = corpsObjet(brut)
+  async ajouterDocument(utilisateur: UtilisateurSession, scoutId: string, corps: DonneesAjoutDocument) {
+    const paroisseId = await this.acces.verifierScoutGere(utilisateur, scoutId)
+    const { type, nomFichier, url, dateExpiration } = corps
+    await this.fichiers.verifierRattachable(utilisateur, url.trim(), scoutId)
 
-    const type = corps.type
-    const nomFichier = texte(corps, 'nomFichier')
-    const url = texte(corps, 'url')
-    const dateExpiration = texteOuNull(corps, 'dateExpiration')
-
-    // estValeurEnum plutôt que `type in TypeDocument` : `in` remonte la chaîne
-    // de prototypes et accepterait "toString", "constructor"…
-    if (!type || !estValeurEnum(TypeDocument, type)) throw new BadRequestException('Type de document invalide')
-    if (!nomFichier?.trim() || !url?.trim()) throw new BadRequestException('Le fichier est requis')
-    if (!estCheminLocalValide(url.trim())) {
-      throw new BadRequestException('url doit être un chemin local (ex : /api/fichiers/…)')
-    }
-    let dateExpirationValide: Date | null = null
-    if (dateExpiration) {
-      dateExpirationValide = new Date(dateExpiration)
-      if (Number.isNaN(dateExpirationValide.getTime())) throw new BadRequestException("Date d'expiration invalide")
-    }
-
-    return this.prisma.document.create({
+    const document = await this.prisma.document.create({
       data: {
         type,
         nomFichier: nomFichier.trim(),
         url: url.trim(),
-        dateExpiration: dateExpirationValide,
+        dateExpiration,
         scoutId,
       },
     })
+
+    await this.audit.enregistrer({
+      paroisseId,
+      acteurId: utilisateur.id,
+      action: 'DOCUMENT_AJOUTE',
+      entite: 'Document',
+      entiteId: document.id,
+      details: { type, scoutId },
+    })
+
+    return document
   }
 
   async supprimerDocument(utilisateur: UtilisateurSession, scoutId: string, documentId: string) {
@@ -146,6 +130,7 @@ export class FicheScoutService {
     if (!document) throw new NotFoundException('Document introuvable')
 
     await this.prisma.document.delete({ where: { id: documentId } })
+    await this.fichiers.supprimerSiOrphelin(document.url)
 
     await this.audit.enregistrer({
       paroisseId,

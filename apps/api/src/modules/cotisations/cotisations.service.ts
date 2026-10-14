@@ -6,47 +6,22 @@ import {
   anneeScolaireValide,
   estValeurEnum,
 } from '@scout/shared'
-import { BrancheType, StatutCotisation, TypeCotisation } from '../../generated/prisma/client'
+import { BrancheType, StatutCotisation } from '../../generated/prisma/client'
 import { AuditService } from '../../common/audit.service'
 import { paroisseIdRequise } from '../../common/paroisse'
 import { PerimetreService } from '../../common/perimetre.service'
 import type { UtilisateurSession } from '../../common/types'
 import { PrismaService } from '../../prisma/prisma.service'
+import type {
+  CorpsCreationCotisation,
+  CorpsModificationCotisation,
+  CorpsStatutCotisant,
+} from './cotisations.schemas'
 
 export interface FiltresCotisations {
   anneeScolaire?: string
   statut?: string
   branche?: string
-}
-
-export interface CorpsCreationCotisation {
-  scoutId?: unknown
-  scoutIds?: unknown
-  type?: unknown
-  libelle?: unknown
-  montant?: unknown
-  anneeScolaire?: unknown
-}
-
-export interface CorpsModificationCotisation {
-  statut?: unknown
-  modePaiement?: unknown
-  notes?: unknown
-  montantPaye?: unknown
-}
-
-export interface CorpsStatutCotisant {
-  scoutId?: unknown
-  cotisant?: unknown
-  anneeScolaire?: unknown
-}
-
-// Texte optionnel : undefined si absent, null si explicitement null, sinon la
-// chaîne. Toute autre valeur est refusée (un autre type ferait planter `.trim()`).
-function texteOptionnel(valeur: unknown, champ: string): string | null | undefined {
-  if (valeur === undefined || valeur === null) return valeur
-  if (typeof valeur !== 'string') throw new BadRequestException(`${champ} doit être une chaîne de caractères`)
-  return valeur
 }
 
 @Injectable()
@@ -115,21 +90,9 @@ export class CotisationsService {
   // responsables de branche pourront ensuite enregistrer les paiements.
   async creer(utilisateur: UtilisateurSession, corps: CorpsCreationCotisation) {
     const paroisseId = paroisseIdRequise(utilisateur)
-    const { scoutId, scoutIds, type, montant } = corps
-
-    const cibles: unknown[] = Array.isArray(scoutIds) && scoutIds.length ? scoutIds : scoutId ? [scoutId] : []
-    if (cibles.length === 0 || !cibles.every((c): c is string => typeof c === 'string' && c.length > 0)) {
-      throw new BadRequestException('scoutId ou scoutIds est requis')
-    }
-    if (!estValeurEnum(TypeCotisation, type)) {
-      throw new BadRequestException('Type de cotisation invalide')
-    }
-    if (typeof montant !== 'number' || montant < 0 || !Number.isInteger(montant)) {
-      throw new BadRequestException('Le montant doit être un entier positif')
-    }
-    const libelle = texteOptionnel(corps.libelle, 'libelle')
-    const anneeCorps = texteOptionnel(corps.anneeScolaire, 'anneeScolaire')
-    const annee = anneeCorps?.trim() || anneeScolaireCourante()
+    // Corps déjà validé par SchemaCreationCotisation (cibles, type, montant).
+    const { cibles, type, montant, libelle } = corps
+    const annee = corps.anneeScolaire?.trim() || anneeScolaireCourante()
 
     const scouts = await this.prisma.scout.findMany({
       where: { id: { in: cibles }, paroisseId },
@@ -199,16 +162,13 @@ export class CotisationsService {
     })
     if (!existante) throw new NotFoundException('Cotisation introuvable')
 
-    const { statut, montantPaye } = corps
-    if (statut !== undefined && !estValeurEnum(StatutCotisation, statut)) {
-      throw new BadRequestException('Statut invalide')
-    }
-    const modePaiement = texteOptionnel(corps.modePaiement, 'modePaiement')
-    const notes = texteOptionnel(corps.notes, 'notes')
+    // Forme déjà validée par SchemaModificationCotisation ; reste ici la
+    // cohérence du montant payé avec le montant dû.
+    const { statut, montantPaye, modePaiement, notes } = corps
 
     if (statut === 'PARTIELLEMENT_PAYEE') {
       if (
-        typeof montantPaye !== 'number' ||
+        montantPaye === undefined ||
         !Number.isInteger(montantPaye) ||
         montantPaye <= 0 ||
         montantPaye >= existante.montant
@@ -225,7 +185,7 @@ export class CotisationsService {
       EN_ATTENTE: 0,
       EXONEREE: 0,
       PAYEE: existante.montant,
-      PARTIELLEMENT_PAYEE: typeof montantPaye === 'number' ? montantPaye : 0,
+      PARTIELLEMENT_PAYEE: montantPaye ?? 0,
     }
     const paiement = statut === 'PAYEE' || statut === 'PARTIELLEMENT_PAYEE'
 
@@ -370,14 +330,8 @@ export class CotisationsService {
   // de Groupe (administrateur de la paroisse), contrôlé par le contrôleur.
   async definirStatut(utilisateur: UtilisateurSession, corps: CorpsStatutCotisant) {
     const paroisseId = paroisseIdRequise(utilisateur)
-    const { scoutId, cotisant, anneeScolaire: anneeCorps } = corps
-    if (typeof scoutId !== 'string' || !scoutId || typeof cotisant !== 'boolean') {
-      throw new BadRequestException('scoutId et cotisant sont requis')
-    }
-    const anneeScolaire = anneeCorps ?? anneeScolaireCourante()
-    if (typeof anneeScolaire !== 'string' || !anneeScolaireValide(anneeScolaire)) {
-      throw new BadRequestException('Année scolaire invalide')
-    }
+    const { scoutId, cotisant } = corps
+    const anneeScolaire = corps.anneeScolaire ?? anneeScolaireCourante()
 
     const scout = await this.prisma.scout.findFirst({
       where: { id: scoutId, paroisseId },

@@ -3,8 +3,10 @@ import { ApiTags } from '@nestjs/swagger'
 import { ROLES_GROUPE, ROLES_TOUT_STAFF } from '@scout/shared'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator'
+import { ZodPipe } from '../../common/pipes/zod.pipe'
 import type { UtilisateurSession } from '../../common/types'
 import { IndicateursService } from './indicateurs.service'
+import { SchemaModificationParoisse, type CorpsModificationParoisse } from './paroisse.schemas'
 import { ParoisseService } from './paroisse.service'
 
 // Tableau de bord d'une paroisse : staff paroissial, parents et scouts.
@@ -24,7 +26,10 @@ export class ParoisseController {
 
   @Patch()
   @Roles(...ROLES_GROUPE)
-  modifier(@UtilisateurCourant() utilisateur: UtilisateurSession, @Body() corps: unknown) {
+  modifier(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Body(new ZodPipe(SchemaModificationParoisse)) corps: CorpsModificationParoisse,
+  ) {
     return this.paroisse.modifier(utilisateur, corps)
   }
 }

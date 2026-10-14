@@ -4,7 +4,18 @@ import { ROLES_GESTION, ROLES_GROUPE, ROLES_TOUT_STAFF } from '@scout/shared'
 import type { Response } from 'express'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator'
+import { ZodPipe } from '../../common/pipes/zod.pipe'
 import type { UtilisateurSession } from '../../common/types'
+import {
+  SchemaConfigReunion,
+  SchemaCreationReunions,
+  SchemaModificationReunion,
+  SchemaPresencesReunion,
+  type CorpsConfigReunion,
+  type CorpsCreationReunions,
+  type CorpsModificationReunion,
+  type CorpsPresencesReunion,
+} from './reunions.schemas'
 import { ReunionsService } from './reunions.service'
 
 // Paramètre de query unique (une valeur répétée ?a=1&a=2 arrive en tableau).
@@ -29,7 +40,10 @@ export class ReunionsController {
 
   @Put('config')
   @Roles(...ROLES_GROUPE)
-  enregistrerConfig(@UtilisateurCourant() utilisateur: UtilisateurSession, @Body() corps: unknown) {
+  enregistrerConfig(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Body(new ZodPipe(SchemaConfigReunion)) corps: CorpsConfigReunion,
+  ) {
     return this.reunions.enregistrerConfig(utilisateur, corps)
   }
 
@@ -43,7 +57,10 @@ export class ReunionsController {
   @Post()
   @HttpCode(201)
   @Roles(...ROLES_GESTION)
-  creer(@UtilisateurCourant() utilisateur: UtilisateurSession, @Body() corps: unknown) {
+  creer(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Body(new ZodPipe(SchemaCreationReunions)) corps: CorpsCreationReunions,
+  ) {
     return this.reunions.creer(utilisateur, corps)
   }
 
@@ -55,7 +72,11 @@ export class ReunionsController {
 
   @Patch(':id')
   @Roles(...ROLES_GESTION)
-  modifier(@UtilisateurCourant() utilisateur: UtilisateurSession, @Param('id') id: string, @Body() corps: unknown) {
+  modifier(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Param('id') id: string,
+    @Body(new ZodPipe(SchemaModificationReunion)) corps: CorpsModificationReunion,
+  ) {
     return this.reunions.modifier(utilisateur, id, corps)
   }
 
@@ -77,7 +98,7 @@ export class ReunionsController {
   enregistrerPresences(
     @UtilisateurCourant() utilisateur: UtilisateurSession,
     @Param('id') id: string,
-    @Body() corps: unknown,
+    @Body(new ZodPipe(SchemaPresencesReunion)) corps: CorpsPresencesReunion,
   ) {
     return this.reunions.enregistrerPresences(utilisateur, id, corps)
   }

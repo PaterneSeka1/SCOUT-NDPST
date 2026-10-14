@@ -1,14 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { hash } from 'bcryptjs'
-import {
-  estCouleurHexValide,
-  estUrlFichierValide,
-  LABELS_BRANCHES,
-  LABELS_ROLES,
-  MONO_PAROISSE,
-  motDePasseValide,
-  REGLE_MOT_DE_PASSE,
-} from '@scout/shared'
+import { LABELS_BRANCHES, LABELS_ROLES, MONO_PAROISSE } from '@scout/shared'
 import { Prisma } from '../../generated/prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
 import { AuditService } from '../../common/audit.service'
@@ -16,16 +8,12 @@ import { AuthService } from '../../auth/auth.service'
 import { champCsv as champ } from '../../common/lib/csv'
 import { logger } from '../../common/lib/logger'
 import { envoyerEmailBienvenue } from '../../common/lib/notifications'
-import { urlPubliqueBase } from '../../common/lib/storage'
-import {
-  booleenOptionnel,
-  corpsObjet,
-  dateFichier,
-  type FichierCsv,
-  LABELS_SEXE,
-  texteOptionnel,
-  urlConnexion,
-} from './admin.utils'
+import { dateFichier, type FichierCsv, LABELS_SEXE, urlConnexion } from './admin.utils'
+import type {
+  DonneesCreationChefGroupe,
+  DonneesCreationParoisse,
+  DonneesModificationParoisse,
+} from './paroisses.schemas'
 
 function slugNom(nom: string): string {
   return nom.toLowerCase().replace(/\s+/g, '-')
@@ -65,7 +53,7 @@ export class ParoissesService {
     }))
   }
 
-  async creer(corpsBrut: unknown) {
+  async creer(donnees: DonneesCreationParoisse) {
     if (MONO_PAROISSE) {
       const nbParoisses = await this.prisma.paroisse.count()
       if (nbParoisses >= 1) {
@@ -75,20 +63,7 @@ export class ParoissesService {
       }
     }
 
-    const corps = corpsObjet(corpsBrut)
-    const nom = texteOptionnel(corps, 'nom')?.trim()
-    const ville = texteOptionnel(corps, 'ville')?.trim()
-    const diocese = texteOptionnel(corps, 'diocese')?.trim()
-    const districtId = texteOptionnel(corps, 'districtId')?.trim()
-    const ocean = texteOptionnel(corps, 'ocean')
-    const adresse = texteOptionnel(corps, 'adresse')
-    const telephone = texteOptionnel(corps, 'telephone')
-    const email = texteOptionnel(corps, 'email')?.trim()
-
-    if (!nom || !ville || !diocese || !districtId) {
-      throw new BadRequestException('Le nom, la ville, le diocèse et le district sont obligatoires')
-    }
-
+    const { districtId, email } = donnees
     const district = await this.prisma.district.findUnique({ where: { id: districtId }, select: { id: true } })
     if (!district) throw new BadRequestException('District invalide')
 
@@ -98,16 +73,7 @@ export class ParoissesService {
     }
 
     return this.prisma.paroisse.create({
-      data: {
-        nom,
-        ville,
-        diocese,
-        ocean: ocean?.trim() || null,
-        districtId: district.id,
-        adresse: adresse?.trim() || null,
-        telephone: telephone?.trim() || null,
-        email: email || null,
-      },
+      data: { ...donnees, districtId: district.id },
     })
   }
 
@@ -146,69 +112,20 @@ export class ParoissesService {
     return { ...infos, counts, chefsGroupe, membres }
   }
 
-  async modifier(id: string, corpsBrut: unknown, acteurId: string) {
+  async modifier(id: string, donnees: DonneesModificationParoisse, acteurId: string) {
     const existante = await this.prisma.paroisse.findUnique({ where: { id }, select: { id: true, actif: true } })
     if (!existante) throw new NotFoundException('Paroisse introuvable')
 
-    const corps = corpsObjet(corpsBrut)
-    const nom = texteOptionnel(corps, 'nom')
-    const ville = texteOptionnel(corps, 'ville')
-    const diocese = texteOptionnel(corps, 'diocese')
-    const ocean = texteOptionnel(corps, 'ocean')
-    const districtId = texteOptionnel(corps, 'districtId')
-    const adresse = texteOptionnel(corps, 'adresse')
-    const telephone = texteOptionnel(corps, 'telephone')
-    const email = texteOptionnel(corps, 'email')
-    const logo = texteOptionnel(corps, 'logo')
-    const actif = booleenOptionnel(corps, 'actif')
-    const couleurs = {
-      couleurPrimaire: texteOptionnel(corps, 'couleurPrimaire'),
-      couleurAccent: texteOptionnel(corps, 'couleurAccent'),
-      couleurFond: texteOptionnel(corps, 'couleurFond'),
-      couleurHover: texteOptionnel(corps, 'couleurHover'),
-    }
+    const { districtId, actif } = donnees
 
-    if (logo != null && logo.trim() !== '' && !estUrlFichierValide(logo.trim(), urlPubliqueBase())) {
-      throw new BadRequestException(
-        'logo doit être un chemin local (ex : /api/fichiers-publics/…) ou une URL de stockage autorisée',
-      )
-    }
-
-    // Toute paroisse appartient à un district — jamais nul, donc jamais vidable ici.
     if (districtId !== undefined) {
-      if (!districtId.trim()) throw new BadRequestException('Le district est obligatoire')
       const districtExiste = await this.prisma.district.findUnique({ where: { id: districtId }, select: { id: true } })
       if (!districtExiste) throw new BadRequestException('District invalide')
     }
 
-    // Ces couleurs sont injectées dans une balise <style> : contrôle strict.
-    for (const [champCouleur, valeur] of Object.entries(couleurs)) {
-      if (valeur != null && valeur.trim() !== '' && !estCouleurHexValide(valeur)) {
-        throw new BadRequestException(`${champCouleur} doit être une couleur hexadécimale valide (ex : #1a4731)`)
-      }
-    }
-
-    const paroisse = await this.prisma.paroisse.update({
-      where: { id },
-      data: {
-        ...(nom !== undefined ? { nom: nom.trim() } : {}),
-        ...(ville !== undefined ? { ville: ville.trim() } : {}),
-        ...(diocese !== undefined ? { diocese: diocese.trim() } : {}),
-        ...(ocean !== undefined ? { ocean: ocean.trim() || null } : {}),
-        ...(districtId !== undefined ? { districtId } : {}),
-        ...(adresse !== undefined ? { adresse: adresse.trim() || null } : {}),
-        ...(telephone !== undefined ? { telephone: telephone.trim() || null } : {}),
-        ...(email !== undefined ? { email: email.trim() || null } : {}),
-        ...(logo !== undefined ? { logo: logo.trim() || null } : {}),
-        ...(actif !== undefined ? { actif } : {}),
-        ...(couleurs.couleurPrimaire !== undefined
-          ? { couleurPrimaire: couleurs.couleurPrimaire.trim() || null }
-          : {}),
-        ...(couleurs.couleurAccent !== undefined ? { couleurAccent: couleurs.couleurAccent.trim() || null } : {}),
-        ...(couleurs.couleurFond !== undefined ? { couleurFond: couleurs.couleurFond.trim() || null } : {}),
-        ...(couleurs.couleurHover !== undefined ? { couleurHover: couleurs.couleurHover.trim() || null } : {}),
-      },
-    })
+    // Données déjà normalisées par SchemaModificationParoisse : un champ
+    // undefined (absent du corps) est ignoré par Prisma, donc inchangé.
+    const paroisse = await this.prisma.paroisse.update({ where: { id }, data: donnees })
 
     // Désactiver une paroisse bloque la connexion de tout son personnel : les
     // sessions ouvertes sont fermées immédiatement plutôt qu'au prochain
@@ -287,7 +204,7 @@ export class ParoissesService {
   // Crée le compte Chef de Groupe d'une paroisse — action délibérément séparée
   // de la création de la paroisse elle-même : désigner qui dirige une paroisse
   // est une décision humaine, jamais automatisée.
-  async creerChefGroupe(paroisseId: string, corpsBrut: unknown) {
+  async creerChefGroupe(paroisseId: string, donnees: DonneesCreationChefGroupe) {
     const paroisse = await this.prisma.paroisse.findUnique({ where: { id: paroisseId }, select: { id: true } })
     if (!paroisse) throw new NotFoundException('Paroisse introuvable')
 
@@ -305,18 +222,7 @@ export class ParoissesService {
       )
     }
 
-    const corps = corpsObjet(corpsBrut)
-    const nom = texteOptionnel(corps, 'nom')?.trim()
-    const prenom = texteOptionnel(corps, 'prenom')?.trim()
-    const matricule = texteOptionnel(corps, 'matricule')?.trim()
-    const telephone = texteOptionnel(corps, 'telephone')?.trim()
-    const email = texteOptionnel(corps, 'email')?.trim()
-    const password = texteOptionnel(corps, 'password')
-
-    if (!nom || !prenom || !matricule || !password) {
-      throw new BadRequestException('Le nom, le prénom, le matricule et le mot de passe sont requis')
-    }
-    if (!motDePasseValide(password)) throw new BadRequestException(REGLE_MOT_DE_PASSE)
+    const { nom, prenom, matricule, telephone, email, password } = donnees
 
     const doublonMatricule = await this.prisma.utilisateur.findUnique({ where: { matricule }, select: { id: true } })
     if (doublonMatricule) throw new BadRequestException('Ce matricule est déjà utilisé')
@@ -342,8 +248,8 @@ export class ParoissesService {
           nom,
           prenom,
           matricule,
-          telephone: telephone || null,
-          email: email || null,
+          telephone,
+          email,
           role: 'CHEF_GROUPE',
           password: passwordHache,
           paroisseId,

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { PerimetreService } from '../../common/perimetre.service'
 import type { UtilisateurSession } from '../../common/types'
 import type { PrismaService } from '../../prisma/prisma.service'
+import type { CorpsCreationProgramme } from './programmes.schemas'
 import { ProgrammesService } from './programmes.service'
 
 function utilisateur(role: string, roleDistrict: string | null = null): UtilisateurSession {
@@ -42,10 +43,11 @@ function construire() {
   return { service, prisma }
 }
 
-const corpsValide = {
+// Corps tel que transmis par le contrôleur après validation (SchemaCreationProgramme).
+const corpsValide: CorpsCreationProgramme = {
   titre: 'T',
-  periodeDebut: '2026-01-01',
-  periodeFin: '2026-06-30',
+  periodeDebut: new Date('2026-01-01'),
+  periodeFin: new Date('2026-06-30'),
   brancheType: 'COMPAGNONS',
 }
 

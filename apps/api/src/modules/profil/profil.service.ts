@@ -7,6 +7,7 @@ import { AuditService } from '../../common/audit.service'
 import { AuthService } from '../../auth/auth.service'
 import { paroisseIdRequise } from '../../common/paroisse'
 import type { UtilisateurSession } from '../../common/types'
+import type { CorpsChangementMotDePasse, CorpsConsentement, CorpsModificationProfil } from './profil.schemas'
 
 // Profil en libre-service : accessible à tout utilisateur authentifié, quel que
 // soit son rôle (y compris ADMIN_PLATEFORME, dont paroisseId est toujours nul).
@@ -28,13 +29,6 @@ const SELECTION_PROFIL = {
   paroisse: { select: { id: true, nom: true } },
 } as const
 
-// Chaîne optionnelle (undefined/null acceptés), rejetée si d'un autre type.
-function chaineOptionnelle(valeur: unknown, message: string): string | null | undefined {
-  if (valeur === undefined || valeur === null) return valeur
-  if (typeof valeur !== 'string') throw new BadRequestException(message)
-  return valeur
-}
-
 @Injectable()
 export class ProfilService {
   constructor(
@@ -52,20 +46,11 @@ export class ProfilService {
     return utilisateur
   }
 
-  async modifierProfil(session: UtilisateurSession, corps: Record<string, unknown>) {
-    // On ne lit volontairement que les champs auto-modifiables : role, actif,
-    // matricule et paroisseId ne sont jamais lus ici, donc même si un client
-    // malveillant les inclut dans le corps de la requête, ils sont ignorés
-    // silencieusement — seuls ces quatre champs explicitement lus peuvent
-    // atteindre `data`.
-    const nom = chaineOptionnelle(corps.nom, 'Le nom est invalide')
-    const prenom = chaineOptionnelle(corps.prenom, 'Le prénom est invalide')
-    const email = chaineOptionnelle(corps.email, 'L’adresse e-mail est invalide')
-    const telephone = chaineOptionnelle(corps.telephone, 'Le numéro de téléphone est invalide')
-    // nom et prénom sont obligatoires en base : null est refusé (la route Next
-    // laissait Prisma échouer en 500).
-    if (nom === null) throw new BadRequestException('Le nom est invalide')
-    if (prenom === null) throw new BadRequestException('Le prénom est invalide')
+  async modifierProfil(session: UtilisateurSession, corps: CorpsModificationProfil) {
+    // Corps validé par SchemaModificationProfil : seuls les champs
+    // auto-modifiables y figurent — role, actif, matricule et paroisseId
+    // éventuellement envoyés par un client malveillant sont retirés.
+    const { nom, prenom, email, telephone } = corps
 
     if (email != null && email.trim() !== '') {
       // Insensible à la casse, comme pour la route de gestion équivalente :
@@ -111,16 +96,8 @@ export class ProfilService {
   // de Groupe) : ici l'appelant ne peut agir que sur son propre compte
   // (session.id, jamais un id transmis) et doit prouver qu'il connaît son mot
   // de passe actuel avant de le changer.
-  async changerMotDePasse(session: UtilisateurSession, corps: Record<string, unknown>) {
+  async changerMotDePasse(session: UtilisateurSession, corps: CorpsChangementMotDePasse) {
     const { motDePasseActuel, nouveauMotDePasse } = corps
-    if (
-      typeof motDePasseActuel !== 'string' ||
-      !motDePasseActuel ||
-      typeof nouveauMotDePasse !== 'string' ||
-      !nouveauMotDePasse
-    ) {
-      throw new BadRequestException('Le mot de passe actuel et le nouveau mot de passe sont requis')
-    }
 
     const utilisateur = await this.prisma.utilisateur.findUnique({
       where: { id: session.id },
@@ -291,11 +268,8 @@ export class ProfilService {
   // SON enfant (photo affichée dans l'application, publications de la
   // paroisse…). Restreint aux scouts effectivement rattachés au parent via
   // LienParentScout — jamais à un scout quelconque.
-  async consentementImage(session: UtilisateurSession, scoutId: string, corps: Record<string, unknown>) {
+  async consentementImage(session: UtilisateurSession, scoutId: string, corps: CorpsConsentement) {
     const { consentement } = corps
-    if (typeof consentement !== 'boolean') {
-      throw new BadRequestException('Le champ consentement (booléen) est requis')
-    }
     const paroisseId = paroisseIdRequise(session)
 
     // Le rôle du compte n'est jamais la condition d'accès : un membre du
@@ -324,6 +298,40 @@ export class ProfilService {
       entite: 'Scout',
       entiteId: scoutId,
       details: { consentementImage: consentement },
+    })
+
+    return scout
+  }
+
+  // Même règle que consentementImage, pour le consentement au traitement des
+  // données de santé de l'enfant (fiche médicale, informations sanitaires).
+  async consentementSante(session: UtilisateurSession, scoutId: string, corps: CorpsConsentement) {
+    const { consentement } = corps
+    const paroisseId = paroisseIdRequise(session)
+
+    // Seul le lien LienParentScout réel fait foi, jamais le rôle du compte.
+    const lien = await this.prisma.lienParentScout.findFirst({
+      where: { parentId: session.id, scoutId, scout: { paroisseId } },
+    })
+    if (!lien) throw new ForbiddenException("Cet enfant n'est pas rattaché à votre compte")
+
+    const scout = await this.prisma.scout.update({
+      where: { id: scoutId },
+      data: {
+        consentementSante: consentement,
+        consentementSanteDate: consentement ? new Date() : null,
+        consentementSanteParId: consentement ? session.id : null,
+      },
+      select: { id: true, consentementSante: true, consentementSanteDate: true },
+    })
+
+    await this.audit.enregistrer({
+      paroisseId,
+      acteurId: session.id,
+      action: 'SCOUT_CONSENTEMENT_SANTE_MODIFIE',
+      entite: 'Scout',
+      entiteId: scoutId,
+      details: { consentementSante: consentement },
     })
 
     return scout

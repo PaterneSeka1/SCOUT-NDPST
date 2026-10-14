@@ -6,14 +6,20 @@ import {
   ROLES_TOUT_STAFF,
   TypeActiviteSchema,
   entierBorne,
-  estCheminLocalValide,
-  estValeurEnum,
 } from '@scout/shared'
-import { BrancheType, Prisma, TypeAutorisationCamp } from '../../generated/prisma/client'
+import { BrancheType, Prisma } from '../../generated/prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
+import { AccesFichiersService } from '../../common/acces-fichiers.service'
 import { PerimetreService } from '../../common/perimetre.service'
 import { paroisseIdRequise } from '../../common/paroisse'
 import type { UtilisateurSession } from '../../common/types'
+import type {
+  CorpsConfirmationAutorisation,
+  CorpsCreationActivite,
+  CorpsModificationActivite,
+  CorpsPresencesActivite,
+  CorpsRetraitAutorisation,
+} from './activites.schemas'
 
 export interface FiltresActivites {
   page: string | null
@@ -34,19 +40,12 @@ const SELECTION_SCOUT_PRESENCE = {
   brancheType: true,
 } as const
 
-// Corps JSON attendu sous forme d'objet : toute autre forme est rejetée.
-function objetCorps(corps: unknown): Record<string, unknown> {
-  if (typeof corps !== 'object' || corps === null || Array.isArray(corps)) {
-    throw new BadRequestException('Données invalides')
-  }
-  return corps as Record<string, unknown>
-}
-
 @Injectable()
 export class ActivitesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly perimetre: PerimetreService,
+    private readonly fichiers: AccesFichiersService,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -122,43 +121,16 @@ export class ActivitesService {
     }
   }
 
-  async creer(utilisateur: UtilisateurSession, corpsBrut: unknown) {
+  // Corps déjà validé par SchemaCreationActivite (forme, dates, enums).
+  async creer(utilisateur: UtilisateurSession, corps: CorpsCreationActivite) {
     const estAssistantDistrict = utilisateur.roleDistrict === 'ASSISTANT_DISTRICT'
     const estStaff = ROLES_TOUT_STAFF.includes(utilisateur.role)
     if (!estStaff && !estAssistantDistrict) throw new ForbiddenException('Accès refusé')
 
-    const corps = objetCorps(corpsBrut)
     const { titre, description, dateDebut, dateFin, lieu, type, brancheType, paroisseId: paroisseIdCorps } = corps
 
-    if (typeof titre !== 'string' || !titre.trim() || typeof dateDebut !== 'string' || !dateDebut) {
-      throw new BadRequestException('Le titre et la date de début sont obligatoires')
-    }
-    if (dateFin !== undefined && typeof dateFin !== 'string') {
-      throw new BadRequestException('La date de fin est invalide')
-    }
-    const dateDebutObj = new Date(dateDebut)
-    if (Number.isNaN(dateDebutObj.getTime())) {
-      throw new BadRequestException('La date de début est invalide')
-    }
-    const dateFinObj = dateFin ? new Date(dateFin) : null
-    if (dateFin && (!dateFinObj || Number.isNaN(dateFinObj.getTime()))) {
-      throw new BadRequestException('La date de fin est invalide')
-    }
-    if (dateFinObj && dateFinObj <= dateDebutObj) {
-      throw new BadRequestException('La date de fin doit être après la date de début')
-    }
-
-    const typeValide = TypeActiviteSchema.safeParse(type)
-    if (type !== undefined && !typeValide.success) {
-      throw new BadRequestException("Type d'activité invalide")
-    }
-    const brancheValide = BrancheTypeSchema.safeParse(brancheType)
-    if (brancheType != null && !brancheValide.success) {
-      throw new BadRequestException('Branche invalide')
-    }
-
     let paroisseId: string
-    let brancheEffective: BrancheType | null = brancheValide.success ? brancheValide.data : null
+    let brancheEffective: BrancheType | null = brancheType ?? null
 
     // La création via le district (choix de la paroisse cible) n'est utilisée
     // que par /district/ma-branche/activites/nouvelle, seule à envoyer
@@ -199,12 +171,12 @@ export class ActivitesService {
 
     return this.prisma.activite.create({
       data: {
-        titre: titre.trim(),
-        description: typeof description === 'string' ? description.trim() || null : null,
-        dateDebut: dateDebutObj,
-        dateFin: dateFinObj,
-        lieu: typeof lieu === 'string' ? lieu.trim() || null : null,
-        type: typeValide.success ? typeValide.data : 'REUNION',
+        titre,
+        description: description ?? null,
+        dateDebut,
+        dateFin,
+        lieu: lieu ?? null,
+        type: type ?? 'REUNION',
         brancheType: brancheEffective,
         paroisseId,
         creePar: utilisateur.id,
@@ -238,7 +210,7 @@ export class ActivitesService {
     return activite
   }
 
-  async modifier(utilisateur: UtilisateurSession, id: string, corpsBrut: unknown) {
+  async modifier(utilisateur: UtilisateurSession, id: string, corps: CorpsModificationActivite) {
     const paroisseId = paroisseIdRequise(utilisateur)
 
     // Un responsable de branche ne peut modifier que les activités de sa propre
@@ -250,45 +222,14 @@ export class ActivitesService {
     const existante = await this.prisma.activite.findFirst({ where: { id, paroisseId, ...filtreBranche } })
     if (!existante) throw new NotFoundException('Activité introuvable')
 
-    const corps = objetCorps(corpsBrut)
     const { titre, description, dateDebut, dateFin, lieu, type, brancheType } = corps
-    if (titre !== undefined && typeof titre !== 'string') {
-      throw new BadRequestException('Le titre est invalide')
-    }
-    const titreNettoye = typeof titre === 'string' ? titre.trim() : undefined
-    if (titre !== undefined && !titreNettoye) {
-      throw new BadRequestException('Le titre est requis')
-    }
-    if (dateDebut !== undefined && typeof dateDebut !== 'string') {
-      throw new BadRequestException('La date de début est invalide')
-    }
-    // dateFin : null ou '' efface la date de fin.
-    if (dateFin !== undefined && dateFin !== null && typeof dateFin !== 'string') {
-      throw new BadRequestException('La date de fin est invalide')
-    }
-
-    const typeValide = TypeActiviteSchema.safeParse(type)
-    if (type !== undefined && !typeValide.success) {
-      throw new BadRequestException("Type d'activité invalide")
-    }
-    const brancheValide = BrancheTypeSchema.safeParse(brancheType)
-    if (brancheType != null && brancheType !== '' && !brancheValide.success) {
-      throw new BadRequestException('Branche invalide')
-    }
-    const brancheFinale: BrancheType | null = brancheValide.success ? brancheValide.data : null
-    if (estBranche && brancheType !== undefined && brancheFinale !== existante.brancheType) {
+    // brancheType : undefined = inchangée, null = inter-branches.
+    if (estBranche && brancheType !== undefined && brancheType !== existante.brancheType) {
       throw new ForbiddenException('Le changement de branche est réservé au groupe')
     }
 
-    const dateDebutFinale = typeof dateDebut === 'string' ? new Date(dateDebut) : existante.dateDebut
-    if (dateDebut !== undefined && Number.isNaN(dateDebutFinale.getTime())) {
-      throw new BadRequestException('La date de début est invalide')
-    }
-    const dateFinFinale =
-      dateFin !== undefined ? (typeof dateFin === 'string' && dateFin ? new Date(dateFin) : null) : existante.dateFin
-    if (dateFin && dateFinFinale && Number.isNaN(dateFinFinale.getTime())) {
-      throw new BadRequestException('La date de fin est invalide')
-    }
+    const dateDebutFinale = dateDebut ?? existante.dateDebut
+    const dateFinFinale = dateFin !== undefined ? dateFin : existante.dateFin
     if (dateFinFinale && dateFinFinale <= dateDebutFinale) {
       throw new BadRequestException('La date de fin doit être après la date de début')
     }
@@ -296,15 +237,13 @@ export class ActivitesService {
     return this.prisma.activite.update({
       where: { id },
       data: {
-        ...(titre !== undefined && { titre: titreNettoye }),
-        ...(description !== undefined && {
-          description: typeof description === 'string' ? description.trim() || null : null,
-        }),
-        ...(dateDebut !== undefined && { dateDebut: dateDebutFinale }),
-        ...(dateFin !== undefined && { dateFin: dateFinFinale }),
-        ...(lieu !== undefined && { lieu: typeof lieu === 'string' ? lieu.trim() || null : null }),
-        ...(type !== undefined && typeValide.success && { type: typeValide.data }),
-        ...(brancheType !== undefined && { brancheType: brancheFinale }),
+        ...(titre !== undefined && { titre }),
+        ...(description !== undefined && { description }),
+        ...(dateDebut !== undefined && { dateDebut }),
+        ...(dateFin !== undefined && { dateFin }),
+        ...(lieu !== undefined && { lieu }),
+        ...(type !== undefined && { type }),
+        ...(brancheType !== undefined && { brancheType }),
       },
       include: AVEC_NOMBRE_PRESENCES,
     })
@@ -319,7 +258,14 @@ export class ActivitesService {
     const peutSupprimer = existante.creePar === utilisateur.id || utilisateur.role === 'CHEF_GROUPE'
     if (!peutSupprimer) throw new ForbiddenException('Non autorisé')
 
+    // Les autorisations de camp sont supprimées en cascade : leurs documents
+    // signés ne doivent pas rester dans le stockage.
+    const documents = await this.prisma.autorisationCamp.findMany({
+      where: { activiteId: id, documentUrl: { not: null } },
+      select: { documentUrl: true },
+    })
     await this.prisma.activite.delete({ where: { id } })
+    for (const { documentUrl } of documents) await this.fichiers.supprimerSiOrphelin(documentUrl)
     return { message: 'Activité supprimée' }
   }
 
@@ -351,7 +297,11 @@ export class ActivitesService {
     return !!lien
   }
 
-  async confirmerAutorisation(utilisateur: UtilisateurSession, activiteId: string, corpsBrut: unknown) {
+  async confirmerAutorisation(
+    utilisateur: UtilisateurSession,
+    activiteId: string,
+    corps: CorpsConfirmationAutorisation,
+  ) {
     const paroisseId = paroisseIdRequise(utilisateur)
 
     const activite = await this.prisma.activite.findFirst({ where: { id: activiteId, paroisseId } })
@@ -360,20 +310,8 @@ export class ActivitesService {
       throw new BadRequestException('Cette confirmation ne concerne que les activités de type Camp')
     }
 
-    const { scoutId, type, mode, documentUrl, documentNomFichier } = objetCorps(corpsBrut)
-
-    if (typeof scoutId !== 'string' || !scoutId || !estValeurEnum(TypeAutorisationCamp, type)) {
-      throw new BadRequestException('Scout et type sont requis')
-    }
-    const urlDocument = typeof documentUrl === 'string' ? documentUrl.trim() : ''
-    const nomDocument = typeof documentNomFichier === 'string' ? documentNomFichier.trim() : ''
-    const parDocument = mode === 'DOCUMENT'
-    if (parDocument && (!urlDocument || !nomDocument)) {
-      throw new BadRequestException('Le document est requis pour ce mode')
-    }
-    if (parDocument && !estCheminLocalValide(urlDocument)) {
-      throw new BadRequestException('documentUrl doit être un chemin local (ex : /api/fichiers/…)')
-    }
+    // Présence du document et chemin local déjà vérifiés par SchemaConfirmationAutorisation.
+    const { scoutId, type, parDocument, documentUrl: urlDocument, documentNomFichier: nomDocument } = corps
 
     const scout = await this.prisma.scout.findFirst({ where: { id: scoutId, paroisseId } })
     if (!scout) throw new NotFoundException('Scout introuvable')
@@ -381,6 +319,7 @@ export class ActivitesService {
     if (!(await this.peutAgirSurScout(utilisateur, paroisseId, scoutId, scout.brancheType))) {
       throw new ForbiddenException('Accès refusé')
     }
+    if (parDocument) await this.fichiers.verifierRattachable(utilisateur, urlDocument, scoutId)
 
     const confirmation = {
       confirmeLe: new Date(),
@@ -388,23 +327,28 @@ export class ActivitesService {
       documentUrl: parDocument ? urlDocument : null,
       documentNomFichier: parDocument ? nomDocument : null,
     }
-    return this.prisma.autorisationCamp.upsert({
+    const precedente = await this.prisma.autorisationCamp.findUnique({
+      where: { activiteId_scoutId_type: { activiteId, scoutId, type } },
+      select: { documentUrl: true },
+    })
+    const autorisation = await this.prisma.autorisationCamp.upsert({
       where: { activiteId_scoutId_type: { activiteId, scoutId, type } },
       create: { activiteId, scoutId, type, ...confirmation },
       update: confirmation,
     })
+    if (precedente?.documentUrl && precedente.documentUrl !== confirmation.documentUrl) {
+      await this.fichiers.supprimerSiOrphelin(precedente.documentUrl)
+    }
+    return autorisation
   }
 
-  async retirerAutorisation(utilisateur: UtilisateurSession, activiteId: string, corpsBrut: unknown) {
+  async retirerAutorisation(utilisateur: UtilisateurSession, activiteId: string, corps: CorpsRetraitAutorisation) {
     const paroisseId = paroisseIdRequise(utilisateur)
 
     const activite = await this.prisma.activite.findFirst({ where: { id: activiteId, paroisseId } })
     if (!activite) throw new NotFoundException('Activité introuvable')
 
-    const { scoutId, type } = objetCorps(corpsBrut)
-    if (typeof scoutId !== 'string' || !scoutId || !estValeurEnum(TypeAutorisationCamp, type)) {
-      throw new BadRequestException('Scout et type sont requis')
-    }
+    const { scoutId, type } = corps
 
     const existante = await this.prisma.autorisationCamp.findFirst({
       where: { activiteId, scoutId, type, scout: { paroisseId } },
@@ -421,6 +365,7 @@ export class ActivitesService {
     if (!autorise) throw new ForbiddenException('Accès refusé')
 
     await this.prisma.autorisationCamp.delete({ where: { id: existante.id } })
+    await this.fichiers.supprimerSiOrphelin(existante.documentUrl)
     return { ok: true }
   }
 
@@ -485,35 +430,24 @@ export class ActivitesService {
         select: SELECTION_SCOUT_PRESENCE,
         orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
       })
-      return scouts.map((scout) => ({ id: null, present: false, commentaire: null, scout: avecAutorisationCamp(scout) }))
+      return scouts.map((scout) => ({
+        id: null,
+        present: false,
+        commentaire: null,
+        scout: avecAutorisationCamp(scout),
+      }))
     }
 
     return presences.map((p) => ({ ...p, scout: avecAutorisationCamp(p.scout) }))
   }
 
-  async enregistrerPresences(utilisateur: UtilisateurSession, id: string, corpsBrut: unknown) {
+  async enregistrerPresences(utilisateur: UtilisateurSession, id: string, corps: CorpsPresencesActivite) {
     const paroisseId = paroisseIdRequise(utilisateur)
     // Cf. listerPresences : un responsable de branche ne peut enregistrer les
     // présences que d'une activité de sa propre branche (ou inter-branches).
     const activite = await this.activitePourPresences(utilisateur, paroisseId, id)
 
-    const { presences } = objetCorps(corpsBrut)
-    if (
-      !Array.isArray(presences) ||
-      presences.some(
-        (p: unknown) =>
-          typeof p !== 'object' ||
-          p === null ||
-          typeof (p as Record<string, unknown>).scoutId !== 'string' ||
-          !(p as Record<string, unknown>).scoutId ||
-          typeof (p as Record<string, unknown>).present !== 'boolean' ||
-          ((p as Record<string, unknown>).commentaire != null &&
-            typeof (p as Record<string, unknown>).commentaire !== 'string'),
-      )
-    ) {
-      throw new BadRequestException('Format invalide')
-    }
-    const lignes = presences as Array<{ scoutId: string; present: boolean; commentaire?: string | null }>
+    const lignes = corps.presences
 
     // Seuls les scouts de la paroisse appartenant à la branche de l'activité
     // (tous pour une activité inter-branches, comme la liste du GET) peuvent

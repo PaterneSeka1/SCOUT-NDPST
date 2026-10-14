@@ -1,11 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
-import { BrancheTypeSchema, brancheSelonAge, calculerAge } from '@scout/shared'
-import type { BrancheType } from '../../generated/prisma/client'
+import { brancheSelonAge, calculerAge } from '@scout/shared'
 import { AuditService } from '../../common/audit.service'
 import { paroisseIdRequise } from '../../common/paroisse'
 import type { UtilisateurSession } from '../../common/types'
 import { PrismaService } from '../../prisma/prisma.service'
-import { corpsObjet } from './corps'
+import type { DonneesPassagesBranche } from './scouts.schemas'
 
 interface Proposition {
   scoutId: string
@@ -68,28 +67,8 @@ export class PassageBrancheService {
   // Applique en bloc les passages de branche sélectionnés par l'utilisateur
   // (jamais automatique : toujours une confirmation explicite, scout par
   // scout, depuis la liste renvoyée par la prévisualisation).
-  async appliquer(utilisateur: UtilisateurSession, brut: unknown) {
-    const corps = corpsObjet(brut)
-    const passagesBruts = corps.passages
-    if (!Array.isArray(passagesBruts) || passagesBruts.length === 0) {
-      throw new BadRequestException('Aucun passage à appliquer')
-    }
-
-    const passages: { scoutId: string; nouvelleBranche: BrancheType | null }[] = []
-    for (const p of passagesBruts as unknown[]) {
-      const passage = (typeof p === 'object' && p !== null ? p : {}) as Record<string, unknown>
-      if (typeof passage.scoutId !== 'string' || !passage.scoutId) {
-        throw new BadRequestException('scoutId manquant')
-      }
-      const nouvelleBranche = passage.nouvelleBranche
-      if (nouvelleBranche != null && !BrancheTypeSchema.safeParse(nouvelleBranche).success) {
-        throw new BadRequestException('Branche invalide')
-      }
-      passages.push({
-        scoutId: passage.scoutId,
-        nouvelleBranche: (nouvelleBranche ?? null) as BrancheType | null,
-      })
-    }
+  async appliquer(utilisateur: UtilisateurSession, corps: DonneesPassagesBranche) {
+    const { passages } = corps
 
     const paroisseId = paroisseIdRequise(utilisateur)
 
@@ -111,7 +90,7 @@ export class PassageBrancheService {
           ? this.prisma.scout.update({ where: { id: p.scoutId }, data: { brancheType: p.nouvelleBranche } })
           : // nouvelleBranche null = sortie du mouvement (âge dépassé) : le scout
             // est désactivé plutôt que supprimé, pour conserver son historique.
-            this.prisma.scout.update({ where: { id: p.scoutId }, data: { actif: false } }),
+            this.prisma.scout.update({ where: { id: p.scoutId }, data: { actif: false, desactiveLe: new Date() } }),
       ),
     )
 

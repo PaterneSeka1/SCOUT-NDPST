@@ -5,7 +5,7 @@ import { PerimetreService } from '../../common/perimetre.service'
 import { paroisseIdRequise } from '../../common/paroisse'
 import type { UtilisateurSession } from '../../common/types'
 import { PrismaService } from '../../prisma/prisma.service'
-import { corpsObjet, texte } from './corps'
+import type { DonneesValidationProgression } from './scouts.schemas'
 
 interface ScoutCible {
   id: string
@@ -101,13 +101,9 @@ export class ProgressionsService {
     }
   }
 
-  async valider(utilisateur: UtilisateurSession, id: string, brut: unknown) {
+  async valider(utilisateur: UtilisateurSession, id: string, corps: DonneesValidationProgression) {
     const scout = await this.scoutAutorise(utilisateur, id)
-    const corps = corpsObjet(brut)
-
-    const badgeId = texte(corps, 'badgeId')
-    const commentaire = texte(corps, 'commentaire')
-    if (!badgeId) throw new BadRequestException('badgeId est requis')
+    const { badgeId, commentaire } = corps
 
     const badge = await this.prisma.badge.findUnique({
       where: { id: badgeId },

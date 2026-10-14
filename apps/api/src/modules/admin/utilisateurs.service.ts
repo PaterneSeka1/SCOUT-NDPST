@@ -3,8 +3,6 @@ import { hash } from 'bcryptjs'
 import {
   BrancheTypeSchema,
   libelleRoleAvecFonction,
-  motDePasseValide,
-  REGLE_MOT_DE_PASSE,
   ROLES_ASSIGNABLES_PAROISSE,
   ROLES_BRANCHE,
   ROLES_DISTRICT_ETENDU,
@@ -16,15 +14,13 @@ import { AuditService } from '../../common/audit.service'
 import { AuthService } from '../../auth/auth.service'
 import { logger } from '../../common/lib/logger'
 import { envoyerEmailBienvenue } from '../../common/lib/notifications'
-import {
-  booleenOptionnel,
-  type Corps,
-  corpsObjet,
-  entierBorneRequete,
-  parametre,
-  texteOptionnel,
-  urlConnexion,
-} from './admin.utils'
+import { entierBorneRequete, parametre, urlConnexion } from './admin.utils'
+import type {
+  DonneesCreationUtilisateur,
+  DonneesModificationUtilisateur,
+  DonneesMotDePasseAdmin,
+  DonneesNomination,
+} from './utilisateurs.schemas'
 
 // Une cible ADMIN_PLATEFORME n'existe jamais pour cette surface : un admin
 // plateforme ne gère pas d'autres admins plateforme via /api/admin/utilisateurs.
@@ -52,27 +48,6 @@ const SELECTION_NOMINATION = {
 const MESSAGE_CHEF_GROUPE_UNIQUE =
   "Cette paroisse a déjà un Chef de Groupe actif. Désactivez-le avant d'en désigner un nouveau."
 const MESSAGE_RESPONSABLE_UNIQUE = 'Cette branche a déjà un Responsable de Branche actif dans la paroisse.'
-
-// Champ de nomination facultatif : absent → undefined, null ou non-texte →
-// null, sinon texte nettoyé (vide → null).
-function nullableTexte(valeur: unknown): string | null | undefined {
-  if (valeur === undefined) return undefined
-  if (valeur === null) return null
-  if (typeof valeur !== 'string') return null
-  return valeur.trim() || null
-}
-
-const BRANCHE_INVALIDE = Symbol('brancheInvalide')
-
-function nullableBranche(valeur: unknown): string | null | undefined | typeof BRANCHE_INVALIDE {
-  const texte = nullableTexte(valeur)
-  if (texte && !BrancheTypeSchema.safeParse(texte).success) return BRANCHE_INVALIDE
-  return texte
-}
-
-function brancheValide(valeur: unknown): boolean {
-  return valeur == null || BrancheTypeSchema.safeParse(valeur).success
-}
 
 function estConflitUnicite(erreur: unknown): boolean {
   return erreur instanceof Prisma.PrismaClientKnownRequestError && erreur.code === 'P2002'
@@ -231,50 +206,17 @@ export class UtilisateursService {
     return { utilisateurs, total, page, totalPages: Math.max(1, Math.ceil(total / limite)) }
   }
 
-  async creer(corpsBrut: unknown, acteurId: string) {
-    const corps = corpsObjet(corpsBrut)
-    const paroisseId = texteOptionnel(corps, 'paroisseId')
-    const nom = texteOptionnel(corps, 'nom')?.trim()
-    const prenom = texteOptionnel(corps, 'prenom')?.trim()
-    const email = texteOptionnel(corps, 'email')?.trim()
-    const matricule = texteOptionnel(corps, 'matricule')?.trim()
-    const telephone = texteOptionnel(corps, 'telephone')?.trim()
-    const role = texteOptionnel(corps, 'role')
-    const password = texteOptionnel(corps, 'password')
-    const fonction = texteOptionnel(corps, 'fonction')
-    const brancheType = corps.brancheType
-
-    if (!paroisseId || !nom || !prenom || !role || !password) {
-      throw new BadRequestException('Les champs paroisseId, nom, prenom, role et password sont requis')
-    }
-    if (!motDePasseValide(password)) throw new BadRequestException(REGLE_MOT_DE_PASSE)
+  // Corps validé par SchemaCreationUtilisateur (champs requis, mot de passe,
+  // rôle paroissial assignable, branche cohérente avec le rôle).
+  async creer(donnees: DonneesCreationUtilisateur, acteurId: string) {
+    const { paroisseId, nom, prenom, email, matricule, telephone, role, password, fonction, brancheType } = donnees
 
     const paroisse = await this.prisma.paroisse.findUnique({ where: { id: paroisseId }, select: { id: true } })
     if (!paroisse) throw new NotFoundException('Paroisse introuvable')
 
-    // Un admin plateforme (transverse, sans paroisse) ne se crée jamais via
-    // cette route — ROLES_ASSIGNABLES_PAROISSE exclut ADMIN_PLATEFORME. Les
-    // rôles de district non plus : `role` est toujours un rôle PAROISSIAL ;
-    // une affectation district (roleDistrict) se fait en promouvant un membre
-    // du staff déjà actif, jamais en créant un compte avec ce rôle.
-    if (!ROLES_ASSIGNABLES_PAROISSE.includes(role)) throw new BadRequestException('Rôle invalide')
-
-    if (!brancheValide(brancheType)) throw new BadRequestException('Branche invalide')
-
-    // brancheType n'a de sens que pour l'encadrement de branche paroissial :
-    // requis pour ces rôles, forcé à null pour tout autre rôle même si fourni.
-    const estBranche = ROLES_BRANCHE.includes(role)
-    if (estBranche && !brancheType) throw new BadRequestException('La branche est requise pour ce rôle')
-    const brancheTypeValeur = estBranche ? (brancheType as BrancheType) : null
-    const fonctionValeur = fonction?.trim() || null
-
     // Un compte est créé actif : il ne doit pas doubler un poste unique.
-    const conflitPoste = await this.conflitPosteUnique(paroisseId, role, brancheTypeValeur)
+    const conflitPoste = await this.conflitPosteUnique(paroisseId, role, brancheType)
     if (conflitPoste) throw new ConflictException(conflitPoste)
-
-    const estParent = role === 'PARENT'
-    if (estParent && !telephone) throw new BadRequestException('Le numéro de téléphone est requis pour un parent')
-    if (!estParent && !matricule) throw new BadRequestException('Le matricule est requis')
 
     if (matricule) {
       const doublon = await this.prisma.utilisateur.findUnique({ where: { matricule }, select: { id: true } })
@@ -302,12 +244,12 @@ export class UtilisateursService {
         data: {
           nom,
           prenom,
-          email: email || null,
-          matricule: matricule || null,
-          telephone: telephone || null,
+          email,
+          matricule,
+          telephone,
           role: role as RoleUtilisateur,
-          fonction: fonctionValeur,
-          brancheType: brancheTypeValeur,
+          fonction,
+          brancheType,
           password: passwordHache,
           paroisseId,
         },
@@ -392,11 +334,11 @@ export class UtilisateursService {
     return cible
   }
 
-  async modifier(id: string, corpsBrut: unknown, acteurId: string) {
+  // Forme des champs validée par SchemaModificationUtilisateur ; les règles qui
+  // dépendent du compte existant (rôle actuel, branche déjà affectée) restent ici.
+  async modifier(id: string, donnees: DonneesModificationUtilisateur, acteurId: string) {
     const existant = await this.trouverCible(id)
-    const corps: Corps = corpsObjet(corpsBrut)
-    const { nom, prenom, email, role, fonction, brancheType } = corps
-    const actif = booleenOptionnel(corps, 'actif')
+    const { nom, prenom, email, role, actif, fonction, brancheType } = donnees
 
     // Pas de réaffectation de paroisse : seuls nom, prenom, email, role, actif,
     // fonction et brancheType sont modifiables via cette route. `role` est
@@ -404,31 +346,14 @@ export class UtilisateursService {
     // affectation district (roleDistrict) se gère via la désignation du
     // Commissaire ou les nominations. Un compte PARENT/SCOUT existant (hors
     // périmètre V1) garde son rôle tel quel.
-    if (
-      role !== undefined &&
-      role !== existant.role &&
-      (typeof role !== 'string' || !ROLES_ASSIGNABLES_PAROISSE.includes(role))
-    ) {
+    if (role !== undefined && role !== existant.role && !ROLES_ASSIGNABLES_PAROISSE.includes(role)) {
       throw new BadRequestException('Rôle invalide')
     }
-    if (nom !== undefined && (typeof nom !== 'string' || !nom.trim())) {
-      throw new BadRequestException('Le nom est invalide')
-    }
-    if (prenom !== undefined && (typeof prenom !== 'string' || !prenom.trim())) {
-      throw new BadRequestException('Le prénom est invalide')
-    }
-    if (email !== undefined && email !== null && typeof email !== 'string') {
-      throw new BadRequestException('L’adresse e-mail est invalide')
-    }
-    if (fonction !== undefined && fonction !== null && typeof fonction !== 'string') {
-      throw new BadRequestException('La fonction est invalide')
-    }
-    if (!brancheValide(brancheType)) throw new BadRequestException('Branche invalide')
 
     // brancheType/fonction recalculés sur le RÔLE FINAL (nouveau si fourni,
     // sinon existant) — un utilisateur qui change de rôle ne doit jamais
     // conserver une branche héritée d'un rôle précédent.
-    const roleFinal = role !== undefined ? (role as string) : existant.role
+    const roleFinal = role !== undefined ? role : existant.role
     const estBrancheFinal = ROLES_BRANCHE.includes(roleFinal)
     if (estBrancheFinal && brancheType === undefined && !existant.brancheType) {
       throw new BadRequestException('La branche est requise pour ce rôle')
@@ -436,15 +361,13 @@ export class UtilisateursService {
     if (estBrancheFinal && brancheType === null) {
       throw new BadRequestException('La branche est requise pour ce rôle')
     }
-    const brancheTypeFinal = estBrancheFinal
-      ? ((brancheType !== undefined ? brancheType : existant.brancheType) as BrancheType)
-      : null
-    const fonctionFinal = fonction !== undefined ? (fonction as string | null)?.trim() || null : existant.fonction
-    const emailNettoye = typeof email === 'string' ? email.trim() : ''
+    const brancheTypeFinal = estBrancheFinal ? (brancheType !== undefined ? brancheType : existant.brancheType) : null
+    // fonction et email arrivent déjà nettoyés (vide → null).
+    const fonctionFinal = fonction !== undefined ? fonction : existant.fonction
 
-    if (email !== undefined && emailNettoye) {
+    if (email) {
       const doublon = await this.prisma.utilisateur.findFirst({
-        where: { email: { equals: emailNettoye, mode: 'insensitive' }, NOT: { id } },
+        where: { email: { equals: email, mode: 'insensitive' }, NOT: { id } },
         select: { id: true },
       })
       if (doublon) throw new BadRequestException('Cette adresse e-mail est déjà utilisée')
@@ -461,9 +384,9 @@ export class UtilisateursService {
       misAJour = await this.prisma.utilisateur.update({
         where: { id },
         data: {
-          ...(nom !== undefined ? { nom: (nom as string).trim() } : {}),
-          ...(prenom !== undefined ? { prenom: (prenom as string).trim() } : {}),
-          ...(email !== undefined ? { email: emailNettoye || null } : {}),
+          ...(nom !== undefined ? { nom } : {}),
+          ...(prenom !== undefined ? { prenom } : {}),
+          ...(email !== undefined ? { email } : {}),
           ...(role !== undefined ? { role: role as RoleUtilisateur } : {}),
           ...(actif !== undefined ? { actif } : {}),
           fonction: fonctionFinal,
@@ -556,7 +479,7 @@ export class UtilisateursService {
     return utilisateur
   }
 
-  async nommer(id: string, corpsBrut: unknown, acteurId: string) {
+  async nommer(id: string, donnees: DonneesNomination, acteurId: string) {
     const existant = await this.prisma.utilisateur.findFirst({
       where: { id, ...CIBLE_GERABLE },
       select: {
@@ -576,18 +499,15 @@ export class UtilisateursService {
     })
     if (!existant) throw new NotFoundException('Utilisateur introuvable')
 
-    const corps = corpsObjet(corpsBrut)
-    const { role, roleDistrict } = corps
-    const brancheTypeParoisseCorps = corps.brancheType
-    const brancheTypeDistrictCorps = corps.brancheTypeDistrict
-    const fonctionDistrictCorps = corps.fonctionDistrict
-
-    const estTexteOuNul = (v: unknown) => v === undefined || v === null || typeof v === 'string'
-    if (role !== undefined && typeof role !== 'string') throw new BadRequestException('Rôle invalide')
-    if (!estTexteOuNul(roleDistrict)) throw new BadRequestException('Rôle de district invalide')
-    if (!estTexteOuNul(brancheTypeParoisseCorps)) throw new BadRequestException('Branche invalide')
-    if (!estTexteOuNul(brancheTypeDistrictCorps)) throw new BadRequestException('Branche de district invalide')
-    if (!estTexteOuNul(fonctionDistrictCorps)) throw new BadRequestException('Fonction de district invalide')
+    // Forme et valeurs reconnues déjà contrôlées par SchemaNomination (textes
+    // nettoyés, vide → null) ; les règles liées au compte existant restent ici.
+    const {
+      role,
+      roleDistrict,
+      brancheType: brancheParoisseDemandee,
+      brancheTypeDistrict: brancheDistrictDemandee,
+      fonctionDistrict: fonctionDistrictDemandee,
+    } = donnees
 
     // Un compte PARENT/SCOUT existant (hors périmètre V1) garde son rôle tel quel.
     if (role !== undefined && role !== existant.role && !ROLES_ASSIGNABLES_PAROISSE.includes(role)) {
@@ -596,8 +516,6 @@ export class UtilisateursService {
 
     const roleFinal: string = role !== undefined ? role : existant.role
     const estRoleBranche = ROLES_BRANCHE.includes(roleFinal)
-    const brancheParoisseDemandee = nullableBranche(brancheTypeParoisseCorps)
-    if (brancheParoisseDemandee === BRANCHE_INVALIDE) throw new BadRequestException('Branche invalide')
 
     const brancheParoisseFinale = estRoleBranche
       ? brancheParoisseDemandee !== undefined
@@ -615,15 +533,7 @@ export class UtilisateursService {
       throw new BadRequestException('Un matricule est requis avant de nommer cette personne à ce rôle')
     }
 
-    const roleDistrictNormalise = nullableTexte(roleDistrict)
-    if (roleDistrictNormalise && !ROLES_DISTRICT_ETENDU.includes(roleDistrictNormalise)) {
-      throw new BadRequestException('Rôle de district invalide')
-    }
-    const roleDistrictFinal = roleDistrict !== undefined ? (roleDistrictNormalise ?? null) : existant.roleDistrict
-
-    const brancheDistrictDemandee = nullableBranche(brancheTypeDistrictCorps)
-    if (brancheDistrictDemandee === BRANCHE_INVALIDE) throw new BadRequestException('Branche de district invalide')
-    const fonctionDistrictDemandee = nullableTexte(fonctionDistrictCorps)
+    const roleDistrictFinal = roleDistrict !== undefined ? roleDistrict : existant.roleDistrict
 
     if (roleDistrictFinal) {
       if (!existant.actif) {
@@ -738,7 +648,7 @@ export class UtilisateursService {
     return utilisateur
   }
 
-  async changerMotDePasse(id: string, corpsBrut: unknown, acteurId: string) {
+  async changerMotDePasse(id: string, { nouveauMotDePasse }: DonneesMotDePasseAdmin, acteurId: string) {
     // Un admin plateforme ne réinitialise pas le mot de passe d'un autre
     // admin plateforme via cette surface.
     const existant = await this.prisma.utilisateur.findFirst({
@@ -746,11 +656,6 @@ export class UtilisateursService {
       select: { id: true, paroisseId: true },
     })
     if (!existant) throw new NotFoundException('Utilisateur introuvable')
-
-    const nouveauMotDePasse = corpsObjet(corpsBrut).nouveauMotDePasse
-    if (typeof nouveauMotDePasse !== 'string' || !motDePasseValide(nouveauMotDePasse)) {
-      throw new BadRequestException(REGLE_MOT_DE_PASSE)
-    }
 
     const passwordHache = await hash(nouveauMotDePasse, 12)
     await this.prisma.utilisateur.update({ where: { id }, data: { password: passwordHache } })

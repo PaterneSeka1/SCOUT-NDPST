@@ -1,5 +1,6 @@
 import { NotFoundException } from '@nestjs/common'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { AccesFichiersService } from '../../common/acces-fichiers.service'
 import { AuditService } from '../../common/audit.service'
 import { PerimetreService } from '../../common/perimetre.service'
 import type { UtilisateurSession } from '../../common/types'
@@ -41,7 +42,11 @@ function services(prisma: ReturnType<typeof prismaSimule>) {
   const p = prisma as unknown as PrismaService
   const audit = { enregistrer: vi.fn() } as unknown as AuditService
   const acces = new AccesScoutsService(p, new PerimetreService(p))
-  return { scouts: new ScoutsService(p, audit, acces), fiche: new FicheScoutService(p, audit, acces) }
+  const fichiers = new AccesFichiersService(p, new PerimetreService(p))
+  return {
+    scouts: new ScoutsService(p, audit, acces, fichiers),
+    fiche: new FicheScoutService(p, audit, acces, fichiers),
+  }
 }
 
 const filtres = { page: null, limite: null, recherche: null, actif: null }
@@ -62,7 +67,7 @@ describe('Cloisonnement par branche des scouts', () => {
     expect(prisma.scout.count.mock.calls[0][0].where.brancheType).toBe('LOUVETEAUX')
   })
 
-  it("ne renvoie rien à un rôle de branche sans branche assignée (jamais toute la paroisse)", async () => {
+  it('ne renvoie rien à un rôle de branche sans branche assignée (jamais toute la paroisse)', async () => {
     prisma = prismaSimule(null)
     const { scouts } = services(prisma)
     const resultat = await scouts.lister(utilisateur('ADJOINT_BRANCHE'), { ...filtres, branche: null })

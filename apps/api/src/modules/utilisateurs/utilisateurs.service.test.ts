@@ -130,13 +130,6 @@ describe('UtilisateursService — hiérarchie des modifications', () => {
       expect(ctx.auth.revoquerToutes).not.toHaveBeenCalled()
     })
 
-    it('rejette un mot de passe trop faible', async () => {
-      ctx.prisma.utilisateur.findFirst.mockResolvedValueOnce({ id: 'cible', roleDistrict: null })
-      await expect(
-        ctx.service.reinitialiserMotDePasse(CHEF, 'cible', { nouveauMotDePasse: 'court' }),
-      ).rejects.toBeInstanceOf(BadRequestException)
-    })
-
     it('met à jour le mot de passe puis révoque toutes les sessions du compte', async () => {
       ctx.prisma.utilisateur.findFirst.mockResolvedValueOnce({ id: 'cible', roleDistrict: null })
       const resultat = await ctx.service.reinitialiserMotDePasse(CHEF, 'cible', {

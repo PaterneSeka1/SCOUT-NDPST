@@ -3,22 +3,22 @@ import { ApiTags } from '@nestjs/swagger'
 import { ROLES_GESTION, ROLES_GROUPE, ROLES_TOUT_STAFF } from '@scout/shared'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator'
+import { ZodPipe } from '../../common/pipes/zod.pipe'
 import type { UtilisateurSession } from '../../common/types'
 import {
-  CotisationsService,
+  SchemaCreationCotisation,
+  SchemaModificationCotisation,
+  SchemaStatutCotisant,
   type CorpsCreationCotisation,
   type CorpsModificationCotisation,
   type CorpsStatutCotisant,
-} from './cotisations.service'
+} from './cotisations.schemas'
+import { CotisationsService } from './cotisations.service'
 
 // Paramètre de requête : seule une valeur unique est retenue (un paramètre
 // répété arrive sous forme de tableau et n'est jamais transmis à Prisma).
 function texteRequete(valeur: unknown): string | undefined {
   return typeof valeur === 'string' ? valeur : undefined
-}
-
-function objet<T extends object>(corps: unknown): T {
-  return (typeof corps === 'object' && corps !== null ? corps : {}) as T
 }
 
 // Les routes /cotisations/statuts sont déclarées avant /cotisations/:id :
@@ -43,8 +43,11 @@ export class CotisationsController {
 
   @Put('statuts')
   @Roles(...ROLES_GROUPE)
-  definirStatut(@UtilisateurCourant() utilisateur: UtilisateurSession, @Body() corps: unknown) {
-    return this.cotisations.definirStatut(utilisateur, objet<CorpsStatutCotisant>(corps))
+  definirStatut(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Body(new ZodPipe(SchemaStatutCotisant)) corps: CorpsStatutCotisant,
+  ) {
+    return this.cotisations.definirStatut(utilisateur, corps)
   }
 
   @Get()
@@ -65,14 +68,21 @@ export class CotisationsController {
   @Post()
   @HttpCode(201)
   @Roles(...ROLES_GROUPE)
-  creer(@UtilisateurCourant() utilisateur: UtilisateurSession, @Body() corps: unknown) {
-    return this.cotisations.creer(utilisateur, objet<CorpsCreationCotisation>(corps))
+  creer(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Body(new ZodPipe(SchemaCreationCotisation)) corps: CorpsCreationCotisation,
+  ) {
+    return this.cotisations.creer(utilisateur, corps)
   }
 
   @Put(':id')
   @Roles(...ROLES_GESTION)
-  modifier(@UtilisateurCourant() utilisateur: UtilisateurSession, @Param('id') id: string, @Body() corps: unknown) {
-    return this.cotisations.modifier(utilisateur, id, objet<CorpsModificationCotisation>(corps))
+  modifier(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Param('id') id: string,
+    @Body(new ZodPipe(SchemaModificationCotisation)) corps: CorpsModificationCotisation,
+  ) {
+    return this.cotisations.modifier(utilisateur, id, corps)
   }
 
   @Delete(':id')

@@ -1,23 +1,28 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import {
-  REGLE_MOT_DE_PASSE,
-  ROLES_TOUT_STAFF,
-  entierBorne,
-  estCheminLocalValide,
-  estValeurEnum,
-  motDePasseValide,
-} from '@scout/shared'
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
+import { ROLES_TOUT_STAFF, entierBorne, estValeurEnum } from '@scout/shared'
 import { hash } from 'bcryptjs'
 import { BrancheType, Prisma, Sexe } from '../../generated/prisma/client'
+import { AccesFichiersService } from '../../common/acces-fichiers.service'
 import { AuditService } from '../../common/audit.service'
 import { paroisseIdRequise } from '../../common/paroisse'
 import type { UtilisateurSession } from '../../common/types'
 import { logger } from '../../common/lib/logger'
 import { PrismaService } from '../../prisma/prisma.service'
 import { AccesScoutsService } from './acces-scouts.service'
-import { corpsObjet, booleen, chaine, texte, texteOuNull } from './corps'
-
-const MAX_LIGNES_IMPORT = 500
+import { chaine } from './corps'
+import type {
+  DonneesCreationScout,
+  DonneesModificationScout,
+  DonneesCreationCompteScout,
+  DonneesMatriculeScout,
+  DonneesImportScouts,
+} from './scouts.schemas'
 
 export interface FiltresListe {
   page: string | null
@@ -52,6 +57,7 @@ export class ScoutsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly acces: AccesScoutsService,
+    private readonly fichiers: AccesFichiersService,
   ) {}
 
   async lister(utilisateur: UtilisateurSession, filtres: FiltresListe) {
@@ -117,34 +123,11 @@ export class ScoutsService {
     return { scouts, total, page, totalPages: Math.ceil(total / limite) }
   }
 
-  async creer(utilisateur: UtilisateurSession, brut: unknown) {
+  async creer(utilisateur: UtilisateurSession, corps: DonneesCreationScout) {
     const paroisseId = paroisseIdRequise(utilisateur)
-    const corps = corpsObjet(brut)
-    const nom = texte(corps, 'nom')
-    const prenom = texte(corps, 'prenom')
-    const dateNaissance = texte(corps, 'dateNaissance')
-    const sexe = corps.sexe
-    const brancheType = corps.brancheType
-    const photo = texteOuNull(corps, 'photo')
-    const allergies = texteOuNull(corps, 'allergies')
-    const traitementsMedicaux = texteOuNull(corps, 'traitementsMedicaux')
-    const contactsUrgence = corps.contactsUrgence
-
-    // Validation des champs obligatoires
-    if (!nom?.trim()) throw new BadRequestException('Le nom est requis')
-    if (!prenom?.trim()) throw new BadRequestException('Le prénom est requis')
-    if (!dateNaissance) throw new BadRequestException('La date de naissance est requise')
-    const dateNaissanceObj = new Date(dateNaissance)
-    if (Number.isNaN(dateNaissanceObj.getTime())) {
-      throw new BadRequestException('La date de naissance est invalide')
-    }
-    if (!estValeurEnum(Sexe, sexe)) throw new BadRequestException('Le sexe est invalide ou manquant')
-    if (!estValeurEnum(BrancheType, brancheType)) {
-      throw new BadRequestException('La branche est invalide ou manquante')
-    }
-    if (photo != null && photo !== '' && !estCheminLocalValide(photo)) {
-      throw new BadRequestException('photo doit être un chemin local (ex : /api/fichiers/…)')
-    }
+    const { nom, prenom, dateNaissance, sexe, brancheType, photo, allergies, traitementsMedicaux, contactsUrgence } =
+      corps
+    if (photo?.trim()) await this.fichiers.verifierRattachable(utilisateur, photo.trim())
 
     // Un responsable de branche ne peut inscrire un scout que dans sa propre branche.
     let brancheEffective: BrancheType = brancheType
@@ -154,32 +137,13 @@ export class ScoutsService {
       brancheEffective = bt
     }
 
-    // Validation des contacts d'urgence
-    if (!Array.isArray(contactsUrgence) || contactsUrgence.length === 0) {
-      throw new BadRequestException("Au moins un contact d'urgence est requis")
-    }
-    const contacts = contactsUrgence.map((contact: unknown, i) => {
-      const nomContact = chaine(contact, 'nom')?.trim()
-      const telephone = chaine(contact, 'telephone')?.trim()
-      if (!nomContact) throw new BadRequestException(`Le nom du contact ${i + 1} est requis`)
-      if (!telephone) throw new BadRequestException(`Le téléphone du contact ${i + 1} est requis`)
-      const principal = (contact as Record<string, unknown>).principal
-      return {
-        nom: nomContact,
-        prenom: chaine(contact, 'prenom')?.trim() || null,
-        telephone,
-        relation: chaine(contact, 'relation')?.trim() || null,
-        principal: principal === true,
-      }
-    })
-
     // Créer le scout et ses contacts en transaction
     const scout = await this.prisma.$transaction(async (tx) => {
       const nouveauScout = await tx.scout.create({
         data: {
           nom: nom.trim(),
           prenom: prenom.trim(),
-          dateNaissance: dateNaissanceObj,
+          dateNaissance,
           sexe,
           brancheType: brancheEffective,
           photo: photo?.trim() || null,
@@ -190,7 +154,7 @@ export class ScoutsService {
       })
 
       // Créer les contacts d'urgence
-      for (const contact of contacts) {
+      for (const contact of contactsUrgence) {
         await tx.contactUrgence.create({ data: { ...contact, scoutId: nouveauScout.id } })
       }
 
@@ -261,10 +225,20 @@ export class ScoutsService {
     })
 
     if (!scout) throw new NotFoundException('Scout introuvable')
+
+    // Fiche complète d'un mineur (allergies, traitements, documents) :
+    // chaque consultation est tracée (loi n° 2013-450, données sensibles).
+    await this.audit.enregistrer({
+      paroisseId,
+      acteurId: utilisateur.id,
+      action: 'FICHE_SCOUT_CONSULTEE',
+      entite: 'Scout',
+      entiteId: id,
+    })
     return scout
   }
 
-  async modifier(utilisateur: UtilisateurSession, id: string, brut: unknown) {
+  async modifier(utilisateur: UtilisateurSession, id: string, corps: DonneesModificationScout) {
     const paroisseId = paroisseIdRequise(utilisateur)
 
     // Un responsable de branche ne peut modifier que les scouts de sa propre branche.
@@ -273,49 +247,42 @@ export class ScoutsService {
 
     const existant = await this.prisma.scout.findFirst({
       where: { id, paroisseId, ...(brancheUtilisateur ? { brancheType: brancheUtilisateur } : {}) },
-      select: { id: true, brancheType: true },
+      select: { id: true, brancheType: true, photo: true, actif: true },
     })
     if (!existant) throw new NotFoundException('Scout introuvable')
-    const corps = corpsObjet(brut)
-
-    const nom = texte(corps, 'nom')
-    const prenom = texte(corps, 'prenom')
-    const dateNaissance = texte(corps, 'dateNaissance')
-    const sexe = corps.sexe
-    const brancheType = corps.brancheType
-    const actif = booleen(corps, 'actif')
-    const photo = texteOuNull(corps, 'photo')
-    const allergies = texteOuNull(corps, 'allergies')
-    const traitementsMedicaux = texteOuNull(corps, 'traitementsMedicaux')
-    const consentementImage = booleen(corps, 'consentementImage')
-
-    const dateNaissanceObj = dateNaissance !== undefined ? new Date(dateNaissance) : undefined
-    if (dateNaissanceObj && Number.isNaN(dateNaissanceObj.getTime())) {
-      throw new BadRequestException('La date de naissance est invalide')
-    }
-    if (sexe !== undefined && !estValeurEnum(Sexe, sexe)) throw new BadRequestException('Sexe invalide')
-    if (brancheType !== undefined && !estValeurEnum(BrancheType, brancheType)) {
-      throw new BadRequestException('Branche invalide')
-    }
+    const {
+      nom,
+      prenom,
+      dateNaissance,
+      sexe,
+      brancheType,
+      actif,
+      photo,
+      allergies,
+      traitementsMedicaux,
+      consentementImage,
+      consentementSante,
+    } = corps
     // Le changement de branche est réservé au groupe (fonctionnalité dédiée
     // "passage de branche") — un responsable de branche ne peut pas déplacer
     // un scout vers une autre branche via cette route.
     if (brancheUtilisateur && brancheType !== undefined && brancheType !== existant.brancheType) {
       throw new ForbiddenException('Le changement de branche est réservé au groupe')
     }
-    if (photo != null && photo !== '' && !estCheminLocalValide(photo)) {
-      throw new BadRequestException('photo doit être un chemin local (ex : /api/fichiers/…)')
-    }
+    if (photo?.trim()) await this.fichiers.verifierRattachable(utilisateur, photo.trim(), id)
 
     const scout = await this.prisma.scout.update({
       where: { id },
       data: {
         ...(nom !== undefined ? { nom: nom.trim() } : {}),
         ...(prenom !== undefined ? { prenom: prenom.trim() } : {}),
-        ...(dateNaissanceObj ? { dateNaissance: dateNaissanceObj } : {}),
+        ...(dateNaissance ? { dateNaissance } : {}),
         ...(sexe !== undefined ? { sexe: sexe as Sexe } : {}),
         ...(brancheType !== undefined ? { brancheType: brancheType as BrancheType } : {}),
-        ...(actif !== undefined ? { actif } : {}),
+        // desactiveLe : point de départ du délai de conservation (anonymisation).
+        ...(actif !== undefined
+          ? { actif, ...(actif !== existant.actif ? { desactiveLe: actif ? null : new Date() } : {}) }
+          : {}),
         ...(photo !== undefined ? { photo: photo?.trim() || null } : {}),
         ...(allergies !== undefined ? { allergies: allergies?.trim() || null } : {}),
         ...(traitementsMedicaux !== undefined ? { traitementsMedicaux: traitementsMedicaux?.trim() || null } : {}),
@@ -326,9 +293,37 @@ export class ScoutsService {
               consentementImageParId: consentementImage ? utilisateur.id : null,
             }
           : {}),
+        ...(consentementSante !== undefined
+          ? {
+              consentementSante,
+              consentementSanteDate: consentementSante ? new Date() : null,
+              consentementSanteParId: consentementSante ? utilisateur.id : null,
+            }
+          : {}),
       },
       include: { contactsUrgence: true },
     })
+
+    if (photo !== undefined && existant.photo && existant.photo !== scout.photo) {
+      await this.fichiers.supprimerSiOrphelin(existant.photo)
+    }
+
+    if (allergies !== undefined || traitementsMedicaux !== undefined) {
+      // Le contenu n'est jamais copié dans le journal : seuls les champs modifiés.
+      await this.audit.enregistrer({
+        paroisseId,
+        acteurId: utilisateur.id,
+        action: 'SCOUT_DONNEES_MEDICALES_MODIFIEES',
+        entite: 'Scout',
+        entiteId: id,
+        details: {
+          champs: [
+            ...(allergies !== undefined ? ['allergies'] : []),
+            ...(traitementsMedicaux !== undefined ? ['traitementsMedicaux'] : []),
+          ],
+        },
+      })
+    }
 
     if (consentementImage !== undefined) {
       await this.audit.enregistrer({
@@ -341,11 +336,22 @@ export class ScoutsService {
       })
     }
 
+    if (consentementSante !== undefined) {
+      await this.audit.enregistrer({
+        paroisseId,
+        acteurId: utilisateur.id,
+        action: 'SCOUT_CONSENTEMENT_SANTE_MODIFIE',
+        entite: 'Scout',
+        entiteId: id,
+        details: { consentementSante },
+      })
+    }
+
     return scout
   }
 
   // Création du compte utilisateur (rôle SCOUT) rattaché à un scout.
-  async creerCompte(utilisateur: UtilisateurSession, id: string, brut: unknown) {
+  async creerCompte(utilisateur: UtilisateurSession, id: string, corps: DonneesCreationCompteScout) {
     const paroisseId = paroisseIdRequise(utilisateur)
 
     const scout = await this.prisma.scout.findFirst({
@@ -357,13 +363,7 @@ export class ScoutsService {
       throw new BadRequestException('Le scout doit avoir un matricule avant de créer un compte')
     }
     if (scout.utilisateurId) throw new BadRequestException('Ce scout possède déjà un compte utilisateur')
-    const corps = corpsObjet(brut)
-
-    const password = corps.password
-    const telephone = texte(corps, 'telephone')
-    if (typeof password !== 'string' || !password || !motDePasseValide(password)) {
-      throw new BadRequestException(REGLE_MOT_DE_PASSE)
-    }
+    const { password, telephone } = corps
 
     // Vérifier que le matricule n'est pas déjà utilisé par un utilisateur
     const matriculeExistant = await this.prisma.utilisateur.findUnique({
@@ -396,7 +396,7 @@ export class ScoutsService {
     })
   }
 
-  async attribuerMatricule(utilisateur: UtilisateurSession, id: string, brut: unknown) {
+  async attribuerMatricule(utilisateur: UtilisateurSession, id: string, corps: DonneesMatriculeScout) {
     const paroisseId = paroisseIdRequise(utilisateur)
 
     const existant = await this.prisma.scout.findFirst({
@@ -404,10 +404,7 @@ export class ScoutsService {
       select: { id: true, matricule: true },
     })
     if (!existant) throw new NotFoundException('Scout introuvable')
-    const corps = corpsObjet(brut)
-
-    const matricule = texte(corps, 'matricule')?.trim()
-    if (!matricule) throw new BadRequestException('Le matricule est requis')
+    const { matricule } = corps
 
     // Vérifier l'unicité du matricule
     const doublon = await this.prisma.scout.findFirst({
@@ -443,13 +440,8 @@ export class ScoutsService {
     return scout
   }
 
-  async importer(utilisateur: UtilisateurSession, brut: unknown) {
-    const corps = corpsObjet(brut)
-    const scouts = corps.scouts
-    if (!Array.isArray(scouts) || scouts.length === 0) throw new BadRequestException('Aucune ligne à importer')
-    if (scouts.length > MAX_LIGNES_IMPORT) {
-      throw new BadRequestException(`Maximum ${MAX_LIGNES_IMPORT} lignes par import`)
-    }
+  async importer(utilisateur: UtilisateurSession, corps: DonneesImportScouts) {
+    const { scouts } = corps
 
     const paroisseId = paroisseIdRequise(utilisateur)
 

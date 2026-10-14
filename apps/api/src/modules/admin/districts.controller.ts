@@ -4,6 +4,9 @@ import { ROLES_PLATEFORME } from '@scout/shared'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator'
 import type { UtilisateurSession } from '../../common/types'
+import type { z } from 'zod'
+import { ZodPipe } from '../../common/pipes/zod.pipe'
+import { SchemaDesignationCommissaire, SchemaDistrict } from './districts.schemas'
 import { DistrictsService } from './districts.service'
 
 @ApiTags('Administration plateforme')
@@ -19,7 +22,10 @@ export class AdminDistrictsController {
 
   @Post()
   @HttpCode(201)
-  creer(@Body() corps: unknown, @UtilisateurCourant() utilisateur: UtilisateurSession) {
+  creer(
+    @Body(new ZodPipe(SchemaDistrict)) corps: z.infer<typeof SchemaDistrict>,
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+  ) {
     return this.districts.creer(corps, utilisateur.id)
   }
 
@@ -29,7 +35,11 @@ export class AdminDistrictsController {
   }
 
   @Patch(':id')
-  modifier(@Param('id') id: string, @Body() corps: unknown, @UtilisateurCourant() utilisateur: UtilisateurSession) {
+  modifier(
+    @Param('id') id: string,
+    @Body(new ZodPipe(SchemaDistrict)) corps: z.infer<typeof SchemaDistrict>,
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+  ) {
     return this.districts.modifier(id, corps, utilisateur.id)
   }
 
@@ -42,7 +52,7 @@ export class AdminDistrictsController {
   @HttpCode(200)
   designerCommissaire(
     @Param('id') id: string,
-    @Body() corps: unknown,
+    @Body(new ZodPipe(SchemaDesignationCommissaire)) corps: z.infer<typeof SchemaDesignationCommissaire>,
     @UtilisateurCourant() utilisateur: UtilisateurSession,
   ) {
     return this.districts.designerCommissaire(id, corps, utilisateur.id)

@@ -3,17 +3,19 @@ import { ApiTags } from '@nestjs/swagger'
 import { ROLES_GESTION, ROLES_TOUT_STAFF as ROLES_LECTURE } from '@scout/shared'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator'
+import { ZodPipe } from '../../common/pipes/zod.pipe'
 import type { UtilisateurSession } from '../../common/types'
 import {
-  ProgrammesService,
+  SchemaCreationLigne,
+  SchemaCreationProgramme,
+  SchemaModificationLigne,
+  SchemaModificationProgramme,
+  type CorpsCreationLigne,
   type CorpsCreationProgramme,
-  type CorpsLigne,
+  type CorpsModificationLigne,
   type CorpsModificationProgramme,
-} from './programmes.service'
-
-function objet<T extends object>(corps: unknown): T {
-  return (typeof corps === 'object' && corps !== null ? corps : {}) as T
-}
+} from './programmes.schemas'
+import { ProgrammesService } from './programmes.service'
 
 @ApiTags('Programmes')
 @Controller('programmes')
@@ -31,8 +33,11 @@ export class ProgrammesController {
   // combinée rôle paroissial / affectation district, vérifiée par le service.
   @Post()
   @HttpCode(201)
-  creer(@UtilisateurCourant() utilisateur: UtilisateurSession, @Body() corps: unknown) {
-    return this.programmes.creer(utilisateur, objet<CorpsCreationProgramme>(corps))
+  creer(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Body(new ZodPipe(SchemaCreationProgramme)) corps: CorpsCreationProgramme,
+  ) {
+    return this.programmes.creer(utilisateur, corps)
   }
 
   @Get(':id')
@@ -43,8 +48,12 @@ export class ProgrammesController {
 
   @Patch(':id')
   @Roles(...ROLES_GESTION)
-  modifier(@UtilisateurCourant() utilisateur: UtilisateurSession, @Param('id') id: string, @Body() corps: unknown) {
-    return this.programmes.modifier(utilisateur, id, objet<CorpsModificationProgramme>(corps))
+  modifier(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Param('id') id: string,
+    @Body(new ZodPipe(SchemaModificationProgramme)) corps: CorpsModificationProgramme,
+  ) {
+    return this.programmes.modifier(utilisateur, id, corps)
   }
 
   @Delete(':id')
@@ -56,8 +65,12 @@ export class ProgrammesController {
   @Post(':id/lignes')
   @HttpCode(201)
   @Roles(...ROLES_GESTION)
-  ajouterLigne(@UtilisateurCourant() utilisateur: UtilisateurSession, @Param('id') id: string, @Body() corps: unknown) {
-    return this.programmes.ajouterLigne(utilisateur, id, objet<CorpsLigne>(corps))
+  ajouterLigne(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Param('id') id: string,
+    @Body(new ZodPipe(SchemaCreationLigne)) corps: CorpsCreationLigne,
+  ) {
+    return this.programmes.ajouterLigne(utilisateur, id, corps)
   }
 
   @Patch(':id/lignes/:ligneId')
@@ -66,9 +79,9 @@ export class ProgrammesController {
     @UtilisateurCourant() utilisateur: UtilisateurSession,
     @Param('id') id: string,
     @Param('ligneId') ligneId: string,
-    @Body() corps: unknown,
+    @Body(new ZodPipe(SchemaModificationLigne)) corps: CorpsModificationLigne,
   ) {
-    return this.programmes.modifierLigne(utilisateur, id, ligneId, objet<CorpsLigne>(corps))
+    return this.programmes.modifierLigne(utilisateur, id, ligneId, corps)
   }
 
   @Delete(':id/lignes/:ligneId')

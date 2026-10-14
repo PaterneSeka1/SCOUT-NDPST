@@ -7,10 +7,12 @@ import type { AuthService } from '../../auth/auth.service'
 import type { PrismaService } from '../../prisma/prisma.service'
 import { AdminDistrictsController } from './districts.controller'
 import { AdminParoissesController } from './paroisses.controller'
+import { SchemaCreationChefGroupe, SchemaModificationParoisse } from './paroisses.schemas'
 import { ParoissesService } from './paroisses.service'
 import { AdminAuditController, AdminSiteConfigController } from './plateforme.controller'
 import { AdminRapportsController } from './rapports.controller'
 import { AdminUtilisateursController } from './utilisateurs.controller'
+import { SchemaCreationUtilisateur, SchemaMotDePasseAdmin, SchemaNomination } from './utilisateurs.schemas'
 import { UtilisateursService } from './utilisateurs.service'
 
 const CONTROLEURS = [
@@ -100,7 +102,10 @@ describe('AdminModule — unicité du Chef de Groupe actif', () => {
 
   it('refuse de créer un second Chef de Groupe via /paroisses/:id/chef-groupe (409)', async () => {
     await expect(
-      s.paroisses.creerChefGroupe('p1', { nom: 'Kouassi', prenom: 'Jean', matricule: 'M1', password: 'abcdef12' }),
+      s.paroisses.creerChefGroupe(
+        'p1',
+        SchemaCreationChefGroupe.parse({ nom: 'Kouassi', prenom: 'Jean', matricule: 'M1', password: 'abcdef12' }),
+      ),
     ).rejects.toBeInstanceOf(ConflictException)
     expect(s.prisma.utilisateur.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { paroisseId: 'p1', role: 'CHEF_GROUPE', actif: true } }),
@@ -111,7 +116,14 @@ describe('AdminModule — unicité du Chef de Groupe actif', () => {
   it('refuse de créer un compte CHEF_GROUPE via /utilisateurs (409)', async () => {
     await expect(
       s.utilisateurs.creer(
-        { paroisseId: 'p1', nom: 'Kouassi', prenom: 'Jean', matricule: 'M1', role: 'CHEF_GROUPE', password: 'abcdef12' },
+        SchemaCreationUtilisateur.parse({
+          paroisseId: 'p1',
+          nom: 'Kouassi',
+          prenom: 'Jean',
+          matricule: 'M1',
+          role: 'CHEF_GROUPE',
+          password: 'abcdef12',
+        }),
         'admin',
       ),
     ).rejects.toBeInstanceOf(ConflictException)
@@ -135,9 +147,9 @@ describe('AdminModule — unicité du Chef de Groupe actif', () => {
         paroisse: { districtId: 'd1' },
       })
       .mockResolvedValueOnce({ id: 'chef-actuel' })
-    await expect(s.utilisateurs.nommer('u2', { role: 'CHEF_GROUPE' }, 'admin')).rejects.toBeInstanceOf(
-      ConflictException,
-    )
+    await expect(
+      s.utilisateurs.nommer('u2', SchemaNomination.parse({ role: 'CHEF_GROUPE' }), 'admin'),
+    ).rejects.toBeInstanceOf(ConflictException)
     expect(s.prisma.utilisateur.findFirst).toHaveBeenLastCalledWith(
       expect.objectContaining({
         where: { paroisseId: 'p1', role: 'CHEF_GROUPE', actif: true, NOT: { id: 'u2' } },
@@ -151,7 +163,11 @@ describe('AdminModule — fermeture des sessions', () => {
     const s = simulations()
     s.prisma.utilisateur.findFirst.mockResolvedValue({ id: 'u1', paroisseId: 'p1' })
     s.prisma.utilisateur.update.mockResolvedValue({})
-    await s.utilisateurs.changerMotDePasse('u1', { nouveauMotDePasse: 'nouveau123' }, 'admin')
+    await s.utilisateurs.changerMotDePasse(
+      'u1',
+      SchemaMotDePasseAdmin.parse({ nouveauMotDePasse: 'nouveau123' }),
+      'admin',
+    )
     expect(s.auth.revoquerToutes).toHaveBeenCalledWith('u1')
   })
 
@@ -168,7 +184,7 @@ describe('AdminModule — fermeture des sessions', () => {
     s.prisma.paroisse.findUnique.mockResolvedValue({ id: 'p1', actif: true })
     s.prisma.paroisse.update.mockResolvedValue({ id: 'p1', actif: false })
     s.prisma.utilisateur.findMany.mockResolvedValue([{ id: 'u1' }, { id: 'u2' }])
-    await s.paroisses.modifier('p1', { actif: false }, 'admin')
+    await s.paroisses.modifier('p1', SchemaModificationParoisse.parse({ actif: false }), 'admin')
     expect(s.auth.revoquerToutes).toHaveBeenCalledWith('u1')
     expect(s.auth.revoquerToutes).toHaveBeenCalledWith('u2')
     expect(s.audit.enregistrer).toHaveBeenCalledWith(expect.objectContaining({ action: 'PAROISSE_DESACTIVEE' }))

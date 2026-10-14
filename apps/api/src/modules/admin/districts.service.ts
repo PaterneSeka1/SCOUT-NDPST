@@ -3,7 +3,7 @@ import { MONO_PAROISSE, ROLES_TOUT_STAFF } from '@scout/shared'
 import type { RoleUtilisateur } from '../../generated/prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
 import { AuditService } from '../../common/audit.service'
-import { corpsObjet, texteOptionnel } from './admin.utils'
+import type { DonneesDesignationCommissaire, DonneesDistrict } from './districts.schemas'
 
 const AFFECTATION_DISTRICT_VIDE = { roleDistrict: null, fonctionDistrict: null, brancheTypeDistrict: null }
 
@@ -33,7 +33,7 @@ export class DistrictsService {
     return { districts: districtsAvecCommissaire }
   }
 
-  async creer(corpsBrut: unknown, acteurId: string) {
+  async creer({ nom }: DonneesDistrict, acteurId: string) {
     if (MONO_PAROISSE) {
       const nbDistricts = await this.prisma.district.count()
       if (nbDistricts >= 1) {
@@ -42,9 +42,6 @@ export class DistrictsService {
         )
       }
     }
-
-    const nom = texteOptionnel(corpsObjet(corpsBrut), 'nom')?.trim()
-    if (!nom) throw new BadRequestException('Le nom du district est requis')
 
     const existant = await this.prisma.district.findFirst({
       where: { nom: { equals: nom, mode: 'insensitive' } },
@@ -189,12 +186,9 @@ export class DistrictsService {
     }
   }
 
-  async modifier(id: string, corpsBrut: unknown, acteurId: string) {
+  async modifier(id: string, { nom }: DonneesDistrict, acteurId: string) {
     const existant = await this.prisma.district.findUnique({ where: { id }, select: { id: true, nom: true } })
     if (!existant) throw new NotFoundException('District introuvable')
-
-    const nom = texteOptionnel(corpsObjet(corpsBrut), 'nom')?.trim()
-    if (!nom) throw new BadRequestException('Le nom du district est requis')
 
     const doublon = await this.prisma.district.findFirst({
       where: { nom: { equals: nom, mode: 'insensitive' }, NOT: { id } },
@@ -250,12 +244,9 @@ export class DistrictsService {
   // staff (ROLES_TOUT_STAFF) déjà en poste et actif dans l'une des paroisses du
   // district — jamais en créant un nouveau compte, et sans jamais toucher à son
   // rôle paroissial (role) : il continue de l'exercer normalement.
-  async designerCommissaire(districtId: string, corpsBrut: unknown, acteurId: string) {
+  async designerCommissaire(districtId: string, { utilisateurId }: DonneesDesignationCommissaire, acteurId: string) {
     const district = await this.prisma.district.findUnique({ where: { id: districtId }, select: { id: true } })
     if (!district) throw new NotFoundException('District introuvable')
-
-    const utilisateurId = texteOptionnel(corpsObjet(corpsBrut), 'utilisateurId')
-    if (!utilisateurId?.trim()) throw new BadRequestException('Le membre à désigner est requis')
 
     const membre = await this.prisma.utilisateur.findUnique({
       where: { id: utilisateurId },

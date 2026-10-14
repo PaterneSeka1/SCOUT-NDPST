@@ -4,6 +4,14 @@ import { ROLES_PLATEFORME } from '@scout/shared'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator'
 import type { UtilisateurSession } from '../../common/types'
+import type { z } from 'zod'
+import { ZodPipe } from '../../common/pipes/zod.pipe'
+import {
+  SchemaCreationUtilisateur,
+  SchemaModificationUtilisateur,
+  SchemaMotDePasseAdmin,
+  SchemaNomination,
+} from './utilisateurs.schemas'
 import { UtilisateursService } from './utilisateurs.service'
 
 @ApiTags('Administration plateforme')
@@ -19,7 +27,10 @@ export class AdminUtilisateursController {
 
   @Post()
   @HttpCode(201)
-  creer(@Body() corps: unknown, @UtilisateurCourant() utilisateur: UtilisateurSession) {
+  creer(
+    @Body(new ZodPipe(SchemaCreationUtilisateur)) corps: z.infer<typeof SchemaCreationUtilisateur>,
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+  ) {
     return this.utilisateurs.creer(corps, utilisateur.id)
   }
 
@@ -29,7 +40,11 @@ export class AdminUtilisateursController {
   }
 
   @Put(':id')
-  modifier(@Param('id') id: string, @Body() corps: unknown, @UtilisateurCourant() utilisateur: UtilisateurSession) {
+  modifier(
+    @Param('id') id: string,
+    @Body(new ZodPipe(SchemaModificationUtilisateur)) corps: z.infer<typeof SchemaModificationUtilisateur>,
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+  ) {
     return this.utilisateurs.modifier(id, corps, utilisateur.id)
   }
 
@@ -40,14 +55,18 @@ export class AdminUtilisateursController {
   }
 
   @Put(':id/nominations')
-  nommer(@Param('id') id: string, @Body() corps: unknown, @UtilisateurCourant() utilisateur: UtilisateurSession) {
+  nommer(
+    @Param('id') id: string,
+    @Body(new ZodPipe(SchemaNomination)) corps: z.infer<typeof SchemaNomination>,
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+  ) {
     return this.utilisateurs.nommer(id, corps, utilisateur.id)
   }
 
   @Put(':id/password')
   changerMotDePasse(
     @Param('id') id: string,
-    @Body() corps: unknown,
+    @Body(new ZodPipe(SchemaMotDePasseAdmin)) corps: z.infer<typeof SchemaMotDePasseAdmin>,
     @UtilisateurCourant() utilisateur: UtilisateurSession,
   ) {
     return this.utilisateurs.changerMotDePasse(id, corps, utilisateur.id)

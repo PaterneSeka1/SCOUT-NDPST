@@ -5,7 +5,10 @@ import { ROLES_PLATEFORME } from '@scout/shared'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator'
 import type { UtilisateurSession } from '../../common/types'
+import type { z } from 'zod'
+import { ZodPipe } from '../../common/pipes/zod.pipe'
 import { envoyerCsv } from './admin.utils'
+import { SchemaCreationChefGroupe, SchemaCreationParoisse, SchemaModificationParoisse } from './paroisses.schemas'
 import { ParoissesService } from './paroisses.service'
 
 @ApiTags('Administration plateforme')
@@ -21,7 +24,7 @@ export class AdminParoissesController {
 
   @Post()
   @HttpCode(201)
-  creer(@Body() corps: unknown) {
+  creer(@Body(new ZodPipe(SchemaCreationParoisse)) corps: z.infer<typeof SchemaCreationParoisse>) {
     return this.paroisses.creer(corps)
   }
 
@@ -31,7 +34,11 @@ export class AdminParoissesController {
   }
 
   @Patch(':id')
-  modifier(@Param('id') id: string, @Body() corps: unknown, @UtilisateurCourant() utilisateur: UtilisateurSession) {
+  modifier(
+    @Param('id') id: string,
+    @Body(new ZodPipe(SchemaModificationParoisse)) corps: z.infer<typeof SchemaModificationParoisse>,
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+  ) {
     return this.paroisses.modifier(id, corps, utilisateur.id)
   }
 
@@ -42,7 +49,10 @@ export class AdminParoissesController {
 
   @Post(':id/chef-groupe')
   @HttpCode(201)
-  creerChefGroupe(@Param('id') id: string, @Body() corps: unknown) {
+  creerChefGroupe(
+    @Param('id') id: string,
+    @Body(new ZodPipe(SchemaCreationChefGroupe)) corps: z.infer<typeof SchemaCreationChefGroupe>,
+  ) {
     return this.paroisses.creerChefGroupe(id, corps)
   }
 

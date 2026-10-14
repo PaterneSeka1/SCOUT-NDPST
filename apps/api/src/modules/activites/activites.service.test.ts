@@ -28,7 +28,8 @@ function construire() {
     $transaction: vi.fn(),
   }
   const perimetre = { brancheUtilisateur: vi.fn().mockResolvedValue('LOUVETEAUX') }
-  const service = new ActivitesService(prisma as never, perimetre as never)
+  const fichiers = { verifierRattachable: vi.fn() }
+  const service = new ActivitesService(prisma as never, perimetre as never, fichiers as never)
   return { prisma, perimetre, service }
 }
 
@@ -41,13 +42,23 @@ describe('ActivitesService — cloisonnement des présences par branche', () => 
   })
 
   it("refuse la lecture des présences d'une activité d'une autre branche", async () => {
-    ctx.prisma.activite.findFirst.mockResolvedValue({ id: 'a1', paroisseId: 'p1', brancheType: 'ECLAIREURS', type: 'SORTIE' })
+    ctx.prisma.activite.findFirst.mockResolvedValue({
+      id: 'a1',
+      paroisseId: 'p1',
+      brancheType: 'ECLAIREURS',
+      type: 'SORTIE',
+    })
     await expect(ctx.service.listerPresences(responsableLouveteaux, 'a1')).rejects.toBeInstanceOf(ForbiddenException)
     expect(ctx.prisma.presence.findMany).not.toHaveBeenCalled()
   })
 
   it("refuse l'enregistrement des présences d'une activité d'une autre branche", async () => {
-    ctx.prisma.activite.findFirst.mockResolvedValue({ id: 'a1', paroisseId: 'p1', brancheType: 'ECLAIREURS', type: 'SORTIE' })
+    ctx.prisma.activite.findFirst.mockResolvedValue({
+      id: 'a1',
+      paroisseId: 'p1',
+      brancheType: 'ECLAIREURS',
+      type: 'SORTIE',
+    })
     await expect(
       ctx.service.enregistrerPresences(responsableLouveteaux, 'a1', { presences: [{ scoutId: 's1', present: true }] }),
     ).rejects.toBeInstanceOf(ForbiddenException)
@@ -66,7 +77,12 @@ describe('ActivitesService — cloisonnement des présences par branche', () => 
   })
 
   it("rejette le pointage d'un scout hors de la branche de l'activité", async () => {
-    ctx.prisma.activite.findFirst.mockResolvedValue({ id: 'a3', paroisseId: 'p1', brancheType: 'LOUVETEAUX', type: 'SORTIE' })
+    ctx.prisma.activite.findFirst.mockResolvedValue({
+      id: 'a3',
+      paroisseId: 'p1',
+      brancheType: 'LOUVETEAUX',
+      type: 'SORTIE',
+    })
     ctx.prisma.scout.findMany.mockResolvedValue([{ id: 's1' }])
     await expect(
       ctx.service.enregistrerPresences(responsableLouveteaux, 'a3', {

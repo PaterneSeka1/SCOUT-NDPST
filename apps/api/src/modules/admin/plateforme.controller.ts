@@ -2,6 +2,9 @@ import { Body, Controller, Get, Put, Query } from '@nestjs/common'
 import { ApiTags } from '@nestjs/swagger'
 import { ROLES_PLATEFORME } from '@scout/shared'
 import { Roles } from '../../common/decorators/roles.decorator'
+import type { z } from 'zod'
+import { ZodPipe } from '../../common/pipes/zod.pipe'
+import { SchemaConfigurationSite } from './plateforme.schemas'
 import { PlateformeService } from './plateforme.service'
 
 @ApiTags('Administration plateforme')
@@ -31,7 +34,7 @@ export class AdminSiteConfigController {
   }
 
   @Put()
-  modifier(@Body() corps: unknown) {
+  modifier(@Body(new ZodPipe(SchemaConfigurationSite)) corps: z.infer<typeof SchemaConfigurationSite>) {
     return this.plateforme.modifierConfig(corps)
   }
 }

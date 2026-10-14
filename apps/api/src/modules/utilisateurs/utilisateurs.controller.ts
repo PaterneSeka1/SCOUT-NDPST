@@ -3,8 +3,16 @@ import { ApiTags } from '@nestjs/swagger'
 import { ROLES_GROUPE } from '@scout/shared'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator'
+import { ZodPipe } from '../../common/pipes/zod.pipe'
 import type { UtilisateurSession } from '../../common/types'
-import { corpsObjet } from './corps'
+import {
+  SchemaCreationUtilisateur,
+  SchemaModificationUtilisateur,
+  SchemaReinitialisationMotDePasse,
+  type CorpsCreationUtilisateur,
+  type CorpsModificationUtilisateur,
+  type CorpsReinitialisationMotDePasse,
+} from './utilisateurs.schemas'
 import { UtilisateursService } from './utilisateurs.service'
 
 // Paramètre de query : seule une valeur textuelle unique est retenue
@@ -34,8 +42,11 @@ export class UtilisateursController {
 
   // 201 par défaut sur un POST, comme la route Next.
   @Post()
-  creer(@UtilisateurCourant() utilisateur: UtilisateurSession, @Body() corps: unknown) {
-    return this.utilisateurs.creer(utilisateur, corpsObjet(corps))
+  creer(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Body(new ZodPipe(SchemaCreationUtilisateur)) corps: CorpsCreationUtilisateur,
+  ) {
+    return this.utilisateurs.creer(utilisateur, corps)
   }
 
   @Get(':id')
@@ -44,8 +55,12 @@ export class UtilisateursController {
   }
 
   @Put(':id')
-  modifier(@UtilisateurCourant() utilisateur: UtilisateurSession, @Param('id') id: string, @Body() corps: unknown) {
-    return this.utilisateurs.modifier(utilisateur, id, corpsObjet(corps))
+  modifier(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Param('id') id: string,
+    @Body(new ZodPipe(SchemaModificationUtilisateur)) corps: CorpsModificationUtilisateur,
+  ) {
+    return this.utilisateurs.modifier(utilisateur, id, corps)
   }
 
   // Désactivation (jamais de suppression physique).
@@ -58,8 +73,8 @@ export class UtilisateursController {
   reinitialiserMotDePasse(
     @UtilisateurCourant() utilisateur: UtilisateurSession,
     @Param('id') id: string,
-    @Body() corps: unknown,
+    @Body(new ZodPipe(SchemaReinitialisationMotDePasse)) corps: CorpsReinitialisationMotDePasse,
   ) {
-    return this.utilisateurs.reinitialiserMotDePasse(utilisateur, id, corpsObjet(corps))
+    return this.utilisateurs.reinitialiserMotDePasse(utilisateur, id, corps)
   }
 }

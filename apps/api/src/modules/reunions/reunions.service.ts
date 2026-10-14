@@ -1,20 +1,18 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
-import {
-  BrancheTypeSchema,
-  LABELS_BRANCHES,
-  ROLES_BRANCHE,
-  StatutPresenceReunionSchema,
-  StatutReunionSchema,
-} from '@scout/shared'
-import type { BrancheType, Prisma, StatutPresenceReunion } from '../../generated/prisma/client'
+import { BrancheTypeSchema, LABELS_BRANCHES, ROLES_BRANCHE, StatutReunionSchema } from '@scout/shared'
+import type { BrancheType, Prisma } from '../../generated/prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
 import { AuditService } from '../../common/audit.service'
 import { PerimetreService } from '../../common/perimetre.service'
 import { paroisseIdRequise } from '../../common/paroisse'
 import { champCsv as champ, contentDispositionTelechargement } from '../../common/lib/csv'
 import type { UtilisateurSession } from '../../common/types'
-
-const MAX_REUNIONS_SERIE = 60
+import type {
+  CorpsConfigReunion,
+  CorpsCreationReunions,
+  CorpsModificationReunion,
+  CorpsPresencesReunion,
+} from './reunions.schemas'
 
 const LABELS_STATUT: Record<string, string> = {
   PRESENT: 'Présent',
@@ -27,28 +25,6 @@ const SELECTION_SCOUT = { id: true, prenom: true, nom: true, photo: true, branch
 export interface ExportCsv {
   contenu: string
   contentDisposition: string
-}
-
-// Corps JSON attendu sous forme d'objet : toute autre forme est rejetée.
-function objetCorps(corps: unknown): Record<string, unknown> {
-  if (typeof corps !== 'object' || corps === null || Array.isArray(corps)) {
-    throw new BadRequestException('Données invalides')
-  }
-  return corps as Record<string, unknown>
-}
-
-// Champs texte libres optionnels (titre, lieu, notes) : chaîne, null ou absent.
-// Toute autre valeur aurait atteint Prisma et provoqué une erreur 500.
-function texteOptionnel(valeur: unknown, message: string): string | null | undefined {
-  if (valeur === undefined || valeur === null) return valeur
-  if (typeof valeur !== 'string') throw new BadRequestException(message)
-  return valeur
-}
-
-function entierOptionnel(valeur: unknown, message: string): number | null | undefined {
-  if (valeur === undefined || valeur === null) return valeur
-  if (typeof valeur !== 'number' || !Number.isInteger(valeur)) throw new BadRequestException(message)
-  return valeur
 }
 
 @Injectable()
@@ -119,28 +95,13 @@ export class ReunionsService {
     })
   }
 
-  async creer(utilisateur: UtilisateurSession, corpsBrut: unknown) {
+  // Corps déjà validé par SchemaCreationReunions (dates, branche, textes).
+  async creer(utilisateur: UtilisateurSession, corps: CorpsCreationReunions) {
     const paroisseId = paroisseIdRequise(utilisateur)
-    const { dates, brancheType, titre, lieu, dureeMinutes, notes } = objetCorps(corpsBrut)
-
-    if (!Array.isArray(dates) || !dates.length) throw new BadRequestException('Au moins une date est requise')
-    if (dates.length > MAX_REUNIONS_SERIE) {
-      throw new BadRequestException('Maximum 60 réunions par création en série')
-    }
-    const datesObj = dates.map((d: unknown) => (typeof d === 'string' ? new Date(d) : new Date(NaN)))
-    if (datesObj.some((d) => Number.isNaN(d.getTime()))) {
-      throw new BadRequestException('Une ou plusieurs dates sont invalides')
-    }
-    const brancheValide = BrancheTypeSchema.safeParse(brancheType)
-    if (brancheType != null && !brancheValide.success) throw new BadRequestException('Branche invalide')
-
-    const titreValide = texteOptionnel(titre, 'Le titre est invalide')
-    const lieuValide = texteOptionnel(lieu, 'Le lieu est invalide')
-    const notesValides = texteOptionnel(notes, 'Les notes sont invalides')
-    const dureeValide = entierOptionnel(dureeMinutes, 'La durée est invalide')
+    const { dates: datesObj, brancheType, titre, lieu, dureeMinutes, notes } = corps
 
     // Un chef de branche ne peut créer que pour sa propre branche
-    let brancheEffective: BrancheType | null = brancheValide.success ? brancheValide.data : null
+    let brancheEffective: BrancheType | null = brancheType ?? null
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
       const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
       if (!bt) throw new ForbiddenException('Aucune branche assignée')
@@ -155,10 +116,10 @@ export class ReunionsService {
             creePar: utilisateur.id,
             dateHeure: d,
             brancheType: brancheEffective,
-            titre: titreValide ?? null,
-            lieu: lieuValide ?? null,
-            dureeMinutes: dureeValide ?? null,
-            notes: notesValides ?? null,
+            titre: titre ?? null,
+            lieu: lieu ?? null,
+            dureeMinutes: dureeMinutes ?? null,
+            notes: notes ?? null,
           },
         }),
       ),
@@ -185,9 +146,10 @@ export class ReunionsService {
     return reunion
   }
 
-  async modifier(utilisateur: UtilisateurSession, id: string, corpsBrut: unknown) {
+  // Corps déjà validé par SchemaModificationReunion (statut, dates, report).
+  async modifier(utilisateur: UtilisateurSession, id: string, corps: CorpsModificationReunion) {
     const paroisseId = paroisseIdRequise(utilisateur)
-    const { statut, dateReportee, dateHeure, brancheType, titre, lieu, dureeMinutes, notes } = objetCorps(corpsBrut)
+    const { statut, dateReportee, dateHeure, brancheType, titre, lieu, dureeMinutes, notes } = corps
 
     const existant = await this.prisma.jourReunion.findFirst({ where: { id, paroisseId } })
     if (!existant) throw new NotFoundException('Réunion introuvable')
@@ -195,50 +157,23 @@ export class ReunionsService {
     // Un chef de branche ne peut modifier que les réunions de sa propre branche
     await this.verifierAccesBranche(utilisateur, existant.brancheType)
 
-    const statutValide = StatutReunionSchema.safeParse(statut)
-    if (statut !== undefined && !statutValide.success) throw new BadRequestException('Statut invalide')
-    const brancheValide = BrancheTypeSchema.safeParse(brancheType)
-    if (brancheType != null && !brancheValide.success) throw new BadRequestException('Branche invalide')
-    const brancheFinale: BrancheType | null = brancheValide.success ? brancheValide.data : null
-
     // Un chef de branche ne peut pas déplacer une réunion vers une autre branche
     // (ni la rendre inter-branches) : cf. PUT /activites/:id.
-    if (ROLES_BRANCHE.includes(utilisateur.role) && brancheType !== undefined && brancheFinale !== existant.brancheType) {
+    if (ROLES_BRANCHE.includes(utilisateur.role) && brancheType !== undefined && (brancheType ?? null) !== existant.brancheType) {
       throw new ForbiddenException('Le changement de branche est réservé au groupe')
     }
-
-    if (statut === 'REPORTEE' && !dateReportee) {
-      throw new BadRequestException('La nouvelle date est requise pour reporter une réunion')
-    }
-
-    const dateReporteeFinale = typeof dateReportee === 'string' && dateReportee ? new Date(dateReportee) : null
-    if (
-      (dateReportee && typeof dateReportee !== 'string') ||
-      (dateReporteeFinale && Number.isNaN(dateReporteeFinale.getTime()))
-    ) {
-      throw new BadRequestException('La date de report est invalide')
-    }
-    const dateHeureFinale = typeof dateHeure === 'string' ? new Date(dateHeure) : undefined
-    if (dateHeure !== undefined && (!dateHeureFinale || Number.isNaN(dateHeureFinale.getTime()))) {
-      throw new BadRequestException('La date de la réunion est invalide')
-    }
-
-    const titreValide = texteOptionnel(titre, 'Le titre est invalide')
-    const lieuValide = texteOptionnel(lieu, 'Le lieu est invalide')
-    const notesValides = texteOptionnel(notes, 'Les notes sont invalides')
-    const dureeValide = entierOptionnel(dureeMinutes, 'La durée est invalide')
 
     return this.prisma.jourReunion.update({
       where: { id },
       data: {
-        ...(statut !== undefined && statutValide.success ? { statut: statutValide.data } : {}),
-        ...(dateReportee !== undefined ? { dateReportee: dateReporteeFinale } : {}),
-        ...(dateHeureFinale ? { dateHeure: dateHeureFinale } : {}),
-        ...(brancheType !== undefined ? { brancheType: brancheFinale } : {}),
-        ...(titreValide !== undefined ? { titre: titreValide } : {}),
-        ...(lieuValide !== undefined ? { lieu: lieuValide } : {}),
-        ...(dureeValide !== undefined ? { dureeMinutes: dureeValide } : {}),
-        ...(notesValides !== undefined ? { notes: notesValides } : {}),
+        ...(statut !== undefined ? { statut } : {}),
+        ...(dateReportee !== undefined ? { dateReportee } : {}),
+        ...(dateHeure ? { dateHeure } : {}),
+        ...(brancheType !== undefined ? { brancheType: brancheType ?? null } : {}),
+        ...(titre !== undefined ? { titre } : {}),
+        ...(lieu !== undefined ? { lieu } : {}),
+        ...(dureeMinutes !== undefined ? { dureeMinutes } : {}),
+        ...(notes !== undefined ? { notes } : {}),
       },
     })
   }
@@ -320,25 +255,11 @@ export class ReunionsService {
   }
 
   // Enregistre / met à jour les présences en masse (upsert)
-  async enregistrerPresences(utilisateur: UtilisateurSession, id: string, corpsBrut: unknown) {
+  async enregistrerPresences(utilisateur: UtilisateurSession, id: string, corps: CorpsPresencesReunion) {
     const paroisseId = paroisseIdRequise(utilisateur)
     const reunion = await this.reunionPourPresences(utilisateur, paroisseId, id)
 
-    const { presences } = objetCorps(corpsBrut)
-    if (!Array.isArray(presences)) throw new BadRequestException('Format invalide')
-    if (
-      presences.some((p: unknown) => {
-        if (typeof p !== 'object' || p === null) return true
-        const { scoutId, note } = p as Record<string, unknown>
-        return typeof scoutId !== 'string' || !scoutId || (note != null && typeof note !== 'string')
-      })
-    ) {
-      throw new BadRequestException('Format invalide')
-    }
-    const lignes = presences as Array<{ scoutId: string; statut: unknown; note?: string | null }>
-    if (lignes.some((p) => !StatutPresenceReunionSchema.safeParse(p.statut).success)) {
-      throw new BadRequestException('Statut de présence invalide')
-    }
+    const lignes = corps.presences
 
     // Seuls les scouts de la paroisse de la branche de la réunion (tous pour une
     // réunion inter-branches), ou déjà pointés sur cette réunion (cf.
@@ -360,14 +281,13 @@ export class ReunionsService {
     }
 
     await this.prisma.$transaction(
-      lignes.map(({ scoutId, statut, note }) => {
-        const statutPresence = statut as StatutPresenceReunion
-        return this.prisma.presenceReunion.upsert({
+      lignes.map(({ scoutId, statut, note }) =>
+        this.prisma.presenceReunion.upsert({
           where: { jourReunionId_scoutId: { jourReunionId: id, scoutId } },
-          create: { jourReunionId: id, scoutId, statut: statutPresence, note: note ?? null, marqueParId: utilisateur.id },
-          update: { statut: statutPresence, note: note ?? null, marqueParId: utilisateur.id },
-        })
-      }),
+          create: { jourReunionId: id, scoutId, statut, note: note ?? null, marqueParId: utilisateur.id },
+          update: { statut, note: note ?? null, marqueParId: utilisateur.id },
+        }),
+      ),
     )
 
     // Passer la réunion en TERMINEE si elle ne l'est pas encore
@@ -464,26 +384,15 @@ export class ReunionsService {
     return this.prisma.configReunionBranche.findMany({ where: { paroisseId }, orderBy: { brancheType: 'asc' } })
   }
 
-  async enregistrerConfig(utilisateur: UtilisateurSession, corpsBrut: unknown) {
+  // Corps déjà validé par SchemaConfigReunion (branche, jour, heure).
+  async enregistrerConfig(utilisateur: UtilisateurSession, corps: CorpsConfigReunion) {
     const paroisseId = paroisseIdRequise(utilisateur)
-    const { brancheType, jourSemaine, heureDebut, dureeMinutes, lieu } = objetCorps(corpsBrut)
+    const { brancheType, jourSemaine, heureDebut, dureeMinutes, lieu } = corps
 
-    if (!brancheType || jourSemaine === undefined || !heureDebut) {
-      throw new BadRequestException('Champs requis manquants')
-    }
-    const brancheValide = BrancheTypeSchema.safeParse(brancheType)
-    if (!brancheValide.success) throw new BadRequestException('Branche invalide')
-    if (typeof jourSemaine !== 'number' || !Number.isInteger(jourSemaine) || jourSemaine < 0 || jourSemaine > 6) {
-      throw new BadRequestException('jourSemaine doit être compris entre 0 (dimanche) et 6 (samedi)')
-    }
-    if (typeof heureDebut !== 'string') throw new BadRequestException("L'heure de début est invalide")
-    const dureeValide = entierOptionnel(dureeMinutes, 'La durée est invalide')
-    const lieuValide = texteOptionnel(lieu, 'Le lieu est invalide')
-
-    const valeurs = { jourSemaine, heureDebut, dureeMinutes: dureeValide ?? 90, lieu: lieuValide ?? null }
+    const valeurs = { jourSemaine, heureDebut, dureeMinutes: dureeMinutes ?? 90, lieu: lieu ?? null }
     return this.prisma.configReunionBranche.upsert({
-      where: { paroisseId_brancheType: { paroisseId, brancheType: brancheValide.data } },
-      create: { paroisseId, brancheType: brancheValide.data, ...valeurs },
+      where: { paroisseId_brancheType: { paroisseId, brancheType } },
+      create: { paroisseId, brancheType, ...valeurs },
       update: valeurs,
     })
   }
