@@ -96,7 +96,9 @@ export async function envoyerEmailReinitialisation(email: string, prenom: string
     // explicitement (le lien contient un token de réinitialisation à usage unique)
     // plutôt que de l'exposer en clair dans des logs potentiellement accessibles
     // à d'autres que le destinataire.
-    logger.error('email.smtp_non_configure', { contexte: 'reinitialisation_mot_de_passe' })
+    logger.error('email.smtp_non_configure', new Error('SMTP_HOST absent'), {
+      contexte: 'reinitialisation_mot_de_passe',
+    })
     return { ok: false, mode: 'erreur' as const }
   }
 

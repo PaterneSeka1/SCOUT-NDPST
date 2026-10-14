@@ -1,6 +1,6 @@
 import { BadRequestException, HttpException, HttpStatus, Injectable } from '@nestjs/common'
 import { hash } from 'bcryptjs'
-import { randomBytes } from 'crypto'
+import { createHash, randomBytes } from 'crypto'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@scout/shared'
 import { PrismaService } from '../prisma/prisma.service'
 import { env } from '../config/env'
@@ -15,6 +15,12 @@ const DUREE_LIEN_MS = 60 * 60 * 1000
 
 const LIEN_INVALIDE = 'Ce lien est invalide ou a déjà été utilisé.'
 
+// Seule l'empreinte du jeton est stockée (comme pour les sessions) : le jeton
+// lui-même n'existe que dans l'e-mail envoyé.
+function empreinte(token: string): string {
+  return createHash('sha256').update(token).digest('hex')
+}
+
 @Injectable()
 export class MotDePasseService {
   constructor(
@@ -24,8 +30,8 @@ export class MotDePasseService {
 
   // Réponse toujours identique pour ne pas révéler si l'adresse existe.
   async demanderReinitialisation(email: string, ip: string): Promise<{ message: string }> {
-    const parIp = limiterTaux(`mdp-oublie:ip:${ip}`, MAX_DEMANDES, FENETRE_MS)
-    const parEmail = limiterTaux(`mdp-oublie:email:${email.toLowerCase()}`, MAX_DEMANDES, FENETRE_MS)
+    const parIp = await limiterTaux(`mdp-oublie:ip:${ip}`, MAX_DEMANDES, FENETRE_MS)
+    const parEmail = await limiterTaux(`mdp-oublie:email:${email.toLowerCase()}`, MAX_DEMANDES, FENETRE_MS)
     if (!parIp.autorise || !parEmail.autorise) {
       logger.warn('mdp_oublie.rate_limit', { ip, parIp: !parIp.autorise, parEmail: !parEmail.autorise })
       throw new HttpException(
@@ -50,7 +56,11 @@ export class MotDePasseService {
 
     const token = randomBytes(32).toString('hex')
     await this.prisma.tokenReinitialisation.create({
-      data: { token, utilisateurId: utilisateur.id, expiresAt: new Date(Date.now() + DUREE_LIEN_MS) },
+      data: {
+        empreinte: empreinte(token),
+        utilisateurId: utilisateur.id,
+        expiresAt: new Date(Date.now() + DUREE_LIEN_MS),
+      },
     })
 
     const lien = `${env().URL_FRONTEND_PAROISSE.replace(/\/$/, '')}/reinitialiser-motdepasse?token=${token}`
@@ -61,7 +71,7 @@ export class MotDePasseService {
   async verifierLien(token: string): Promise<{ valide: boolean }> {
     if (!token) return { valide: false }
     const record = await this.prisma.tokenReinitialisation.findUnique({
-      where: { token },
+      where: { empreinte: empreinte(token) },
       select: { utilise: true, expiresAt: true },
     })
     return { valide: !!(record && !record.utilise && record.expiresAt > new Date()) }
@@ -71,7 +81,7 @@ export class MotDePasseService {
     if (!token) throw new BadRequestException('Token manquant')
     if (!motDePasseValide(motDePasse)) throw new BadRequestException(REGLE_MOT_DE_PASSE)
 
-    if (!limiterTaux(`reset-mdp:ip:${ip}`, 10, FENETRE_MS).autorise) {
+    if (!(await limiterTaux(`reset-mdp:ip:${ip}`, 10, FENETRE_MS)).autorise) {
       logger.warn('reset_mdp.rate_limit', { ip })
       throw new HttpException(
         { erreur: 'Trop de tentatives. Réessayez dans quelques minutes.' },
@@ -79,7 +89,7 @@ export class MotDePasseService {
       )
     }
 
-    const record = await this.prisma.tokenReinitialisation.findUnique({ where: { token } })
+    const record = await this.prisma.tokenReinitialisation.findUnique({ where: { empreinte: empreinte(token) } })
     if (!record || record.utilise) throw new BadRequestException(LIEN_INVALIDE)
     if (record.expiresAt < new Date()) {
       throw new BadRequestException('Ce lien a expiré. Veuillez faire une nouvelle demande.')

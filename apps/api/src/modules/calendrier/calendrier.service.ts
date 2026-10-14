@@ -139,7 +139,7 @@ export class CalendrierService {
   async fluxIcs(token: string | undefined, ip: string): Promise<string> {
     if (!token) throw new BadRequestException('Jeton manquant')
 
-    const limite = limiterTaux(`calendrier-ics:ip:${ip}`, 30, 15 * 60 * 1000)
+    const limite = await limiterTaux(`calendrier-ics:ip:${ip}`, 30, 15 * 60 * 1000)
     if (!limite.autorise) throw new HttpException('Trop de requêtes', HttpStatus.TOO_MANY_REQUESTS)
 
     const utilisateur = await this.prisma.utilisateur.findUnique({

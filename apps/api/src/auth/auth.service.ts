@@ -4,7 +4,7 @@ import { compare } from 'bcryptjs'
 import { createHash, randomBytes } from 'crypto'
 import { PrismaService } from '../prisma/prisma.service'
 import { env } from '../config/env'
-import { limiterTaux } from '../common/lib/rateLimit'
+import { limiteAtteinte, limiterTaux } from '../common/lib/rateLimit'
 import { logger } from '../common/lib/logger'
 import { ALGORITHME_ADMIN, clesAdmin } from './cles-admin'
 import type { UtilisateurSession } from '../common/types'
@@ -46,13 +46,21 @@ export class AuthService {
   ) {}
 
   async connecter(identifiant: string, motDePasse: string, ip: string, agent?: string): Promise<JetonsEmis> {
-    // Limite par identifiant ET par IP : empêche aussi bien le brute-force d'un
-    // compte précis que le credential stuffing depuis une seule source.
-    const parIdentifiant = limiterTaux(`login:id:${identifiant}`, MAX_TENTATIVES_CONNEXION, FENETRE_CONNEXION_MS)
-    const parIp = limiterTaux(`login:ip:${ip}`, MAX_TENTATIVES_CONNEXION * 4, FENETRE_CONNEXION_MS)
-    if (!parIdentifiant.autorise || !parIp.autorise) {
+    // Seuls les ÉCHECS sont comptés, sur trois compteurs :
+    //   - identifiant + IP (5) : brute-force d'un compte depuis une source ;
+    //   - IP (20) : credential stuffing depuis une source ;
+    //   - identifiant (20) : attaque distribuée sur un compte.
+    // Un tiers ne peut donc plus bloquer le compte de quelqu'un d'autre en
+    // quelques essais, et une connexion réussie ne consomme rien.
+    const limites: [string, number][] = [
+      [`login:id-ip:${identifiant}:${ip}`, MAX_TENTATIVES_CONNEXION],
+      [`login:ip:${ip}`, MAX_TENTATIVES_CONNEXION * 4],
+      [`login:id:${identifiant}`, MAX_TENTATIVES_CONNEXION * 4],
+    ]
+    const atteintes = await Promise.all(limites.map(([cle, max]) => limiteAtteinte(cle, max)))
+    if (atteintes.some(Boolean)) {
       // Jamais l'identifiant (matricule/téléphone = donnée personnelle) dans le log.
-      logger.warn('auth.rate_limit', { ip, parIdentifiant: !parIdentifiant.autorise, parIp: !parIp.autorise })
+      logger.warn('auth.rate_limit', { ip, parIdentifiantIp: atteintes[0], parIp: atteintes[1], parIdentifiant: atteintes[2] })
       throw new HttpException(
         { erreur: 'Trop de tentatives. Réessayez dans quelques minutes.' },
         HttpStatus.TOO_MANY_REQUESTS,
@@ -66,10 +74,13 @@ export class AuthService {
 
     // Message identique dans tous les cas d'échec : ne révèle pas si le
     // compte existe, est désactivé ou si sa paroisse l'est.
-    const echec = new UnauthorizedException('Identifiant ou mot de passe incorrect')
-    if (!utilisateur || !utilisateur.actif) throw echec
-    if (utilisateur.paroisse && !utilisateur.paroisse.actif) throw echec
-    if (!(await compare(motDePasse, utilisateur.password))) throw echec
+    const echec = async () => {
+      await Promise.all(limites.map(([cle, max]) => limiterTaux(cle, max, FENETRE_CONNEXION_MS)))
+      return new UnauthorizedException('Identifiant ou mot de passe incorrect')
+    }
+    if (!utilisateur || !utilisateur.actif) throw await echec()
+    if (utilisateur.paroisse && !utilisateur.paroisse.actif) throw await echec()
+    if (!(await compare(motDePasse, utilisateur.password))) throw await echec()
 
     const jetonSession = genererJeton()
     const sessionExpireLe = new Date(Date.now() + env().SESSION_TTL_SECONDES * 1000)

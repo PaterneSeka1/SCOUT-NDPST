@@ -536,12 +536,14 @@ model PresenceReunion {
 }
 
 // ---------------------------------------------------------------------------
-// Token de réinitialisation de mot de passe
+// Token de réinitialisation de mot de passe. Seule l'empreinte SHA-256 du
+// jeton envoyé par e-mail est stockée : une fuite de la table ne permet pas
+// de réinitialiser un mot de passe.
 // ---------------------------------------------------------------------------
 
 model TokenReinitialisation {
   id        String   @id @default(cuid())
-  token     String   @unique
+  empreinte String   @unique
   expiresAt DateTime
   utilise   Boolean  @default(false)
   createdAt DateTime @default(now())
@@ -549,7 +551,7 @@ model TokenReinitialisation {
   utilisateurId String
   utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
 
-  @@index([token])
+  @@index([empreinte])
   @@index([utilisateurId])
 }
 
