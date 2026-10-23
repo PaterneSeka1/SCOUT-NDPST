@@ -21,8 +21,10 @@ Installation district : Navigateur ──► Nginx ──► web-district ──
 - **Administrateur plateforme unique** : son compte vit dans l'installation district, qui signe ses jetons avec une clé privée ECDSA. Les installations qu'il administre (paroisse) les vérifient avec la seule clé publique, uniquement pour `ADMIN_PLATEFORME` ; ses actions y sont journalisées comme celles d'un acteur externe. Les comptes ordinaires restent propres à chaque installation (secret HS256 distinct).
 - Le navigateur n'appelle jamais l'API directement : chaque frontend relaie `/api/*` côté serveur (`next.config.ts`, `rewrites`). Tout reste sur une même origine, sans CORS ni cookie tiers.
 - **Authentification** (`apps/api/src/auth`) :
-  - un jeton d'accès JWT de courte durée (5 min) dans le cookie httpOnly `scout_acces` ;
+  - un jeton d'accès JWT de courte durée (5 min), lié à une session persistante par `sid`, dans le cookie httpOnly `scout_acces` ;
   - un jeton de session révocable (12 h, rotation à chaque rafraîchissement, seule son empreinte est stockée en base) dans le cookie httpOnly `scout_session` ;
+  - chaque requête protégée vérifie la session, le compte, sa paroisse et ses droits actuels ; les accès administrateurs externes sont revalidés auprès de leur installation émettrice ;
+  - les nouveaux comptes staff reçoivent un secret temporaire et doivent définir un mot de passe personnel avant tout accès métier ;
   - le middleware du frontend (`proxy.ts`) rafraîchit le jeton d'accès de façon transparente ;
   - les autres clients (futures plateformes, scripts) peuvent utiliser `Authorization: Bearer`.
 - **Autorisation** : toute route de l'API est protégée par défaut (`AuthGuard` global). Les rôles se déclarent avec `@Roles(...)` (rôle paroissial) ou `@RolesDistrict(...)` (affectation district). Les routes ouvertes portent `@Public()` avec une justification.
@@ -30,7 +32,7 @@ Installation district : Navigateur ──► Nginx ──► web-district ──
 
 ## Démarrer en local
 
-Prérequis : Node.js ≥ 22.12 (npm ≥ 10) et Docker.
+Prérequis : Node.js 22.23.4 (`.nvmrc`), npm 10.9.9 et Docker.
 
 ```bash
 ./setup.sh   # première fois : fichiers .env, dépendances, base, migrations, compte admin
@@ -44,7 +46,8 @@ npm run dev         # API + deux frontends en parallèle (après `docker compose
 npm run typecheck   # vérification des types de tous les paquets
 npm test            # tests unitaires (Vitest)
 npm run lint
-npm run build
+npm run build       # Webpack pour les deux frontends ; API_URL_INTERNE requise au build
+npm run test:e2e    # Chromium installé via npx playwright install chromium, API synthétique locale
 ```
 
 La documentation interactive de l'API est servie sur `http://localhost:4000/api/docs` quand `SWAGGER_ACTIF=true` (voir `apps/api/.env.example`).
@@ -79,11 +82,11 @@ En production, `deploy-ovh.sh` prend une sauvegarde (`pg_dump`) juste avant `mig
 
 ## Déploiement
 
-Procédure complète, première installation comprise : [docs/deploiement-ovh.md](docs/deploiement-ovh.md).
+Releases et rollback applicatif : [docs/exploitation-releases.md](docs/exploitation-releases.md). Première installation et configuration historique : [docs/deploiement-ovh.md](docs/deploiement-ovh.md). Bilan et validations avant production : [docs/modernisation.md](docs/modernisation.md).
 
 - **VPS (OVH)** : `deploy-ovh.sh`. PostgreSQL en Docker, installation paroisse : deux processus pm2 sur l'hôte (`deploy/ecosystem.config.cjs` : `scout-api`, `scout-web`), Nginx en reverse proxy vers l'espace paroisse (`deploy/nginx-scout.conf`). L'installation district est décrite dans la procédure (section 13).
 - **Sauvegardes** : `npm run sauvegarder -w @scout/api` envoie dans R2 une sauvegarde de la base chiffrée sur le VPS (AES-256-GCM) ; lancée chaque nuit par cron et avant chaque migration. Relecture avec `restaurer-sauvegarde`.
-- **Première installation** : `npm run initialiser -w @scout/api` crée, sur une base vide, le compte administrateur plateforme (sauf `-- --sans-admin`, pour l'installation paroisse), le district, la paroisse et son Chef de Groupe (mots de passe saisis à la main).
+- **Première installation** : `npm run initialiser -w @scout/api` crée, sur une base vide, le compte administrateur plateforme (sauf `-- --sans-admin`, pour l'installation paroisse), le district, la paroisse et son Chef de Groupe (secrets saisis à la main ; celui du Chef de Groupe doit être remplacé à la première connexion).
 - **Fichiers (Cloudflare R2)** : aucun document n'est conservé sur le VPS. En production, l'API refuse de démarrer sans stockage externe. Deux buckets : un privé (photos, fiches médicales, autorisations), servi uniquement par l'API après contrôle des droits, et un public (logos, image d'accueil), exposé sur un domaine personnalisé. Configuration détaillée dans `apps/api/.env.example`. Les fichiers d'une installation antérieure se reprennent avec `npm run fichiers:migrer-r2 -w @scout/api` (simulation par défaut, `-- --appliquer` pour écrire).
 - **Docker** : `apps/api/Dockerfile`, `apps/web-paroisse/Dockerfile` et `apps/web-district/Dockerfile` (contexte de build : racine du dépôt) ; pile complète locale avec `docker compose --profile app up -d --build`.
 
