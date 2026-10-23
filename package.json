@@ -3,8 +3,8 @@
   "private": true,
   "description": "Monorepo SCOUT ASCCI : API (NestJS) commune, frontend paroissial et application district (Next.js), chaque plateforme sur sa propre installation.",
   "engines": {
-    "node": ">=22.12",
-    "npm": ">=10"
+    "node": "22.23.4",
+    "npm": "10.9.9"
   },
   "workspaces": [
     "packages/*",
@@ -22,9 +22,11 @@
     "db:diff": "npm run prisma:diff -w @scout/api",
     "db:status": "npm run prisma:status -w @scout/api",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:e2e": "npm run build -w @scout/shared && playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "1.56.1",
     "concurrently": "10.0.6",
     "prettier": "3.9.10",
     "prettier-plugin-tailwindcss": "0.8.1"
@@ -50,5 +52,6 @@
     "@nestjs/swagger": {
       "js-yaml": "5.4.2"
     }
-  }
+  },
+  "packageManager": "npm@10.9.9"
 }

@@ -43,6 +43,8 @@ const CSP = [
 ].join('; ')
 
 const nextConfig: NextConfig = {
+  // Cache des tests navigateur isolé des builds de livraison.
+  distDir: process.env.SCOUT_E2E === '1' ? '.next-e2e' : '.next',
   // Build autonome (serveur Node minimal) pour l'image Docker uniquement ; en
   // production pm2, `next start` est utilisé (voir deploy/ecosystem.config.cjs).
   // La racine du monorepo est la racine de traçage : @scout/shared est inclus.
