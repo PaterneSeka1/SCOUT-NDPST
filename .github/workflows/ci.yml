@@ -5,32 +5,93 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Lint, types, tests et build
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      # Base jetable dédiée à ce job; aucun secret de production.
+      DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci
+    timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
+
+      - name: Scripts de release (simulation isolée)
+        run: |
+          bash -n deploy-ovh.sh deploy/*.sh
+          node --check deploy/check-backup.cjs
+          node --check deploy/check-resources.cjs
+          python3 deploy/tests/release_test.py
+          python3 deploy/tests/restore_test.py
+          python3 deploy/tests/resources_test.py
+
+      - name: Version npm reproductible
+        run: npm install --global npm@10.9.9
 
       # Génère aussi le client Prisma (postinstall de @scout/api).
       - run: npm ci
-
-      # Bloque les failles connues élevées ou critiques des dépendances livrées.
-      - name: Audit des dépendances de production
-        run: npm audit --omit=dev --audit-level=high
 
       - name: Paquet partagé
         run: npm run build -w @scout/shared
 
       - name: Validation du schéma Prisma
         run: npm exec -w @scout/api -- prisma validate
+
+      - name: Migrations sur PostgreSQL temporaire
+        run: npm run db:deploy
+
+      - name: État des migrations
+        run: npm run db:status
+
+      - name: Reprise des affectations existantes (seconde base temporaire)
         env:
-          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: ci
+          PGPASSWORD: ci
+          PGDATABASE: ci_reprise
+        run: |
+          createdb --maintenance-db=ci ci_reprise
+          bash apps/api/test/migrations/reprise.sh
+
+      - name: Authentification sur PostgreSQL réel (base temporaire dédiée)
+        env:
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci_integration
+          SCOUT_TEST_DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci_integration
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: ci
+          PGPASSWORD: ci
+        run: |
+          createdb --maintenance-db=ci ci_integration
+          npm run db:deploy
+          npm run test:integration -w @scout/api
 
       - name: Lint
         run: npm run lint --workspaces --if-present
@@ -48,11 +109,28 @@ jobs:
           API_URL_INTERNE: http://127.0.0.1:4000
           NEXT_PUBLIC_SITE_URL: https://ci.example.invalid
 
+  dependency-audit:
+    name: Audit bloquant des dépendances de production
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install --global npm@10.9.9
+      - run: npm ci
+      # Indépendant des tests : une erreur du registre échoue ce job et doit
+      # bloquer la fusion, tout en laissant les autres contrôles s'exécuter.
+      - run: npm audit --omit=dev --audit-level=high
+
   docker-build:
     name: Build des images Docker
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: API (sans publication)
         run: docker build -f apps/api/Dockerfile -t scout-api:ci .
@@ -65,3 +143,40 @@ jobs:
 
       - name: Application district (sans publication)
         run: docker build -f apps/web-district/Dockerfile --build-arg API_URL_INTERNE=http://api:4000 --build-arg NEXT_PUBLIC_SITE_URL=https://district.example.invalid -t scout-district:ci .
+
+  e2e:
+    name: Parcours navigateur bureau et mobile (API simulée)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Version npm reproductible
+        run: npm install --global npm@10.9.9
+
+      - run: npm ci
+
+      - name: Types des scénarios et de la configuration E2E
+        run: npx tsc --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --skipLibCheck playwright.config.ts e2e/*.ts
+
+      - name: Chromium et bibliothèques système
+        run: npx playwright install --with-deps chromium
+
+      - name: Frontends réels et API locale simulée sans base
+        run: npm run test:e2e
+
+      - name: Rapport et traces en cas d’échec
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-echec
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7

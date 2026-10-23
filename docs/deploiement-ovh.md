@@ -1,3 +1,5 @@
+> **Évolution du déploiement :** `deploy-ovh.sh` prépare désormais des releases et exige une configuration runtime dédiée. Lire [le guide des releases](exploitation-releases.md) avant toute commande de déploiement de ce guide. Les sections infrastructure, secrets, bases distinctes et stockage restent applicables. Les anciennes commandes directes PM2 ne constituent pas la procédure courante.
+
 # Déploiement sur le VPS OVH
 
 Procédure complète pour remplacer l'ancienne installation (application Next.js unique `scout-ndpst`) par la nouvelle **installation paroisse**, en **repartant d'une base vide**. Elle sert aussi de référence pour les mises à jour suivantes (section 10). L'installation district, autonome (autre clone, autre base), est décrite à la section 13.

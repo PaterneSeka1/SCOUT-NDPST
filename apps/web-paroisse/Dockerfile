@@ -1,7 +1,8 @@
 # Frontend paroissial Next.js — image construite depuis la RACINE du monorepo :
 #   docker build -f apps/web-paroisse/Dockerfile -t scout-web .
 # Aucun accès base ni secret : URL de l'API, URL publique du site et du stockage.
-FROM node:22-alpine AS base
+FROM node:22.23.4-alpine AS base
+RUN npm install --global npm@10.9.9
 WORKDIR /repo
 
 # Étape 1 : dépendances
@@ -33,7 +34,7 @@ ENV STORAGE_PUBLIC_URL_BASE=$STORAGE_PUBLIC_URL_BASE
 RUN npm run build -w @scout/shared && npm run build -w @scout/web-paroisse
 
 # Étape 3 : image d'exécution
-FROM node:22-alpine AS runner
+FROM node:22.23.4-alpine AS runner
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
