@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
+import { confirmer } from '@/app/components/ConfirmDialog'
 import Link from 'next/link'
 import { LABELS_ROLES, COULEURS_ROLES, ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT } from '@scout/shared'
 import { useUtilisateurs, useModifierUtilisateur } from '@/hooks/useUtilisateurs'
@@ -44,7 +46,15 @@ function SkeletonRow() {
 
 function CarteUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
   const { mutateAsync, isPending } = useModifierUtilisateur(utilisateur.id)
-  const handleToggle = async () => { await mutateAsync({ actif: !utilisateur.actif }) }
+  const handleToggle = async () => {
+    if (utilisateur.actif && !await confirmer({
+      titre: 'Désactiver ce compte ?',
+      description: `Le compte de ${utilisateur.prenom} ${utilisateur.nom} perdra immédiatement ses accès et ses sessions seront révoquées.`,
+      labelConfirmer: 'Désactiver', danger: true,
+    })) return
+    try { await mutateAsync({ actif: !utilisateur.actif }) }
+    catch (erreur) { toast.error(erreur instanceof Error ? erreur.message : 'Impossible de modifier le compte.') }
+  }
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2.5">
@@ -94,7 +104,15 @@ function CarteUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
 
 function LigneUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
   const { mutateAsync, isPending } = useModifierUtilisateur(utilisateur.id)
-  const handleToggle = async () => { await mutateAsync({ actif: !utilisateur.actif }) }
+  const handleToggle = async () => {
+    if (utilisateur.actif && !await confirmer({
+      titre: 'Désactiver ce compte ?',
+      description: `Le compte de ${utilisateur.prenom} ${utilisateur.nom} perdra immédiatement ses accès et ses sessions seront révoquées.`,
+      labelConfirmer: 'Désactiver', danger: true,
+    })) return
+    try { await mutateAsync({ actif: !utilisateur.actif }) }
+    catch (erreur) { toast.error(erreur instanceof Error ? erreur.message : 'Impossible de modifier le compte.') }
+  }
 
   return (
     <tr className="hover:bg-gray-50 transition-colors">

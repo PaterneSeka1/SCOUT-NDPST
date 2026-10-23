@@ -1,9 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { confirmer } from '@/app/components/ConfirmDialog'
 import {
   LABELS_ROLES,
   COULEURS_ROLES,
@@ -122,6 +123,7 @@ export default function UtilisateursPlateformePage() {
   const [paroisseFiltre, setParoisseFiltre] = useState('')
   const [filtresMobilesOuverts, setFiltresMobilesOuverts] = useState(false)
   const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
+  const dialogueNomination = useRef<HTMLDialogElement>(null)
   const [utilisateurNomination, setUtilisateurNomination] = useState<UtilisateurListe | null>(null)
   const [formNomination, setFormNomination] = useState<FormNomination>({
     role: '',
@@ -133,6 +135,15 @@ export default function UtilisateursPlateformePage() {
   })
   const [erreursNomination, setErreursNomination] = useState<FormNominationErrors>({})
   const [soumissionNomination, setSoumissionNomination] = useState(false)
+
+  useEffect(() => {
+    if (!utilisateurNomination) return
+    const dialogue = dialogueNomination.current
+    const origine = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    dialogue?.showModal()
+    return () => { dialogue?.close(); origine?.focus() }
+  }, [utilisateurNomination])
+
 
   const roleNominationEstBranche = ROLES_BRANCHE.includes(formNomination.role)
   const nominationDistrictActive = !!formNomination.roleDistrict
@@ -314,6 +325,11 @@ export default function UtilisateursPlateformePage() {
   const soumettreNomination = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!utilisateurNomination || !validerNomination()) return
+    if (!await confirmer({
+      titre: 'Confirmer cette nomination ?',
+      description: 'Cette opération modifiera les droits du membre et révoquera ses sessions en cours.',
+      labelConfirmer: 'Enregistrer la nomination', danger: true,
+    })) return
     setSoumissionNomination(true)
     try {
       const res = await fetch(`/api/admin/utilisateurs/${utilisateurNomination.id}/nominations`, {
@@ -922,13 +938,15 @@ export default function UtilisateursPlateformePage() {
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} total={total} itemLabel="utilisateur" />
 
       {utilisateurNomination && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 px-0 py-0 sm:items-center sm:px-4 sm:py-6">
+        <dialog ref={dialogueNomination} aria-labelledby="nomination-titre" aria-modal="true"
+          onCancel={(event) => { event.preventDefault(); fermerNomination() }}
+          className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-2xl rounded-xl border-0 p-0 backdrop:bg-black/30">
           <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border border-gray-200 bg-white shadow-xl sm:max-h-[90vh] sm:rounded-xl">
             <form onSubmit={soumettreNomination} noValidate>
               <div className="border-b border-gray-100 px-5 py-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <h2 className="text-lg font-bold text-gray-900">
+                    <h2 id="nomination-titre" className="text-lg font-bold text-gray-900">
                       Nommer {utilisateurNomination.prenom} {utilisateurNomination.nom}
                     </h2>
                     <p className="text-sm text-gray-500">
@@ -953,11 +971,11 @@ export default function UtilisateursPlateformePage() {
                 <section className="space-y-3">
                   <h3 className="text-sm font-semibold text-gray-800">Rôle paroissial</h3>
                   <div>
-                    <label className={CLS_LABEL}>
+                    <label htmlFor="nomination-role" className={CLS_LABEL}>
                       Rôle <span className="text-red-500">*</span>
                     </label>
                     <select
-                      name="role"
+                      id="nomination-role" name="role"
                       value={formNomination.role}
                       onChange={handleNominationChange}
                       className={erreursNomination.role ? CLS_SELECT_ERR : CLS_SELECT}
@@ -974,11 +992,11 @@ export default function UtilisateursPlateformePage() {
 
                   {roleNominationEstBranche && (
                     <div>
-                      <label className={CLS_LABEL}>
+                      <label htmlFor="nomination-brancheType" className={CLS_LABEL}>
                         Branche <span className="text-red-500">*</span>
                       </label>
                       <select
-                        name="brancheType"
+                        id="nomination-brancheType" name="brancheType"
                         value={formNomination.brancheType}
                         onChange={handleNominationChange}
                         className={erreursNomination.brancheType ? CLS_SELECT_ERR : CLS_SELECT}
@@ -1001,9 +1019,9 @@ export default function UtilisateursPlateformePage() {
                   <section className="space-y-3 border-t border-gray-100 pt-5">
                     <h3 className="text-sm font-semibold text-gray-800">Affectation district</h3>
                     <div>
-                      <label className={CLS_LABEL}>Nomination</label>
+                      <label htmlFor="nomination-roleDistrict" className={CLS_LABEL}>Nomination</label>
                       <select
-                        name="roleDistrict"
+                        id="nomination-roleDistrict" name="roleDistrict"
                         value={formNomination.roleDistrict}
                         onChange={handleNominationChange}
                         className={erreursNomination.roleDistrict ? CLS_SELECT_ERR : CLS_SELECT}
@@ -1060,11 +1078,11 @@ export default function UtilisateursPlateformePage() {
 
                         {nominationModeBranche ? (
                           <div>
-                            <label className={CLS_LABEL}>
+                            <label htmlFor="nomination-brancheTypeDistrict" className={CLS_LABEL}>
                               Branche de district <span className="text-red-500">*</span>
                             </label>
                             <select
-                              name="brancheTypeDistrict"
+                              id="nomination-brancheTypeDistrict" name="brancheTypeDistrict"
                               value={formNomination.brancheTypeDistrict}
                               onChange={handleNominationChange}
                               className={erreursNomination.brancheTypeDistrict ? CLS_SELECT_ERR : CLS_SELECT}
@@ -1086,7 +1104,7 @@ export default function UtilisateursPlateformePage() {
                               Fonction <span className="text-xs font-normal text-gray-400">(optionnel)</span>
                             </label>
                             <input
-                              name="fonctionDistrict"
+                              id="nomination-fonctionDistrict" name="fonctionDistrict"
                               value={formNomination.fonctionDistrict}
                               onChange={handleNominationChange}
                               placeholder="Ex. Spiritualité, Secrétariat…"
@@ -1120,7 +1138,7 @@ export default function UtilisateursPlateformePage() {
               </div>
             </form>
           </div>
-        </div>
+        </dialog>
       )}
     </div>
   )

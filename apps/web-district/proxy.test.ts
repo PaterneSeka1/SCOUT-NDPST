@@ -36,6 +36,22 @@ describe('proxy (console district)', () => {
   })
 
   describe('pages', () => {
+    it('protège la page de changement obligatoire sans session', async () => {
+      const proxy = await chargerProxy()
+      const reponse = await proxy(requete('/changer-mot-de-passe'))
+      expect(new URL(reponse.headers.get('location')!).pathname).toBe('/login')
+    })
+
+    it('rafraîchit la session avant le formulaire de changement obligatoire', async () => {
+      fetchSimule.mockResolvedValue(new Response('{}', {
+        headers: [['set-cookie', 'scout_acces=nouveau; Path=/; HttpOnly']],
+      }))
+      const proxy = await chargerProxy()
+      const reponse = await proxy(requete('/changer-mot-de-passe', { scout_session: 'session-active' }))
+      expect(estSuite(reponse)).toBe(true)
+      expect(fetchSimule).toHaveBeenCalledWith(`${API_LOCALE}/api/auth/rafraichir`, expect.anything())
+    })
+
     it('redirige /admin vers /login sans session, en conservant la destination', async () => {
       const proxy = await chargerProxy()
       const reponse = await proxy(requete('/admin/paroisses'))

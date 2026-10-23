@@ -198,6 +198,8 @@ function FeuillePresences({
                     <div className="flex items-center gap-4">
                       {/* Case à cocher */}
                       <button
+                        aria-label={`Présence de ${p.scout.prenom} ${p.scout.nom}`}
+                        aria-pressed={estPresent}
                         onClick={() => togglePresence(p.scout.id)}
                         className={`flex h-6 w-6 shrink-0 items-center justify-center rounded border-2 transition-colors ${
                           estPresent
@@ -259,6 +261,7 @@ function FeuillePresences({
                         type="text"
                         value={etat?.commentaire ?? ''}
                         onChange={(e) => setCommentaire(p.scout.id, e.target.value)}
+                        aria-label={`Commentaire pour ${p.scout.prenom} ${p.scout.nom}`}
                         placeholder="Commentaire (optionnel)"
                         className="hidden w-48 rounded border border-gray-200 px-2 py-1 text-xs focus:ring-1 focus:ring-(--cp) focus:outline-none sm:block"
                       />
@@ -270,6 +273,7 @@ function FeuillePresences({
                         type="text"
                         value={etat?.commentaire ?? ''}
                         onChange={(e) => setCommentaire(p.scout.id, e.target.value)}
+                        aria-label={`Commentaire pour ${p.scout.prenom} ${p.scout.nom}`}
                         placeholder="Commentaire (optionnel)"
                         className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:ring-1 focus:ring-(--cp) focus:outline-none"
                       />

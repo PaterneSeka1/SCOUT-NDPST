@@ -1,26 +1,11 @@
 'use client'
 
 import { useSession } from '@/lib/session-client'
-import { useEffect, useState } from 'react'
+import { useDashboard } from '@/hooks/useDashboard'
 import Link from 'next/link'
 import { ICONES_KPI, ICONE_KPI_DEFAUT, ICONES_TYPE_ACTIVITE, ClipboardList } from '@/lib/icons'
 import { StatCard, StatCardSkeleton } from '@/app/components/ui/StatCard'
 import { pageHorsPerimetreV1 } from '@scout/shared'
-
-type ActiviteRecente = {
-  id: string
-  titre: string
-  dateDebut: string
-  type: string
-  brancheType: string | null
-  lieu: string | null
-  _count: { presences: number }
-}
-
-type KpisData = {
-  kpis: Record<string, number | string>
-  activitesRecentes: ActiviteRecente[]
-}
 
 const TONS_KPI: Array<'primary' | 'accent' | 'warning' | 'info'> = ['primary', 'accent', 'warning', 'info']
 
@@ -66,25 +51,11 @@ export default function DashboardPage() {
   const { data: session } = useSession()
   const role = session?.user?.role ?? ''
 
-  const [data, setData] = useState<KpisData | null>(null)
-  const [chargement, setChargement] = useState(true)
-  const [erreur, setErreur] = useState('')
-
-  useEffect(() => {
-    if (!session?.user) return
-    fetch('/api/dashboard/kpis')
-      .then((r) => r.json())
-      .then((d) => {
-        if (!d?.kpis) {
-          setErreur('Impossible de charger le tableau de bord.')
-          return
-        }
-        setErreur('')
-        setData(d)
-      })
-      .catch(() => setErreur('Impossible de charger le tableau de bord. Vérifiez votre connexion.'))
-      .finally(() => setChargement(false))
-  }, [session])
+  const dashboard = useDashboard()
+  const chargement = !dashboard.hydrate || dashboard.isPending
+  const erreur = dashboard.hydrate && dashboard.isError
+  // Un échec de rafraîchissement ne doit pas présenter des données anciennes comme actuelles.
+  const data = !dashboard.hydrate || erreur ? undefined : dashboard.data
 
   const entrees = data?.kpis ? Object.entries(data.kpis) : []
 
@@ -133,10 +104,15 @@ export default function DashboardPage() {
       </div>
 
       {erreur && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{erreur}</div>
+        <section className="space-y-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <p role="alert">{dashboard.error?.message ?? 'Impossible de charger le tableau de bord. Vérifiez votre connexion.'}</p>
+          <button type="button" disabled={dashboard.isFetching} onClick={() => void dashboard.refetch()}
+            className="rounded-lg border border-red-300 px-4 py-2 font-medium disabled:opacity-60">Réessayer</button>
+        </section>
       )}
 
       {/* KPIs */}
+      {!erreur && <>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {chargement
           ? Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
@@ -211,6 +187,7 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+      </>}
     </div>
   )
 }

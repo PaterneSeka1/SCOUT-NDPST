@@ -62,7 +62,6 @@ export interface DonneesCreerUtilisateur {
   telephone?: string | null
   role: string
   brancheType?: string | null
-  password: string
   scoutIds?: string[]
 }
 
@@ -148,7 +147,8 @@ export function useCreerUtilisateur() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (donnees: DonneesCreerUtilisateur): Promise<Utilisateur> => {
+    gcTime: 0,
+    mutationFn: async (donnees: DonneesCreerUtilisateur): Promise<Utilisateur & { motDePasseTemporaire: string }> => {
       const res = await fetch('/api/utilisateurs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

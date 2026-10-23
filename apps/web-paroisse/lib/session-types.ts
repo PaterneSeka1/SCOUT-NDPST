@@ -7,6 +7,7 @@ export interface Session {
     email: string
     nom: string
     prenom: string
+    doitChangerMotDePasse?: boolean
     role: string
     // Affectation district, additive au rôle paroissial — null si ce compte
     // ne sert pas le district.

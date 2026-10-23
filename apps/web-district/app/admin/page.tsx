@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { toast } from 'sonner'
+import { lireRapports } from '@/lib/rapports'
 import { formatMontantFCFA } from '@scout/shared'
 import { GraphiqueUtilisateursParCategorie, GraphiqueCotisations, GraphiqueScoutsParParoisse } from './KpiCharts'
 import { ICONES_KPI, ICONE_KPI_DEFAUT } from '@/lib/icons'
@@ -36,38 +36,47 @@ export default function AdminAccueil() {
   const [paroisses, setParoisses] = useState<LigneParoisse[]>([])
   const [chargement, setChargement] = useState(true)
 
-  useEffect(() => {
-    fetch('/api/admin/rapports')
-      .then((r) => {
-        if (!r.ok) throw new Error('Erreur serveur')
-        return r.json()
-      })
-      .then((data) => { setTotaux(data.totaux); setKpis(data.kpis); setParoisses(data.paroisses ?? []) })
-      .catch(() => toast.error('Impossible de charger le tableau de bord.'))
+  const [erreur, setErreur] = useState<string | null>(null)
+  const charger = useCallback(() => {
+    return fetch('/api/admin/rapports')
+      .then(lireRapports)
+      .then((data) => { setTotaux(data.totaux); setKpis(data.kpis); setParoisses(data.paroisses) })
+      .catch((cause: unknown) => setErreur(cause instanceof Error ? cause.message : 'Connexion impossible. Vérifiez votre connexion puis réessayez.'))
       .finally(() => setChargement(false))
   }, [])
 
+  useEffect(() => { void charger() }, [charger])
+
   if (chargement) {
     return (
-      <div className="flex items-center justify-center py-24">
+      <div role="status" aria-label="Chargement des indicateurs" className="flex items-center justify-center py-24">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--cp)' }} />
       </div>
     )
   }
 
+  if (erreur || !totaux || !kpis) return (
+    <section className="space-y-4 rounded-xl border border-red-200 bg-white p-6">
+      <h1 className="text-xl font-bold">Indicateurs indisponibles</h1>
+      <p role="alert">{erreur ?? 'Les données sont indisponibles.'}</p>
+      <button type="button" onClick={() => { setChargement(true); setErreur(null); void charger() }} className="rounded-lg bg-(--cp) px-4 py-2 text-white">Réessayer</button>
+      <Link href="/login" className="ml-4 underline">Se reconnecter</Link>
+    </section>
+  )
+
   // Palette catégorielle fixe (indépendante du thème par paroisse) — sert
   // uniquement à distinguer visuellement les 8 indicateurs entre eux.
   const cartes = [
-    { label: 'Paroisses actives', value: `${totaux?.paroissesActives ?? 0} / ${totaux?.paroisses ?? 0}`, couleur: '#1a4731' },
-    { label: 'Scouts (toutes paroisses)', value: totaux?.scouts ?? 0, couleur: '#27ae60' },
-    { label: 'Utilisateurs', value: totaux?.utilisateurs ?? 0, couleur: '#f39c12' },
-    { label: 'Activités', value: totaux?.activites ?? 0, couleur: '#3498db' },
-    { label: 'Taux de présence', value: `${kpis?.tauxPresence ?? 0} %`, couleur: '#27ae60' },
-    { label: 'Activités ce mois', value: kpis?.activitesMois ?? 0, couleur: '#3498db' },
+    { label: 'Paroisses actives', value: `${totaux.paroissesActives} / ${totaux.paroisses}`, couleur: '#1a4731' },
+    { label: 'Scouts (toutes paroisses)', value: totaux.scouts, couleur: '#27ae60' },
+    { label: 'Utilisateurs', value: totaux.utilisateurs, couleur: '#f39c12' },
+    { label: 'Activités', value: totaux.activites, couleur: '#3498db' },
+    { label: 'Taux de présence', value: `${kpis.tauxPresence} %`, couleur: '#27ae60' },
+    { label: 'Activités ce mois', value: kpis.activitesMois, couleur: '#3498db' },
     // Montants en FCFA hors périmètre V1 (marquage cotisant / non cotisant uniquement).
     ...(PERIMETRE_V1 ? [] : [
-      { label: 'Cotisations payées', value: formatMontantFCFA(kpis?.cotisationsPayees ?? 0), couleur: '#27ae60' },
-      { label: 'Cotisations en attente', value: formatMontantFCFA(kpis?.cotisationsEnAttente ?? 0), couleur: '#f39c12' },
+      { label: 'Cotisations payées', value: formatMontantFCFA(kpis.cotisationsPayees), couleur: '#27ae60' },
+      { label: 'Cotisations en attente', value: formatMontantFCFA(kpis.cotisationsEnAttente), couleur: '#f39c12' },
     ]),
   ]
 
@@ -76,7 +85,7 @@ export default function AdminAccueil() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Tableau de bord plateforme</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Vue d&apos;ensemble consolidée de toutes les paroisses</p>
+          <p className="text-sm text-gray-500 mt-0.5">Indicateurs des paroisses de l&apos;installation sélectionnée</p>
         </div>
         <div className="flex flex-wrap gap-2 shrink-0">
           <Link
@@ -120,11 +129,11 @@ export default function AdminAccueil() {
       {!PERIMETRE_V1 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <GraphiqueUtilisateursParCategorie
-            staff={kpis?.utilisateursParCategorie.staff ?? 0}
-            parents={kpis?.utilisateursParCategorie.parents ?? 0}
-            comptesScouts={kpis?.utilisateursParCategorie.comptesScouts ?? 0}
+            staff={kpis.utilisateursParCategorie.staff}
+            parents={kpis.utilisateursParCategorie.parents}
+            comptesScouts={kpis.utilisateursParCategorie.comptesScouts}
           />
-          <GraphiqueCotisations payees={kpis?.cotisationsPayees ?? 0} enAttente={kpis?.cotisationsEnAttente ?? 0} />
+          <GraphiqueCotisations payees={kpis.cotisationsPayees} enAttente={kpis.cotisationsEnAttente} />
         </div>
       )}
 

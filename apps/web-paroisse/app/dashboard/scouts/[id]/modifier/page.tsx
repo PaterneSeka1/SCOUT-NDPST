@@ -84,7 +84,14 @@ function FormulaireScout({ id, scout }: { id: string; scout: Scout }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await mutateAsync({ ...form, photo: photo ?? undefined, consentementImage, consentementSante })
+      await mutateAsync({
+        ...form,
+        photo: photo ?? undefined,
+        // Une simple correction de fiche ne renouvelle pas la déclaration
+        // parentale ni sa date/auteur/provenance.
+        ...(consentementImage !== scout.consentementImage ? { consentementImage } : {}),
+        ...(consentementSante !== scout.consentementSante ? { consentementSante } : {}),
+      })
       toast.success('Modifications enregistrées.')
       router.push(`/dashboard/scouts/${id}`)
     } catch (err) {
@@ -259,6 +266,7 @@ function FormulaireScout({ id, scout }: { id: string; scout: Scout }) {
             </div>
           </div>
 
+          <p className="mb-3 text-sm text-amber-800">Déclaration administrative : la preuve du consentement parental doit être vérifiée. Cocher ces cases ne constitue pas une preuve du consentement d’une personne habilitée.</p>
           <label className="flex cursor-pointer items-center gap-2.5 border-t border-gray-100 pt-4">
             <input
               type="checkbox"
@@ -273,7 +281,7 @@ function FormulaireScout({ id, scout }: { id: string; scout: Scout }) {
           </label>
           {scout?.consentementImageDate && (
             <p className="-mt-2 text-xs text-gray-400">
-              Dernière confirmation le {new Date(scout.consentementImageDate).toLocaleDateString('fr-FR')}
+              Dernière déclaration administrative le {new Date(scout.consentementImageDate).toLocaleDateString('fr-FR')}
             </p>
           )}
 
@@ -291,7 +299,7 @@ function FormulaireScout({ id, scout }: { id: string; scout: Scout }) {
           </label>
           {scout?.consentementSanteDate && (
             <p className="-mt-2 text-xs text-gray-400">
-              Dernière confirmation le {new Date(scout.consentementSanteDate).toLocaleDateString('fr-FR')}
+              Dernière déclaration administrative le {new Date(scout.consentementSanteDate).toLocaleDateString('fr-FR')}
             </p>
           )}
 

@@ -3,7 +3,7 @@
 import { signOut } from '@/lib/session-client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { MONO_PAROISSE } from '@scout/shared'
 import { pageHorsPerimetreV1 } from '@scout/shared'
 import { NavIcon, Menu, UserCircle, LogOut, type LucideIcon } from '@/lib/icons'
@@ -67,6 +67,7 @@ function SidebarContent({
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  aria-current={actif ? 'page' : undefined}
                   onClick={onNavigate}
                   className={`snav-link flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium ${actif ? 'snav-active' : ''}`}
                 >
@@ -116,6 +117,12 @@ export function AdminShell({
 }) {
   const pathname = usePathname()
   const [sidebarOuverte, setSidebarOuverte] = useState(false)
+  const menuMobile = useRef<HTMLDialogElement>(null)
+
+  useEffect(() => {
+    if (sidebarOuverte) menuMobile.current?.showModal()
+    else menuMobile.current?.close()
+  }, [sidebarOuverte])
   const sidebarStyle = { backgroundColor: 'var(--cp)' }
   const titrePage = MENU.find((m) => (m.href === '/admin' ? pathname === '/admin' : pathname.startsWith(m.href)))?.label ?? 'Administration'
   const initiale = nomComplet?.trim()?.[0]?.toUpperCase() ?? 'A'
@@ -131,25 +138,28 @@ export function AdminShell({
 
   return (
     <div className="flex h-dvh overflow-hidden bg-gray-50">
-      {sidebarOuverte && (
-        <div className="fixed inset-0 z-20 bg-black/50 lg:hidden" onClick={() => setSidebarOuverte(false)} />
-      )}
 
       <aside className="hidden w-64 shrink-0 flex-col lg:flex" style={sidebarStyle}>
         <SidebarContent pathname={pathname} nomComplet={nomComplet} installations={installations} />
       </aside>
 
-      <aside
-        className={`fixed inset-y-0 left-0 z-30 flex w-72 flex-col transition-transform duration-300 lg:hidden ${sidebarOuverte ? 'translate-x-0' : '-translate-x-full'}`}
+      <dialog
+        ref={menuMobile}
+        id="navigation-mobile"
+        aria-label="Navigation principale"
+        aria-modal="true"
+        onCancel={(event) => { event.preventDefault(); setSidebarOuverte(false) }}
+        className="fixed inset-y-0 left-0 m-0 hidden h-dvh max-h-none w-72 max-w-full flex-col border-0 p-0 open:flex backdrop:bg-black/50 lg:hidden print:hidden"
         style={sidebarStyle}
       >
+        <button type="button" onClick={() => setSidebarOuverte(false)} className="m-3 self-end rounded-lg border border-white/40 px-3 py-2 text-sm text-white">Fermer le menu</button>
         <SidebarContent
           pathname={pathname}
           nomComplet={nomComplet}
           installations={installations}
           onNavigate={() => setSidebarOuverte(false)}
         />
-      </aside>
+      </dialog>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
@@ -158,6 +168,8 @@ export function AdminShell({
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 lg:hidden"
               onClick={() => setSidebarOuverte(true)}
               aria-label="Ouvrir le menu"
+              aria-expanded={sidebarOuverte}
+              aria-controls="navigation-mobile"
             >
               <Menu className="h-5 w-5" strokeWidth={2} />
             </button>

@@ -10,22 +10,14 @@
 // — aucune nouvelle route ni nouveau modèle de données.
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
+import { useDashboard } from '@/hooks/useDashboard'
+import type { ActiviteRecente } from '@/lib/dashboard'
 import { LABELS_TYPE_ACTIVITE } from '@scout/shared'
 import { LABELS_BRANCHES } from '@scout/shared'
 import { LABELS_TYPE_DOCUMENT } from '@scout/shared'
 import { ROLES_TOUT_STAFF } from '@scout/shared'
 import { PERIMETRE_V1 } from '@scout/shared'
 import { ICONES_TYPE_ACTIVITE, ICONES_TYPE_DOCUMENT, ClipboardList, Paperclip } from '@/lib/icons'
-
-type ActiviteWidget = {
-  id: string
-  titre: string
-  dateDebut: string
-  type: string
-  brancheType: string | null
-  lieu: string | null
-  _count: { presences: number }
-}
 
 type DocumentEcheance = {
   id: string
@@ -58,7 +50,9 @@ function formatDateCourt(iso: string): string {
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
 }
 
-function ActivitesWidget({ activites, sousTitre }: { activites: ActiviteWidget[]; sousTitre: string }) {
+function ActivitesWidget({ activites, sousTitre, chargement, erreur }: {
+  activites: ActiviteRecente[]; sousTitre: string; chargement: boolean; erreur: boolean
+}) {
   return (
     <div className={`${CARTE} pointer-events-auto flex max-h-[min(60vh,26rem)] w-80 flex-col p-4`}>
       <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
@@ -71,7 +65,11 @@ function ActivitesWidget({ activites, sousTitre }: { activites: ActiviteWidget[]
         </Link>
       </div>
 
-      {activites.length === 0 ? (
+      {erreur ? (
+        <p className="py-2 text-xs text-red-700">Activités indisponibles. Réessayez depuis le tableau de bord.</p>
+      ) : chargement ? (
+        <p role="status" className="py-2 text-xs text-gray-500">Chargement des activités…</p>
+      ) : activites.length === 0 ? (
         <div className="py-2 text-xs text-gray-400">Aucune activité pour le moment.</div>
       ) : (
         <div className="space-y-2.5 overflow-y-auto pr-1">
@@ -184,8 +182,9 @@ function WidgetsClient({ role, paroisseId }: { role: string; paroisseId: string 
       return VISIBILITE_DEFAUT
     }
   })
-  const [activites, setActivites] = useState<ActiviteWidget[]>([])
-  const [sousTitreActivites, setSousTitreActivites] = useState('Activités récentes')
+  const dashboard = useDashboard()
+  const activites = dashboard.isError ? [] : dashboard.data?.activitesRecentes ?? []
+  const sousTitreActivites = role === 'PARENT' ? 'Prochaines activités' : 'Activités récentes'
   const [documents, setDocuments] = useState<DocumentEcheance[]>([])
 
   const clesDisponibles = CLES_WIDGETS.filter((cle) => {
@@ -193,19 +192,6 @@ function WidgetsClient({ role, paroisseId }: { role: string; paroisseId: string 
     if (cle === 'documents') return estStaff
     return true
   })
-
-  useEffect(() => {
-    if (!aUneParoisse) return
-    fetch('/api/dashboard/kpis')
-      .then((r) => r.json())
-      .then((d: { activitesRecentes?: ActiviteWidget[] }) => {
-        setActivites(d.activitesRecentes ?? [])
-        setSousTitreActivites(role === 'PARENT' ? 'Prochaines activités' : 'Activités récentes')
-      })
-      .catch(() => {
-        /* widget activités reste utilisable, simplement vide */
-      })
-  }, [aUneParoisse, role])
 
   useEffect(() => {
     if (!estStaff) return
@@ -254,7 +240,7 @@ function WidgetsClient({ role, paroisseId }: { role: string; paroisseId: string 
       )}
 
       {clesDisponibles.includes('activites') && visible.activites && (
-        <ActivitesWidget activites={activites} sousTitre={sousTitreActivites} />
+        <ActivitesWidget activites={activites} sousTitre={sousTitreActivites} chargement={dashboard.isPending} erreur={dashboard.isError} />
       )}
 
       {clesDisponibles.includes('documents') && visible.documents && <DocumentsWidget documents={documents} />}

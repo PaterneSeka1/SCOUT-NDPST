@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { toast } from 'sonner'
+import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
+import { lireRapports } from '@/lib/rapports'
 import { formatMontantFCFA } from '@scout/shared'
 import { ICONES_KPI, ICONE_KPI_DEFAUT } from '@/lib/icons'
 
@@ -46,28 +47,37 @@ export default function RapportsPlateforme() {
   const [paroisses, setParoisses] = useState<LigneParoisse[]>([])
   const [chargement, setChargement] = useState(true)
 
-  useEffect(() => {
-    fetch('/api/admin/rapports')
-      .then((r) => {
-        if (!r.ok) throw new Error('Erreur serveur')
-        return r.json()
-      })
+  const [erreur, setErreur] = useState<string | null>(null)
+  const charger = useCallback(() => {
+    return fetch('/api/admin/rapports')
+      .then(lireRapports)
       .then((data) => {
         setTotaux(data.totaux)
         setKpis(data.kpis)
         setParoisses(data.paroisses)
       })
-      .catch(() => toast.error('Impossible de charger les rapports.'))
+      .catch((cause: unknown) => setErreur(cause instanceof Error ? cause.message : 'Connexion impossible. Vérifiez votre connexion puis réessayez.'))
       .finally(() => setChargement(false))
   }, [])
 
+  useEffect(() => { void charger() }, [charger])
+
   if (chargement) {
     return (
-      <div className="flex items-center justify-center py-24">
+      <div role="status" aria-label="Chargement des indicateurs" className="flex items-center justify-center py-24">
         <div className="h-8 w-8 animate-spin rounded-full border-b-2" style={{ borderColor: 'var(--cp)' }} />
       </div>
     )
   }
+
+  if (erreur || !totaux || !kpis) return (
+    <section className="space-y-4 rounded-xl border border-red-200 bg-white p-6">
+      <h1 className="text-xl font-bold">Indicateurs indisponibles</h1>
+      <p role="alert">{erreur ?? 'Les données sont indisponibles.'}</p>
+      <button type="button" onClick={() => { setChargement(true); setErreur(null); void charger() }} className="rounded-lg bg-(--cp) px-4 py-2 text-white">Réessayer</button>
+      <Link href="/login" className="ml-4 underline">Se reconnecter</Link>
+    </section>
+  )
 
   return (
     <div className="space-y-6">
@@ -84,12 +94,12 @@ export default function RapportsPlateforme() {
         {[
           {
             label: 'Paroisses actives',
-            value: `${totaux?.paroissesActives ?? 0} / ${totaux?.paroisses ?? 0}`,
+            value: `${totaux.paroissesActives} / ${totaux.paroisses}`,
             couleur: 'bg-[#1a4731]',
           },
-          { label: 'Scouts', value: totaux?.scouts ?? 0, couleur: 'bg-[#27ae60]' },
-          { label: 'Utilisateurs', value: totaux?.utilisateurs ?? 0, couleur: 'bg-[#f39c12]' },
-          { label: 'Activités', value: totaux?.activites ?? 0, couleur: 'bg-[#3498db]' },
+          { label: 'Scouts', value: totaux.scouts, couleur: 'bg-[#27ae60]' },
+          { label: 'Utilisateurs', value: totaux.utilisateurs, couleur: 'bg-[#f39c12]' },
+          { label: 'Activités', value: totaux.activites, couleur: 'bg-[#3498db]' },
         ].map(({ label, value, couleur }) => {
           const Icone = ICONES_KPI[label] ?? ICONE_KPI_DEFAUT
           return (

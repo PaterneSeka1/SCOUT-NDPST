@@ -51,7 +51,7 @@ export default async function proxy(req: NextRequest) {
     }
   }
 
-  if (chemin.startsWith('/admin') && !accesDisponible) {
+  if ((chemin.startsWith('/admin') || chemin === '/changer-mot-de-passe') && !accesDisponible) {
     const login = new URL('/login', req.url)
     login.searchParams.set('callbackUrl', chemin)
     const redirection = NextResponse.redirect(login)
@@ -121,5 +121,5 @@ function remplacerCookie(entete: string, nom: string, valeur: string): string {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/:path*'],
+  matcher: ['/admin/:path*', '/changer-mot-de-passe', '/api/:path*'],
 }

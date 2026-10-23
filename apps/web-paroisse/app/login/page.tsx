@@ -26,7 +26,7 @@ export default function LoginPage() {
       })
       const data = (await reponse.json().catch(() => ({}))) as {
         erreur?: string
-        utilisateur?: { paroisseId: string | null }
+        utilisateur?: { paroisseId: string | null; doitChangerMotDePasse?: boolean }
       }
 
       if (!reponse.ok) {
@@ -36,6 +36,9 @@ export default function LoginPage() {
         // autre plateforme, la session ouverte est refermée aussitôt.
         await fetch('/api/auth/deconnexion', { method: 'POST' })
         toast.error("Ce compte n'est rattaché à aucune paroisse : il ne peut pas accéder à cet espace.")
+      } else if (data.utilisateur.doitChangerMotDePasse) {
+        router.push('/changer-mot-de-passe')
+        router.refresh()
       } else {
         const destination = new URLSearchParams(window.location.search).get('callbackUrl')
         // Uniquement un chemin interne : jamais de redirection vers un autre site.

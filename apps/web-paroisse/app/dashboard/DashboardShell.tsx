@@ -3,7 +3,7 @@
 import { signOut } from '@/lib/session-client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ParoisseLogoImage } from '@/app/components/ParoisseLogoImage'
 import { Widgets } from '@/app/components/widgets/Widgets'
 import { NavIcon, Menu, UserCircle, LogOut, type LucideIcon } from '@/lib/icons'
@@ -158,12 +158,13 @@ function SidebarContent({
       <nav className="scrollbar-fine flex-1 overflow-y-auto px-3 py-4">
         <ul className="space-y-0.5">
           {menuItems.map((item) => {
-            const actif = pathname === item.href
+            const actif = item.href === '/dashboard' ? pathname === '/dashboard' : pathname === item.href || pathname.startsWith(`${item.href}/`)
             const Icone = item.icone
             return (
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  aria-current={actif ? 'page' : undefined}
                   onClick={onNavigate}
                   className={`snav-link flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium ${
                     actif ? 'snav-active' : ''
@@ -223,6 +224,12 @@ export function DashboardShell({
 }) {
   const pathname = usePathname()
   const [sidebarOuverte, setSidebarOuverte] = useState(false)
+  const menuMobile = useRef<HTMLDialogElement>(null)
+
+  useEffect(() => {
+    if (sidebarOuverte) menuMobile.current?.showModal()
+    else menuMobile.current?.close()
+  }, [sidebarOuverte])
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1024px)')
@@ -242,12 +249,6 @@ export function DashboardShell({
     <div className="flex h-dvh overflow-hidden bg-gray-50 print:h-auto print:overflow-visible">
 
       {/* Overlay mobile */}
-      {sidebarOuverte && (
-        <div
-          className="fixed inset-0 z-20 bg-black/50 lg:hidden"
-          onClick={() => setSidebarOuverte(false)}
-        />
-      )}
 
       {/* Sidebar desktop */}
       <aside className="hidden w-64 shrink-0 flex-col lg:flex print:hidden" style={sidebarStyle}>
@@ -255,14 +256,18 @@ export function DashboardShell({
       </aside>
 
       {/* Sidebar mobile (drawer) */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-30 flex w-72 flex-col transition-transform duration-300 lg:hidden print:hidden ${
-          sidebarOuverte ? 'translate-x-0' : '-translate-x-full'
-        }`}
+      <dialog
+        ref={menuMobile}
+        id="navigation-mobile"
+        aria-label="Navigation principale"
+        aria-modal="true"
+        onCancel={(event) => { event.preventDefault(); setSidebarOuverte(false) }}
+        className="fixed inset-y-0 left-0 m-0 hidden h-dvh max-h-none w-72 max-w-full flex-col border-0 p-0 open:flex backdrop:bg-black/50 lg:hidden print:hidden"
         style={sidebarStyle}
       >
+        <button type="button" onClick={() => setSidebarOuverte(false)} className="m-3 self-end rounded-lg border border-white/40 px-3 py-2 text-sm text-white">Fermer le menu</button>
         <SidebarContent menuItems={menuItems} {...sidebarProps} onNavigate={() => setSidebarOuverte(false)} />
-      </aside>
+      </dialog>
 
       {/* Zone principale */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden print:overflow-visible">
@@ -274,6 +279,8 @@ export function DashboardShell({
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 lg:hidden"
               onClick={() => setSidebarOuverte(true)}
               aria-label="Ouvrir le menu"
+              aria-expanded={sidebarOuverte}
+              aria-controls="navigation-mobile"
             >
               <Menu className="h-5 w-5" strokeWidth={2} />
             </button>

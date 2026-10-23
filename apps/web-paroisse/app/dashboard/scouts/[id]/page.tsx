@@ -228,12 +228,13 @@ export default function FicheScoutPage() {
               <span className="text-sm text-gray-500">{age} ans — {scout.sexe === 'MASCULIN' ? 'Garçon' : 'Fille'}</span>
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${scout.consentementImage ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
                 <Camera className="h-3 w-3" strokeWidth={2} />
-                {scout.consentementImage ? "Droit à l'image autorisé" : "Droit à l'image non autorisé"}
+                {scout.consentementImage ? "Droit à l'image : autorisation déclarée" : "Droit à l'image non autorisé"}
               </span>
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${scout.consentementSante ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
                 <Stethoscope className="h-3 w-3" strokeWidth={2} />
-                {scout.consentementSante ? 'Données de santé : consentement recueilli' : 'Données de santé : consentement à recueillir'}
+                {scout.consentementSante ? 'Données de santé : consentement déclaré' : 'Données de santé : consentement à recueillir'}
               </span>
+              <p className="w-full text-xs text-amber-800">Déclaration administrative : preuve parentale à vérifier. Ces indicateurs ne constituent pas une preuve de consentement.</p>
             </div>
             <p className="text-sm text-gray-500 mt-1">
               Né(e) le {new Date(scout.dateNaissance).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}

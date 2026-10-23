@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { confirmer } from '@/app/components/ConfirmDialog'
 import { LABELS_ROLES, ROLES_ASSIGNABLES_PAROISSE, ROLES_BRANCHE } from '@scout/shared'
 import { LABELS_BRANCHES } from '@scout/shared'
 import { PasswordInput } from '@/app/components/PasswordInput'
@@ -133,6 +134,11 @@ export default function ModifierUtilisateurPlateformePage() {
   const soumettreInfos = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validerInfos()) return
+    if ((formInfos.role !== utilisateur?.role || (!formInfos.actif && utilisateur?.actif)) && !await confirmer({
+      titre: 'Modifier les accès de ce compte ?',
+      description: 'Le changement de rôle ou la désactivation révoquera les sessions en cours. Vérifiez les accès avant de confirmer.',
+      danger: true,
+    })) return
     setSoumissionInfos(true)
     try {
       const res = await fetch(`/api/admin/utilisateurs/${id}`, {
@@ -180,6 +186,11 @@ export default function ModifierUtilisateurPlateformePage() {
   const soumettreMdp = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validerMdp()) return
+    if (!await confirmer({
+      titre: 'Réinitialiser les accès ?',
+      description: 'Les sessions actuelles seront révoquées. Remettez ce mot de passe temporaire en personne au membre : il devra le remplacer à sa prochaine connexion.',
+      labelConfirmer: 'Réinitialiser', danger: true,
+    })) return
     setSoumissionMdp(true)
     try {
       const res = await fetch(`/api/admin/utilisateurs/${id}/password`, {
@@ -238,10 +249,10 @@ export default function ModifierUtilisateurPlateformePage() {
 
           {/* Paroisse — lecture seule, non réassignable depuis cette page */}
           <div>
-            <label className={CLS_LABEL}>Paroisse</label>
+            <label htmlFor="paroisse" className={CLS_LABEL}>Paroisse</label>
             <input
               type="text"
-              value={utilisateur.paroisse.nom}
+              id="paroisse" value={utilisateur.paroisse.nom}
               disabled
               className="w-full cursor-not-allowed rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500"
             />
@@ -250,11 +261,11 @@ export default function ModifierUtilisateurPlateformePage() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className={CLS_LABEL}>
+              <label htmlFor="nom" className={CLS_LABEL}>
                 Nom <span className="text-red-500">*</span>
               </label>
               <input
-                id="nom"
+                id="nom" aria-invalid={Boolean(erreursInfos.nom)} aria-describedby={erreursInfos.nom ? 'nom-erreur' : undefined}
                 name="nom"
                 type="text"
                 value={formInfos.nom}
@@ -262,14 +273,14 @@ export default function ModifierUtilisateurPlateformePage() {
                 placeholder="Nom de famille"
                 className={erreursInfos.nom ? CLS_INPUT_ERR : CLS_INPUT}
               />
-              {erreursInfos.nom && <p className="mt-1 text-xs text-red-600">{erreursInfos.nom}</p>}
+              {erreursInfos.nom && <p id="nom-erreur" role="alert" className="mt-1 text-xs text-red-600">{erreursInfos.nom}</p>}
             </div>
             <div>
-              <label className={CLS_LABEL}>
+              <label htmlFor="prenom" className={CLS_LABEL}>
                 Prénom <span className="text-red-500">*</span>
               </label>
               <input
-                id="prenom"
+                id="prenom" aria-invalid={Boolean(erreursInfos.prenom)} aria-describedby={erreursInfos.prenom ? 'prenom-erreur' : undefined}
                 name="prenom"
                 type="text"
                 value={formInfos.prenom}
@@ -277,12 +288,12 @@ export default function ModifierUtilisateurPlateformePage() {
                 placeholder="Prénom"
                 className={erreursInfos.prenom ? CLS_INPUT_ERR : CLS_INPUT}
               />
-              {erreursInfos.prenom && <p className="mt-1 text-xs text-red-600">{erreursInfos.prenom}</p>}
+              {erreursInfos.prenom && <p id="prenom-erreur" role="alert" className="mt-1 text-xs text-red-600">{erreursInfos.prenom}</p>}
             </div>
           </div>
 
           <div>
-            <label className={CLS_LABEL}>
+            <label htmlFor="email" className={CLS_LABEL}>
               Email <span className="text-xs font-normal text-gray-400">(optionnel)</span>
             </label>
             <input
@@ -297,11 +308,11 @@ export default function ModifierUtilisateurPlateformePage() {
           </div>
 
           <div>
-            <label className={CLS_LABEL}>
+            <label htmlFor="role" className={CLS_LABEL}>
               Rôle <span className="text-red-500">*</span>
             </label>
             <select
-              id="role"
+              id="role" aria-invalid={Boolean(erreursInfos.role)} aria-describedby={erreursInfos.role ? 'role-erreur' : undefined}
               name="role"
               value={formInfos.role}
               onChange={handleInfosChange}
@@ -314,17 +325,17 @@ export default function ModifierUtilisateurPlateformePage() {
                 </option>
               ))}
             </select>
-            {erreursInfos.role && <p className="mt-1 text-xs text-red-600">{erreursInfos.role}</p>}
+            {erreursInfos.role && <p id="role-erreur" role="alert" className="mt-1 text-xs text-red-600">{erreursInfos.role}</p>}
           </div>
 
           {/* Branche — requise pour l'encadrement de branche paroissial */}
           {estBranche && (
             <div>
-              <label className={CLS_LABEL}>
+              <label htmlFor="brancheType" className={CLS_LABEL}>
                 Branche <span className="text-red-500">*</span>
               </label>
               <select
-                id="brancheType"
+                id="brancheType" aria-invalid={Boolean(erreursInfos.brancheType)} aria-describedby={erreursInfos.brancheType ? 'brancheType-erreur' : undefined}
                 name="brancheType"
                 value={formInfos.brancheType}
                 onChange={handleInfosChange}
@@ -337,7 +348,7 @@ export default function ModifierUtilisateurPlateformePage() {
                   </option>
                 ))}
               </select>
-              {erreursInfos.brancheType && <p className="mt-1 text-xs text-red-600">{erreursInfos.brancheType}</p>}
+              {erreursInfos.brancheType && <p id="brancheType-erreur" role="alert" className="mt-1 text-xs text-red-600">{erreursInfos.brancheType}</p>}
             </div>
           )}
 
@@ -375,32 +386,32 @@ export default function ModifierUtilisateurPlateformePage() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className={CLS_LABEL}>
-                Nouveau mot de passe <span className="text-red-500">*</span>
+              <label htmlFor="motDePasse" className={CLS_LABEL}>
+                Mot de passe temporaire <span className="text-red-500">*</span>
               </label>
               <PasswordInput
-                id="motDePasse"
+                id="motDePasse" aria-invalid={Boolean(erreursMdp.motDePasse)} aria-describedby={erreursMdp.motDePasse ? 'motDePasse-erreur' : undefined}
                 name="motDePasse"
                 value={formMdp.motDePasse}
                 onChange={handleMdpChange}
                 placeholder={REGLE_MOT_DE_PASSE}
                 className={erreursMdp.motDePasse ? CLS_INPUT_ERR : CLS_INPUT}
               />
-              {erreursMdp.motDePasse && <p className="mt-1 text-xs text-red-600">{erreursMdp.motDePasse}</p>}
+              {erreursMdp.motDePasse && <p id="motDePasse-erreur" role="alert" className="mt-1 text-xs text-red-600">{erreursMdp.motDePasse}</p>}
             </div>
             <div>
-              <label className={CLS_LABEL}>
+              <label htmlFor="confirmation" className={CLS_LABEL}>
                 Confirmation <span className="text-red-500">*</span>
               </label>
               <PasswordInput
-                id="confirmation"
+                id="confirmation" aria-invalid={Boolean(erreursMdp.confirmation)} aria-describedby={erreursMdp.confirmation ? 'confirmation-erreur' : undefined}
                 name="confirmation"
                 value={formMdp.confirmation}
                 onChange={handleMdpChange}
                 placeholder="Répéter le mot de passe"
                 className={erreursMdp.confirmation ? CLS_INPUT_ERR : CLS_INPUT}
               />
-              {erreursMdp.confirmation && <p className="mt-1 text-xs text-red-600">{erreursMdp.confirmation}</p>}
+              {erreursMdp.confirmation && <p id="confirmation-erreur" role="alert" className="mt-1 text-xs text-red-600">{erreursMdp.confirmation}</p>}
             </div>
           </div>
 

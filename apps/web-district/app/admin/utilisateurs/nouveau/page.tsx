@@ -1,13 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_ROLES, ROLES_ASSIGNABLES_PAROISSE, ROLES_BRANCHE } from '@scout/shared'
 import { LABELS_BRANCHES } from '@scout/shared'
-import { PasswordInput } from '@/app/components/PasswordInput'
-import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@scout/shared'
 import { BackLink } from '@/app/components/ui/BackLink'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
@@ -33,8 +30,6 @@ interface FormData {
   telephone: string
   role: string
   brancheType: string
-  motDePasse: string
-  confirmation: string
 }
 
 interface FormErrors {
@@ -45,14 +40,12 @@ interface FormErrors {
   telephone?: string
   role?: string
   brancheType?: string
-  motDePasse?: string
-  confirmation?: string
 }
 
 const ROLES_LISTE = ROLES_ASSIGNABLES_PAROISSE
 
 export default function NouvelUtilisateurPlateformePage() {
-  const router = useRouter()
+  const [creation, setCreation] = useState<{ id: string; motDePasseTemporaire: string } | null>(null)
 
   const [paroisses, setParoisses] = useState<ParoisseOption[]>([])
   const [chargementParoisses, setChargementParoisses] = useState(true)
@@ -60,7 +53,7 @@ export default function NouvelUtilisateurPlateformePage() {
 
   const [form, setForm] = useState<FormData>({
     paroisseId: '', nom: '', prenom: '', email: '', matricule: '', telephone: '', role: '',
-    brancheType: '', motDePasse: '', confirmation: '',
+    brancheType: '',
   })
   const [erreurs, setErreurs] = useState<FormErrors>({})
 
@@ -96,10 +89,6 @@ export default function NouvelUtilisateurPlateformePage() {
     } else {
       if (!form.matricule.trim()) e.matricule = 'Le matricule est requis'
     }
-    if (!form.motDePasse) e.motDePasse = 'Le mot de passe est requis'
-    else if (!motDePasseValide(form.motDePasse)) e.motDePasse = REGLE_MOT_DE_PASSE
-    if (!form.confirmation) e.confirmation = 'La confirmation est requise'
-    else if (form.motDePasse !== form.confirmation) e.confirmation = 'Les mots de passe ne correspondent pas'
     setErreurs(e)
     return Object.keys(e).length === 0
   }
@@ -121,19 +110,30 @@ export default function NouvelUtilisateurPlateformePage() {
           telephone: form.telephone.trim() || undefined,
           role: form.role,
           brancheType: estBranche && form.brancheType ? form.brancheType : null,
-          password: form.motDePasse,
+
         }),
       })
       const data = await res.json()
       if (!res.ok) { toast.error(data.erreur ?? 'Erreur serveur'); return }
       toast.success('Utilisateur créé.')
-      router.push(`/admin/utilisateurs/${data.id}`)
+      setCreation(data)
     } catch {
       toast.error('Erreur lors de la création')
     } finally {
       setSoumission(false)
     }
   }
+
+  if (creation) return (
+    <section className="max-w-2xl space-y-4 rounded-xl border border-gray-200 bg-white p-6" aria-labelledby="creation-titre">
+      <h1 id="creation-titre" className="text-xl font-bold">Compte créé</h1>
+      <p>Remettez ce mot de passe temporaire en personne au membre. Il ne sera plus affiché après avoir quitté cette page.</p>
+      <label htmlFor="secret-temporaire" className="block font-medium">Mot de passe temporaire</label>
+      <input id="secret-temporaire" readOnly value={creation.motDePasseTemporaire} autoComplete="off" className="w-full rounded-lg border p-3 font-mono" />
+      <p className="text-sm text-gray-600">Le membre devra définir son mot de passe personnel à sa première connexion.</p>
+      <Link href="/admin/utilisateurs" className="inline-block rounded-lg bg-(--cp) px-4 py-2 text-white">Terminer</Link>
+    </section>
+  )
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -147,9 +147,9 @@ export default function NouvelUtilisateurPlateformePage() {
 
           {/* Paroisse */}
           <div>
-            <label className={CLS_LABEL}>Paroisse <span className="text-red-500">*</span></label>
+            <label htmlFor="paroisseId" className={CLS_LABEL}>Paroisse <span className="text-red-500">*</span></label>
             <select
-              id="paroisseId" name="paroisseId" value={form.paroisseId} onChange={handleChange}
+              id="paroisseId" aria-invalid={Boolean(erreurs.paroisseId)} aria-describedby={erreurs.paroisseId ? 'paroisseId-erreur' : undefined} name="paroisseId" value={form.paroisseId} onChange={handleChange}
               disabled={chargementParoisses}
               className={erreurs.paroisseId ? CLS_SELECT_ERR : CLS_SELECT}
             >
@@ -158,98 +158,81 @@ export default function NouvelUtilisateurPlateformePage() {
                 <option key={p.id} value={p.id}>{p.nom}{!p.actif ? ' (désactivée)' : ''}</option>
               ))}
             </select>
-            {erreurs.paroisseId && <p className="mt-1 text-xs text-red-600">{erreurs.paroisseId}</p>}
+            {erreurs.paroisseId && <p id="paroisseId-erreur" role="alert" className="mt-1 text-xs text-red-600">{erreurs.paroisseId}</p>}
           </div>
 
           {/* Nom + Prénom */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className={CLS_LABEL}>Nom <span className="text-red-500">*</span></label>
-              <input id="nom" name="nom" type="text" value={form.nom} onChange={handleChange} placeholder="Nom de famille"
+              <label htmlFor="nom" className={CLS_LABEL}>Nom <span className="text-red-500">*</span></label>
+              <input id="nom" aria-invalid={Boolean(erreurs.nom)} aria-describedby={erreurs.nom ? 'nom-erreur' : undefined} name="nom" type="text" value={form.nom} onChange={handleChange} placeholder="Nom de famille"
                 className={erreurs.nom ? CLS_INPUT_ERR : CLS_INPUT} />
-              {erreurs.nom && <p className="mt-1 text-xs text-red-600">{erreurs.nom}</p>}
+              {erreurs.nom && <p id="nom-erreur" role="alert" className="mt-1 text-xs text-red-600">{erreurs.nom}</p>}
             </div>
             <div>
-              <label className={CLS_LABEL}>Prénom <span className="text-red-500">*</span></label>
-              <input id="prenom" name="prenom" type="text" value={form.prenom} onChange={handleChange} placeholder="Prénom"
+              <label htmlFor="prenom" className={CLS_LABEL}>Prénom <span className="text-red-500">*</span></label>
+              <input id="prenom" aria-invalid={Boolean(erreurs.prenom)} aria-describedby={erreurs.prenom ? 'prenom-erreur' : undefined} name="prenom" type="text" value={form.prenom} onChange={handleChange} placeholder="Prénom"
                 className={erreurs.prenom ? CLS_INPUT_ERR : CLS_INPUT} />
-              {erreurs.prenom && <p className="mt-1 text-xs text-red-600">{erreurs.prenom}</p>}
+              {erreurs.prenom && <p id="prenom-erreur" role="alert" className="mt-1 text-xs text-red-600">{erreurs.prenom}</p>}
             </div>
           </div>
 
           {/* Rôle */}
           <div>
-            <label className={CLS_LABEL}>Rôle <span className="text-red-500">*</span></label>
-            <select id="role" name="role" value={form.role} onChange={handleChange}
+            <label htmlFor="role" className={CLS_LABEL}>Rôle <span className="text-red-500">*</span></label>
+            <select id="role" aria-invalid={Boolean(erreurs.role)} aria-describedby={erreurs.role ? 'role-erreur' : undefined} name="role" value={form.role} onChange={handleChange}
               className={erreurs.role ? CLS_SELECT_ERR : CLS_SELECT}>
               <option value="">Sélectionner un rôle</option>
               {ROLES_LISTE.map((r) => <option key={r} value={r}>{LABELS_ROLES[r]}</option>)}
             </select>
-            {erreurs.role && <p className="mt-1 text-xs text-red-600">{erreurs.role}</p>}
+            {erreurs.role && <p id="role-erreur" role="alert" className="mt-1 text-xs text-red-600">{erreurs.role}</p>}
           </div>
 
           {/* Branche — requise pour l'encadrement de branche paroissial */}
           {estBranche && (
             <div>
-              <label className={CLS_LABEL}>Branche <span className="text-red-500">*</span></label>
-              <select id="brancheType" name="brancheType" value={form.brancheType} onChange={handleChange}
+              <label htmlFor="brancheType" className={CLS_LABEL}>Branche <span className="text-red-500">*</span></label>
+              <select id="brancheType" aria-invalid={Boolean(erreurs.brancheType)} aria-describedby={erreurs.brancheType ? 'brancheType-erreur' : undefined} name="brancheType" value={form.brancheType} onChange={handleChange}
                 className={erreurs.brancheType ? CLS_SELECT_ERR : CLS_SELECT}>
                 <option value="">Sélectionner une branche</option>
                 {Object.entries(LABELS_BRANCHES).map(([valeur, libelle]) => (
                   <option key={valeur} value={valeur}>{libelle}</option>
                 ))}
               </select>
-              {erreurs.brancheType && <p className="mt-1 text-xs text-red-600">{erreurs.brancheType}</p>}
+              {erreurs.brancheType && <p id="brancheType-erreur" role="alert" className="mt-1 text-xs text-red-600">{erreurs.brancheType}</p>}
             </div>
           )}
 
           {/* Matricule — masqué pour les parents */}
           {form.role && !estParent && (
             <div>
-              <label className={CLS_LABEL}>Matricule <span className="text-red-500">*</span></label>
-              <input id="matricule" name="matricule" type="text" value={form.matricule} onChange={handleChange}
+              <label htmlFor="matricule" className={CLS_LABEL}>Matricule <span className="text-red-500">*</span></label>
+              <input id="matricule" aria-invalid={Boolean(erreurs.matricule)} aria-describedby={erreurs.matricule ? 'matricule-erreur' : undefined} name="matricule" type="text" value={form.matricule} onChange={handleChange}
                 placeholder="Ex : 0545247O" className={`${erreurs.matricule ? CLS_INPUT_ERR : CLS_INPUT} font-mono`} />
               <p className="mt-1 text-xs text-gray-400">Fourni par le mouvement scout</p>
-              {erreurs.matricule && <p className="mt-1 text-xs text-red-600">{erreurs.matricule}</p>}
+              {erreurs.matricule && <p id="matricule-erreur" role="alert" className="mt-1 text-xs text-red-600">{erreurs.matricule}</p>}
             </div>
           )}
 
           {/* Téléphone */}
           <div>
-            <label className={CLS_LABEL}>
+            <label htmlFor="telephone" className={CLS_LABEL}>
               Téléphone {estParent ? <span className="text-red-500">*</span> : <span className="text-xs text-gray-400 font-normal">(optionnel)</span>}
             </label>
-            <input id="telephone" name="telephone" type="tel" value={form.telephone} onChange={handleChange}
+            <input id="telephone" aria-invalid={Boolean(erreurs.telephone)} aria-describedby={erreurs.telephone ? 'telephone-erreur' : undefined} name="telephone" type="tel" value={form.telephone} onChange={handleChange}
               placeholder="07 00 00 00 00" className={erreurs.telephone ? CLS_INPUT_ERR : CLS_INPUT} />
             {estParent && <p className="mt-1 text-xs text-gray-400">Le parent se connecte avec ce numéro</p>}
-            {erreurs.telephone && <p className="mt-1 text-xs text-red-600">{erreurs.telephone}</p>}
+            {erreurs.telephone && <p id="telephone-erreur" role="alert" className="mt-1 text-xs text-red-600">{erreurs.telephone}</p>}
           </div>
 
           {/* Email */}
           <div>
-            <label className={CLS_LABEL}>Email <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
+            <label htmlFor="email" className={CLS_LABEL}>Email <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
             <input id="email" name="email" type="email" value={form.email} onChange={handleChange}
               placeholder="exemple@email.com" className={CLS_INPUT} />
           </div>
 
-          <div className="border-t border-gray-100 pt-4 space-y-4">
-            <h3 className="text-sm font-semibold text-gray-700">Mot de passe</h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className={CLS_LABEL}>Mot de passe <span className="text-red-500">*</span></label>
-                <PasswordInput id="motDePasse" name="motDePasse" value={form.motDePasse} onChange={handleChange}
-                  placeholder={REGLE_MOT_DE_PASSE} className={erreurs.motDePasse ? CLS_INPUT_ERR : CLS_INPUT} />
-                {erreurs.motDePasse && <p className="mt-1 text-xs text-red-600">{erreurs.motDePasse}</p>}
-              </div>
-              <div>
-                <label className={CLS_LABEL}>Confirmation <span className="text-red-500">*</span></label>
-                <PasswordInput id="confirmation" name="confirmation" value={form.confirmation} onChange={handleChange}
-                  placeholder="Répéter le mot de passe" className={erreurs.confirmation ? CLS_INPUT_ERR : CLS_INPUT} />
-                {erreurs.confirmation && <p className="mt-1 text-xs text-red-600">{erreurs.confirmation}</p>}
-              </div>
-            </div>
-          </div>
+          <p className="text-sm text-gray-600">Un mot de passe temporaire sera généré. Le membre devra le remplacer à sa première connexion.</p>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={soumission}

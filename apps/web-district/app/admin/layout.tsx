@@ -12,6 +12,7 @@ import { AdminShell } from './AdminShell'
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession()
   if (!session?.user) redirect('/login')
+  if (session.user.doitChangerMotDePasse) redirect('/changer-mot-de-passe')
   if (session.user.role !== 'ADMIN_PLATEFORME') redirect('/login?refus=1')
 
   const [jar, identite] = await Promise.all([cookies(), getIdentitePlateforme()])

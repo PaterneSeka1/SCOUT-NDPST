@@ -47,7 +47,7 @@ export default async function proxy(req: NextRequest) {
     }
   }
 
-  if (chemin.startsWith('/dashboard') && !accesDisponible) {
+  if ((chemin.startsWith('/dashboard') || chemin === '/changer-mot-de-passe') && !accesDisponible) {
     const login = new URL('/login', req.url)
     login.searchParams.set('callbackUrl', chemin)
     const redirection = NextResponse.redirect(login)
@@ -98,5 +98,5 @@ function remplacerCookie(entete: string, nom: string, valeur: string): string {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/api/:path*'],
+  matcher: ['/dashboard/:path*', '/changer-mot-de-passe', '/api/:path*'],
 }

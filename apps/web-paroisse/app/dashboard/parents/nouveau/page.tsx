@@ -1,13 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useCreerUtilisateur } from '@/hooks/useUtilisateurs'
-import { PasswordInput } from '@/app/components/PasswordInput'
 import { SelecteurEnfants } from '@/app/components/SelecteurEnfants'
-import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@scout/shared'
 import { BackLink } from '@/app/components/ui/BackLink'
 
 const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
@@ -19,8 +16,6 @@ interface FormData {
   prenom: string
   email: string
   telephone: string
-  motDePasse: string
-  confirmation: string
   scoutIds: string[]
 }
 
@@ -28,16 +23,14 @@ interface FormErrors {
   nom?: string
   prenom?: string
   telephone?: string
-  motDePasse?: string
-  confirmation?: string
 }
 
 export default function NouveauParentPage() {
-  const router = useRouter()
-  const { mutateAsync, isPending } = useCreerUtilisateur()
+  const [secret, setSecret] = useState<string | null>(null)
+  const { mutateAsync, isPending, reset } = useCreerUtilisateur()
 
   const [form, setForm] = useState<FormData>({
-    nom: '', prenom: '', email: '', telephone: '', motDePasse: '', confirmation: '', scoutIds: [],
+    nom: '', prenom: '', email: '', telephone: '', scoutIds: [],
   })
   const [erreurs, setErreurs] = useState<FormErrors>({})
 
@@ -52,10 +45,6 @@ export default function NouveauParentPage() {
     if (!form.nom.trim()) e.nom = 'Le nom est requis'
     if (!form.prenom.trim()) e.prenom = 'Le prénom est requis'
     if (!form.telephone.trim()) e.telephone = 'Le numéro de téléphone est requis'
-    if (!form.motDePasse) e.motDePasse = 'Le mot de passe est requis'
-    else if (!motDePasseValide(form.motDePasse)) e.motDePasse = REGLE_MOT_DE_PASSE
-    if (!form.confirmation) e.confirmation = 'La confirmation est requise'
-    else if (form.motDePasse !== form.confirmation) e.confirmation = 'Les mots de passe ne correspondent pas'
     setErreurs(e)
     return Object.keys(e).length === 0
   }
@@ -64,21 +53,31 @@ export default function NouveauParentPage() {
     e.preventDefault()
     if (!valider()) return
     try {
-      await mutateAsync({
+      const resultat = await mutateAsync({
         nom: form.nom.trim(),
         prenom: form.prenom.trim(),
         email: form.email.trim() || null,
         matricule: null,
         telephone: form.telephone.trim(),
         role: 'PARENT',
-        password: form.motDePasse,
         scoutIds: form.scoutIds,
       })
-      router.push('/dashboard/parents')
+      setSecret(resultat.motDePasseTemporaire)
+      reset()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Une erreur est survenue')
     }
   }
+
+  if (secret) return (
+    <section className="space-y-4 rounded-xl border bg-white p-6">
+      <h1 className="text-xl font-bold">Compte parent créé</h1>
+      <p>Remettez ce mot de passe temporaire en personne. Il ne sera plus affiché après avoir quitté cette page et devra être remplacé à la première connexion.</p>
+      <label htmlFor="secret-parent" className="block">Mot de passe temporaire</label>
+      <input id="secret-parent" readOnly value={secret} autoComplete="off" className="w-full rounded border p-3 font-mono" />
+      <Link href="/dashboard/parents" className="inline-block underline">Terminer</Link>
+    </section>
+  )
 
   return (
     <div className="space-y-6">
@@ -127,25 +126,6 @@ export default function NouveauParentPage() {
               scoutIds={form.scoutIds}
               onChange={(scoutIds) => setForm((p) => ({ ...p, scoutIds }))}
             />
-          </div>
-
-          <div className="border-t border-gray-100 pt-4 space-y-4">
-            <h3 className="text-sm font-semibold text-gray-700">Mot de passe</h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className={CLS_LABEL}>Mot de passe <span className="text-red-500">*</span></label>
-                <PasswordInput id="motDePasse" name="motDePasse" value={form.motDePasse} onChange={handleChange}
-                  placeholder={REGLE_MOT_DE_PASSE} className={erreurs.motDePasse ? CLS_INPUT_ERR : CLS_INPUT} />
-                {erreurs.motDePasse && <p className="mt-1 text-xs text-red-600">{erreurs.motDePasse}</p>}
-              </div>
-              <div>
-                <label className={CLS_LABEL}>Confirmation <span className="text-red-500">*</span></label>
-                <PasswordInput id="confirmation" name="confirmation" value={form.confirmation} onChange={handleChange}
-                  placeholder="Répéter le mot de passe" className={erreurs.confirmation ? CLS_INPUT_ERR : CLS_INPUT} />
-                {erreurs.confirmation && <p className="mt-1 text-xs text-red-600">{erreurs.confirmation}</p>}
-              </div>
-            </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">

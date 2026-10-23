@@ -4,8 +4,6 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@scout/shared'
-import { PasswordInput } from '@/app/components/PasswordInput'
 import { confirmer } from '@/app/components/ConfirmDialog'
 import { COULEURS_ROLES, LABELS_ROLES, ROLES_BRANCHE, ROLES_TOUT_STAFF, libelleRoleAvecFonction } from '@scout/shared'
 import { BackLink } from '@/app/components/ui/BackLink'
@@ -81,10 +79,9 @@ interface FormChefGroupe {
   matricule: string
   telephone: string
   email: string
-  motDePasse: string
 }
 
-const CHEF_VIDE: FormChefGroupe = { nom: '', prenom: '', matricule: '', telephone: '', email: '', motDePasse: '' }
+const CHEF_VIDE: FormChefGroupe = { nom: '', prenom: '', matricule: '', telephone: '', email: '' }
 const OPTIONS_MEMBRES_PAR_PAGE = [10, 20, 50]
 // Espaces parent et scout hors périmètre V1 : filtres masqués.
 const PROFILS_HORS_V1 = ['parents', 'scouts']
@@ -109,6 +106,7 @@ function normaliser(valeur: string): string {
 export default function FicheParoissePage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
+  const [secretChef, setSecretChef] = useState<string | null>(null)
   const [paroisse, setParoisse] = useState<Paroisse | null>(null)
   const [chargement, setChargement] = useState(true)
   const [modeEdition, setModeEdition] = useState(false)
@@ -248,12 +246,8 @@ export default function FicheParoissePage() {
 
   const handleCreerChef = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formChef.nom.trim() || !formChef.prenom.trim() || !formChef.matricule.trim() || !formChef.motDePasse) {
-      toast.error('Le nom, le prénom, le matricule et le mot de passe sont requis.')
-      return
-    }
-    if (!motDePasseValide(formChef.motDePasse)) {
-      toast.error(REGLE_MOT_DE_PASSE)
+    if (!formChef.nom.trim() || !formChef.prenom.trim() || !formChef.matricule.trim()) {
+      toast.error('Le nom, le prénom et le matricule sont requis.')
       return
     }
     setSoumissionChef(true)
@@ -267,7 +261,6 @@ export default function FicheParoissePage() {
           matricule: formChef.matricule,
           telephone: formChef.telephone || undefined,
           email: formChef.email || undefined,
-          password: formChef.motDePasse,
         }),
       })
       const data = await res.json()
@@ -275,7 +268,8 @@ export default function FicheParoissePage() {
         toast.error(data.erreur ?? 'Erreur serveur')
         return
       }
-      toast.success('Chef de Groupe créé. Communiquez-lui ses identifiants.')
+      setSecretChef(data.motDePasseTemporaire)
+      toast.success('Chef de Groupe créé.')
       setFormChef(CHEF_VIDE)
       setAfficherFormChef(false)
       charger()
@@ -474,58 +468,61 @@ export default function FicheParoissePage() {
             </div>
           )}
 
+          {secretChef && (
+            <section className="mt-4 space-y-3 rounded-lg border p-4" aria-labelledby="secret-chef-titre">
+              <h3 id="secret-chef-titre" className="font-semibold">Compte du Chef de Groupe créé</h3>
+              <p className="text-sm">Remettez ce mot de passe temporaire en personne. Il devra être remplacé à la première connexion et ne sera plus affiché après fermeture.</p>
+              <label htmlFor="secret-chef" className="block text-sm">Mot de passe temporaire</label>
+              <input id="secret-chef" readOnly value={secretChef} autoComplete="off" className="w-full rounded-lg border p-3 font-mono" />
+              <button type="button" onClick={() => setSecretChef(null)} className="rounded-lg bg-(--cp) px-4 py-2 text-white">Fermer</button>
+            </section>
+          )}
+
           {afficherFormChef && (
             <form onSubmit={handleCreerChef} className="mt-5 border-t border-gray-100 pt-5">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className={CLS_LABEL}>Prénom *</label>
-                  <input
+                  <label htmlFor="chef-prenom" className={CLS_LABEL}>Prénom *</label>
+                  <input id="chef-prenom"
                     className={CLS_INPUT}
                     value={formChef.prenom}
                     onChange={(e) => setFormChef({ ...formChef, prenom: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className={CLS_LABEL}>Nom *</label>
-                  <input
+                  <label htmlFor="chef-nom" className={CLS_LABEL}>Nom *</label>
+                  <input id="chef-nom"
                     className={CLS_INPUT}
                     value={formChef.nom}
                     onChange={(e) => setFormChef({ ...formChef, nom: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className={CLS_LABEL}>Matricule *</label>
-                  <input
+                  <label htmlFor="chef-matricule" className={CLS_LABEL}>Matricule *</label>
+                  <input id="chef-matricule"
                     className={CLS_INPUT}
                     value={formChef.matricule}
                     onChange={(e) => setFormChef({ ...formChef, matricule: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className={CLS_LABEL}>Téléphone</label>
-                  <input
+                  <label htmlFor="chef-telephone" className={CLS_LABEL}>Téléphone</label>
+                  <input id="chef-telephone"
                     className={CLS_INPUT}
                     value={formChef.telephone}
                     onChange={(e) => setFormChef({ ...formChef, telephone: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className={CLS_LABEL}>E-mail</label>
-                  <input
+                  <label htmlFor="chef-email" className={CLS_LABEL}>E-mail</label>
+                  <input id="chef-email"
                     type="email"
                     className={CLS_INPUT}
                     value={formChef.email}
                     onChange={(e) => setFormChef({ ...formChef, email: e.target.value })}
                   />
                 </div>
-                <div>
-                  <label className={CLS_LABEL}>Mot de passe temporaire *</label>
-                  <PasswordInput
-                    className={CLS_INPUT}
-                    value={formChef.motDePasse}
-                    onChange={(e) => setFormChef({ ...formChef, motDePasse: e.target.value })}
-                  />
-                </div>
+
               </div>
               <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:justify-end">
                 <button
@@ -569,8 +566,8 @@ export default function FicheParoissePage() {
             <form onSubmit={handleSubmit} className="mt-5 space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className={CLS_LABEL}>Nom *</label>
-                  <input
+                  <label htmlFor="chef-nom" className={CLS_LABEL}>Nom *</label>
+                  <input id="chef-nom"
                     className={CLS_INPUT}
                     value={form.nom}
                     onChange={(e) => setForm({ ...form, nom: e.target.value })}
@@ -620,16 +617,16 @@ export default function FicheParoissePage() {
                   />
                 </div>
                 <div>
-                  <label className={CLS_LABEL}>Téléphone</label>
-                  <input
+                  <label htmlFor="chef-telephone" className={CLS_LABEL}>Téléphone</label>
+                  <input id="chef-telephone"
                     className={CLS_INPUT}
                     value={form.telephone}
                     onChange={(e) => setForm({ ...form, telephone: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className={CLS_LABEL}>E-mail</label>
-                  <input
+                  <label htmlFor="chef-email" className={CLS_LABEL}>E-mail</label>
+                  <input id="chef-email"
                     type="email"
                     className={CLS_INPUT}
                     value={form.email}

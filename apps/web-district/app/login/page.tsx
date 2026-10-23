@@ -34,7 +34,7 @@ export default function LoginPage() {
       })
       const data = (await reponse.json().catch(() => ({}))) as {
         erreur?: string
-        utilisateur?: { role: string }
+        utilisateur?: { role: string; doitChangerMotDePasse?: boolean }
       }
 
       if (!reponse.ok) {
@@ -44,6 +44,9 @@ export default function LoginPage() {
         // ouverte ici est refermée aussitôt.
         await fetch('/api/auth/deconnexion', { method: 'POST' })
         toast.error('Accès réservé aux administrateurs de la plateforme.')
+      } else if (data.utilisateur.doitChangerMotDePasse) {
+        router.push('/changer-mot-de-passe')
+        router.refresh()
       } else {
         const destination = new URLSearchParams(window.location.search).get('callbackUrl')
         // Uniquement un chemin interne : jamais de redirection vers un autre site.

@@ -18,6 +18,7 @@ import { DashboardShell } from './DashboardShell'
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession()
   if (!session?.user) redirect('/login')
+  if (session.user.doitChangerMotDePasse) redirect('/changer-mot-de-passe')
   // Frontend purement paroissial : un compte sans paroisse (administration
   // plateforme) relève d'une autre plateforme.
   const paroisseId = session.user.paroisseId

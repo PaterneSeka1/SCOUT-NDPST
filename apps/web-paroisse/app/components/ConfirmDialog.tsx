@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface DemandeConfirmation {
   titre: string
@@ -43,12 +43,14 @@ export function confirmer(options: {
   danger?: boolean
 }): Promise<boolean> {
   return new Promise((resolve) => {
+    demandeActuelle?.resolve(false)
     demandeActuelle = { ...options, resolve }
     notifier()
   })
 }
 
 export function ConfirmDialogHost() {
+  const dialogue = useRef<HTMLDialogElement>(null)
   const [demande, setDemande] = useState<DemandeConfirmation | null>(null)
 
   useEffect(() => {
@@ -72,28 +74,39 @@ export function ConfirmDialogHost() {
 
   useEffect(() => {
     if (!demande) return
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') repondre(false)
+    const element = dialogue.current
+    const origine = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    element?.showModal()
+    return () => {
+      element?.close()
+      origine?.focus()
     }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
   }, [demande, repondre])
 
   if (!demande) return null
 
   return (
-    <div
-      className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/50"
-      onClick={() => repondre(false)}
-      role="presentation"
+    <dialog
+      ref={dialogue}
+      className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-md border-0 rounded-xl p-0 bg-transparent backdrop:bg-black/50"
+      onCancel={(event) => { event.preventDefault(); repondre(false) }}
+      onKeyDown={(event) => {
+        if (event.key !== 'Tab') return
+        const boutons = dialogue.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')
+        if (!boutons?.length) return
+        const premier = boutons[0]
+        const dernier = boutons[boutons.length - 1]
+        if (event.shiftKey && document.activeElement === premier) { event.preventDefault(); dernier.focus() }
+        else if (!event.shiftKey && document.activeElement === dernier) { event.preventDefault(); premier.focus() }
+      }}
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="confirm-dialog-titre"
+      aria-describedby="confirm-dialog-description"
     >
       <div
         className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4"
         onClick={(e) => e.stopPropagation()}
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="confirm-dialog-titre"
-        aria-describedby="confirm-dialog-description"
       >
         <h2 id="confirm-dialog-titre" className="text-lg font-bold text-gray-900">
           {demande.titre}
@@ -104,6 +117,7 @@ export function ConfirmDialogHost() {
         <div className="flex flex-col sm:flex-row sm:justify-end gap-3 pt-2">
           <button
             type="button"
+            autoFocus
             onClick={() => repondre(false)}
             className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
           >
@@ -112,7 +126,6 @@ export function ConfirmDialogHost() {
           <button
             type="button"
             onClick={() => repondre(true)}
-            autoFocus
             className={`rounded-lg px-4 py-2 text-sm font-bold text-white transition ${
               demande.danger ? 'bg-red-600 hover:bg-red-700' : 'hover:brightness-110'
             }`}
@@ -122,6 +135,6 @@ export function ConfirmDialogHost() {
           </button>
         </div>
       </div>
-    </div>
+    </dialog>
   )
 }
