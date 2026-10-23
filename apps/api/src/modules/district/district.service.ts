@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { hash } from 'bcryptjs'
 import {
   BrancheTypeSchema,
@@ -15,6 +15,7 @@ import { PerimetreService, type ParoisseDuDistrict } from '../../common/perimetr
 import { paroisseIdRequise } from '../../common/paroisse'
 import type { UtilisateurSession } from '../../common/types'
 import { AuthService } from '../../auth/auth.service'
+import { historiserAffectation, verrouillerDistrict, motifAffectation } from './affectations'
 
 const LIMITE_MAX_PAGE = 100
 
@@ -25,6 +26,7 @@ export interface CorpsAffectation {
   role?: unknown
   fonction?: unknown
   brancheType?: unknown
+  motif?: unknown
 }
 
 export interface FiltresEquipe {
@@ -569,14 +571,26 @@ export class DistrictService {
     const brancheTypeValeur = role === 'ASSISTANT_DISTRICT' && brancheType ? (brancheType as BrancheType) : null
     const fonctionValeur = role === 'ASSISTANT_DISTRICT' && !brancheTypeValeur ? fonction?.trim() || null : null
 
-    const affecte = await this.prisma.utilisateur.update({
-      where: { id: membre.id },
-      data: {
+    const motif = motifAffectation(corps.motif)
+    const affecte = await this.prisma.$transaction(async (tx) => {
+      const paroisse = await tx.paroisse.findUniqueOrThrow({ where: { id: membre.paroisseId! }, select: { districtId: true } })
+      await verrouillerDistrict(tx, paroisse.districtId)
+      const [cibleCourante, ancrageCourant] = await Promise.all([
+        tx.paroisse.findUniqueOrThrow({ where: { id: membre.paroisseId! }, select: { districtId: true } }),
+        tx.paroisse.findUniqueOrThrow({ where: { id: paroisseIdRequise(utilisateur) }, select: { districtId: true } }),
+      ])
+      if (cibleCourante.districtId !== paroisse.districtId || ancrageCourant.districtId !== paroisse.districtId) {
+        throw new ConflictException('Le rattachement territorial a changé ; rechargez la fiche')
+      }
+      const courant = await tx.utilisateur.findUniqueOrThrow({ where: { id: membre.id }, select: { roleDistrict: true, actif: true, role: true, paroisseId: true } })
+      if (courant.roleDistrict || !courant.actif || !ROLES_TOUT_STAFF.includes(courant.role) || courant.paroisseId !== membre.paroisseId) throw new BadRequestException('Ce membre ne peut plus recevoir cette affectation')
+      const data = {
         roleDistrict: role as RoleUtilisateur,
         fonctionDistrict: fonctionValeur,
         brancheTypeDistrict: brancheTypeValeur,
-      },
-      select: SELECT_MEMBRE,
+      }
+      await historiserAffectation(tx, membre.id, data, utilisateur.id, motif)
+      return tx.utilisateur.update({ where: { id: membre.id }, data, select: SELECT_MEMBRE })
     })
 
     await this.audit.enregistrer({
@@ -608,6 +622,7 @@ export class DistrictService {
       roleDistrict: true,
       actif: true,
       fonctionDistrict: true,
+      brancheTypeDistrict: true,
       paroisseId: true,
     })
 
@@ -628,7 +643,7 @@ export class DistrictService {
     // jamais conserver une fonction héritée d'un rôle précédent.
     const roleFinal = role !== undefined ? role : existant.roleDistrict
     const fonctionFinale =
-      roleFinal !== 'ASSISTANT_DISTRICT' ? null : fonction !== undefined ? fonction?.trim() || null : undefined
+      roleFinal !== 'ASSISTANT_DISTRICT' ? null : fonction !== undefined ? fonction?.trim() || null : brancheType ? null : undefined
 
     // brancheType et fonction sont mutuellement exclusifs : si un texte de
     // fonction a été fourni à la place, la branche est effacée même si un
@@ -641,24 +656,33 @@ export class DistrictService {
           ? (brancheType as BrancheType | null)
           : undefined
 
-    const modifie = await this.prisma.utilisateur.update({
-      where: { id: existant.id },
-      data: {
-        ...(role !== undefined ? { roleDistrict: role as RoleUtilisateur } : {}),
-        ...(fonctionFinale !== undefined ? { fonctionDistrict: fonctionFinale } : {}),
-        ...(brancheFinale !== undefined ? { brancheTypeDistrict: brancheFinale } : {}),
-      },
-      select: SELECT_MEMBRE,
+    const motif = motifAffectation(corps.motif)
+    const modifie = await this.prisma.$transaction(async (tx) => {
+      const paroisse = await tx.paroisse.findUniqueOrThrow({ where: { id: existant.paroisseId! }, select: { districtId: true } })
+      await verrouillerDistrict(tx, paroisse.districtId)
+      const courant = await tx.utilisateur.findUniqueOrThrow({ where: { id }, select: { roleDistrict: true, fonctionDistrict: true, brancheTypeDistrict: true, paroisseId: true } })
+      if (!courant.roleDistrict || !ROLES_ASSIGNABLES_DISTRICT.includes(courant.roleDistrict)) throw new NotFoundException('Utilisateur introuvable')
+      if (courant.roleDistrict !== existant.roleDistrict || courant.fonctionDistrict !== existant.fonctionDistrict ||
+          courant.brancheTypeDistrict !== existant.brancheTypeDistrict || courant.paroisseId !== existant.paroisseId) {
+        throw new ConflictException('Cette affectation a été modifiée ; rechargez la fiche')
+      }
+      const data = {
+        roleDistrict: roleFinal as RoleUtilisateur,
+        fonctionDistrict: fonctionFinale !== undefined ? fonctionFinale : existant.fonctionDistrict,
+        brancheTypeDistrict: brancheFinale !== undefined ? brancheFinale : existant.brancheTypeDistrict,
+      }
+      await historiserAffectation(tx, id, data, utilisateur.id, motif)
+      return tx.utilisateur.update({ where: { id }, data, select: SELECT_MEMBRE })
     })
 
-    if (role !== undefined && role !== existant.roleDistrict) {
+    if (modifie.roleDistrict !== existant.roleDistrict || modifie.fonctionDistrict !== existant.fonctionDistrict || modifie.brancheTypeDistrict !== existant.brancheTypeDistrict) {
       await this.audit.enregistrer({
         paroisseId: existant.paroisseId,
         acteurId: utilisateur.id,
         action: 'UTILISATEUR_ROLE_DISTRICT_MODIFIE',
         entite: 'Utilisateur',
         entiteId: existant.id,
-        details: { ancienRoleDistrict: existant.roleDistrict, nouveauRoleDistrict: role },
+        details: { ancienRoleDistrict: existant.roleDistrict, nouveauRoleDistrict: modifie.roleDistrict, fonctionDistrict: modifie.fonctionDistrict, brancheTypeDistrict: modifie.brancheTypeDistrict },
       })
     }
 
@@ -672,10 +696,14 @@ export class DistrictService {
   async retirerMembre(utilisateur: UtilisateurSession, id: string) {
     const existant = await this.membreDuDistrict(utilisateur, id, { id: true, paroisseId: true })
 
-    const retire = await this.prisma.utilisateur.update({
-      where: { id: existant.id },
-      data: { roleDistrict: null, fonctionDistrict: null, brancheTypeDistrict: null },
-      select: SELECT_MEMBRE,
+    const retire = await this.prisma.$transaction(async (tx) => {
+      const paroisse = await tx.paroisse.findUniqueOrThrow({ where: { id: existant.paroisseId! }, select: { districtId: true } })
+      await verrouillerDistrict(tx, paroisse.districtId)
+      const courant = await tx.utilisateur.findUniqueOrThrow({ where: { id }, select: { roleDistrict: true, paroisseId: true } })
+      if (courant.paroisseId !== existant.paroisseId || !courant.roleDistrict || !ROLES_ASSIGNABLES_DISTRICT.includes(courant.roleDistrict)) throw new NotFoundException('Utilisateur introuvable')
+      const data = { roleDistrict: null, fonctionDistrict: null, brancheTypeDistrict: null }
+      await historiserAffectation(tx, id, data, utilisateur.id, 'Retrait de l’équipe district')
+      return tx.utilisateur.update({ where: { id }, data, select: SELECT_MEMBRE })
     })
 
     await this.audit.enregistrer({
@@ -700,7 +728,7 @@ export class DistrictService {
     }
 
     const passwordHache = await hash(nouveauMotDePasse, 12)
-    await this.prisma.utilisateur.update({ where: { id: existant.id }, data: { password: passwordHache } })
+    await this.prisma.utilisateur.update({ where: { id: existant.id }, data: { password: passwordHache, doitChangerMotDePasse: true } })
     await this.auth.revoquerToutes(existant.id)
 
     await this.audit.enregistrer({

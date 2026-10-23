@@ -36,16 +36,15 @@ export const SchemaCreationUtilisateur = corpsAdmin({
   fonction: champTexte('fonction'),
   brancheType: z.unknown().optional(),
 }).transform((corps, ctx) => {
-  const { paroisseId, nom, prenom, role, password, brancheType, telephone, matricule } = corps
+  const { paroisseId, nom, prenom, role, brancheType, telephone, matricule } = corps
   const rejeter = (message: string) => {
     ctx.addIssue({ code: 'custom', message })
     return z.NEVER
   }
 
-  if (!paroisseId || !nom || !prenom || !role || !password) {
-    return rejeter('Les champs paroisseId, nom, prenom, role et password sont requis')
+  if (!paroisseId || !nom || !prenom || !role) {
+    return rejeter('Les champs paroisseId, nom, prenom, role sont requis')
   }
-  if (!motDePasseValide(password)) return rejeter(REGLE_MOT_DE_PASSE)
   if (!ROLES_ASSIGNABLES_PAROISSE.includes(role)) return rejeter('Rôle invalide')
   if (!brancheValide(brancheType)) return rejeter('Branche invalide')
 
@@ -66,7 +65,6 @@ export const SchemaCreationUtilisateur = corpsAdmin({
     matricule: matricule || null,
     telephone: telephone || null,
     role,
-    password,
     fonction: corps.fonction?.trim() || null,
     brancheType: estBranche ? (brancheType as BrancheType) : null,
   }

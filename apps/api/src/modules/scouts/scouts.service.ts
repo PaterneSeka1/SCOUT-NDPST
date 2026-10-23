@@ -291,6 +291,7 @@ export class ScoutsService {
               consentementImage,
               consentementImageDate: consentementImage ? new Date() : null,
               consentementImageParId: consentementImage ? utilisateur.id : null,
+              consentementImageOrigine: consentementImage ? 'SAISIE_ADMINISTRATIVE' : 'RETIRE',
             }
           : {}),
         ...(consentementSante !== undefined
@@ -298,6 +299,7 @@ export class ScoutsService {
               consentementSante,
               consentementSanteDate: consentementSante ? new Date() : null,
               consentementSanteParId: consentementSante ? utilisateur.id : null,
+              consentementSanteOrigine: consentementSante ? 'SAISIE_ADMINISTRATIVE' : 'RETIRE',
             }
           : {}),
       },
@@ -332,7 +334,11 @@ export class ScoutsService {
         action: 'SCOUT_CONSENTEMENT_IMAGE_MODIFIE',
         entite: 'Scout',
         entiteId: id,
-        details: { consentementImage },
+        details: {
+          consentementImage,
+          source: consentementImage ? 'SAISIE_ADMINISTRATIVE' : 'RETIRE',
+          methode: 'INTERFACE_ADMINISTRATIVE',
+        },
       })
     }
 
@@ -343,7 +349,11 @@ export class ScoutsService {
         action: 'SCOUT_CONSENTEMENT_SANTE_MODIFIE',
         entite: 'Scout',
         entiteId: id,
-        details: { consentementSante },
+        details: {
+          consentementSante,
+          source: consentementSante ? 'SAISIE_ADMINISTRATIVE' : 'RETIRE',
+          methode: 'INTERFACE_ADMINISTRATIVE',
+        },
       })
     }
 
@@ -385,6 +395,7 @@ export class ScoutsService {
           telephone: telephone?.trim() || null,
           role: 'SCOUT',
           password: passwordHache,
+          doitChangerMotDePasse: true,
           paroisseId,
         },
         select: { id: true, nom: true, prenom: true, matricule: true, role: true, actif: true },

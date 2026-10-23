@@ -1,3 +1,4 @@
+import { MotDePasseTemporaireAutorise } from '../common/decorators/mot-de-passe-temporaire.decorator'
 import { Body, Controller, Get, HttpCode, Post, Query, Req, Res, UnauthorizedException } from '@nestjs/common'
 import { ApiTags } from '@nestjs/swagger'
 import type { Request, Response } from 'express'
@@ -93,9 +94,36 @@ export class AuthController {
     return { ok: true }
   }
 
+  @MotDePasseTemporaireAutorise()
   @Get('session')
   session(@UtilisateurCourant() utilisateur: UtilisateurSession) {
     return { utilisateur }
+  }
+
+  @MotDePasseTemporaireAutorise()
+  @Post('changer-mot-de-passe')
+  @HttpCode(200)
+  async changerMotDePasse(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Body(
+      new ZodPipe(
+        z.object({
+          motDePasseActuel: z.string().min(1).max(200),
+          nouveauMotDePasse: z.string().min(1).max(200),
+        }),
+      ),
+    )
+    corps: { motDePasseActuel: string; nouveauMotDePasse: string },
+    @Res({ passthrough: true }) reponse: Response,
+  ) {
+    const resultat = await this.motDePasse.changerPersonnel(
+      utilisateur.id,
+      corps.motDePasseActuel,
+      corps.nouveauMotDePasse,
+    )
+    effacerCookies(reponse)
+    reponse.setHeader('Cache-Control', 'no-store')
+    return resultat
   }
 
   // Public : demande de lien de réinitialisation (réponse identique que le

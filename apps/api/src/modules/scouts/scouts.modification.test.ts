@@ -64,6 +64,7 @@ describe('ScoutsService — mises à jour validées et données sensibles', () =
       consentementSante: false,
       consentementSanteDate: null,
       consentementSanteParId: null,
+      consentementSanteOrigine: 'RETIRE',
       allergies: null,
       traitementsMedicaux: 'Traitement confidentiel',
     })
@@ -75,7 +76,7 @@ describe('ScoutsService — mises à jour validées et données sensibles', () =
     )
     expect(JSON.stringify(ctx.audit.enregistrer.mock.calls)).not.toContain('Traitement confidentiel')
     expect(ctx.audit.enregistrer).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'SCOUT_CONSENTEMENT_SANTE_MODIFIE', details: { consentementSante: false } }),
+      expect.objectContaining({ action: 'SCOUT_CONSENTEMENT_SANTE_MODIFIE', details: { consentementSante: false, source: 'RETIRE', methode: 'INTERFACE_ADMINISTRATIVE' } }),
     )
   })
 
@@ -86,7 +87,32 @@ describe('ScoutsService — mises à jour validées et données sensibles', () =
       consentementSante: true,
       consentementSanteDate: expect.any(Date),
       consentementSanteParId: 'u1',
+      consentementSanteOrigine: 'SAISIE_ADMINISTRATIVE',
     })
+  })
+
+
+  it.each([true, false])('distingue aussi la saisie administrative image (%s)', async (accord) => {
+    const ctx = construire()
+    await ctx.service.modifier(utilisateur, 's1', SchemaModificationScout.parse({
+      consentementImage: accord,
+      consentementImageOrigine: 'COMPTE_PARENT_LIE', // une saisie admin ne peut usurper cette provenance
+    }))
+    expect(ctx.prisma.scout.update.mock.calls[0][0].data).toMatchObject({
+      consentementImage: accord,
+      consentementImageOrigine: accord ? 'SAISIE_ADMINISTRATIVE' : 'RETIRE',
+      consentementImageDate: accord ? expect.any(Date) : null,
+      consentementImageParId: accord ? 'u1' : null,
+    })
+    expect(ctx.audit.enregistrer).toHaveBeenCalledWith(expect.objectContaining({
+      acteurId: 'u1',
+      action: 'SCOUT_CONSENTEMENT_IMAGE_MODIFIE',
+      details: {
+        consentementImage: accord,
+        source: accord ? 'SAISIE_ADMINISTRATIVE' : 'RETIRE',
+        methode: 'INTERFACE_ADMINISTRATIVE',
+      },
+    }))
   })
 
   it('date la désactivation et retire la date lors de la réactivation', async () => {

@@ -21,10 +21,13 @@ const MOI: UtilisateurSession = {
 
 function creerContexte() {
   const prisma = {
-    utilisateur: { findUnique: vi.fn(), update: vi.fn().mockResolvedValue({}) },
+    utilisateur: { findUnique: vi.fn(), update: vi.fn().mockResolvedValue({}), updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+    tokenReinitialisation: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+    $transaction: vi.fn(),
     lienParentScout: { findFirst: vi.fn() },
     scout: { update: vi.fn() },
   }
+  prisma.$transaction.mockImplementation((operation: (tx: unknown) => unknown) => operation(prisma))
   const audit = { enregistrer: vi.fn().mockResolvedValue(undefined) }
   const auth = { revoquerToutes: vi.fn().mockResolvedValue(undefined) }
   const service = new ProfilService(
@@ -58,8 +61,33 @@ describe('ProfilService', () => {
         nouveauMotDePasse: 'Nouveau123',
       }),
     )
-    expect(ctx.prisma.utilisateur.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'moi' } }))
-    expect(ctx.auth.revoquerToutes).toHaveBeenCalledWith('moi')
+    expect(ctx.prisma.utilisateur.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'moi', password: expect.any(String) } }))
+    expect(ctx.auth.revoquerToutes).toHaveBeenCalledWith('moi', ctx.prisma)
+  })
+
+
+  it('changerMotDePasse : refuse une course avec un autre remplacement du secret', async () => {
+    const ctx = creerContexte()
+    ctx.prisma.utilisateur.findUnique.mockResolvedValueOnce({ id: 'moi', password: await hash('Ancien123', 4) })
+    ctx.prisma.utilisateur.updateMany.mockResolvedValueOnce({ count: 0 })
+    await expect(ctx.service.changerMotDePasse(MOI, {
+      motDePasseActuel: 'Ancien123', nouveauMotDePasse: 'Nouveau123',
+    })).rejects.toBeInstanceOf(BadRequestException)
+    expect(ctx.prisma.tokenReinitialisation.updateMany).not.toHaveBeenCalled()
+    expect(ctx.auth.revoquerToutes).not.toHaveBeenCalled()
+    expect(ctx.audit.enregistrer).not.toHaveBeenCalled()
+  })
+
+  it('changerMotDePasse : propage un échec de révocation pour annuler la transaction', async () => {
+    const ctx = creerContexte()
+    ctx.prisma.utilisateur.findUnique.mockResolvedValueOnce({ id: 'moi', password: await hash('Ancien123', 4) })
+    const echec = new Error('Révocation indisponible')
+    ctx.auth.revoquerToutes.mockRejectedValueOnce(echec)
+    await expect(ctx.service.changerMotDePasse(MOI, {
+      motDePasseActuel: 'Ancien123', nouveauMotDePasse: 'Nouveau123',
+    })).rejects.toBe(echec)
+    expect(ctx.auth.revoquerToutes).toHaveBeenCalledWith('moi', ctx.prisma)
+    expect(ctx.audit.enregistrer).not.toHaveBeenCalled()
   })
 
   it("consentementImage : refuse un scout non rattaché au compte", async () => {
@@ -91,18 +119,18 @@ describe('ProfilService', () => {
     await ctx.service.consentementSante(MOI, 'scout-1', { consentement: true })
     const appel = ctx.prisma.scout.update.mock.calls[0][0]
     expect(appel.where).toEqual({ id: 'scout-1' })
-    expect(appel.data).toMatchObject({ consentementSante: true, consentementSanteParId: 'moi' })
+    expect(appel.data).toMatchObject({ consentementSante: true, consentementSanteParId: 'moi', consentementSanteOrigine: 'COMPTE_PARENT_LIE' })
     expect(appel.data.consentementSanteDate).toBeInstanceOf(Date)
     expect(ctx.audit.enregistrer).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'SCOUT_CONSENTEMENT_SANTE_MODIFIE',
         entiteId: 'scout-1',
-        details: { consentementSante: true },
+        details: { consentementSante: true, source: 'COMPTE_PARENT_LIE', methode: 'INTERFACE_PARENT' },
       }),
     )
   })
 
-  it('consentementSante : un retrait efface la date et l’auteur', async () => {
+  it('consentementSante : journalise le retrait avec son auteur et retire les marqueurs d’accord actif', async () => {
     const ctx = creerContexte()
     ctx.prisma.lienParentScout.findFirst.mockResolvedValueOnce({ id: 'lien' })
     ctx.prisma.scout.update.mockResolvedValueOnce({ id: 'scout-1', consentementSante: false })
@@ -111,8 +139,33 @@ describe('ProfilService', () => {
       consentementSante: false,
       consentementSanteDate: null,
       consentementSanteParId: null,
+      consentementSanteOrigine: 'RETIRE',
     })
+    expect(ctx.audit.enregistrer).toHaveBeenCalledWith(expect.objectContaining({
+      acteurId: 'moi',
+      details: { consentementSante: false, source: 'RETIRE', methode: 'INTERFACE_PARENT' },
+    }))
   })
+  it.each([true, false])('consentementImage : provenance du compte lié et retrait (%s)', async (accord) => {
+    const ctx = creerContexte()
+    ctx.prisma.lienParentScout.findFirst.mockResolvedValueOnce({ id: 'lien' })
+    await ctx.service.consentementImage(MOI, 'scout-1', { consentement: accord })
+    expect(ctx.prisma.scout.update.mock.calls[0][0].data).toMatchObject({
+      consentementImage: accord,
+      consentementImageOrigine: accord ? 'COMPTE_PARENT_LIE' : 'RETIRE',
+      consentementImageDate: accord ? expect.any(Date) : null,
+      consentementImageParId: accord ? 'moi' : null,
+    })
+    expect(ctx.audit.enregistrer).toHaveBeenCalledWith(expect.objectContaining({
+      acteurId: 'moi',
+      details: {
+        consentementImage: accord,
+        source: accord ? 'COMPTE_PARENT_LIE' : 'RETIRE',
+        methode: 'INTERFACE_PARENT',
+      },
+    }))
+  })
+
 })
 
 describe('Schémas du profil', () => {

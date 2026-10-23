@@ -1,4 +1,4 @@
-import { estCouleurHexValide, estUrlFichierValide, motDePasseValide, REGLE_MOT_DE_PASSE } from '@scout/shared'
+import { estCouleurHexValide, estUrlFichierValide } from '@scout/shared'
 import { z } from 'zod'
 import { urlPubliqueBase } from '../../common/lib/storage'
 import { champBooleen, champTexte, champTexteNettoye, corpsAdmin } from './admin.schemas'
@@ -119,15 +119,11 @@ export const SchemaCreationChefGroupe = corpsAdmin({
   email: champTexteNettoye('email'),
   password: champTexte('password'),
 }).transform((corps, ctx) => {
-  const { nom, prenom, matricule, password } = corps
-  if (!nom || !prenom || !matricule || !password) {
-    ctx.addIssue({ code: 'custom', message: 'Le nom, le prénom, le matricule et le mot de passe sont requis' })
+  const { nom, prenom, matricule } = corps
+  if (!nom || !prenom || !matricule) {
+    ctx.addIssue({ code: 'custom', message: 'Le nom, le prénom, le matricule sont requis' })
     return z.NEVER
   }
-  if (!motDePasseValide(password)) {
-    ctx.addIssue({ code: 'custom', message: REGLE_MOT_DE_PASSE, path: ['password'] })
-    return z.NEVER
-  }
-  return { nom, prenom, matricule, telephone: corps.telephone || null, email: corps.email || null, password }
+  return { nom, prenom, matricule, telephone: corps.telephone || null, email: corps.email || null }
 })
 export type DonneesCreationChefGroupe = z.infer<typeof SchemaCreationChefGroupe>

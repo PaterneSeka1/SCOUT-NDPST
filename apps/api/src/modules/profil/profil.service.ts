@@ -111,12 +111,24 @@ export class ProfilService {
 
     if (!motDePasseValide(nouveauMotDePasse)) throw new BadRequestException(REGLE_MOT_DE_PASSE)
 
+    if (await compare(nouveauMotDePasse, utilisateur.password))
+      throw new BadRequestException('Choisissez un mot de passe différent')
     const passwordHache = await hash(nouveauMotDePasse, 12)
-    await this.prisma.utilisateur.update({ where: { id: session.id }, data: { password: passwordHache } })
+    await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.utilisateur.updateMany({
+        where: { id: session.id, password: utilisateur.password },
+        data: { password: passwordHache, doitChangerMotDePasse: false },
+      })
+      if (count !== 1) throw new BadRequestException('Le mot de passe a changé ; reconnectez-vous')
+      await tx.tokenReinitialisation.updateMany({
+        where: { utilisateurId: session.id, utilise: false },
+        data: { utilise: true },
+      })
+      await this.auth.revoquerToutes(session.id, tx)
+    })
 
     // Toutes les sessions du compte sont fermées, y compris la session
     // courante : l'utilisateur doit se reconnecter avec le nouveau mot de passe.
-    await this.auth.revoquerToutes(session.id)
 
     await this.audit.enregistrer({
       paroisseId: session.paroisseId,
@@ -275,7 +287,7 @@ export class ProfilService {
     // Le rôle du compte n'est jamais la condition d'accès : un membre du
     // staff ou un compte SCOUT (Ressources Adultes) peut être par ailleurs
     // parent d'un scout de la paroisse (voir LienParentScout). Seul le lien
-    // réel fait foi — jamais un scout quelconque.
+    // réel est contrôlé techniquement; l’autorité juridique du compte n’est pas vérifiée.
     const lien = await this.prisma.lienParentScout.findFirst({
       where: { parentId: session.id, scoutId, scout: { paroisseId } },
     })
@@ -287,8 +299,9 @@ export class ProfilService {
         consentementImage: consentement,
         consentementImageDate: consentement ? new Date() : null,
         consentementImageParId: consentement ? session.id : null,
+        consentementImageOrigine: consentement ? 'COMPTE_PARENT_LIE' : 'RETIRE',
       },
-      select: { id: true, consentementImage: true, consentementImageDate: true },
+      select: { id: true, consentementImage: true, consentementImageDate: true, consentementImageOrigine: true },
     })
 
     await this.audit.enregistrer({
@@ -297,7 +310,11 @@ export class ProfilService {
       action: 'SCOUT_CONSENTEMENT_IMAGE_MODIFIE',
       entite: 'Scout',
       entiteId: scoutId,
-      details: { consentementImage: consentement },
+      details: {
+        consentementImage: consentement,
+        source: consentement ? 'COMPTE_PARENT_LIE' : 'RETIRE',
+        methode: 'INTERFACE_PARENT',
+      },
     })
 
     return scout
@@ -321,8 +338,9 @@ export class ProfilService {
         consentementSante: consentement,
         consentementSanteDate: consentement ? new Date() : null,
         consentementSanteParId: consentement ? session.id : null,
+        consentementSanteOrigine: consentement ? 'COMPTE_PARENT_LIE' : 'RETIRE',
       },
-      select: { id: true, consentementSante: true, consentementSanteDate: true },
+      select: { id: true, consentementSante: true, consentementSanteDate: true, consentementSanteOrigine: true },
     })
 
     await this.audit.enregistrer({
@@ -331,7 +349,11 @@ export class ProfilService {
       action: 'SCOUT_CONSENTEMENT_SANTE_MODIFIE',
       entite: 'Scout',
       entiteId: scoutId,
-      details: { consentementSante: consentement },
+      details: {
+        consentementSante: consentement,
+        source: consentement ? 'COMPTE_PARENT_LIE' : 'RETIRE',
+        methode: 'INTERFACE_PARENT',
+      },
     })
 
     return scout

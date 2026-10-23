@@ -1,8 +1,9 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
-import { MONO_PAROISSE, ROLES_TOUT_STAFF } from '@scout/shared'
+import { entierBorne, MONO_PAROISSE, ROLES_TOUT_STAFF } from '@scout/shared'
 import type { RoleUtilisateur } from '../../generated/prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
 import { AuditService } from '../../common/audit.service'
+import { historiserAffectation, verrouillerDistrict } from '../district/affectations'
 import type { DonneesDesignationCommissaire, DonneesDistrict } from './districts.schemas'
 
 const AFFECTATION_DISTRICT_VIDE = { roleDistrict: null, fonctionDistrict: null, brancheTypeDistrict: null }
@@ -20,15 +21,18 @@ export class DistrictsService {
       select: { id: true, nom: true, _count: { select: { paroisses: true } } },
     })
 
-    const districtsAvecCommissaire = await Promise.all(
-      districts.map(async (d) => {
-        const commissaire = await this.prisma.utilisateur.findFirst({
-          where: { roleDistrict: 'COMMISSAIRE_DISTRICT', actif: true, paroisse: { districtId: d.id } },
-          select: { id: true, nom: true, prenom: true, actif: true },
-        })
-        return { id: d.id, nom: d.nom, nbParoisses: d._count.paroisses, commissaire }
-      }),
-    )
+    const commissaires = await this.prisma.utilisateur.findMany({
+      where: { roleDistrict: 'COMMISSAIRE_DISTRICT', actif: true, paroisse: { districtId: { in: districts.map((d) => d.id) } } },
+      select: { id: true, nom: true, prenom: true, actif: true, paroisse: { select: { districtId: true } } },
+      orderBy: { createdAt: 'asc' },
+    })
+    const parDistrict = new Map<string, { id: string; nom: string; prenom: string; actif: boolean }>()
+    for (const { paroisse, ...commissaire } of commissaires) {
+      if (paroisse && !parDistrict.has(paroisse.districtId)) parDistrict.set(paroisse.districtId, commissaire)
+    }
+    const districtsAvecCommissaire = districts.map((d) => ({
+      id: d.id, nom: d.nom, nbParoisses: d._count.paroisses, commissaire: parDistrict.get(d.id) ?? null,
+    }))
 
     return { districts: districtsAvecCommissaire }
   }
@@ -186,6 +190,28 @@ export class DistrictsService {
     }
   }
 
+  async historique(id: string, pageDemandee: unknown, limiteDemandee: unknown) {
+    if (!await this.prisma.district.findUnique({ where: { id }, select: { id: true } })) {
+      throw new NotFoundException('District introuvable')
+    }
+    const page = entierBorne(typeof pageDemandee === 'string' ? pageDemandee : null, 1, 1, 1_000_000)
+    const limite = entierBorne(typeof limiteDemandee === 'string' ? limiteDemandee : null, 25, 1, 100)
+    const where = { districtId: id }
+    const [affectations, total] = await Promise.all([
+      this.prisma.affectationDistrict.findMany({
+        where, orderBy: [{ debutLe: 'desc' }, { id: 'desc' }], skip: (page - 1) * limite, take: limite,
+        select: {
+          id: true, utilisateurId: true, districtId: true, role: true, fonction: true, brancheType: true,
+          debutLe: true, finLe: true, auteurId: true, motif: true, revoqueParId: true,
+          motifRevocation: true, reprise: true,
+          utilisateur: { select: { nom: true, prenom: true } },
+        },
+      }),
+      this.prisma.affectationDistrict.count({ where }),
+    ])
+    return { affectations, total, page, totalPages: Math.ceil(total / limite) }
+  }
+
   async modifier(id: string, { nom }: DonneesDistrict, acteurId: string) {
     const existant = await this.prisma.district.findUnique({ where: { id }, select: { id: true, nom: true } })
     if (!existant) throw new NotFoundException('District introuvable')
@@ -226,6 +252,9 @@ export class DistrictsService {
       )
     }
 
+    if (await this.prisma.affectationDistrict.count({ where: { districtId: id } })) {
+      throw new ConflictException('Ce district possède un historique d’affectations et doit être conservé')
+    }
     await this.prisma.district.delete({ where: { id } })
 
     await this.audit.enregistrer({
@@ -273,16 +302,25 @@ export class DistrictsService {
       throw new BadRequestException("Cette personne n'appartient pas à une paroisse de ce district")
     }
 
-    const commissairesExistants = await this.prisma.utilisateur.findMany({
-      where: { roleDistrict: 'COMMISSAIRE_DISTRICT', paroisse: { districtId } },
-      select: { id: true },
-    })
-    const idsCommissairesExistants = commissairesExistants.map((u) => u.id).filter((id) => id !== membre.id)
+    let idsCommissairesExistants: string[] = []
 
     // Ne touche jamais à `role` (rôle paroissial) : la personne continue de
     // l'exercer normalement dans sa paroisse, l'affectation district s'ajoute
     // simplement à son compte existant.
     const commissaire = await this.prisma.$transaction(async (tx) => {
+      await verrouillerDistrict(tx, districtId)
+      const courant = await tx.utilisateur.findUniqueOrThrow({ where: { id: membre.id }, select: { roleDistrict: true, actif: true, role: true, paroisse: { select: { districtId: true } } } })
+      if (courant.roleDistrict || !courant.actif || !ROLES_TOUT_STAFF.includes(courant.role) || courant.paroisse?.districtId !== districtId) {
+        throw new BadRequestException('Ce membre ne peut plus recevoir cette affectation')
+      }
+      const commissairesExistants = await tx.utilisateur.findMany({
+        where: { roleDistrict: 'COMMISSAIRE_DISTRICT', paroisse: { districtId } }, select: { id: true },
+      })
+      idsCommissairesExistants = commissairesExistants.map((u) => u.id).filter((id) => id !== membre.id)
+      for (const id of idsCommissairesExistants) {
+        await historiserAffectation(tx, id, AFFECTATION_DISTRICT_VIDE, acteurId, 'Remplacement du commissaire')
+      }
+      await historiserAffectation(tx, membre.id, { roleDistrict: 'COMMISSAIRE_DISTRICT', fonctionDistrict: null, brancheTypeDistrict: null }, acteurId)
       if (idsCommissairesExistants.length > 0) {
         await tx.utilisateur.updateMany({
           where: { id: { in: idsCommissairesExistants } },
@@ -340,15 +378,18 @@ export class DistrictsService {
     const district = await this.prisma.district.findUnique({ where: { id: districtId }, select: { id: true } })
     if (!district) throw new NotFoundException('District introuvable')
 
-    const commissaires = await this.prisma.utilisateur.findMany({
-      where: { roleDistrict: 'COMMISSAIRE_DISTRICT', paroisse: { districtId } },
-      select: { id: true, paroisseId: true },
-    })
-    if (commissaires.length === 0) throw new NotFoundException('Aucun Commissaire de District à retirer')
-
-    await this.prisma.utilisateur.updateMany({
-      where: { id: { in: commissaires.map((u) => u.id) } },
-      data: AFFECTATION_DISTRICT_VIDE,
+    const commissaires = await this.prisma.$transaction(async (tx) => {
+      await verrouillerDistrict(tx, districtId)
+      const membres = await tx.utilisateur.findMany({
+        where: { roleDistrict: 'COMMISSAIRE_DISTRICT', paroisse: { districtId } },
+        select: { id: true, paroisseId: true },
+      })
+      if (!membres.length) throw new NotFoundException('Aucun Commissaire de District à retirer')
+      for (const membre of membres) {
+        await historiserAffectation(tx, membre.id, AFFECTATION_DISTRICT_VIDE, acteurId, 'Retrait du commissaire')
+      }
+      await tx.utilisateur.updateMany({ where: { id: { in: membres.map((u) => u.id) } }, data: AFFECTATION_DISTRICT_VIDE })
+      return membres
     })
 
     await this.audit.enregistrer({

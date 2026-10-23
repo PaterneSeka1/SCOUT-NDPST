@@ -1,8 +1,10 @@
 import { ForbiddenException, UnauthorizedException, type ExecutionContext } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 import { JwtService } from '@nestjs/jwt'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { chargerEnv } from '../../config/env'
+import type { PrismaService } from '../../prisma/prisma.service'
+import { CLE_MOT_DE_PASSE_TEMPORAIRE } from '../decorators/mot-de-passe-temporaire.decorator'
 import { CLE_PUBLIC } from '../decorators/public.decorator'
 import { CLE_ROLES, CLE_ROLES_DISTRICT } from '../decorators/roles.decorator'
 import type { UtilisateurSession } from '../types'
@@ -31,19 +33,26 @@ const UTILISATEUR: UtilisateurSession = {
   role: 'RESPONSABLE_BRANCHE',
   roleDistrict: null,
   paroisseId: 'p1',
+  doitChangerMotDePasse: false,
 }
 
 describe('AuthGuard', () => {
   const jwt = new JwtService()
-  const garde = new AuthGuard(new Reflector(), jwt)
+  const prisma = { sessionUtilisateur: { findUnique: vi.fn() } }
+  const garde = new AuthGuard(new Reflector(), jwt, prisma as unknown as PrismaService)
+  const session = () => ({
+    utilisateurId: UTILISATEUR.id, revoqueeLe: null, expireLe: new Date(Date.now() + 60_000),
+    utilisateur: { ...UTILISATEUR, actif: true, paroisse: { actif: true } },
+  })
 
   beforeEach(() => {
+    prisma.sessionUtilisateur.findUnique.mockReset().mockResolvedValue(session())
     chargerEnv({ DATABASE_URL: 'postgresql://test', JWT_ACCESS_SECRET: SECRET } as NodeJS.ProcessEnv)
   })
 
   const signer = (secret = SECRET, emetteur = EMETTEUR_LOCAL) => {
     const { id, ...charge } = UTILISATEUR
-    return jwt.sign(charge, { subject: id, secret, issuer: emetteur, expiresIn: 60 })
+    return jwt.sign({ ...charge, sid: 'session-u1' }, { subject: id, secret, issuer: emetteur, expiresIn: 60 })
   }
 
   it('refuse une route protégée sans jeton (401)', async () => {
@@ -69,6 +78,56 @@ describe('AuthGuard', () => {
         garde.canActivate(contexte({ headers: {}, cookies: { scout_acces: jeton } })),
       ).rejects.toBeInstanceOf(UnauthorizedException)
     }
+  })
+
+  it('refuse les anciens jetons dépourvus de session persistante', async () => {
+    const { id, ...charge } = UTILISATEUR
+    const jeton = jwt.sign(charge, { subject: id, secret: SECRET, issuer: EMETTEUR_LOCAL, expiresIn: 60 })
+    await expect(garde.canActivate(contexte({ headers: {}, cookies: { scout_acces: jeton } }))).rejects.toBeInstanceOf(UnauthorizedException)
+    expect(prisma.sessionUtilisateur.findUnique).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['absente', null],
+    ['révoquée', { revoqueeLe: new Date() }],
+    ['expirée', { expireLe: new Date(Date.now() - 60_000) }],
+    ['autre compte', { utilisateurId: 'autre-utilisateur' }],
+  ])('refuse une session %s même si le jeton est encore valide', async (_nom, changement) => {
+    prisma.sessionUtilisateur.findUnique.mockResolvedValue(changement === null ? null : { ...session(), ...changement })
+    await expect(garde.canActivate(contexte({ headers: {}, cookies: { scout_acces: signer() } }))).rejects.toBeInstanceOf(UnauthorizedException)
+  })
+
+  it.each([
+    ['compte désactivé', { actif: false }],
+    ['paroisse désactivée', { paroisse: { actif: false } }],
+    ['rôle changé', { role: 'ASSISTANT_BRANCHE' }],
+    ['territoire changé', { paroisseId: 'autre-paroisse' }],
+  ])('refuse immédiatement un ancien jeton après %s', async (_nom, changement) => {
+    prisma.sessionUtilisateur.findUnique.mockResolvedValue({ ...session(), utilisateur: { ...session().utilisateur, ...changement } })
+    await expect(garde.canActivate(contexte({ headers: {}, cookies: { scout_acces: signer() } }))).rejects.toBeInstanceOf(UnauthorizedException)
+  })
+
+  it('refuse immédiatement un jeton dont le rôle district a été retiré', async () => {
+    const { id, ...charge } = UTILISATEUR
+    const jeton = jwt.sign({ ...charge, roleDistrict: 'COMMISSAIRE_DISTRICT', sid: 'session-u1' }, { subject: id, secret: SECRET, issuer: EMETTEUR_LOCAL, expiresIn: 60 })
+    await expect(garde.canActivate(contexte({ headers: {}, cookies: { scout_acces: jeton } }))).rejects.toBeInstanceOf(UnauthorizedException)
+  })
+
+  it('refuse les routes protégées tant que le mot de passe personnel est requis', async () => {
+    prisma.sessionUtilisateur.findUnique.mockResolvedValue({ ...session(), utilisateur: { ...session().utilisateur, doitChangerMotDePasse: true } })
+    await expect(garde.canActivate(contexte({ headers: {}, cookies: { scout_acces: signer() } }))).rejects.toMatchObject({
+      response: { code: 'CHANGEMENT_MOT_DE_PASSE_REQUIS' },
+    })
+  })
+
+  it('autorise explicitement les routes de changement du mot de passe temporaire', async () => {
+    prisma.sessionUtilisateur.findUnique.mockResolvedValue({ ...session(), utilisateur: { ...session().utilisateur, doitChangerMotDePasse: true } })
+    await expect(garde.canActivate(contexte({ headers: {}, cookies: { scout_acces: signer() } }, { [CLE_MOT_DE_PASSE_TEMPORAIRE]: true }))).resolves.toBe(true)
+  })
+
+  it('ferme l’accès lorsque la vérification persistante est indisponible', async () => {
+    prisma.sessionUtilisateur.findUnique.mockRejectedValue(new Error('base indisponible'))
+    await expect(garde.canActivate(contexte({ headers: {}, cookies: { scout_acces: signer() } }))).rejects.toBeInstanceOf(UnauthorizedException)
   })
 
   it('laisse passer une route @Public() même avec un jeton invalide', async () => {

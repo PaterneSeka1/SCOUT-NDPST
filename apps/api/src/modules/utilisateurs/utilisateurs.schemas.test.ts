@@ -33,11 +33,18 @@ describe('SchemaCreationUtilisateur', () => {
     expect(SchemaCreationUtilisateur.parse(creationValide).scoutIds).toEqual([])
   })
 
+  it('accepte la création sans mot de passe, le secret étant généré par le serveur', () => {
+    const sansSecret = { nom: 'Kouassi', prenom: 'Awa', role: 'ADJOINT_GROUPE', matricule: 'M9' }
+    expect(SchemaCreationUtilisateur.parse(sansSecret)).not.toHaveProperty('password')
+  })
+
+  it('accepte le champ historique d’un ancien client sans exiger sa robustesse', () => {
+    expect(SchemaCreationUtilisateur.parse({ ...creationValide, password: 'court' }).password).toBe('court')
+  })
+
   it.each([
-    [{ ...creationValide, nom: '  ' }, 'Les champs nom, prenom, role et password sont requis'],
-    [{ ...creationValide, role: '' }, 'Les champs nom, prenom, role et password sont requis'],
-    [{ ...creationValide, password: undefined }, 'Les champs nom, prenom, role et password sont requis'],
-    [{ ...creationValide, password: 'court' }, REGLE_MOT_DE_PASSE],
+    [{ ...creationValide, nom: '  ' }, 'Les champs nom, prenom et role sont requis'],
+    [{ ...creationValide, role: '' }, 'Les champs nom, prenom et role sont requis'],
     [{ ...creationValide, role: 'toString' }, 'Rôle invalide'],
     [{ ...creationValide, email: 3 }, 'L’adresse e-mail est invalide'],
     [{ ...creationValide, matricule: {} }, 'Le matricule est invalide'],

@@ -1,9 +1,6 @@
 import type { Request } from 'express'
 
-// Identité portée par le jeton d'accès. Le rôle, l'affectation district et la
-// paroisse sont relus en base à chaque rafraîchissement (voir AuthService) :
-// une désactivation ou un changement de rôle prend effet au plus tard à
-// l'expiration du jeton d'accès (JWT_ACCESS_TTL_SECONDES).
+// Identité vérifiée contre la session et le compte courant à chaque requête.
 export interface UtilisateurSession {
   id: string
   matricule: string | null
@@ -17,6 +14,7 @@ export interface UtilisateurSession {
   paroisseId: string | null
   // Renseigné quand le compte appartient à une AUTRE installation (identifiant
   // de l'émetteur) : administrateur plateforme partagé, absent de cette base.
+  doitChangerMotDePasse?: boolean
   externe?: string
 }
 

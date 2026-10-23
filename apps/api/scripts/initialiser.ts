@@ -160,6 +160,7 @@ async function main() {
           telephone: chef.telephone || null,
           email: chef.email || null,
           password: hashChef,
+          doitChangerMotDePasse: true,
           role: 'CHEF_GROUPE',
           paroisseId: nouvelleParoisse.id,
         },

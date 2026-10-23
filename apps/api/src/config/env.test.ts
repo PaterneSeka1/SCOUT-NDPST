@@ -67,3 +67,37 @@ describe('chargerEnv — production', () => {
     expect(charger({ ...BASE, NODE_ENV: 'development' })).not.toThrow()
   })
 })
+
+describe('chargerEnv — écoute et vérification fédérée', () => {
+  it('préserve Docker et autorise le loopback imposé par PM2', () => {
+    expect(chargerEnv(BASE).HOST).toBe('0.0.0.0')
+    expect(chargerEnv({ ...BASE, HOST: '127.0.0.1' }).HOST).toBe('127.0.0.1')
+    expect(charger({ ...BASE, HOST: 'hote-inattendu' })).toThrow(/HOST/)
+  })
+
+  it.each(['https://district.example.ci/api/auth/session', 'http://127.0.0.1:4100/api/auth/session'])(
+    'accepte une cible de confiance fixe %s',
+    (url) => {
+      expect(chargerEnv({ ...BASE, ADMIN_URL_VERIFICATION_SESSION: url }).ADMIN_URL_VERIFICATION_SESSION).toBe(url)
+    },
+  )
+
+  it.each([
+    'http://district.example.ci/api/auth/session',
+    'https://user:secret@district.example.ci/api/auth/session',
+    'https://district.example.ci/api/auth/session?token=x',
+  ])('refuse une cible non chiffrée ou contenant un secret %s', (url) => {
+    expect(charger({ ...BASE, ADMIN_URL_VERIFICATION_SESSION: url })).toThrow(/ADMIN_URL_VERIFICATION_SESSION/)
+  })
+})
+
+
+describe('configuration fédérée en production', () => {
+  it('empêche la bascule sans URL de revalidation de l’émetteur', () => {
+    expect(charger({
+      ...BASE, ...R2, ...PROD,
+      ADMIN_EMETTEUR_CONFIANCE: 'district-test',
+      ADMIN_CLE_PUBLIQUE_FICHIER: '/tmp/cle-fictive.pem',
+    })).toThrow(/ADMIN_URL_VERIFICATION_SESSION/)
+  })
+})

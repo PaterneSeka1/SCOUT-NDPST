@@ -5,7 +5,7 @@ import { generateKeyPairSync } from 'crypto'
 import { mkdtempSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import path from 'path'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { chargerEnv } from '../config/env'
 import { AuthGuard } from '../common/guards/auth.guard'
 import { reinitialiserClesAdmin } from './cles-admin'
@@ -41,6 +41,7 @@ const ADMIN = {
   role: 'ADMIN_PLATEFORME',
   roleDistrict: null,
   paroisseId: null,
+  doitChangerMotDePasse: false,
 }
 
 function installation(valeurs: Record<string, string>) {
@@ -49,12 +50,17 @@ function installation(valeurs: Record<string, string>) {
 }
 
 const enDistrict = () => installation({ INSTALLATION_ID: 'district-essai', ADMIN_CLE_PRIVEE_FICHIER: PRIVEE_DISTRICT })
-const enParoisse = () =>
+const URL_VERIFICATION = 'https://district.exemple.ci/api/auth/session'
+const enParoisse = (url: string | undefined = URL_VERIFICATION) =>
   installation({
     INSTALLATION_ID: 'paroisse-essai',
     ADMIN_EMETTEUR_CONFIANCE: 'district-essai',
     ADMIN_CLE_PUBLIQUE_FICHIER: PUBLIQUE_DISTRICT,
+    ...(url ? { ADMIN_URL_VERIFICATION_SESSION: url } : {}),
   })
+
+const prisma = { sessionUtilisateur: { findUnique: vi.fn() } }
+const fetchSimule = vi.fn()
 
 async function verifier(jeton: string) {
   const requete: RequeteAuthentifiee = { headers: {}, cookies: { scout_acces: jeton } } as unknown as RequeteAuthentifiee
@@ -63,22 +69,32 @@ async function verifier(jeton: string) {
     getClass: () => class {},
     switchToHttp: () => ({ getRequest: () => requete }),
   } as unknown as ExecutionContext
-  await new AuthGuard(new Reflector(), jwt).canActivate(contexte)
+  await new AuthGuard(new Reflector(), jwt, prisma as unknown as PrismaService).canActivate(contexte)
   return requete.utilisateur
 }
 
 const signerES256 = (charge: object, cle: string, emetteur = 'district-essai') =>
-  jwt.sign(charge, { subject: 'u-admin', privateKey: cle, algorithm: 'ES256', issuer: emetteur, expiresIn: 60 })
+  jwt.sign({ ...charge, sid: 'session-admin' }, { subject: 'u-admin', privateKey: cle, algorithm: 'ES256', issuer: emetteur, expiresIn: 60 })
 
 async function jetonAdminEmisParLeDistrict(): Promise<string> {
   enDistrict()
   const service = new AuthService({} as PrismaService, jwt)
-  const signer = (service as unknown as { signerAcces: (s: object) => Promise<string> }).signerAcces.bind(service)
-  return signer({ id: 'u-admin', ...ADMIN })
+  const signer = (service as unknown as { signerAcces: (s: object, sessionId: string) => Promise<string> }).signerAcces.bind(service)
+  return signer({ id: 'u-admin', ...ADMIN }, 'session-admin')
 }
 
 describe('administrateur plateforme partagé entre installations', () => {
-  beforeEach(() => reinitialiserClesAdmin())
+  beforeEach(() => {
+    reinitialiserClesAdmin()
+    prisma.sessionUtilisateur.findUnique.mockReset().mockResolvedValue({
+      utilisateurId: 'u-admin', revoqueeLe: null, expireLe: new Date(Date.now() + 60_000),
+      utilisateur: { id: 'u-admin', ...ADMIN, actif: true, paroisse: null },
+    })
+    fetchSimule.mockReset().mockResolvedValue({ ok: true, json: async () => ({ utilisateur: { id: 'u-admin', ...ADMIN } }) })
+    vi.stubGlobal('fetch', fetchSimule)
+  })
+
+  afterEach(() => vi.unstubAllGlobals())
 
   it('le district signe les jetons admin en ES256 et les accepte lui-même', async () => {
     const jeton = await jetonAdminEmisParLeDistrict()
@@ -86,13 +102,15 @@ describe('administrateur plateforme partagé entre installations', () => {
     const utilisateur = await verifier(jeton)
     expect(utilisateur?.role).toBe('ADMIN_PLATEFORME')
     expect(utilisateur?.externe).toBeUndefined()
+    expect(prisma.sessionUtilisateur.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'session-admin' } }))
+    expect(fetchSimule).not.toHaveBeenCalled()
   })
 
   it('le district garde HS256 pour les comptes ordinaires', async () => {
     enDistrict()
     const service = new AuthService({} as PrismaService, jwt)
-    const signer = (service as unknown as { signerAcces: (s: object) => Promise<string> }).signerAcces.bind(service)
-    const jeton = await signer({ id: 'u1', ...ADMIN, role: 'CHEF_GROUPE', paroisseId: 'p1' })
+    const signer = (service as unknown as { signerAcces: (s: object, sessionId: string) => Promise<string> }).signerAcces.bind(service)
+    const jeton = await signer({ id: 'u1', ...ADMIN, role: 'CHEF_GROUPE', paroisseId: 'p1' }, 'session-ordinaire')
     expect(jwt.decode(jeton, { complete: true })?.header.alg).toBe('HS256')
   })
 
@@ -101,6 +119,53 @@ describe('administrateur plateforme partagé entre installations', () => {
     enParoisse()
     const utilisateur = await verifier(jeton)
     expect(utilisateur).toMatchObject({ id: 'u-admin', role: 'ADMIN_PLATEFORME', paroisseId: null, externe: 'district-essai' })
+    expect(fetchSimule).toHaveBeenCalledWith(URL_VERIFICATION, {
+      headers: { Authorization: `Bearer ${jeton}` }, signal: expect.any(AbortSignal), redirect: 'error',
+    })
+    expect(prisma.sessionUtilisateur.findUnique).not.toHaveBeenCalled()
+  })
+
+  it('refuse une session administrateur révoquée auprès de l’émetteur', async () => {
+    const jeton = await jetonAdminEmisParLeDistrict()
+    enParoisse()
+    fetchSimule.mockResolvedValue({ ok: false, status: 401 })
+    await expect(verifier(jeton)).rejects.toBeInstanceOf(UnauthorizedException)
+    expect(fetchSimule).toHaveBeenCalledTimes(1)
+  })
+
+  it('refuse un accès externe si la vérification dépasse son délai', async () => {
+    const jeton = await jetonAdminEmisParLeDistrict()
+    enParoisse()
+    fetchSimule.mockRejectedValue(new DOMException('Délai dépassé', 'TimeoutError'))
+    await expect(verifier(jeton)).rejects.toBeInstanceOf(UnauthorizedException)
+  })
+
+  it('refuse un accès externe sans URL de vérification configurée', async () => {
+    const jeton = await jetonAdminEmisParLeDistrict()
+    enParoisse('')
+    await expect(verifier(jeton)).rejects.toBeInstanceOf(UnauthorizedException)
+    expect(fetchSimule).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['identité différente', { id: 'autre-admin', ...ADMIN }],
+    ['rôle retiré', { id: 'u-admin', ...ADMIN, role: 'CHEF_GROUPE' }],
+    ['mot de passe personnel requis', { id: 'u-admin', ...ADMIN, doitChangerMotDePasse: true }],
+    ['identité déjà externe', { id: 'u-admin', ...ADMIN, externe: 'tiers' }],
+  ])('refuse une réponse de vérification avec %s', async (_nom, utilisateur) => {
+    const jeton = await jetonAdminEmisParLeDistrict()
+    enParoisse()
+    fetchSimule.mockResolvedValue({ ok: true, json: async () => ({ utilisateur }) })
+    await expect(verifier(jeton)).rejects.toBeInstanceOf(UnauthorizedException)
+  })
+
+  it('vérifie à nouveau auprès de l’émetteur à chaque requête, sans cache positif', async () => {
+    const jeton = await jetonAdminEmisParLeDistrict()
+    enParoisse()
+    await expect(verifier(jeton)).resolves.toMatchObject({ id: 'u-admin' })
+    fetchSimule.mockResolvedValue({ ok: false, status: 401 })
+    await expect(verifier(jeton)).rejects.toBeInstanceOf(UnauthorizedException)
+    expect(fetchSimule).toHaveBeenCalledTimes(2)
   })
 
   it('la paroisse refuse un jeton ES256 du district pour un autre rôle que ADMIN_PLATEFORME', async () => {

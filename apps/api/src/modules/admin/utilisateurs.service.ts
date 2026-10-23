@@ -1,3 +1,5 @@
+import { genererMotDePasseTemporaire } from '../../auth/secret-temporaire'
+import { historiserAffectation, verrouillerDistrict } from '../district/affectations'
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { hash } from 'bcryptjs'
 import {
@@ -209,7 +211,7 @@ export class UtilisateursService {
   // Corps validé par SchemaCreationUtilisateur (champs requis, mot de passe,
   // rôle paroissial assignable, branche cohérente avec le rôle).
   async creer(donnees: DonneesCreationUtilisateur, acteurId: string) {
-    const { paroisseId, nom, prenom, email, matricule, telephone, role, password, fonction, brancheType } = donnees
+    const { paroisseId, nom, prenom, email, matricule, telephone, role, fonction, brancheType } = donnees
 
     const paroisse = await this.prisma.paroisse.findUnique({ where: { id: paroisseId }, select: { id: true } })
     if (!paroisse) throw new NotFoundException('Paroisse introuvable')
@@ -236,7 +238,8 @@ export class UtilisateursService {
       if (doublon) throw new BadRequestException('Cette adresse e-mail est déjà utilisée')
     }
 
-    const passwordHache = await hash(password, 12)
+    const motDePasseTemporaire = genererMotDePasseTemporaire()
+    const passwordHache = await hash(motDePasseTemporaire, 12)
 
     let utilisateur
     try {
@@ -251,6 +254,7 @@ export class UtilisateursService {
           fonction,
           brancheType,
           password: passwordHache,
+          doitChangerMotDePasse: true,
           paroisseId,
         },
         select: {
@@ -299,7 +303,7 @@ export class UtilisateursService {
       }).catch((error: unknown) => logger.error('admin.utilisateurs.email_bienvenue_echoue', error))
     }
 
-    return utilisateur
+    return { ...utilisateur, motDePasseTemporaire }
   }
 
   async detail(id: string) {
@@ -419,7 +423,8 @@ export class UtilisateursService {
     const { paroisseId: paroisseIdCible, ...utilisateur } = misAJour
 
     // Compte désactivé : ses sessions ouvertes sont fermées immédiatement.
-    if (actif === false) await this.auth.revoquerToutes(id)
+    if (actif === false || (role !== undefined && role !== existant.role) || brancheTypeFinal !== existant.brancheType)
+      await this.auth.revoquerToutes(id)
 
     if (role !== undefined && role !== existant.role) {
       await this.audit.enregistrer({
@@ -570,6 +575,45 @@ export class UtilisateursService {
     let utilisateur
     try {
       utilisateur = await this.prisma.$transaction(async (tx) => {
+        if (existant.paroisse?.districtId) await verrouillerDistrict(tx, existant.paroisse.districtId)
+        await tx.$queryRaw`SELECT id FROM "Utilisateur" WHERE id = ${id} FOR UPDATE`
+        const courant = await tx.utilisateur.findUniqueOrThrow({
+          where: { id },
+          select: {
+            role: true,
+            roleDistrict: true,
+            brancheType: true,
+            fonctionDistrict: true,
+            brancheTypeDistrict: true,
+            paroisseId: true,
+            paroisse: { select: { districtId: true } },
+            actif: true,
+          },
+        })
+        if (
+          courant.role !== existant.role ||
+          courant.roleDistrict !== existant.roleDistrict ||
+          courant.brancheType !== existant.brancheType ||
+          courant.fonctionDistrict !== existant.fonctionDistrict ||
+          courant.brancheTypeDistrict !== existant.brancheTypeDistrict ||
+          courant.paroisseId !== existant.paroisseId ||
+          courant.paroisse?.districtId !== existant.paroisse?.districtId ||
+          courant.actif !== existant.actif
+        ) {
+          throw new ConflictException('Ce compte a été modifié ; rechargez la fiche avant de nommer')
+        }
+        const dataDistrict = {
+          roleDistrict: roleDistrictFinal as RoleUtilisateur | null,
+          fonctionDistrict: fonctionDistrictFinale,
+          brancheTypeDistrict: brancheDistrictFinale as BrancheType | null,
+        }
+        if (existant.paroisse?.districtId) await historiserAffectation(tx, id, dataDistrict, acteurId)
+        if (roleFinal !== existant.role || brancheParoisseFinale !== existant.brancheType) {
+          await tx.sessionUtilisateur.updateMany({
+            where: { utilisateurId: id, revoqueeLe: null },
+            data: { revoqueeLe: new Date() },
+          })
+        }
         if (roleDistrictFinal === 'COMMISSAIRE_DISTRICT' && existant.paroisse?.districtId) {
           const commissairesExistants = await tx.utilisateur.findMany({
             where: {
@@ -580,6 +624,15 @@ export class UtilisateursService {
             select: { id: true },
           })
           commissairesRemplaces = commissairesExistants.map((u) => u.id)
+          for (const remplacantId of commissairesRemplaces) {
+            await historiserAffectation(
+              tx,
+              remplacantId,
+              { roleDistrict: null, fonctionDistrict: null, brancheTypeDistrict: null },
+              acteurId,
+              'Remplacement du commissaire',
+            )
+          }
           if (commissairesRemplaces.length > 0) {
             await tx.utilisateur.updateMany({
               where: { id: { in: commissairesRemplaces } },
@@ -658,7 +711,10 @@ export class UtilisateursService {
     if (!existant) throw new NotFoundException('Utilisateur introuvable')
 
     const passwordHache = await hash(nouveauMotDePasse, 12)
-    await this.prisma.utilisateur.update({ where: { id }, data: { password: passwordHache } })
+    await this.prisma.utilisateur.update({
+      where: { id },
+      data: { password: passwordHache, doitChangerMotDePasse: true },
+    })
 
     // L'ancien mot de passe a pu être compromis : toutes les sessions ouvertes
     // avec lui sont fermées.

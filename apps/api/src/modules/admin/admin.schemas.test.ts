@@ -125,12 +125,12 @@ describe('Schémas admin — paroisses', () => {
       matricule: 'M1',
       telephone: null,
       email: null,
-      password: 'abcdef12',
     })
     expect(erreur(SchemaCreationChefGroupe, { ...corps, matricule: '' })).toBe(
-      'Le nom, le prénom, le matricule et le mot de passe sont requis',
+      'Le nom, le prénom, le matricule sont requis',
     )
-    expect(erreur(SchemaCreationChefGroupe, { ...corps, password: 'court' })).toBe(REGLE_MOT_DE_PASSE)
+    expect(SchemaCreationChefGroupe.parse({ ...corps, password: 'court' })).not.toHaveProperty('password')
+    expect(SchemaCreationChefGroupe.parse({ nom: 'K', prenom: 'J', matricule: 'M1' })).not.toHaveProperty('password')
   })
 })
 
@@ -198,15 +198,13 @@ describe('Schémas admin — utilisateurs', () => {
       matricule: 'M1',
       telephone: null,
       role: 'CHEF_GROUPE',
-      password: 'abcdef12',
       fonction: null,
       brancheType: null,
     })
   })
 
   it.each([
-    [{ role: undefined }, 'Les champs paroisseId, nom, prenom, role et password sont requis'],
-    [{ password: 'court' }, REGLE_MOT_DE_PASSE],
+    [{ role: undefined }, 'Les champs paroisseId, nom, prenom, role sont requis'],
     [{ role: 'ADMIN_PLATEFORME' }, 'Rôle invalide'],
     [{ brancheType: 'AUTRE' }, 'Branche invalide'],
     [{ role: 'RESPONSABLE_BRANCHE' }, 'La branche est requise pour ce rôle'],
@@ -214,6 +212,14 @@ describe('Schémas admin — utilisateurs', () => {
     [{ telephone: 7 }, 'Le champ telephone est invalide'],
   ])('rejette une création %j', (modification, message) => {
     expect(erreur(SchemaCreationUtilisateur, { ...compte, ...modification })).toBe(message)
+  })
+
+  it('accepte une création sans mot de passe et ignore celui d’un ancien client', () => {
+    const sansSecret = { paroisseId: 'p1', nom: 'K', prenom: 'J', matricule: 'M1', role: 'CHEF_GROUPE' }
+    const attendu = SchemaCreationUtilisateur.parse(sansSecret)
+    expect(attendu).not.toHaveProperty('password')
+    expect(SchemaCreationUtilisateur.parse({ ...sansSecret, password: 'court' })).toEqual(attendu)
+    expect(SchemaCreationUtilisateur.parse({ ...sansSecret, password: 'SecretClient123' })).toEqual(attendu)
   })
 
   it('modification partielle : champs absents laissés undefined, email vide → null', () => {

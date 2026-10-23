@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common'
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 import { JwtService } from '@nestjs/jwt'
 import { CLE_PUBLIC } from '../decorators/public.decorator'
@@ -6,8 +6,10 @@ import type { RequeteAuthentifiee, UtilisateurSession } from '../types'
 import { COOKIE_ACCES } from '../../auth/cookies'
 import { ALGORITHME_ADMIN, clesAdmin } from '../../auth/cles-admin'
 import { env } from '../../config/env'
+import { PrismaService } from '../../prisma/prisma.service'
+import { CLE_MOT_DE_PASSE_TEMPORAIRE } from '../decorators/mot-de-passe-temporaire.decorator'
 
-type ChargeJeton = Omit<UtilisateurSession, 'id' | 'externe'> & { sub: string; iss?: string }
+type ChargeJeton = Omit<UtilisateurSession, 'id' | 'externe'> & { sub: string; iss?: string; sid?: string }
 
 // Garde globale : refuse par défaut toute route non marquée @Public().
 // Le jeton d'accès est lu dans le cookie httpOnly (navigateur) ou dans
@@ -19,6 +21,7 @@ export class AuthGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly jwt: JwtService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async canActivate(contexte: ExecutionContext): Promise<boolean> {
@@ -39,6 +42,18 @@ export class AuthGuard implements CanActivate {
 
     if (estPublique) return true
     if (!requete.utilisateur) throw new UnauthorizedException('Non authentifié')
+    if (
+      requete.utilisateur.doitChangerMotDePasse &&
+      !this.reflector.getAllAndOverride<boolean>(CLE_MOT_DE_PASSE_TEMPORAIRE, [
+        contexte.getHandler(),
+        contexte.getClass(),
+      ])
+    ) {
+      throw new ForbiddenException({
+        code: 'CHANGEMENT_MOT_DE_PASSE_REQUIS',
+        erreur: 'Définissez votre mot de passe personnel avant de continuer',
+      })
+    }
     return true
   }
 
@@ -59,7 +74,7 @@ export class AuthGuard implements CanActivate {
         algorithms: ['HS256'],
         issuer: env().INSTALLATION_ID,
       })
-      return versUtilisateur(charge)
+      return this.verifierSessionLocale(charge)
     }
 
     if (algorithme === ALGORITHME_ADMIN) {
@@ -73,14 +88,90 @@ export class AuthGuard implements CanActivate {
       })
       // Seul l'administrateur plateforme circule entre installations.
       if (charge.role !== 'ADMIN_PLATEFORME') throw new UnauthorizedException('Jeton non autorisé')
-      const utilisateur = versUtilisateur(charge)
-      return emetteur === env().INSTALLATION_ID
-        ? utilisateur
-        : // Compte d'une autre installation : il n'existe pas dans cette base.
-          { ...utilisateur, paroisseId: null, roleDistrict: null, externe: emetteur }
+      if (emetteur === env().INSTALLATION_ID) return this.verifierSessionLocale(charge)
+      // Vérification en ligne auprès de l'émetteur : aucune fenêtre de droits
+      // résiduels ni cache positif. Une installation indisponible ferme l'accès.
+      const url = env().ADMIN_URL_VERIFICATION_SESSION
+      if (!url) throw new UnauthorizedException('Vérification de session externe non configurée')
+      const reponse = await fetch(url, {
+        headers: { Authorization: `Bearer ${jeton}` },
+        signal: AbortSignal.timeout(3000),
+        redirect: 'error',
+      })
+      if (!reponse.ok) throw new UnauthorizedException('Session externe expirée')
+      const resultat = (await reponse.json()) as { utilisateur?: UtilisateurSession }
+      const courant = resultat.utilisateur
+      if (
+        !courant ||
+        courant.id !== charge.sub ||
+        courant.role !== 'ADMIN_PLATEFORME' ||
+        courant.externe ||
+        courant.doitChangerMotDePasse
+      ) {
+        throw new UnauthorizedException('Session externe refusée')
+      }
+      return {
+        ...versUtilisateur(charge),
+        doitChangerMotDePasse: false,
+        paroisseId: null,
+        roleDistrict: null,
+        externe: emetteur,
+      }
     }
 
     throw new UnauthorizedException('Algorithme de jeton refusé')
+  }
+
+  private async verifierSessionLocale(charge: ChargeJeton): Promise<UtilisateurSession> {
+    if (!charge.sid || !charge.sub) throw new UnauthorizedException('Session à renouveler')
+    const session = await this.prisma.sessionUtilisateur.findUnique({
+      where: { id: charge.sid },
+      select: {
+        utilisateurId: true,
+        revoqueeLe: true,
+        expireLe: true,
+        utilisateur: {
+          select: {
+            id: true,
+            matricule: true,
+            email: true,
+            nom: true,
+            prenom: true,
+            role: true,
+            roleDistrict: true,
+            paroisseId: true,
+            actif: true,
+            doitChangerMotDePasse: true,
+            paroisse: { select: { actif: true } },
+          },
+        },
+      },
+    })
+    const u = session?.utilisateur
+    if (
+      !session ||
+      session.utilisateurId !== charge.sub ||
+      session.revoqueeLe ||
+      session.expireLe <= new Date() ||
+      !u?.actif ||
+      (u.paroisse && !u.paroisse.actif) ||
+      u.role !== charge.role ||
+      u.roleDistrict !== charge.roleDistrict ||
+      u.paroisseId !== charge.paroisseId
+    ) {
+      throw new UnauthorizedException('Session expirée')
+    }
+    return {
+      id: u.id,
+      matricule: u.matricule,
+      email: u.email ?? '',
+      nom: u.nom,
+      prenom: u.prenom,
+      role: u.role,
+      roleDistrict: u.roleDistrict,
+      paroisseId: u.paroisseId,
+      doitChangerMotDePasse: u.doitChangerMotDePasse,
+    }
   }
 }
 
@@ -94,6 +185,7 @@ function versUtilisateur(charge: ChargeJeton): UtilisateurSession {
     role: charge.role,
     roleDistrict: charge.roleDistrict,
     paroisseId: charge.paroisseId,
+    doitChangerMotDePasse: charge.doitChangerMotDePasse,
   }
 }
 

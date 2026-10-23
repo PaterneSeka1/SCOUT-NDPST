@@ -57,9 +57,66 @@ describe('AuthService.rafraichir', () => {
 
     expect(resultat.jetonSession).toBeDefined()
     expect(resultat.utilisateur.role).toBe('CHEF_GROUPE')
-    const donnees = prisma.sessionUtilisateur.update.mock.calls[0][0].data
+    const donnees = prisma.sessionUtilisateur.updateMany.mock.calls[0][0].data
     expect(donnees.ancienneEmpreinte).toBe(empreinte('jeton-courant'))
     expect(donnees.empreinteJeton).toBe(empreinte(resultat.jetonSession!))
+  })
+
+  it('une rotation concurrente perdante ne remplace pas le cookie gagnant', async () => {
+    const prisma = prismaSimule({
+      id: 's1',
+      empreinteJeton: empreinte('courant'),
+      expireLe: futur(),
+      revoqueeLe: null,
+      utilisateur: UTILISATEUR,
+    })
+    prisma.sessionUtilisateur.updateMany.mockResolvedValue({ count: 0 })
+    prisma.sessionUtilisateur.findFirst
+      .mockResolvedValueOnce({
+        id: 's1',
+        empreinteJeton: empreinte('courant'),
+        expireLe: futur(),
+        revoqueeLe: null,
+        utilisateur: UTILISATEUR,
+      })
+      .mockResolvedValueOnce({
+        id: 's1',
+        empreinteJeton: empreinte('gagnant'),
+        ancienneEmpreinte: empreinte('courant'),
+        ancienneValideJusqua: futur(),
+        expireLe: futur(),
+        revoqueeLe: null,
+      })
+    const service = new AuthService(prisma as unknown as PrismaService, new JwtService())
+    const resultat = await service.rafraichir('courant')
+    expect(resultat.jetonSession).toBeUndefined()
+    expect(prisma.sessionUtilisateur.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 's1', empreinteJeton: empreinte('courant'), revoqueeLe: null, expireLe: { gt: expect.any(Date) } },
+      }),
+    )
+  })
+
+  it('une révocation pendant la rotation ne peut rouvrir une session', async () => {
+    const prisma = prismaSimule({
+      id: 's1',
+      empreinteJeton: empreinte('courant'),
+      expireLe: futur(),
+      revoqueeLe: null,
+      utilisateur: UTILISATEUR,
+    })
+    prisma.sessionUtilisateur.updateMany.mockResolvedValue({ count: 0 })
+    prisma.sessionUtilisateur.findFirst
+      .mockResolvedValueOnce({
+        id: 's1',
+        empreinteJeton: empreinte('courant'),
+        expireLe: futur(),
+        revoqueeLe: null,
+        utilisateur: UTILISATEUR,
+      })
+      .mockResolvedValueOnce(null)
+    const service = new AuthService(prisma as unknown as PrismaService, new JwtService())
+    await expect(service.rafraichir('courant')).rejects.toBeInstanceOf(UnauthorizedException)
   })
 
   it('accepte l’ancien jeton pendant la fenêtre de grâce sans nouvelle rotation', async () => {

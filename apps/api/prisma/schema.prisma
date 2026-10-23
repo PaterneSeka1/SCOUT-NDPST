@@ -155,6 +155,31 @@ model District {
   updatedAt DateTime @updatedAt
 
   paroisses Paroisse[]
+  affectations AffectationDistrict[]
+}
+
+// Historique immuable des mandats district ; les colonnes Utilisateur restent
+// la projection courante. Les identités d'auteurs peuvent venir d'une autre
+// installation, comme celles du journal d'audit.
+model AffectationDistrict {
+  id String @id @default(cuid())
+  utilisateurId String
+  utilisateur Utilisateur @relation("AffectationResponsable", fields: [utilisateurId], references: [id], onDelete: Restrict)
+  districtId String
+  district District @relation(fields: [districtId], references: [id], onDelete: Restrict)
+  role RoleUtilisateur
+  fonction String?
+  brancheType BrancheType?
+  debutLe DateTime @default(now())
+  finLe DateTime?
+  auteurId String?
+  motif String?
+  revoqueParId String?
+  motifRevocation String?
+  reprise Boolean @default(false)
+
+  @@index([districtId, debutLe])
+  @@index([utilisateurId, debutLe])
 }
 
 // ---------------------------------------------------------------------------
@@ -194,6 +219,8 @@ model Utilisateur {
   telephone String?         @unique // Requis pour parents, optionnel pour les autres
   email     String?         @unique
   password  String
+  doitChangerMotDePasse Boolean @default(false)
+  affectationsDistrict AffectationDistrict[] @relation("AffectationResponsable")
   role      RoleUtilisateur // Rôle PAROISSIAL (direction de groupe ou encadrement de branche) —
                              // jamais une valeur de district, même si ce compte sert aussi le
                              // district (voir roleDistrict) : les deux sont indépendants, une
@@ -275,6 +302,8 @@ model Scout {
   // personne ne l'a explicitement accordé.
   consentementImage     Boolean   @default(false)
   consentementImageDate DateTime?
+  // Provenance de la déclaration, sans présumer l’autorité juridique du compte.
+  consentementImageOrigine String?
 
   // Consentement des parents au traitement des données de santé du scout
   // (allergies, traitements, fiches médicales). Enregistré et journalisé, sans
@@ -282,6 +311,7 @@ model Scout {
   // plus dangereuse qu'une fiche signalée « sans consentement ».
   consentementSante     Boolean   @default(false)
   consentementSanteDate DateTime?
+  consentementSanteOrigine String?
 
   // Conservation (loi n° 2013-450) : date de désactivation, point de départ
   // du délai avant anonymisation, et date de l'anonymisation effectuée.

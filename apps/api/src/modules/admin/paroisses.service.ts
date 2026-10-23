@@ -1,3 +1,4 @@
+import { genererMotDePasseTemporaire } from '../../auth/secret-temporaire'
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { hash } from 'bcryptjs'
 import { LABELS_BRANCHES, LABELS_ROLES, MONO_PAROISSE } from '@scout/shared'
@@ -5,6 +6,7 @@ import { Prisma } from '../../generated/prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
 import { AuditService } from '../../common/audit.service'
 import { AuthService } from '../../auth/auth.service'
+import { verrouillerDistrict } from '../district/affectations'
 import { champCsv as champ } from '../../common/lib/csv'
 import { logger } from '../../common/lib/logger'
 import { envoyerEmailBienvenue } from '../../common/lib/notifications'
@@ -113,7 +115,7 @@ export class ParoissesService {
   }
 
   async modifier(id: string, donnees: DonneesModificationParoisse, acteurId: string) {
-    const existante = await this.prisma.paroisse.findUnique({ where: { id }, select: { id: true, actif: true } })
+    const existante = await this.prisma.paroisse.findUnique({ where: { id }, select: { id: true, actif: true, districtId: true } })
     if (!existante) throw new NotFoundException('Paroisse introuvable')
 
     const { districtId, actif } = donnees
@@ -123,14 +125,39 @@ export class ParoissesService {
       if (!districtExiste) throw new BadRequestException('District invalide')
     }
 
-    // Données déjà normalisées par SchemaModificationParoisse : un champ
-    // undefined (absent du corps) est ignoré par Prisma, donc inchangé.
-    const paroisse = await this.prisma.paroisse.update({ where: { id }, data: donnees })
+    const districtChange = districtId !== undefined && districtId !== existante.districtId
+    // Le périmètre district découle de la paroisse d'ancrage. Déplacer une
+    // paroisse ne constitue jamais une nomination dans le district d'arrivée.
+    const paroisse = districtChange ? await this.prisma.$transaction(async (tx) => {
+      for (const cible of [...new Set([existante.districtId, districtId!])].sort()) {
+        await verrouillerDistrict(tx, cible)
+      }
+      await tx.$queryRaw`SELECT id FROM "Paroisse" WHERE id = ${id} FOR UPDATE`
+      const courante = await tx.paroisse.findUnique({ where: { id }, select: { districtId: true } })
+      if (!courante) throw new NotFoundException('Paroisse introuvable')
+      if (courante.districtId !== existante.districtId) {
+        throw new ConflictException('Cette paroisse a été déplacée ; rechargez la fiche')
+      }
+      // Même ordre utilisateur → sessions que connexion/réinitialisation.
+      await tx.$queryRaw`SELECT id FROM "Utilisateur" WHERE "paroisseId" = ${id} ORDER BY id FOR UPDATE`
+      const mandat = await tx.utilisateur.findFirst({
+        where: { paroisseId: id, roleDistrict: { not: null } }, select: { id: true },
+      })
+      if (mandat) {
+        throw new ConflictException('Retirez explicitement les affectations district des membres avant de déplacer cette paroisse')
+      }
+      const modifiee = await tx.paroisse.update({ where: { id }, data: donnees })
+      await tx.sessionUtilisateur.updateMany({
+        where: { utilisateur: { paroisseId: id }, revoqueeLe: null },
+        data: { revoqueeLe: new Date() },
+      })
+      return modifiee
+    }) : await this.prisma.paroisse.update({ where: { id }, data: donnees })
 
     // Désactiver une paroisse bloque la connexion de tout son personnel : les
     // sessions ouvertes sont fermées immédiatement plutôt qu'au prochain
     // rafraîchissement.
-    if (actif === false) {
+    if (actif === false && !districtChange) {
       const comptes = await this.prisma.utilisateur.findMany({ where: { paroisseId: id }, select: { id: true } })
       for (const compte of comptes) await this.auth.revoquerToutes(compte.id)
     }
@@ -143,6 +170,14 @@ export class ParoissesService {
         action: actif ? 'PAROISSE_REACTIVEE' : 'PAROISSE_DESACTIVEE',
         entite: 'Paroisse',
         entiteId: id,
+      })
+    }
+
+    if (districtChange) {
+      await this.audit.enregistrer({
+        paroisseId: id, acteurId, action: 'PAROISSE_DISTRICT_MODIFIE',
+        entite: 'Paroisse', entiteId: id,
+        details: { ancienDistrictId: existante.districtId, nouveauDistrictId: districtId },
       })
     }
 
@@ -222,7 +257,7 @@ export class ParoissesService {
       )
     }
 
-    const { nom, prenom, matricule, telephone, email, password } = donnees
+    const { nom, prenom, matricule, telephone, email } = donnees
 
     const doublonMatricule = await this.prisma.utilisateur.findUnique({ where: { matricule }, select: { id: true } })
     if (doublonMatricule) throw new BadRequestException('Ce matricule est déjà utilisé')
@@ -240,7 +275,8 @@ export class ParoissesService {
       if (doublonEmail) throw new BadRequestException('Cette adresse e-mail est déjà utilisée')
     }
 
-    const passwordHache = await hash(password, 12)
+    const motDePasseTemporaire = genererMotDePasseTemporaire()
+    const passwordHache = await hash(motDePasseTemporaire, 12)
     let chefGroupe
     try {
       chefGroupe = await this.prisma.utilisateur.create({
@@ -252,6 +288,7 @@ export class ParoissesService {
           email,
           role: 'CHEF_GROUPE',
           password: passwordHache,
+          doitChangerMotDePasse: true,
           paroisseId,
         },
         select: {
@@ -288,7 +325,7 @@ export class ParoissesService {
       }).catch((error: unknown) => logger.error('admin.paroisses.chef_groupe.email_bienvenue_echoue', error))
     }
 
-    return chefGroupe
+    return { ...chefGroupe, motDePasseTemporaire }
   }
 
   async exporterScouts(id: string, acteurId: string): Promise<FichierCsv> {

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@nestjs/common'
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common'
 import { ApiTags } from '@nestjs/swagger'
 import { ROLES_PLATEFORME } from '@scout/shared'
 import { Roles } from '../../common/decorators/roles.decorator'
@@ -32,6 +32,11 @@ export class AdminDistrictsController {
   @Get(':id')
   detail(@Param('id') id: string) {
     return this.districts.detail(id)
+  }
+
+  @Get(':id/affectations')
+  historique(@Param('id') id: string, @Query('page') page: string, @Query('limite') limite: string) {
+    return this.districts.historique(id, page, limite)
   }
 
   @Patch(':id')

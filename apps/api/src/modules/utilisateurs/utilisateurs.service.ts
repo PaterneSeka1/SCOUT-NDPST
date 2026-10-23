@@ -1,3 +1,4 @@
+import { genererMotDePasseTemporaire } from '../../auth/secret-temporaire'
 import {
   BadRequestException,
   ConflictException,
@@ -172,7 +173,7 @@ export class UtilisateursService {
   // Forme, mot de passe, rôle (valeur connue), branche et enfants déjà validés
   // par SchemaCreationUtilisateur ; restent ici les règles d'attribution.
   async creer(session: UtilisateurSession, corps: CorpsCreationUtilisateur) {
-    const { nom, prenom, role, password, email, matricule, telephone, brancheType, scoutIds: scoutIdsUniques } = corps
+    const { nom, prenom, role, email, matricule, telephone, brancheType, scoutIds: scoutIdsUniques } = corps
 
     // Un admin plateforme (transverse, sans paroisse) ne se crée jamais via
     // cette route — uniquement via la bascule de compte ou un accès base directe.
@@ -248,7 +249,8 @@ export class UtilisateursService {
       if (existant) throw new BadRequestException('Cette adresse e-mail est déjà utilisée')
     }
 
-    const passwordHache = await hash(password, 12)
+    const motDePasseTemporaire = genererMotDePasseTemporaire()
+    const passwordHache = await hash(motDePasseTemporaire, 12)
 
     let utilisateur
     try {
@@ -263,6 +265,7 @@ export class UtilisateursService {
             role,
             brancheType: brancheTypeFinal,
             password: passwordHache,
+            doitChangerMotDePasse: true,
             paroisseId,
           },
           select: SELECTION_LISTE,
@@ -303,7 +306,7 @@ export class UtilisateursService {
       }).catch((erreur) => logger.error('utilisateurs.email_bienvenue_echoue', erreur))
     }
 
-    return utilisateur
+    return { ...utilisateur, motDePasseTemporaire }
   }
 
   private async enfantsDe(parentId: string, paroisseId: string) {
@@ -461,7 +464,7 @@ export class UtilisateursService {
 
     // Un compte désactivé perd immédiatement ses sessions : sans cela, il
     // resterait connecté jusqu'au prochain rafraîchissement du jeton d'accès.
-    if (actif === false) await this.auth.revoquerToutes(id)
+    if (actif === false || changeRole || brancheTypeFinal !== existant.brancheType) await this.auth.revoquerToutes(id)
 
     // Renvoyé avec le même champ `enfants` que le GET : sans ça, le cache
     // React Query (qui remplace la donnée en place après un PUT réussi)
@@ -559,7 +562,10 @@ export class UtilisateursService {
     }
 
     const passwordHache = await hash(corps.nouveauMotDePasse, 12)
-    await this.prisma.utilisateur.update({ where: { id }, data: { password: passwordHache } })
+    await this.prisma.utilisateur.update({
+      where: { id },
+      data: { password: passwordHache, doitChangerMotDePasse: true },
+    })
 
     // L'ancien mot de passe a pu être compromis : toutes les sessions ouvertes
     // du compte sont fermées (y compris celle de l'appelant s'il agit sur

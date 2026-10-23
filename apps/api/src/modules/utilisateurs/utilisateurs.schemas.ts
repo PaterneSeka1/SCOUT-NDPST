@@ -8,7 +8,7 @@ import { BrancheTypeSchema, REGLE_MOT_DE_PASSE, RoleUtilisateurSchema, motDePass
 // dans UtilisateursService.
 
 const MESSAGE_CORPS_INVALIDE = 'Données invalides'
-const MESSAGE_CHAMPS_REQUIS = 'Les champs nom, prenom, role et password sont requis'
+const MESSAGE_CHAMPS_REQUIS = 'Les champs nom, prenom et role sont requis'
 const MESSAGE_ROLE_INVALIDE = 'Rôle invalide'
 
 const role = z.enum(RoleUtilisateurSchema.options, { error: MESSAGE_ROLE_INVALIDE })
@@ -35,10 +35,8 @@ export const SchemaCreationUtilisateur = z.object(
     nom: z.string({ error: MESSAGE_CHAMPS_REQUIS }).trim().min(1, MESSAGE_CHAMPS_REQUIS),
     prenom: z.string({ error: MESSAGE_CHAMPS_REQUIS }).trim().min(1, MESSAGE_CHAMPS_REQUIS),
     role: z.string({ error: MESSAGE_CHAMPS_REQUIS }).min(1, MESSAGE_CHAMPS_REQUIS).pipe(role),
-    password: z
-      .string({ error: MESSAGE_CHAMPS_REQUIS })
-      .min(1, MESSAGE_CHAMPS_REQUIS)
-      .refine(motDePasseValide, REGLE_MOT_DE_PASSE),
+    // Ancien client accepté, mais ce secret ne sera jamais utilisé à la création.
+    password: z.string().max(200).optional(),
     email: texteOptionnel('L’adresse e-mail est invalide'),
     matricule: texteOptionnel('Le matricule est invalide'),
     telephone: texteOptionnel('Le numéro de téléphone est invalide'),

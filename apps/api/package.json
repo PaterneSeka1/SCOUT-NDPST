@@ -7,7 +7,7 @@
     "build": "nest build",
     "dev": "nest start --watch",
     "start": "node dist/main.js",
-    "lint": "eslint \"src/**/*.ts\" --max-warnings 0",
+    "lint": "eslint \"{src,test}/**/*.ts\" --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "prisma:generate": "prisma generate",
@@ -19,7 +19,8 @@
     "fichiers:migrer-r2": "ts-node --transpile-only scripts/migrer-fichiers-r2.ts",
     "initialiser": "ts-node --transpile-only scripts/initialiser.ts",
     "sauvegarder": "ts-node --transpile-only scripts/sauvegarder-base.ts",
-    "restaurer-sauvegarde": "ts-node --transpile-only scripts/restaurer-sauvegarde.ts"
+    "restaurer-sauvegarde": "ts-node --transpile-only scripts/restaurer-sauvegarde.ts",
+    "test:integration": "vitest run --config vitest.postgres.config.mts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1080.0",

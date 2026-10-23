@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt'
 import { compare } from 'bcryptjs'
 import { createHash, randomBytes } from 'crypto'
 import { PrismaService } from '../prisma/prisma.service'
+import type { Prisma } from '../generated/prisma/client'
 import { env } from '../config/env'
 import { limiteAtteinte, limiterTaux } from '../common/lib/rateLimit'
 import { logger } from '../common/lib/logger'
@@ -26,6 +27,7 @@ const SELECTION_UTILISATEUR = {
   roleDistrict: true,
   paroisseId: true,
   actif: true,
+  doitChangerMotDePasse: true,
   paroisse: { select: { actif: true } },
 } as const
 
@@ -60,7 +62,12 @@ export class AuthService {
     const atteintes = await Promise.all(limites.map(([cle, max]) => limiteAtteinte(cle, max)))
     if (atteintes.some(Boolean)) {
       // Jamais l'identifiant (matricule/téléphone = donnée personnelle) dans le log.
-      logger.warn('auth.rate_limit', { ip, parIdentifiantIp: atteintes[0], parIp: atteintes[1], parIdentifiant: atteintes[2] })
+      logger.warn('auth.rate_limit', {
+        ip,
+        parIdentifiantIp: atteintes[0],
+        parIp: atteintes[1],
+        parIdentifiant: atteintes[2],
+      })
       throw new HttpException(
         { erreur: 'Trop de tentatives. Réessayez dans quelques minutes.' },
         HttpStatus.TOO_MANY_REQUESTS,
@@ -76,6 +83,7 @@ export class AuthService {
     // compte existe, est désactivé ou si sa paroisse l'est.
     const echec = async () => {
       await Promise.all(limites.map(([cle, max]) => limiterTaux(cle, max, FENETRE_CONNEXION_MS)))
+      logger.warn('auth.connexion_refusee', { ip })
       return new UnauthorizedException('Identifiant ou mot de passe incorrect')
     }
     if (!utilisateur || !utilisateur.actif) throw await echec()
@@ -84,17 +92,41 @@ export class AuthService {
 
     const jetonSession = genererJeton()
     const sessionExpireLe = new Date(Date.now() + env().SESSION_TTL_SECONDES * 1000)
-    await this.prisma.sessionUtilisateur.create({
-      data: {
-        utilisateurId: utilisateur.id,
-        empreinteJeton: empreinte(jetonSession),
-        expireLe: sessionExpireLe,
-        agentUtilisateur: agent?.slice(0, 200) ?? null,
-      },
+    const { sessionCreee, courant } = await this.prisma.$transaction(async (tx) => {
+      // Le hash peut avoir changé pendant bcrypt. Sérialiser la création de
+      // session avec UPDATE Utilisateur (changement/reset) empêche un ancien
+      // secret de créer une session après la révocation transactionnelle.
+      await tx.$queryRaw`SELECT id FROM "Utilisateur" WHERE id = ${utilisateur.id} FOR UPDATE`
+      const courant = await tx.utilisateur.findUnique({
+        where: { id: utilisateur.id },
+        select: { ...SELECTION_UTILISATEUR, password: true },
+      })
+      if (
+        !courant?.actif ||
+        courant.password !== utilisateur.password ||
+        (courant.paroisse && !courant.paroisse.actif)
+      ) {
+        throw new UnauthorizedException('Identifiant ou mot de passe incorrect')
+      }
+      const sessionCreee = await tx.sessionUtilisateur.create({
+        data: {
+          utilisateurId: utilisateur.id,
+          empreinteJeton: empreinte(jetonSession),
+          expireLe: sessionExpireLe,
+          agentUtilisateur: agent?.slice(0, 200) ?? null,
+        },
+      })
+      return { sessionCreee, courant }
     })
 
-    const session = versSession(utilisateur)
-    return { utilisateur: session, jetonAcces: await this.signerAcces(session), jetonSession, sessionExpireLe }
+    logger.info('auth.connexion_reussie', { utilisateurId: utilisateur.id, sessionId: sessionCreee.id })
+    const session = versSession(courant)
+    return {
+      utilisateur: session,
+      jetonAcces: await this.signerAcces(session, sessionCreee.id),
+      jetonSession,
+      sessionExpireLe,
+    }
   }
 
   // Émet un nouveau jeton d'accès à partir du jeton de session, après avoir
@@ -117,7 +149,7 @@ export class AuthService {
     }
 
     const identite = versSession(utilisateur)
-    const jetonAcces = await this.signerAcces(identite)
+    const jetonAcces = await this.signerAcces(identite, session.id)
 
     if (session.empreinteJeton !== hash) {
       // Ancien jeton : accepté seulement pendant la fenêtre de grâce. Au-delà,
@@ -131,14 +163,30 @@ export class AuthService {
     }
 
     const nouveauJeton = genererJeton()
-    await this.prisma.sessionUtilisateur.update({
-      where: { id: session.id },
+    const rotation = await this.prisma.sessionUtilisateur.updateMany({
+      where: { id: session.id, empreinteJeton: hash, revoqueeLe: null, expireLe: { gt: maintenant } },
       data: {
         empreinteJeton: empreinte(nouveauJeton),
         ancienneEmpreinte: hash,
         ancienneValideJusqua: new Date(maintenant.getTime() + GRACE_ROTATION_MS),
       },
     })
+    if (rotation.count !== 1) {
+      // Deux requêtes peuvent avoir lu le même jeton courant. Seule la
+      // gagnante pose un nouveau cookie ; la perdante utilise la grâce sans
+      // écraser ce cookie par un secret qui n'existe plus en base.
+      const courante = await this.prisma.sessionUtilisateur.findFirst({
+        where: { id: session.id, revoqueeLe: null, expireLe: { gt: new Date() } },
+      })
+      if (
+        !courante ||
+        courante.ancienneEmpreinte !== hash ||
+        !courante.ancienneValideJusqua ||
+        courante.ancienneValideJusqua <= new Date()
+      )
+        throw expiree
+      return { utilisateur: identite, jetonAcces, sessionExpireLe: session.expireLe }
+    }
     return { utilisateur: identite, jetonAcces, jetonSession: nouveauJeton, sessionExpireLe: session.expireLe }
   }
 
@@ -153,19 +201,21 @@ export class AuthService {
 
   // Révoque toutes les sessions d'un compte (changement ou réinitialisation de
   // mot de passe, désactivation).
-  async revoquerToutes(utilisateurId: string): Promise<void> {
-    await this.prisma.sessionUtilisateur.updateMany({
+  async revoquerToutes(utilisateurId: string, transaction?: Prisma.TransactionClient): Promise<void> {
+    await (transaction ?? this.prisma).sessionUtilisateur.updateMany({
       where: { utilisateurId, revoqueeLe: null },
       data: { revoqueeLe: new Date() },
     })
+    if (!transaction) logger.info('auth.sessions_revoquees', { utilisateurId })
   }
 
   private async revoquer(sessionId: string) {
     await this.prisma.sessionUtilisateur.update({ where: { id: sessionId }, data: { revoqueeLe: new Date() } })
   }
 
-  private signerAcces(session: UtilisateurSession): Promise<string> {
-    const { id, ...charge } = session
+  private signerAcces(session: UtilisateurSession, sessionId: string): Promise<string> {
+    const { id, ...identite } = session
+    const charge = { ...identite, sid: sessionId }
     const communes = { subject: id, issuer: env().INSTALLATION_ID, expiresIn: env().JWT_ACCESS_TTL_SECONDES }
     // Administrateur plateforme hébergé ici : jeton à clé privée, vérifiable
     // par les autres installations qu'il administre (clé publique seule).
@@ -198,6 +248,7 @@ function versSession(u: {
   role: string
   roleDistrict: string | null
   paroisseId: string | null
+  doitChangerMotDePasse?: boolean
 }): UtilisateurSession {
   return {
     id: u.id,
@@ -208,5 +259,6 @@ function versSession(u: {
     role: u.role,
     roleDistrict: u.roleDistrict,
     paroisseId: u.paroisseId,
+    doitChangerMotDePasse: u.doitChangerMotDePasse ?? false,
   }
 }

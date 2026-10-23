@@ -1,5 +1,5 @@
-import { BadRequestException, HttpException, HttpStatus, Injectable } from '@nestjs/common'
-import { hash } from 'bcryptjs'
+import { UnauthorizedException, BadRequestException, HttpException, HttpStatus, Injectable } from '@nestjs/common'
+import { compare, hash } from 'bcryptjs'
 import { createHash, randomBytes } from 'crypto'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@scout/shared'
 import { PrismaService } from '../prisma/prisma.service'
@@ -68,6 +68,36 @@ export class MotDePasseService {
     return reponse
   }
 
+  async changerPersonnel(utilisateurId: string, actuel: string, nouveau: string) {
+    if (!(await limiterTaux(`changement-mdp:${utilisateurId}`, 5, FENETRE_MS)).autorise) {
+      throw new HttpException('Trop de tentatives', HttpStatus.TOO_MANY_REQUESTS)
+    }
+    const u = await this.prisma.utilisateur.findUnique({
+      where: { id: utilisateurId },
+      select: { password: true, actif: true },
+    })
+    if (!u?.actif || !(await compare(actuel, u.password)))
+      throw new UnauthorizedException('Mot de passe actuel incorrect')
+    if (!motDePasseValide(nouveau)) throw new BadRequestException(REGLE_MOT_DE_PASSE)
+    if (await compare(nouveau, u.password))
+      throw new BadRequestException('Choisissez un mot de passe personnel différent')
+    const password = await hash(nouveau, 12)
+    await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.utilisateur.updateMany({
+        where: { id: utilisateurId, password: u.password, actif: true },
+        data: { password, doitChangerMotDePasse: false },
+      })
+      if (count !== 1) throw new UnauthorizedException('Le mot de passe a changé, reconnectez-vous')
+      await tx.tokenReinitialisation.updateMany({ where: { utilisateurId, utilise: false }, data: { utilise: true } })
+      await tx.sessionUtilisateur.updateMany({
+        where: { utilisateurId, revoqueeLe: null },
+        data: { revoqueeLe: new Date() },
+      })
+    })
+    logger.info('auth.mot_de_passe_personnel_defini', { utilisateurId })
+    return { message: 'Mot de passe personnel enregistré. Reconnectez-vous.' }
+  }
+
   async verifierLien(token: string): Promise<{ valide: boolean }> {
     if (!token) return { valide: false }
     const record = await this.prisma.tokenReinitialisation.findUnique({
@@ -100,19 +130,26 @@ export class MotDePasseService {
     // Consommation atomique : deux requêtes concurrentes avec le même lien ne
     // peuvent pas réinitialiser le mot de passe deux fois.
     const consomme = await this.prisma.$transaction(async (tx) => {
+      // Même ordre que la connexion et le changement personnel : compte,
+      // liens de réinitialisation, puis sessions.
+      await tx.$queryRaw`SELECT id FROM "Utilisateur" WHERE id = ${record.utilisateurId} FOR UPDATE`
       const { count } = await tx.tokenReinitialisation.updateMany({
         where: { id: record.id, utilise: false, expiresAt: { gt: new Date() } },
         data: { utilise: true },
       })
       if (count !== 1) return false
-      await tx.utilisateur.update({ where: { id: record.utilisateurId }, data: { password: passwordHache } })
+      await tx.utilisateur.update({
+        where: { id: record.utilisateurId },
+        data: { password: passwordHache, doitChangerMotDePasse: false },
+      })
+      await this.auth.revoquerToutes(record.utilisateurId, tx)
       return true
     })
     if (!consomme) throw new BadRequestException(LIEN_INVALIDE)
 
     // Un mot de passe réinitialisé ferme toutes les sessions ouvertes,
     // y compris celle d'un éventuel tiers qui connaissait l'ancien.
-    await this.auth.revoquerToutes(record.utilisateurId)
+    logger.info('auth.mot_de_passe_reinitialise', { utilisateurId: record.utilisateurId })
     return { message: 'Mot de passe modifié avec succès.' }
   }
 }

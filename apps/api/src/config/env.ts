@@ -9,6 +9,9 @@ const videEnAbsent = (valeur: unknown) => (typeof valeur === 'string' && valeur.
 const SchemaEnv = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
+  // Docker exige une écoute sur l'interface du conteneur ; PM2 sur l'hôte
+  // impose 127.0.0.1 dans ses fichiers ecosystem.
+  HOST: z.enum(['0.0.0.0', '127.0.0.1', '::', '::1']).default('0.0.0.0'),
   DATABASE_URL: z.string().min(1),
 
   // Secret de signature des jetons d'accès (HS256). Distinct de tout autre
@@ -33,6 +36,9 @@ const SchemaEnv = z.object({
   ADMIN_CLE_PRIVEE_FICHIER: z.string().optional(),
   ADMIN_EMETTEUR_CONFIANCE: z.string().optional(),
   ADMIN_CLE_PUBLIQUE_FICHIER: z.string().optional(),
+  // URL fixe de /api/auth/session sur l'installation émettrice. Aucun hôte
+  // n'est dérivé d'un jeton ou d'une entrée utilisateur.
+  ADMIN_URL_VERIFICATION_SESSION: z.preprocess(videEnAbsent, z.string().url().optional()),
   SESSION_TTL_SECONDES: z.coerce
     .number()
     .int()
@@ -126,6 +132,22 @@ const SchemaEnvValide = SchemaEnv.superRefine((cfg, ctx) => {
   }
   if (renseigne(cfg.ADMIN_EMETTEUR_CONFIANCE) && cfg.ADMIN_EMETTEUR_CONFIANCE === cfg.INSTALLATION_ID) {
     manque('ADMIN_EMETTEUR_CONFIANCE', 'doit désigner une AUTRE installation que celle-ci')
+  }
+  if (cfg.NODE_ENV === 'production' && renseigne(cfg.ADMIN_EMETTEUR_CONFIANCE) && !cfg.ADMIN_URL_VERIFICATION_SESSION) {
+    manque('ADMIN_URL_VERIFICATION_SESSION', 'URL de revalidation de l’émetteur obligatoire avec un administrateur externe')
+  }
+  if (cfg.ADMIN_URL_VERIFICATION_SESSION) {
+    const url = new URL(cfg.ADMIN_URL_VERIFICATION_SESSION)
+    if (
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash ||
+      (url.protocol !== 'https:' &&
+        !(url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)))
+    ) {
+      manque('ADMIN_URL_VERIFICATION_SESSION', 'HTTPS ou HTTP loopback requis, sans identifiants ni paramètres')
+    }
   }
 
   if (renseigne(cfg.STORAGE_S3_BUCKET)) {

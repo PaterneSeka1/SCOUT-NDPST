@@ -41,6 +41,12 @@ async function demarrer() {
   app.setGlobalPrefix('api')
   app.use(helmet())
   app.use(cookieParser())
+  // Les réponses peuvent contenir des données privées ou un secret d'activation
+  // remis une seule fois. Aucun intermédiaire ne doit les conserver.
+  app.use((_requete: Request, reponse: Response, suivant: NextFunction) => {
+    reponse.setHeader('Cache-Control', 'no-store')
+    suivant()
+  })
 
   const origines = config.CORS_ORIGINES.split(',')
     .map((o) => o.trim())
@@ -66,8 +72,8 @@ async function demarrer() {
   }
 
   app.enableShutdownHooks()
-  await app.listen(config.PORT)
-  logger.info('api.demarree', { port: config.PORT })
+  await app.listen(config.PORT, config.HOST)
+  logger.info('api.demarree', { port: config.PORT, host: config.HOST })
 }
 
 demarrer().catch((erreur) => {
