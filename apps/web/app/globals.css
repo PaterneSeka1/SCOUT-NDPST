@@ -1,11 +1,12 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   Charte SCOUT-NDPST — tirée du logo du groupe : vert scout, terracotta,
-   sable, crème et or discret. Les couleurs institutionnelles (--cp, --ca,
-   --cf, --ch) sont injectées par app/layout.tsx depuis la configuration de
-   l'installation (Administration > Identité et configuration) ; les valeurs
-   ci-dessous ne sont que des replis.
+   Charte SCOUT-NDPST — « Carnet de route ».
+   Tirée du logo du groupe : vert forêt, terracotta, or discret, sur un papier
+   clair. Les couleurs institutionnelles (--cp, --ca, --cf, --ch) sont
+   injectées par app/layout.tsx depuis la configuration de l'installation
+   (Administration > Identité et configuration) ; les valeurs ci-dessous ne
+   sont que des replis. Voir docs/refonte-ux-ui.md pour le design system.
    --------------------------------------------------------------------------- */
 :root {
   --cp: #2f5d3a;
@@ -16,8 +17,18 @@
   --ca-rgb: 181, 101, 63;
   --ch-rgb: 194, 122, 82;
 
-  --background: #fbf8f2;
-  --foreground: #23201b;
+  /* Surfaces et texte (contrastes AA vérifiés sur --papier) */
+  --background: #f6f3ec;
+  --foreground: #1c1f1a;
+
+  /* Hauteur de l'en-tête public (sticky) : sert aux décalages d'ancres. */
+  --hauteur-entete: 4rem;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --hauteur-entete: 4.5rem;
+  }
 }
 
 @theme inline {
@@ -32,18 +43,28 @@
 
   --font-sans: var(--font-corps), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-display: var(--font-titre), ui-serif, Georgia, serif;
+  --font-condense: var(--font-signal), var(--font-corps), ui-sans-serif, sans-serif;
   --font-mono: var(--font-geist-mono);
 }
 
 @theme {
-  /* Palette fixe de la charte (décors, fonds, états) */
-  --color-creme: #fbf8f2;
-  --color-creme-fonce: #f3ecdf;
-  --color-sable-50: #faf5ec;
-  --color-sable-100: #f1e6d2;
-  --color-sable-200: #e5d3b2;
-  --color-sable-300: #d6bc8d;
-  --color-sable-500: #b89a66;
+  /* Papier et encres : surfaces neutres chaudes, moins jaunes que l'ancien sable. */
+  --color-papier: #f6f3ec;
+  --color-papier-fonce: #ebe5d8;
+  --color-encre: #1c1f1a;
+  --color-encre-douce: #474c44;
+  --color-encre-pale: #646a60;
+  --color-ligne: #e2dccf;
+  --color-ligne-forte: #cbc2b0;
+
+  /* Palette historique conservée (noms utilisés dans l'espace privé), retouchée. */
+  --color-creme: #f6f3ec;
+  --color-creme-fonce: #ebe5d8;
+  --color-sable-50: #f8f4ec;
+  --color-sable-100: #efe7d8;
+  --color-sable-200: #e2d4ba;
+  --color-sable-300: #d1bc94;
+  --color-sable-500: #a68b5b;
   --color-terracotta-50: #fbf0ea;
   --color-terracotta-100: #f5dccf;
   --color-terracotta-500: #b5653f;
@@ -54,27 +75,39 @@
   --color-foret-500: #3f7a4c;
   --color-foret-600: #2f5d3a;
   --color-foret-700: #244a2d;
-  --color-foret-900: #15291b;
+  --color-foret-900: #12261a;
   --color-or-300: #e2c47d;
   --color-or-500: #b8913a;
-  --color-or-700: #8a6a24;
-  --color-encre: #23201b;
+  --color-or-700: #7a5c1c;
 
-  --shadow-carte: 0 1px 2px rgba(35, 32, 27, 0.04), 0 4px 16px -8px rgba(35, 32, 27, 0.12);
-  --shadow-flottante: 0 12px 40px -12px rgba(35, 32, 27, 0.28);
+  /* Accents des branches : une teinte par branche, désaturée pour rester dans
+     la charte. Toujours accompagnés du nom de la branche (jamais seuls). */
+  --color-branche-oisillons: #b7861a;
+  --color-branche-louveteaux: #c25e24;
+  --color-branche-eclaireurs: #2f7a45;
+  --color-branche-cheminots: #2a6299;
+  --color-branche-compagnons: #8b2f3c;
+  --color-branche-ressources: #2c706b;
 
-  --animate-apparition: apparition 0.5s ease-out both;
+  --shadow-carte: 0 1px 2px rgba(28, 31, 26, 0.05), 0 6px 20px -12px rgba(28, 31, 26, 0.18);
+  --shadow-flottante: 0 18px 48px -18px rgba(28, 31, 26, 0.35);
+
+  --animate-apparition: apparition 0.45s ease-out both;
 
   @keyframes apparition {
     from {
       opacity: 0;
-      transform: translateY(8px);
+      transform: translateY(6px);
     }
     to {
       opacity: 1;
       transform: none;
     }
   }
+}
+
+html {
+  scroll-padding-top: calc(var(--hauteur-entete) + 1rem);
 }
 
 body {
@@ -85,9 +118,26 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Titres éditoriaux du site public */
+/* Titres éditoriaux (Fraunces) : réservés aux titres de page et de section. */
 .titre-display {
   font-family: var(--font-titre), ui-serif, Georgia, serif;
+  font-optical-sizing: auto;
+  letter-spacing: -0.015em;
+}
+
+/* Signalétique (Barlow Condensed) : surtitres, dates, âges, repères chiffrés —
+   l'équivalent des fanions et balises de piste. */
+.signal {
+  font-family: var(--font-signal), var(--font-corps), ui-sans-serif, sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chiffre-signal {
+  font-family: var(--font-signal), var(--font-corps), ui-sans-serif, sans-serif;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
 
@@ -102,7 +152,7 @@ body {
 
 /* Navigation de l'espace privé (sidebar sur fond --cf) */
 .snav-link {
-  color: rgba(255, 255, 255, 0.74);
+  color: rgba(255, 255, 255, 0.78);
   transition:
     background-color 0.15s,
     color 0.15s;
@@ -112,16 +162,25 @@ body {
   color: white;
 }
 .snav-active {
-  background-color: rgba(var(--ch-rgb), 0.95) !important;
+  background-color: rgba(255, 255, 255, 0.12) !important;
   color: white !important;
+  box-shadow: inset 3px 0 0 var(--ch);
 }
 
-/* Motif discret inspiré des cercles du logo (fonds décoratifs uniquement) */
+/* Courbes de niveau (carte topographique) : évoque l'exploration et le camp.
+   Usage limité aux bandeaux d'ouverture et aux états vides du site public. */
+.motif-topo {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='320' viewBox='0 0 480 320' fill='none' stroke='%23000' stroke-width='1'%3E%3Cpath d='M-20 260c60-40 110-30 160-60s70-90 140-96 120 40 220 10'/%3E%3Cpath d='M-20 290c70-36 120-24 170-52s80-82 150-86 120 44 200 18'/%3E%3Cpath d='M-20 230c50-42 100-36 150-66s60-96 130-104 130 34 240 0'/%3E%3Cpath d='M-20 200c46-46 96-42 144-72s50-100 120-112 140 26 256-10'/%3E%3Cpath d='M190 170c20-30 70-34 92-8s-6 60-46 58-60-22-46-50z'/%3E%3Cpath d='M210 168c12-16 40-18 52-4s-4 32-26 31-34-12-26-27z'/%3E%3C/svg%3E");
+  background-size: 480px 320px;
+}
+.motif-topo-clair {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='320' viewBox='0 0 480 320' fill='none' stroke='%23fff' stroke-width='1'%3E%3Cpath d='M-20 260c60-40 110-30 160-60s70-90 140-96 120 40 220 10'/%3E%3Cpath d='M-20 290c70-36 120-24 170-52s80-82 150-86 120 44 200 18'/%3E%3Cpath d='M-20 230c50-42 100-36 150-66s60-96 130-104 130 34 240 0'/%3E%3Cpath d='M-20 200c46-46 96-42 144-72s50-100 120-112 140 26 256-10'/%3E%3Cpath d='M190 170c20-30 70-34 92-8s-6 60-46 58-60-22-46-50z'/%3E%3Cpath d='M210 168c12-16 40-18 52-4s-4 32-26 31-34-12-26-27z'/%3E%3C/svg%3E");
+  background-size: 480px 320px;
+}
+
+/* Ancien motif à pois : neutralisé (remplacé par .motif-topo, plus sobre). */
 .motif-cercles {
-  background-image:
-    radial-gradient(circle at 20% 30%, rgba(var(--ca-rgb), 0.08) 0 2px, transparent 3px),
-    radial-gradient(circle at 70% 60%, rgba(184, 145, 58, 0.1) 0 2px, transparent 3px);
-  background-size: 28px 28px, 36px 36px;
+  background-image: none;
 }
 
 .scrollbar-fine {

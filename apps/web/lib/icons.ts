@@ -14,6 +14,7 @@ import {
   Network, Flag, Mail, Phone, MapPin, Pencil, Trash2, Eye, EyeOff, Archive,
   Globe, Send, Filter, Sparkles, HeartPulse, Server, Database, Route,
   MessageCircle, Quote, ScrollText, Target, Lightbulb,
+  LogIn, UserPlus, HelpCircle, Mountain, CalendarClock, ArrowUpRight, Shield, SlidersHorizontal,
 } from 'lucide-react'
 
 export type { LucideIcon }
@@ -104,4 +105,5 @@ export {
   Network, Flag, Mail, Phone, MapPin, Pencil, Trash2, Eye, EyeOff, Archive,
   Globe, Send, Filter, Sparkles, HeartPulse, Server, Database, Route,
   MessageCircle, Quote, ScrollText, Target, Lightbulb,
+  LogIn, UserPlus, HelpCircle, Mountain, CalendarClock, ArrowUpRight, Shield, SlidersHorizontal,
 }

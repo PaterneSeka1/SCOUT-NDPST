@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Fraunces, Geist_Mono, Source_Sans_3 } from 'next/font/google'
+import { Barlow_Condensed, Fraunces, Geist_Mono, Source_Sans_3 } from 'next/font/google'
 import './globals.css'
 import { Providers } from './providers'
 import { ConfirmDialogHost } from '@/components/ConfirmDialog'
@@ -8,9 +8,11 @@ import { hexToRgb } from '@scout/shared'
 import { getIdentite } from '@/lib/identite-serveur'
 import { LOGO_PAR_DEFAUT, nomAffiche } from '@/lib/identite'
 
-// Corps de texte lisible, titres éditoriaux plus chaleureux.
+// Corps de texte lisible (interface), titres éditoriaux chaleureux (Fraunces)
+// et signalétique condensée pour les dates, âges et surtitres.
 const corps = Source_Sans_3({ variable: '--font-corps', subsets: ['latin'], display: 'swap' })
-const titre = Fraunces({ variable: '--font-titre', subsets: ['latin'], display: 'swap' })
+const titre = Fraunces({ variable: '--font-titre', subsets: ['latin'], display: 'swap', axes: ['opsz'] })
+const signal = Barlow_Condensed({ variable: '--font-signal', subsets: ['latin'], weight: ['500', '600'], display: 'swap' })
 const mono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] })
 
 // URL publique du site (liens absolus des métadonnées Open Graph). Le repli
@@ -69,7 +71,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <head>
         <style dangerouslySetInnerHTML={{ __html: cssVars }} />
       </head>
-      <body className={`${corps.variable} ${titre.variable} ${mono.variable} antialiased`}>
+      <body className={`${corps.variable} ${titre.variable} ${signal.variable} ${mono.variable} antialiased`}>
         <Providers>{children}</Providers>
         <ConfirmDialogHost />
         <InstallationPwa nomSite={nomAffiche(identite)} logoSite={identite.logoUrl || LOGO_PAR_DEFAUT} />
