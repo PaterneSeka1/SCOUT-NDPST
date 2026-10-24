@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { LOGO_PAR_DEFAUT } from '@/lib/identite'
+import { useSiteInfo } from '@/components/useSiteInfo'
 
 // Tailles prédéfinies (px)
 const TAILLES = {
@@ -43,8 +43,8 @@ export function ParoisseLogoImage({
 }
 
 // ──────────────────────────────────────────────────────────────────
-// Composant auto-fetching pour les pages client (login, sidebar…)
-// Interroge /api/public/logo et affiche le résultat
+// Variante pour les pages client hors layout (connexion, mot de passe) :
+// le logo vient de l'identité publique, requête partagée par useSiteInfo.
 // ──────────────────────────────────────────────────────────────────
 export function ParoisseLogoImageAuto({
   taille = 'md',
@@ -53,26 +53,6 @@ export function ParoisseLogoImageAuto({
   taille?: Taille
   className?: string
 }) {
-  // undefined = en cours | null = pas de logo | string = URL
-  const [logoUrl, setLogoUrl] = useState<string | null | undefined>(undefined)
-
-  useEffect(() => {
-    fetch('/api/public/logo')
-      .then((r) => r.json())
-      .then((d: { logoUrl: string | null }) => setLogoUrl(d.logoUrl ?? null))
-      .catch(() => setLogoUrl(null))
-  }, [])
-
-  if (logoUrl === undefined) {
-    // Skeleton pendant le chargement
-    const px = TAILLES[taille]
-    return (
-      <span
-        className="block rounded animate-pulse bg-white/20"
-        style={{ width: px, height: px }}
-      />
-    )
-  }
-
+  const { logoUrl } = useSiteInfo()
   return <ParoisseLogoImage logoUrl={logoUrl} taille={taille} className={className} />
 }
