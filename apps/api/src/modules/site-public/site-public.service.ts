@@ -47,6 +47,8 @@ function versMembre(m: MembrePublic) {
     nom: m.nom,
     fonction: m.fonctionPublique || LABELS_ROLES[m.role] || m.role,
     branche: m.brancheType ? LABELS_BRANCHES[m.brancheType] : null,
+    // Code de branche (accent visuel et filtres du site) ; null = direction du groupe.
+    brancheType: m.brancheType,
     photo: m.photoPublique,
     biographie: m.biographie,
   }

@@ -34,6 +34,20 @@ describe('SitePublicService — données publiées uniquement', () => {
     expect(appel.where.role.in).not.toContain('SCOUT')
   })
 
+  it('expose le code de branche (null pour la direction) et trie la direction en premier', async () => {
+    const { prisma, service } = construire()
+    const base = { fonctionPublique: null, photoPublique: null, biographie: null, ordrePublic: 0 }
+    prisma.utilisateur.findMany.mockResolvedValueOnce([
+      { ...base, id: 'b', prenom: 'Awa', nom: 'Koné', role: 'RESPONSABLE_BRANCHE', brancheType: 'LOUVETEAUX' },
+      { ...base, id: 'g', prenom: 'Yao', nom: 'Kouassi', role: 'CHEF_GROUPE', brancheType: null },
+    ])
+    const equipe = await service.equipe()
+    expect(equipe.map((m) => [m.id, m.brancheType, m.branche])).toEqual([
+      ['g', null, null],
+      ['b', 'LOUVETEAUX', 'Louveteaux'],
+    ])
+  })
+
   it("n'expose que les activités publiques, jamais leur description interne", async () => {
     const { prisma, service } = construire()
     await service.activites({})
