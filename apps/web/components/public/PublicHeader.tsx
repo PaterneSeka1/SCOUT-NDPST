@@ -9,7 +9,9 @@ import { LIENS_PUBLICS } from '@/lib/navigation-publique'
 
 export function PublicHeader({ nomSite, sousTitre, logoUrl }: { nomSite: string; sousTitre: string; logoUrl: string }) {
   const chemin = usePathname()
-  const [ouvert, setOuvert] = useState(false)
+  const [cheminOuvert, setCheminOuvert] = useState<string | null>(null)
+  const ouvert = cheminOuvert === chemin
+  const setOuvert = (valeur: boolean) => setCheminOuvert(valeur ? chemin : null)
   const [defile, setDefile] = useState(false)
   const tiroir = useRef<HTMLDialogElement>(null)
   const surAccueil = chemin === '/'
@@ -26,7 +28,9 @@ export function PublicHeader({ nomSite, sousTitre, logoUrl }: { nomSite: string;
     else tiroir.current?.close()
   }, [ouvert])
 
-  useEffect(() => setOuvert(false), [chemin])
+  if (cheminOuvert !== null && cheminOuvert !== chemin) {
+    setCheminOuvert(null)
+  }
 
   // Transparent sur le hero de l'accueil, opaque ailleurs ou après défilement.
   const transparent = surAccueil && !defile

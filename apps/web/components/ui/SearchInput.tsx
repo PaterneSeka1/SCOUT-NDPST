@@ -20,10 +20,12 @@ export function SearchInput({
   className?: string
 }) {
   const [saisie, setSaisie] = useState(valeur)
+  const [valeurPrecedente, setValeurPrecedente] = useState(valeur)
 
-  useEffect(() => {
+  if (valeur !== valeurPrecedente) {
+    setValeurPrecedente(valeur)
     setSaisie(valeur)
-  }, [valeur])
+  }
 
   useEffect(() => {
     if (saisie === valeur) return
