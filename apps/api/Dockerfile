@@ -10,8 +10,7 @@ COPY package.json package-lock.json ./
 # npm ci exige tous les manifestes déclarés dans les workspaces (lockfile complet).
 COPY packages/shared/package.json packages/shared/
 COPY apps/api/package.json apps/api/
-COPY apps/web-paroisse/package.json apps/web-paroisse/
-COPY apps/web-district/package.json apps/web-district/
+COPY apps/web/package.json apps/web/
 # Le postinstall de l'API génère le client Prisma : il a besoin du schéma.
 COPY apps/api/prisma apps/api/prisma
 COPY apps/api/prisma.config.ts apps/api/

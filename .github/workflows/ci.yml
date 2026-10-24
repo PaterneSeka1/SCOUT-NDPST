@@ -69,7 +69,7 @@ jobs:
       - name: État des migrations
         run: npm run db:status
 
-      - name: Reprise des affectations existantes (seconde base temporaire)
+      - name: Reprise des données existantes et simplification mono-paroissiale (seconde base temporaire)
         env:
           PGHOST: 127.0.0.1
           PGPORT: 5432
@@ -103,7 +103,7 @@ jobs:
         run: npm run test --workspaces --if-present
 
       - name: Build
-        run: npm run build -w @scout/api -w @scout/web-paroisse -w @scout/web-district
+        run: npm run build -w @scout/api -w @scout/web
         env:
           # Obligatoire pour un build de production des frontends (relais /api).
           API_URL_INTERNE: http://127.0.0.1:4000
@@ -138,11 +138,8 @@ jobs:
       - name: Chargement du client Prisma compilé
         run: docker run --rm --entrypoint node scout-api:ci -e "require('./dist/generated/prisma/client.js')"
 
-      - name: Frontend paroissial (sans publication)
-        run: docker build -f apps/web-paroisse/Dockerfile --build-arg API_URL_INTERNE=http://api:4000 --build-arg NEXT_PUBLIC_SITE_URL=https://paroisse.example.invalid -t scout-web:ci .
-
-      - name: Application district (sans publication)
-        run: docker build -f apps/web-district/Dockerfile --build-arg API_URL_INTERNE=http://api:4000 --build-arg NEXT_PUBLIC_SITE_URL=https://district.example.invalid -t scout-district:ci .
+      - name: Frontend (sans publication)
+        run: docker build -f apps/web/Dockerfile --build-arg API_URL_INTERNE=http://api:4000 --build-arg NEXT_PUBLIC_SITE_URL=https://paroisse.example.invalid -t scout-web:ci .
 
   e2e:
     name: Parcours navigateur bureau et mobile (API simulée)

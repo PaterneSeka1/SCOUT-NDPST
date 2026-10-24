@@ -2,7 +2,7 @@
 # Sonde destinée à un ordonnanceur supervisé, aucun redémarrage automatique.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-"$ROOT/deploy/check-health.sh" "${1:?Installation paroisse|district requise}"
+"$ROOT/deploy/check-health.sh" "${1:-paroisse}"
 (cd "$ROOT/apps/api" && node ../../deploy/check-backup.cjs)
 node "$ROOT/deploy/check-resources.cjs"
 # Seuil proposé : 85 %; toute saturation rend la sonde non nulle.

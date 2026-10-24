@@ -24,14 +24,14 @@ with tempfile.TemporaryDirectory(prefix="scout-release-") as temporary:
         source / "deploy",
         fixtures / "deploy",
         fixtures / "apps/api",
-        fixtures / "apps/web-paroisse",
+        fixtures / "apps/web",
         runtime / "shared",
         binaries,
     ):
         directory.mkdir(parents=True, exist_ok=True)
     shutil.copy(REPO / "deploy/release.sh", source / "deploy/release.sh")
     (runtime / "shared/.env.prod").write_text("INSTALLATION=paroisse\n")
-    for name in ("api.env", "web-paroisse.env"):
+    for name in ("api.env", "web.env"):
         (runtime / "shared" / name).write_text("")
 
     executable(

@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
-case "${1:-}" in
+case "${1:-paroisse}" in
   paroisse) API=4000; WEB=3002 ;;
-  district) API=4100; WEB=3004 ;;
-  *) echo 'Usage: check-health.sh paroisse|district' >&2; exit 1 ;;
+  *) echo 'Usage: check-health.sh [paroisse]' >&2; exit 1 ;;
 esac
 # Délai borné, vérifie aussi le relais Next -> API et une page publique.
 for attempt in {1..20}; do

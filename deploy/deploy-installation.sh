@@ -1,20 +1,14 @@
 #!/bin/bash
 # =============================================================================
-# SCOUT ASCCI — Déploiement production d'une installation (VPS OVH)
+# SCOUT-NDPST — Déploiement production de l'installation paroissiale (VPS OVH)
 # À lancer sur le VPS (via SSH), depuis la racine du clone à déployer.
 #
-# Chaque installation a son propre clone, sa propre base et ses propres
-# secrets ; .env.prod (INSTALLATION=paroisse|district) indique laquelle ce
-# clone déploie :
-#
-#   | Installation | Base (Docker)  | API (pm2)                | Frontend (pm2)              |
-#   | paroisse     | 127.0.0.1:5434 | scout-api :4000          | scout-web :3002             |
-#   | district     | 127.0.0.1:5436 | scout-district-api :4100 | scout-district-web :3004    |
+# Une seule installation : la paroisse (base 127.0.0.1:5434, API pm2
+# scout-api :4000, frontend pm2 scout-web :3002).
 #
 # Seule la base tourne dans Docker (docker-compose.prod.yml). Les fichiers
 # téléversés sont dans Cloudflare R2, jamais sur le VPS. Nginx fait office de
-# reverse proxy HTTPS vers le frontend (deploy/nginx-scout.conf,
-# deploy/nginx-district.conf).
+# reverse proxy HTTPS vers le frontend (deploy/nginx-scout.conf).
 # Procédure complète (première installation incluse) : docs/deploiement-ovh.md.
 # =============================================================================
 
@@ -55,25 +49,13 @@ cd "$SCRIPT_DIR"
 INSTALLATION=$(lire_env .env.prod INSTALLATION)
 INSTALLATION=${INSTALLATION:-paroisse}
 
-case "$INSTALLATION" in
-  paroisse)
-    FRONT=web-paroisse
-    ECOSYSTEM=deploy/ecosystem.config.cjs
-    PORT_API=4000
-    PROCESSUS_API=scout-api
-    PROCESSUS_WEB=scout-web
-    ;;
-  district)
-    FRONT=web-district
-    ECOSYSTEM=deploy/ecosystem.district.config.cjs
-    PORT_API=4100
-    PROCESSUS_API=scout-district-api
-    PROCESSUS_WEB=scout-district-web
-    ;;
-  *)
-    err "INSTALLATION=$INSTALLATION dans .env.prod : valeurs possibles « paroisse » ou « district »."
-    ;;
-esac
+# Seule valeur possible depuis la simplification mono-paroissiale.
+[ "$INSTALLATION" = paroisse ] || err "INSTALLATION=$INSTALLATION dans .env.prod : seule la valeur « paroisse » est prise en charge."
+FRONT=web
+ECOSYSTEM=deploy/ecosystem.config.cjs
+PORT_API=4000
+PROCESSUS_API=scout-api
+PROCESSUS_WEB=scout-web
 
 PORT_DB=$(lire_env .env.prod PORT_DB)
 PORT_DB=${PORT_DB:-5434}
@@ -84,21 +66,14 @@ COMPOSE_PROJET=${COMPOSE_PROJET:-scout-ascci}
 
 echo ""
 echo "=================================================="
-echo "  SCOUT ASCCI — Déploiement de l'installation $INSTALLATION (OVH VPS)"
+echo "  SCOUT-NDPST — Déploiement de l'installation paroissiale (OVH VPS)"
 echo "=================================================="
 echo ""
-
-# Le district partage le VPS avec la paroisse : il ne doit jamais réutiliser
-# le projet Compose, le conteneur ni le port de la base paroisse.
-if [ "$INSTALLATION" = "district" ]; then
-  [ "$COMPOSE_PROJET" != "scout-ascci" ] && [ "$CONTENEUR_DB" != "scout_db" ] && [ "$PORT_DB" != "5434" ] \
-    || err "Installation district : définis COMPOSE_PROJET, CONTENEUR_DB et PORT_DB dans .env.prod (voir .env.prod.example), distincts de ceux de la paroisse."
-fi
 
 # --- Fichiers d'environnement ---
 API_ENV=apps/api/.env
 FRONT_ENV=apps/$FRONT/.env
-[ -f "$API_ENV" ] || err "$API_ENV introuvable. Copie apps/api/.env.example et remplis-le (voir docs/deploiement-ovh.md, section 6.2 ou 13)."
+[ -f "$API_ENV" ] || err "$API_ENV introuvable. Copie apps/api/.env.example et remplis-le (voir docs/deploiement-ovh.md, section 6.2)."
 [ -f "$FRONT_ENV" ] || err "$FRONT_ENV introuvable. Copie apps/$FRONT/.env.example et remplis-le (API_URL_INTERNE, NEXT_PUBLIC_SITE_URL, STORAGE_PUBLIC_URL_BASE)."
 
 [ "$(lire_env "$API_ENV" NODE_ENV)" = "production" ] || err "NODE_ENV doit valoir production dans $API_ENV."
@@ -113,14 +88,10 @@ esac
 [ "$(lire_env "$FRONT_ENV" API_URL_INTERNE)" = "http://127.0.0.1:$PORT_API" ] \
   || err "API_URL_INTERNE de $FRONT_ENV doit valoir http://127.0.0.1:$PORT_API (API de l'installation $INSTALLATION)."
 
-# Clé privée de l'administrateur plateforme : uniquement sur le district.
-CLE_PRIVEE=$(lire_env "$API_ENV" ADMIN_CLE_PRIVEE_FICHIER)
-if [ "$INSTALLATION" = "district" ]; then
-  [ -n "$CLE_PRIVEE" ] && [ -r "$CLE_PRIVEE" ] \
-    || err "ADMIN_CLE_PRIVEE_FICHIER doit désigner un fichier lisible dans $API_ENV (clé privée de l'administrateur plateforme)."
-else
-  [ -z "$CLE_PRIVEE" ] || err "ADMIN_CLE_PRIVEE_FICHIER ne doit JAMAIS être défini sur l'installation paroisse : seule la clé publique y a sa place."
-fi
+# Variables de l'ancienne fédération d'administrateur : retirées, jamais utilisées.
+for VARIABLE in ADMIN_CLE_PRIVEE_FICHIER ADMIN_EMETTEUR_CONFIANCE ADMIN_CLE_PUBLIQUE_FICHIER ADMIN_URL_VERIFICATION_SESSION; do
+  [ -z "$(lire_env "$API_ENV" "$VARIABLE")" ] || info "$VARIABLE est obsolète dans $API_ENV : à retirer (administration désormais locale)."
+done
 ok "Fichiers d'environnement présents et cohérents ($INSTALLATION)"
 
 # --- Fichiers téléversés (Cloudflare R2) ---
@@ -133,7 +104,7 @@ STOCKAGE_S3=$(lire_env "$API_ENV" STORAGE_S3_BUCKET)
 # my-app/uploads-*. Ils doivent être repris dans R2 avant la mise en service,
 # sinon les photos et documents existants ne seraient plus servis.
 if [ "$INSTALLATION" = "paroisse" ] && { [ -d "my-app/uploads-prives" ] || [ -d "my-app/uploads-publiques" ]; }; then
-  err "Des fichiers téléversés sont encore sur le VPS (my-app/uploads-*). Reprends-les dans R2 : cd apps/api && npm run fichiers:migrer-r2 -- --source ../../my-app --public-ancien ../web-paroisse/public/uploads (simulation), puis avec --appliquer ; vérifie l'affichage, puis supprime my-app/uploads-* et relance."
+  err "Des fichiers téléversés sont encore sur le VPS (my-app/uploads-*). Reprends-les dans R2 : cd apps/api && npm run fichiers:migrer-r2 -- --source ../../my-app --public-ancien ../web/public/uploads (simulation), puis avec --appliquer ; vérifie l'affichage, puis supprime my-app/uploads-* et relance."
 fi
 # Le frontend doit autoriser le domaine public R2 dans sa CSP, sinon les logos
 # et images d'accueil seraient bloqués par le navigateur.

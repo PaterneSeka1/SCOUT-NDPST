@@ -1,14 +1,12 @@
-# Base PostgreSQL de production d'UNE installation (paroisse ou district).
+# Base PostgreSQL de production de l'installation paroissiale.
 #
 # Nom de projet fixe par installation : le volume de données s'appelle
 # toujours <COMPOSE_PROJET>_postgres_data, quel que soit le dossier
 # d'installation. Une installation dans un autre dossier ne crée donc pas une
 # base vide par erreur, et ne réutilise jamais le volume d'une autre.
 #
-# Les valeurs par défaut sont celles de l'installation paroisse. L'installation
-# district les remplace dans son propre .env.prod (COMPOSE_PROJET,
-# CONTENEUR_DB, PORT_DB) : deux installations sur le même VPS ont ainsi deux
-# conteneurs, deux ports et deux volumes distincts.
+# Valeurs par défaut conservées (scout-ascci, scout_db, 5434) : changer le
+# nom du projet ferait pointer Compose vers un volume vide.
 name: ${COMPOSE_PROJET:-scout-ascci}
 
 services:

@@ -17,11 +17,8 @@ ACTION="${1:-deploy}"
 [[ "$ACTION" = deploy || "$ACTION" = rollback ]] || fail "Action inconnue."
 [[ -f "$BASE/shared/.env.prod" ]] || fail "Configuration shared absente; voir docs/exploitation-releases.md."
 INSTALLATION="$(sed -n 's/^INSTALLATION=//p' "$BASE/shared/.env.prod" | tr -d '\r\"\047')"
-case "$INSTALLATION" in
-  paroisse) FRONT=web-paroisse; ECOSYSTEM=ecosystem.config.cjs ;;
-  district) FRONT=web-district; ECOSYSTEM=ecosystem.district.config.cjs ;;
-  *) fail "INSTALLATION explicite paroisse|district requise." ;;
-esac
+[[ "$INSTALLATION" = paroisse ]] || fail "INSTALLATION=paroisse requise (seule installation prise en charge)."
+FRONT=web; ECOSYSTEM=ecosystem.config.cjs
 link_release() {
   local name="$1" target="$2"
   [[ ! -e "$BASE/$name" || -L "$BASE/$name" ]] || fail "$name doit être un lien symbolique."
