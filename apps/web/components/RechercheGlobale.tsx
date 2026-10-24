@@ -103,10 +103,10 @@ export function RechercheGlobale() {
   }
 
   return (
-    <div ref={conteneurRef} className="relative w-full max-w-xs">
+    <div ref={conteneurRef} className="relative w-full max-w-sm">
       <div className="relative">
         <svg
-          className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400"
+          className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-encre-pale"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -133,36 +133,37 @@ export function RechercheGlobale() {
             if (e.key === 'Escape') setOuvert(false)
           }}
           placeholder="Rechercher un scout, un membre…"
-          className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pr-3 pl-9 text-sm transition-colors focus:border-transparent focus:bg-white focus:ring-2 focus:ring-(--cp) focus:outline-none"
+          aria-label="Rechercher un scout ou un membre de la maîtrise"
+          className="w-full rounded-md border border-ligne bg-papier py-2 pr-3 pl-9 text-sm transition-colors focus:border-transparent focus:bg-white focus:ring-2 focus:ring-(--cp) focus:outline-none"
         />
       </div>
 
       {ouvert && requete.trim().length >= TAILLE_MIN_REQUETE && (
-        <div className="absolute z-40 mt-1.5 max-h-96 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+        <div className="absolute z-40 mt-1.5 max-h-96 w-full overflow-y-auto rounded-lg border border-ligne bg-white shadow-lg">
           {chargement && (
-            <div className="flex items-center gap-2 px-4 py-3 text-sm text-gray-400">
+            <div className="flex items-center gap-2 px-4 py-3 text-sm text-encre-pale">
               <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-gray-300 border-t-transparent" />
               Recherche…
             </div>
           )}
 
           {!chargement && aucunResultat && (
-            <div className="px-4 py-3 text-sm text-gray-400">Aucun résultat pour « {requete.trim()} »</div>
+            <div className="px-4 py-3 text-sm text-encre-pale">Aucun résultat pour « {requete.trim()} »</div>
           )}
 
           {scouts.length > 0 && (
             <div className="py-1.5">
-              <p className="px-4 py-1 text-xs font-semibold tracking-wide text-gray-400 uppercase">Scouts</p>
+              <p className="px-4 py-1 text-xs font-semibold tracking-wide text-encre-pale uppercase">Scouts</p>
               {scouts.map((s) => (
                 <button
                   key={s.id}
                   onClick={() => allerA(`/dashboard/scouts/${s.id}`)}
-                  className="flex w-full items-center justify-between gap-2 px-4 py-2 text-left transition-colors hover:bg-gray-50"
+                  className="flex w-full items-center justify-between gap-2 px-4 py-2 text-left transition-colors hover:bg-papier"
                 >
-                  <span className="truncate text-sm text-gray-800">
+                  <span className="truncate text-sm text-encre">
                     {s.prenom} {s.nom}
                   </span>
-                  <span className="shrink-0 text-xs text-gray-400">
+                  <span className="shrink-0 text-xs text-encre-pale">
                     {LABELS_BRANCHES[s.brancheType] ?? s.brancheType}
                   </span>
                 </button>
@@ -171,20 +172,20 @@ export function RechercheGlobale() {
           )}
 
           {utilisateurs.length > 0 && (
-            <div className="border-t border-gray-100 py-1.5">
-              <p className="px-4 py-1 text-xs font-semibold tracking-wide text-gray-400 uppercase">Membres</p>
+            <div className="border-t border-ligne py-1.5">
+              <p className="px-4 py-1 text-xs font-semibold tracking-wide text-encre-pale uppercase">Membres</p>
               {utilisateurs.map((u) => (
                 <button
                   key={u.id}
                   onClick={() =>
                     allerA(u.role === 'PARENT' ? `/dashboard/parents/${u.id}` : `/dashboard/utilisateurs/${u.id}`)
                   }
-                  className="flex w-full items-center justify-between gap-2 px-4 py-2 text-left transition-colors hover:bg-gray-50"
+                  className="flex w-full items-center justify-between gap-2 px-4 py-2 text-left transition-colors hover:bg-papier"
                 >
-                  <span className="truncate text-sm text-gray-800">
+                  <span className="truncate text-sm text-encre">
                     {u.prenom} {u.nom}
                   </span>
-                  <span className="shrink-0 text-xs text-gray-400">{LABELS_ROLES[u.role] ?? u.role}</span>
+                  <span className="shrink-0 text-xs text-encre-pale">{LABELS_ROLES[u.role] ?? u.role}</span>
                 </button>
               ))}
             </div>

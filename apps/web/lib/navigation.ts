@@ -96,7 +96,6 @@ const SECTIONS: { titre: string; elements: (ElementNavigation & { visible: Regle
       { libelle: 'Présentation des branches', href: '/admin/branches', icone: NavIcon.branches, visible: editeur },
       { libelle: "Demandes d'adhésion", href: '/admin/demandes', icone: NavIcon.demandes, visible: role(ROLES_ADMIN, ROLES_GROUPE_ETENDU) },
       { libelle: 'Identité et configuration', href: '/admin/configuration', icone: NavIcon.configuration, visible: role(ROLES_ADMIN) },
-      { libelle: 'Paramètres', href: '/admin/parametres', icone: NavIcon.parametres, visible: role(ROLES_ADMIN) },
       { libelle: "Journal d'audit", href: '/admin/audit', icone: NavIcon.audit, visible: role(ROLES_SUPERVISION) },
     ],
   },

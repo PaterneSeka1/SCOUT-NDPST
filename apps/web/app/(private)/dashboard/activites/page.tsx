@@ -108,7 +108,7 @@ export default function PageActivites() {
         )
       },
     },
-    { cle: 'type', titre: 'Type', rendu: (a) => LABELS_TYPE_ACTIVITE[a.type] ?? a.type, masquee: 'lg' },
+    { cle: 'type', titre: 'Type', rendu: (a) => LABELS_TYPE_ACTIVITE[a.type] ?? a.type, masquee: 'xl' },
     {
       cle: 'branche',
       titre: 'Branche',
@@ -123,7 +123,7 @@ export default function PageActivites() {
     {
       cle: 'responsable',
       titre: 'Responsable',
-      masquee: 'lg',
+      masquee: '2xl',
       rendu: (a) => (a.responsable ? `${a.responsable.prenom} ${a.responsable.nom}` : <span className="text-stone-400">—</span>),
     },
     { cle: 'presences', titre: 'Présences', masquee: 'md', rendu: (a) => <span className="tabular-nums">{a._count.presences}</span> },
@@ -183,11 +183,11 @@ export default function PageActivites() {
           actions={(a) => (
             <>
               <ButtonLink href={`/dashboard/activites/${a.id}/modifier`} variante="fantome" taille="sm" icone={Pencil}>
-                <span className="sr-only md:not-sr-only">Modifier</span>
+                <span className="sr-only 2xl:not-sr-only">Modifier</span>
               </ButtonLink>
               {peutSupprimer(a) && (
                 <Button variante="fantome" taille="sm" icone={Trash2} onClick={() => demanderSuppression(a)} className="text-red-700 hover:bg-red-50">
-                  <span className="sr-only md:not-sr-only">Supprimer</span>
+                  <span className="sr-only 2xl:not-sr-only">Supprimer</span>
                 </Button>
               )}
             </>

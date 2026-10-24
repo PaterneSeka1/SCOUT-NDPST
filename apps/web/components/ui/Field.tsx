@@ -1,6 +1,7 @@
 import { forwardRef, useId } from 'react'
 
-const CHAMP =
+/** Classes d'un champ de saisie (réutilisées par PasswordInput). */
+export const CHAMP =
   'block w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 shadow-sm transition placeholder:text-stone-400 focus:border-primaire focus:ring-2 focus:ring-primaire/20 focus:outline-none disabled:bg-stone-50 disabled:text-stone-500 aria-[invalid=true]:border-red-500'
 
 /**

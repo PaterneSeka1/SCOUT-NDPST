@@ -14,7 +14,7 @@ export interface Colonne<T> {
   tri?: string
   className?: string
   /** Masquée sous ce point de rupture (les cartes mobiles l'affichent quand même). */
-  masquee?: 'sm' | 'md' | 'lg'
+  masquee?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
   /** Libellé principal de la carte mobile. */
   principale?: boolean
 }
@@ -24,7 +24,7 @@ export interface Tri {
   sens: 'asc' | 'desc'
 }
 
-const MASQUE: Record<string, string> = { sm: 'hidden sm:table-cell', md: 'hidden md:table-cell', lg: 'hidden lg:table-cell' }
+const MASQUE: Record<string, string> = { sm: 'hidden sm:table-cell', md: 'hidden md:table-cell', lg: 'hidden lg:table-cell', xl: 'hidden xl:table-cell', '2xl': 'hidden 2xl:table-cell' }
 
 /**
  * Tableau de données : tri serveur, chargement, erreur, état vide, actions
@@ -82,7 +82,7 @@ export function DataTable<T>({
   return (
     <div className={chargement ? 'opacity-60 transition-opacity' : ''} aria-busy={chargement || undefined}>
       {/* Bureau */}
-      <div className="hidden overflow-x-auto md:block">
+      <div className="relative hidden overflow-x-auto md:block">
         <table className="w-full text-left text-sm">
           <caption className="sr-only">{legende}</caption>
           <thead className="border-b border-stone-200 bg-stone-50/70 text-xs font-medium tracking-wide text-stone-500 uppercase">
