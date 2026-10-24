@@ -1,3 +1,5 @@
+> **Document historique (23 octobre 2026).** Il décrit l’état antérieur à la simplification mono-paroissiale : district, fédération d’administrateur et `PERIMETRE_V1` ont depuis été retirés. Voir [le rapport de refonte](rapport-refonte.md).
+
 # Modernisation SCOUT-NDPST — 23 octobre 2026
 
 ## Périmètre et architecture

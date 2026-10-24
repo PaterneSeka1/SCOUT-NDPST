@@ -14,7 +14,7 @@ SCOUT_TEST_DATABASE_URL="$DATABASE_URL" npm run test:integration -w @scout/api
 
 La commande de migration est un outil normal d'exploitation : sa cible doit être vérifiée avant exécution. La garde de sécurité de la suite s'applique au lancement de `test:integration`, pas à une commande Prisma lancée séparément.
 
-Avant tout constructeur Prisma/connexion, la suite refuse une URL sans utilisateur, un hôte hors `localhost`/`127.0.0.1`/`::1`, une option de requête ou un fragment, et tout nom autre que `ci_integration` ou `scout_test_integration_[a-z0-9_]+`. Elle ignore les options libpq susceptibles de détourner la configuration et ne réutilise pas implicitement `DATABASE_URL`. Après connexion, elle refuse une base contenant utilisateurs, paroisses ou districts. Cette protection ne remplace pas la création d'un environnement jetable : ne jamais renommer une base existante pour contourner la garde.
+Avant tout constructeur Prisma/connexion, la suite refuse une URL sans utilisateur, un hôte hors `localhost`/`127.0.0.1`/`::1`, une option de requête ou un fragment, et tout nom autre que `ci_integration` ou `scout_test_integration_[a-z0-9_]+`. Elle ignore les options libpq susceptibles de détourner la configuration et ne réutilise pas implicitement `DATABASE_URL`. Après connexion, elle refuse une base contenant des utilisateurs ou des scouts. Cette protection ne remplace pas la création d'un environnement jetable : ne jamais renommer une base existante pour contourner la garde.
 
 La suite utilise les vrais `PrismaService`, `AuthService`, `MotDePasseService` et `AuthGuard`, avec des comptes synthétiques. Elle couvre cinq scénarios :
 

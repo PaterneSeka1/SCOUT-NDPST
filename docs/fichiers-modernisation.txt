@@ -1,3 +1,4 @@
+# Inventaire historique (modernisation du 23 octobre 2026, antérieur à la refonte mono-paroissiale).
 .github/workflows/ci.yml
 .gitignore
 .npmrc

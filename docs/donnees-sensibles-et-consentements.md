@@ -46,7 +46,7 @@ L'exercice de restauration doit associer dump chiffré, clés historiques dans u
 
 Ces points sont une liste de décisions à obtenir, sans conclusion juridique :
 
-- Qui décide des finalités et des accès, et qui porte les traitements entre paroisse, district, hébergeur et prestataires ?
+- Qui décide des finalités et des accès, et qui porte les traitements entre paroisse, hébergeur et prestataires ?
 - Quels éléments permettent d'établir la qualité du représentant, son autorité et les cas de plusieurs représentants ou de retrait contesté ? Une déclaration du compte lié suffit-elle pour chaque usage envisagé ?
 - Quelles notices et versions de formulaires sont nécessaires pour distinguer image, publication publique, santé, urgences et partage entre structures ?
 - Quelles formalités, garanties et modalités de contrôle faut-il confirmer avec l'association et l'ARTCI pour ces catégories de données, les mineurs, les prestataires et les lieux d'hébergement ?
