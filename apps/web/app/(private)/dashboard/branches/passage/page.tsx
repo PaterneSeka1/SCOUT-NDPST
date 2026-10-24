@@ -28,7 +28,7 @@ function badgeBranche(branche: string | null) {
   if (!branche) {
     return <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">Sortie du mouvement</span>
   }
-  const couleur = COULEURS_BRANCHES[branche] ?? 'bg-gray-100 text-gray-700'
+  const couleur = COULEURS_BRANCHES[branche] ?? 'bg-stone-100 text-stone-700'
   const tranche = TRANCHES_AGE_BRANCHES[branche]
   return (
     <span className={`rounded-full px-2 py-0.5 text-xs whitespace-nowrap ${couleur}`}>
@@ -139,8 +139,8 @@ export default function PagePassageBranche() {
       <BackLink href="/dashboard/branches">Retour aux branches</BackLink>
 
       <div>
-        <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Passage de branche</h1>
-        <p className="mt-0.5 text-sm text-gray-500">
+        <h1 className="text-xl font-bold text-stone-900 sm:text-2xl">Passage de branche</h1>
+        <p className="mt-0.5 text-sm text-stone-500">
           Propose un changement de branche pour chaque scout dont l&apos;âge ne correspond plus à sa branche actuelle,
           selon les tranches d&apos;âge ci-dessous. Rien n&apos;est modifié tant que vous ne confirmez pas.
         </p>
@@ -153,10 +153,10 @@ export default function PagePassageBranche() {
         </div>
       </div>
 
-      <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
+      <div className="space-y-4 rounded-xl border border-stone-200 bg-white p-5 sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Date de référence</label>
+            <label className="mb-1 block text-sm font-medium text-stone-700">Date de référence</label>
             <input
               type="date"
               value={dateReference}
@@ -165,9 +165,9 @@ export default function PagePassageBranche() {
                 setErreur('')
                 setDateReference(e.target.value)
               }}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-transparent focus:ring-2 focus:ring-(--cp) focus:outline-none"
+              className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-900 focus:border-transparent focus:ring-2 focus:ring-(--cp) focus:outline-none"
             />
-            <p className="mt-1 text-xs text-gray-400">
+            <p className="mt-1 text-xs text-stone-400">
               Âge calculé à cette date (ex : le 1er septembre pour une rentrée scoute).
             </p>
           </div>
@@ -178,7 +178,7 @@ export default function PagePassageBranche() {
               charger(dateReference)
             }}
             disabled={chargement}
-            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60 sm:mb-6"
+            className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 disabled:opacity-60 sm:mb-6"
           >
             Recalculer
           </button>
@@ -194,13 +194,13 @@ export default function PagePassageBranche() {
           </div>
         ) : propositions.length === 0 ? (
           <div className="py-12 text-center">
-            <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-gray-300" strokeWidth={2} />
-            <p className="text-sm text-gray-500">Aucun scout à changer de branche à cette date.</p>
+            <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-stone-300" strokeWidth={2} />
+            <p className="text-sm text-stone-500">Aucun scout à changer de branche à cette date.</p>
           </div>
         ) : (
           <>
-            <div className="flex flex-col gap-3 border-b border-gray-100 pb-3 sm:flex-row sm:items-center sm:justify-between">
-              <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-600">
+            <div className="flex flex-col gap-3 border-b border-stone-100 pb-3 sm:flex-row sm:items-center sm:justify-between">
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-stone-600">
                 <input
                   type="checkbox"
                   checked={selection.size === propositions.length}
@@ -222,7 +222,7 @@ export default function PagePassageBranche() {
               {propositions.map((p) => (
                 <label
                   key={p.scoutId}
-                  className="flex cursor-pointer flex-col gap-2 rounded-lg border border-gray-100 p-3 hover:bg-gray-50 sm:flex-row sm:items-center sm:gap-3"
+                  className="flex cursor-pointer flex-col gap-2 rounded-lg border border-stone-100 p-3 hover:bg-stone-50 sm:flex-row sm:items-center sm:gap-3"
                 >
                   <div className="flex min-w-0 items-center gap-3">
                     <input
@@ -232,17 +232,17 @@ export default function PagePassageBranche() {
                       className="h-4 w-4 shrink-0 rounded accent-(--cp)"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-gray-900">
+                      <p className="truncate text-sm font-medium text-stone-900">
                         {p.prenom} {p.nom}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-stone-500">
                         {p.matricule ?? 'Sans matricule'} · {p.age} ans
                       </p>
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 pl-7 sm:shrink-0 sm:pl-0">
                     {badgeBranche(p.brancheActuelle)}
-                    <ArrowRight className="h-4 w-4 text-gray-300" strokeWidth={2} />
+                    <ArrowRight className="h-4 w-4 text-stone-300" strokeWidth={2} />
                     {badgeBranche(p.brancheProposee)}
                     {estCorrection(p) && (
                       <span

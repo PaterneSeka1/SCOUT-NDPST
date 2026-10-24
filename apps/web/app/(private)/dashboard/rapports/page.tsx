@@ -34,10 +34,10 @@ function BarrePourcent({ valeur, max, couleur }: { valeur: number; max: number; 
   const pct = max > 0 ? Math.round((valeur / max) * 100) : 0
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
+      <div className="flex-1 bg-stone-100 rounded-full h-2.5 overflow-hidden">
         <div className={`h-full rounded-full transition-all duration-500 ${couleur}`} style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-xs text-gray-600 w-8 text-right">{valeur}</span>
+      <span className="text-xs text-stone-600 w-8 text-right">{valeur}</span>
     </div>
   )
 }
@@ -46,7 +46,7 @@ function JaugeTaux({ taux }: { taux: number }) {
   const couleur = taux >= 75 ? 'bg-green-500' : taux >= 50 ? 'bg-amber-500' : 'bg-red-400'
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+      <div className="flex-1 bg-stone-100 rounded-full h-2 overflow-hidden">
         <div className={`h-full rounded-full ${couleur}`} style={{ width: `${taux}%` }} />
       </div>
       <span className={`text-xs font-semibold ${taux >= 75 ? 'text-green-600' : taux >= 50 ? 'text-orange-500' : 'text-red-500'}`}>
@@ -90,15 +90,15 @@ export default function PageRapports() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Rapports</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Vue d&apos;ensemble statistique du groupe scout</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-stone-900">Rapports</h1>
+        <p className="text-sm text-stone-500 mt-0.5">Vue d&apos;ensemble statistique du groupe scout</p>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { cle: 'effectif', label: 'Scouts actifs', valeur: rapport.scoutsActifs, couleur: 'bg-(--cp)' },
-          { cle: 'effectif', label: 'Scouts inactifs', valeur: rapport.scoutsInactifs, couleur: 'bg-gray-500' },
+          { cle: 'effectif', label: 'Scouts inactifs', valeur: rapport.scoutsInactifs, couleur: 'bg-stone-500' },
           { cle: 'enCours', label: 'Activités ce mois', valeur: rapport.activitesMois, couleur: 'bg-(--ca)' },
           { cle: 'reunions', label: 'Réunions ce mois', valeur: rapport.reunionsMois, couleur: 'bg-blue-600' },
         ].map(({ cle, label, valeur, couleur }) => {
@@ -115,19 +115,19 @@ export default function PageRapports() {
 
       {/* Taux de présence global */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-sm font-semibold text-gray-700 mb-1">Taux de présence — Activités</p>
-          <p className="text-xs text-gray-400 mb-3">6 derniers mois</p>
+        <div className="bg-white rounded-xl border border-stone-200 p-5">
+          <p className="text-sm font-semibold text-stone-700 mb-1">Taux de présence — Activités</p>
+          <p className="text-xs text-stone-400 mb-3">6 derniers mois</p>
           <div className="flex items-end gap-3">
-            <p className="text-3xl font-bold text-gray-800">{rapport.tauxPresence}%</p>
+            <p className="text-3xl font-bold text-stone-800">{rapport.tauxPresence}%</p>
           </div>
           <JaugeTaux taux={rapport.tauxPresence} />
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-sm font-semibold text-gray-700 mb-1">Taux de présence — Réunions</p>
-          <p className="text-xs text-gray-400 mb-3">6 derniers mois (réunions terminées)</p>
+        <div className="bg-white rounded-xl border border-stone-200 p-5">
+          <p className="text-sm font-semibold text-stone-700 mb-1">Taux de présence — Réunions</p>
+          <p className="text-xs text-stone-400 mb-3">6 derniers mois (réunions terminées)</p>
           <div className="flex items-end gap-3">
-            <p className="text-3xl font-bold text-gray-800">{rapport.tauxPresenceReunions}%</p>
+            <p className="text-3xl font-bold text-stone-800">{rapport.tauxPresenceReunions}%</p>
           </div>
           <JaugeTaux taux={rapport.tauxPresenceReunions} />
         </div>
@@ -135,18 +135,18 @@ export default function PageRapports() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Scouts par branche */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
-          <h2 className="text-sm font-semibold text-gray-800 mb-1">Scouts par branche</h2>
-          <p className="text-xs text-gray-400 mb-4">{totalScouts} scouts au total</p>
+        <div className="bg-white rounded-xl border border-stone-200 p-5 sm:p-6">
+          <h2 className="text-sm font-semibold text-stone-800 mb-1">Scouts par branche</h2>
+          <p className="text-xs text-stone-400 mb-4">{totalScouts} scouts au total</p>
           <div className="space-y-3">
             {ORDRE_BRANCHES.map((branche) => {
               const entree = rapport.scoutsParBranche.find((b) => b.brancheType === branche)
               const nb = entree?._count.id ?? 0
-              const [bgCls] = (COULEURS_BRANCHES[branche] ?? 'bg-gray-200 text-gray-700').split(' ')
+              const [bgCls] = (COULEURS_BRANCHES[branche] ?? 'bg-stone-200 text-stone-700').split(' ')
               return (
                 <div key={branche}>
                   <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-600">{LABELS_BRANCHES[branche]}</span>
+                    <span className="text-stone-600">{LABELS_BRANCHES[branche]}</span>
                   </div>
                   <BarrePourcent valeur={nb} max={maxScouts} couleur={bgCls} />
                 </div>
@@ -156,17 +156,17 @@ export default function PageRapports() {
         </div>
 
         {/* Activités récentes */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
-          <h2 className="text-sm font-semibold text-gray-800 mb-4">Activités récentes</h2>
+        <div className="bg-white rounded-xl border border-stone-200 p-5 sm:p-6">
+          <h2 className="text-sm font-semibold text-stone-800 mb-4">Activités récentes</h2>
           {rapport.dernieresActivites.length === 0 ? (
-            <p className="text-sm text-gray-400 italic">Aucune activité ces 6 derniers mois</p>
+            <p className="text-sm text-stone-400 italic">Aucune activité ces 6 derniers mois</p>
           ) : (
             <div className="space-y-3">
               {rapport.dernieresActivites.map((a) => (
                 <div key={a.id} className="flex items-center gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{a.titre}</p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-sm font-medium text-stone-900 truncate">{a.titre}</p>
+                    <p className="text-xs text-stone-400">
                       {new Date(a.dateDebut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                       {' · '}{LABELS_TYPE_ACTIVITE[a.type] ?? a.type}
                       {a.brancheType ? ` · ${LABELS_BRANCHES[a.brancheType] ?? a.brancheType}` : ''}
@@ -183,9 +183,9 @@ export default function PageRapports() {
       </div>
 
       {/* Réunions terminées avec taux de présence */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
+      <div className="bg-white rounded-xl border border-stone-200 p-5 sm:p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-gray-800">Présences aux réunions</h2>
+          <h2 className="text-sm font-semibold text-stone-800">Présences aux réunions</h2>
           <Link href="/dashboard/reunions" className="inline-flex items-center gap-1 text-xs hover:underline" style={{ color: 'var(--cp)' }}>
             Voir toutes
             <ArrowRight className="h-3 w-3" strokeWidth={2} />
@@ -193,41 +193,41 @@ export default function PageRapports() {
         </div>
 
         {rapport.dernieresReunions.length === 0 ? (
-          <p className="text-sm text-gray-400 italic text-center py-4">Aucune réunion terminée ces 6 derniers mois</p>
+          <p className="text-sm text-stone-400 italic text-center py-4">Aucune réunion terminée ces 6 derniers mois</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left text-xs font-medium text-gray-500 pb-2">Réunion</th>
-                  <th className="text-left text-xs font-medium text-gray-500 pb-2">Branche</th>
-                  <th className="text-left text-xs font-medium text-gray-500 pb-2 min-w-[120px]">Présents</th>
-                  <th className="text-right text-xs font-medium text-gray-500 pb-2">Export</th>
+                <tr className="border-b border-stone-100">
+                  <th className="text-left text-xs font-medium text-stone-500 pb-2">Réunion</th>
+                  <th className="text-left text-xs font-medium text-stone-500 pb-2">Branche</th>
+                  <th className="text-left text-xs font-medium text-stone-500 pb-2 min-w-[120px]">Présents</th>
+                  <th className="text-right text-xs font-medium text-stone-500 pb-2">Export</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-stone-50">
                 {rapport.dernieresReunions.map((r) => {
                   const date = new Date(r.dateReportee ?? r.dateHeure)
                   return (
                     <tr key={r.id}>
                       <td className="py-3 pr-4">
-                        <p className="font-medium text-gray-900 truncate max-w-[160px]">
+                        <p className="font-medium text-stone-900 truncate max-w-[160px]">
                           {r.titre || 'Réunion'}
                         </p>
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-stone-400">
                           {date.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short' })}
                         </p>
                       </td>
                       <td className="py-3 pr-4">
                         {r.brancheType ? (
-                          <span className="text-xs text-gray-600">{LABELS_BRANCHES[r.brancheType] ?? r.brancheType}</span>
+                          <span className="text-xs text-stone-600">{LABELS_BRANCHES[r.brancheType] ?? r.brancheType}</span>
                         ) : (
-                          <span className="text-xs text-gray-400 italic">Inter-branches</span>
+                          <span className="text-xs text-stone-400 italic">Inter-branches</span>
                         )}
                       </td>
                       <td className="py-3 pr-4">
                         <div className="space-y-1">
-                          <p className="text-xs text-gray-600">{r.presents} / {r.totalScouts}</p>
+                          <p className="text-xs text-stone-600">{r.presents} / {r.totalScouts}</p>
                           <JaugeTaux taux={r.tauxPresence} />
                         </div>
                       </td>

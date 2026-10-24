@@ -104,15 +104,15 @@ export default function PageImporterScouts() {
       <BackLink href="/dashboard/scouts">Retour à la liste</BackLink>
 
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Importer des scouts</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Inscription en masse depuis un fichier CSV, utile lors d&apos;une rentrée scoute.</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-stone-900">Importer des scouts</h1>
+        <p className="text-sm text-stone-500 mt-0.5">Inscription en masse depuis un fichier CSV, utile lors d&apos;une rentrée scoute.</p>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">
+      <div className="bg-white rounded-xl border border-stone-200 p-5 sm:p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <button
             onClick={telechargerModele}
-            className="inline-flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+            className="inline-flex items-center justify-center gap-2 bg-white border border-stone-300 text-stone-700 px-4 py-2 rounded-lg hover:bg-stone-50 transition-colors text-sm font-medium"
           >
             <Download className="h-3.5 w-3.5" strokeWidth={2} />
             Télécharger le modèle CSV
@@ -122,10 +122,10 @@ export default function PageImporterScouts() {
             Choisir un fichier CSV
             <input type="file" accept=".csv,text/csv" onChange={handleFichier} className="hidden" />
           </label>
-          {nomFichier && <span className="text-sm text-gray-500 truncate">{nomFichier}</span>}
+          {nomFichier && <span className="text-sm text-stone-500 truncate">{nomFichier}</span>}
         </div>
 
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-stone-400">
           Colonnes attendues : {COLONNES_ATTENDUES.join(', ')}. Le matricule et le prénom/relation du contact sont optionnels, le reste est obligatoire.
         </p>
 
@@ -133,24 +133,24 @@ export default function PageImporterScouts() {
 
         {lignes.length > 0 && !resultats && (
           <>
-            <div className="border-t border-gray-100 pt-4">
-              <h2 className="text-sm font-semibold text-gray-800 mb-2">Aperçu ({lignes.length} ligne{lignes.length > 1 ? 's' : ''})</h2>
+            <div className="border-t border-stone-100 pt-4">
+              <h2 className="text-sm font-semibold text-stone-800 mb-2">Aperçu ({lignes.length} ligne{lignes.length > 1 ? 's' : ''})</h2>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-xs">
                   <thead>
-                    <tr className="text-left text-gray-400 border-b border-gray-100">
+                    <tr className="text-left text-stone-400 border-b border-stone-100">
                       {COLONNES_ATTENDUES.map((c) => <th key={c} className="pr-4 py-1.5 whitespace-nowrap">{c}</th>)}
                     </tr>
                   </thead>
                   <tbody>
                     {lignes.slice(0, 10).map((ligne, i) => (
-                      <tr key={i} className="border-b border-gray-50">
-                        {COLONNES_ATTENDUES.map((c) => <td key={c} className="pr-4 py-1.5 text-gray-700 whitespace-nowrap">{ligne[c] || '—'}</td>)}
+                      <tr key={i} className="border-b border-stone-50">
+                        {COLONNES_ATTENDUES.map((c) => <td key={c} className="pr-4 py-1.5 text-stone-700 whitespace-nowrap">{ligne[c] || '—'}</td>)}
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                {lignes.length > 10 && <p className="text-xs text-gray-400 mt-2">… et {lignes.length - 10} autre(s) ligne(s)</p>}
+                {lignes.length > 10 && <p className="text-xs text-stone-400 mt-2">… et {lignes.length - 10} autre(s) ligne(s)</p>}
               </div>
             </div>
 
@@ -165,8 +165,8 @@ export default function PageImporterScouts() {
         )}
 
         {resultats && (
-          <div className="border-t border-gray-100 pt-4 space-y-3">
-            <h2 className="text-sm font-semibold text-gray-800">Résultat de l&apos;import</h2>
+          <div className="border-t border-stone-100 pt-4 space-y-3">
+            <h2 className="text-sm font-semibold text-stone-800">Résultat de l&apos;import</h2>
             <div className="space-y-1.5">
               {resultats.map((r) => (
                 <div key={r.ligne} className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg ${r.succes ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
@@ -181,7 +181,7 @@ export default function PageImporterScouts() {
             <div className="flex gap-3">
               <button
                 onClick={() => { setLignes([]); setResultats(null); setNomFichier('') }}
-                className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                className="border border-stone-300 text-stone-700 px-4 py-2 rounded-lg hover:bg-stone-50 transition-colors text-sm font-medium"
               >
                 Importer un autre fichier
               </button>

@@ -50,8 +50,8 @@ export default function PageBranches() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Branches</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Organisation des branches scouts de la paroisse</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-stone-900">Branches</h1>
+          <p className="text-sm text-stone-500 mt-0.5">Organisation des branches scouts de la paroisse</p>
         </div>
         {session?.user && ROLES_GROUPE.includes(session.user.role) && (
           <Link href="/dashboard/branches/passage"
@@ -68,11 +68,11 @@ export default function PageBranches() {
           const adjoint = postesbranche.find((p) => p.role === 'ADJOINT')
           const assistants = postesbranche.filter((p) => p.role === 'ASSISTANT')
           const nbScouts = comptes[branche] ?? 0
-          const couleur = COULEURS_BRANCHES[branche] ?? 'bg-gray-100 text-gray-700'
+          const couleur = COULEURS_BRANCHES[branche] ?? 'bg-stone-100 text-stone-700'
           const [bgCls, textCls] = couleur.split(' ')
 
           return (
-            <div key={branche} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div key={branche} className="bg-white rounded-xl border border-stone-200 overflow-hidden">
               {/* En-tête branche */}
               <div className={`${bgCls} px-5 py-4 flex items-center justify-between`}>
                 <div>
@@ -86,23 +86,23 @@ export default function PageBranches() {
               </div>
 
               {/* Encadrants */}
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-stone-100">
                 {postesbranche.length === 0 ? (
-                  <p className="px-5 py-4 text-sm text-gray-400 italic">Aucun encadrant assigné</p>
+                  <p className="px-5 py-4 text-sm text-stone-400 italic">Aucun encadrant assigné</p>
                 ) : (
                   [responsable, adjoint, ...assistants].filter(Boolean).map((p) => p && (
                     <div key={p.id} className="px-5 py-3 flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-semibold text-gray-600 shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-xs font-semibold text-stone-600 shrink-0">
                         {p.utilisateur.prenom[0]}{p.utilisateur.nom[0]}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{p.utilisateur.prenom} {p.utilisateur.nom}</p>
-                        <p className="text-xs text-gray-500">{LABELS_ROLE[p.role]}{p.fonction ? ` — ${p.fonction}` : ''}</p>
+                        <p className="text-sm font-medium text-stone-900 truncate">{p.utilisateur.prenom} {p.utilisateur.nom}</p>
+                        <p className="text-xs text-stone-500">{LABELS_ROLE[p.role]}{p.fonction ? ` — ${p.fonction}` : ''}</p>
                       </div>
                       <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full ${
                         p.role === 'RESPONSABLE' ? 'bg-(--cp) text-white' :
-                        p.role === 'ADJOINT' ? 'bg-gray-200 text-gray-700' :
-                        'bg-gray-100 text-gray-500'
+                        p.role === 'ADJOINT' ? 'bg-stone-200 text-stone-700' :
+                        'bg-stone-100 text-stone-500'
                       }`}>{LABELS_ROLE[p.role]}</span>
                     </div>
                   ))

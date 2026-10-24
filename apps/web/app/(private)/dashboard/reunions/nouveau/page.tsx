@@ -10,10 +10,10 @@ import { BackLink } from '@/components/ui/BackLink'
 import { CalendarDays, Repeat, Check } from '@/lib/icons'
 
 const CLS_INPUT =
-  'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+  'w-full border border-stone-300 rounded-lg px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
 const CLS_SELECT =
-  'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
-const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
+  'w-full border border-stone-300 rounded-lg px-3 py-2 text-sm text-stone-900 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_LABEL = 'block text-sm font-medium text-stone-700 mb-1'
 
 const BRANCHES = [
   { value: '', label: 'Toutes les branches' },
@@ -168,11 +168,11 @@ export default function PageNouvelleReunion() {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <BackLink href="/dashboard/reunions">Retour</BackLink>
-        <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Planifier une réunion</h1>
+        <h1 className="text-xl font-bold text-stone-900 sm:text-2xl">Planifier une réunion</h1>
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div className="space-y-5 rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
+        <div className="space-y-5 rounded-xl border border-stone-200 bg-white p-5 sm:p-6">
           {/* Mode */}
           <div>
             <label className={CLS_LABEL}>Type de planification</label>
@@ -182,7 +182,7 @@ export default function PageNouvelleReunion() {
                   key={m}
                   type="button"
                   onClick={() => setMode(m)}
-                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg border py-2.5 text-sm font-medium transition-colors ${mode === m ? 'border-(--cp) bg-(--cp) text-white' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg border py-2.5 text-sm font-medium transition-colors ${mode === m ? 'border-(--cp) bg-(--cp) text-white' : 'border-stone-300 text-stone-600 hover:bg-stone-50'}`}
                 >
                   {m === 'unique' ? (
                     <CalendarDays className="h-4 w-4" strokeWidth={2} />
@@ -200,11 +200,11 @@ export default function PageNouvelleReunion() {
             <div>
               <label className={CLS_LABEL}>Branche</label>
               {brancheVerrouillee ? (
-                <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
-                  <span className="text-sm font-medium text-gray-700">
+                <div className="flex items-center gap-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
+                  <span className="text-sm font-medium text-stone-700">
                     {BRANCHES.find((b) => b.value === brancheVerrouillee)?.label ?? brancheVerrouillee}
                   </span>
-                  <span className="ml-auto text-xs text-gray-400">Votre branche</span>
+                  <span className="ml-auto text-xs text-stone-400">Votre branche</span>
                 </div>
               ) : (
                 <select
@@ -235,7 +235,7 @@ export default function PageNouvelleReunion() {
             </div>
             <div>
               <label className={CLS_LABEL}>
-                Titre <span className="text-xs font-normal text-gray-400">(optionnel)</span>
+                Titre <span className="text-xs font-normal text-stone-400">(optionnel)</span>
               </label>
               <input
                 type="text"
@@ -264,8 +264,8 @@ export default function PageNouvelleReunion() {
 
           {/* Mode série */}
           {mode === 'serie' && (
-            <div className="space-y-4 rounded-xl border border-gray-100 bg-gray-50 p-4">
-              <p className="text-xs font-medium tracking-wide text-gray-500 uppercase">Paramètres de la série</p>
+            <div className="space-y-4 rounded-xl border border-stone-100 bg-stone-50 p-4">
+              <p className="text-xs font-medium tracking-wide text-stone-500 uppercase">Paramètres de la série</p>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div>
                   <label className={CLS_LABEL}>Jour de la semaine</label>
@@ -349,7 +349,7 @@ export default function PageNouvelleReunion() {
                     {previewDates.length} réunion{previewDates.length > 1 ? 's' : ''} seront créées
                   </span>
                   {previewDates.length <= 6 && (
-                    <span className="ml-1 text-gray-500">
+                    <span className="ml-1 text-stone-500">
                       —{' '}
                       {previewDates
                         .map((d) =>
@@ -368,7 +368,7 @@ export default function PageNouvelleReunion() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className={CLS_LABEL}>
-                  Lieu <span className="text-xs font-normal text-gray-400">(optionnel)</span>
+                  Lieu <span className="text-xs font-normal text-stone-400">(optionnel)</span>
                 </label>
                 <input
                   type="text"
@@ -396,14 +396,14 @@ export default function PageNouvelleReunion() {
           {/* Notes */}
           <div>
             <label className={CLS_LABEL}>
-              Notes <span className="text-xs font-normal text-gray-400">(optionnel)</span>
+              Notes <span className="text-xs font-normal text-stone-400">(optionnel)</span>
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
               placeholder="Programme, consignes particulières…"
-              className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-(--cp) focus:outline-none"
+              className="w-full resize-none rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:ring-2 focus:ring-(--cp) focus:outline-none"
             />
           </div>
 
@@ -421,7 +421,7 @@ export default function PageNouvelleReunion() {
             </button>
             <Link
               href="/dashboard/reunions"
-              className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+              className="inline-flex items-center justify-center rounded-lg border border-stone-300 px-4 py-2.5 text-sm text-stone-700 transition-colors hover:bg-stone-50"
             >
               Annuler
             </Link>

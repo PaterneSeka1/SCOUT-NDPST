@@ -41,7 +41,7 @@ export default function PageMotDePasseOublie() {
               <ParoisseLogoImageAuto taille="lg" />
             </div>
             <h1 className="text-xl font-bold" style={{ color: 'var(--cp)' }}>Mot de passe oublié</h1>
-            <p className="text-sm text-gray-500 mt-1">{nomSite}</p>
+            <p className="text-sm text-stone-500 mt-1">{nomSite}</p>
           </div>
 
           {envoye ? (
@@ -52,25 +52,25 @@ export default function PageMotDePasseOublie() {
                 </svg>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-800">Email envoyé</p>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm font-medium text-stone-800">Email envoyé</p>
+                <p className="text-sm text-stone-500 mt-1">
                   Si un compte correspond à <strong>{email}</strong>, vous recevrez un lien de réinitialisation dans quelques minutes.
                 </p>
               </div>
-              <p className="text-xs text-gray-400">Vérifiez également vos spams.</p>
+              <p className="text-xs text-stone-400">Vérifiez également vos spams.</p>
               <Link href="/connexion"
-                className="inline-block w-full text-center py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm mt-2">
+                className="inline-block w-full text-center py-2.5 border border-stone-300 text-stone-700 rounded-lg hover:bg-stone-50 transition-colors text-sm mt-2">
                 Retour à la connexion
               </Link>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-stone-600">
                 Entrez l&apos;adresse email associée à votre compte. Nous vous enverrons un lien pour réinitialiser votre mot de passe.
               </p>
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="email" className="block text-sm font-medium text-stone-700 mb-1">
                   Adresse email
                 </label>
                 <input
@@ -81,7 +81,7 @@ export default function PageMotDePasseOublie() {
                   required
                   autoFocus
                   placeholder="votre@email.com"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-(--ca) focus:border-transparent transition text-gray-700 placeholder-gray-400"
+                  className="w-full px-4 py-2.5 border border-stone-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-(--ca) focus:border-transparent transition text-stone-700 placeholder-stone-400"
                 />
               </div>
 

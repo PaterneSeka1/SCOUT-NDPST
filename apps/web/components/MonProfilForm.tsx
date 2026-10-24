@@ -7,11 +7,11 @@ import { PasswordInput } from '@/components/PasswordInput'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@scout/shared'
 
 const CLS_INPUT =
-  'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+  'w-full border border-stone-300 rounded-lg px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
 const CLS_INPUT_ERR =
-  'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
-const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
-const CLS_LABEL_LECTURE = 'block text-xs font-medium text-gray-400 mb-1'
+  'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_LABEL = 'block text-sm font-medium text-stone-700 mb-1'
+const CLS_LABEL_LECTURE = 'block text-xs font-medium text-stone-400 mb-1'
 
 interface Profil {
   id: string
@@ -193,16 +193,16 @@ export function MonProfilForm() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Mon profil</h1>
-        <p className="mt-0.5 text-sm text-gray-500">
+        <h1 className="text-xl font-bold text-stone-900 sm:text-2xl">Mon profil</h1>
+        <p className="mt-0.5 text-sm text-stone-500">
           {profil.prenom} {profil.nom}
         </p>
       </div>
 
       {/* Section 1 — Mes informations */}
       <form onSubmit={soumettreInfos} noValidate>
-        <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
-          <h2 className="border-b border-gray-100 pb-3 text-sm font-semibold text-gray-800">Mes informations</h2>
+        <div className="space-y-4 rounded-xl border border-stone-200 bg-white p-5 sm:p-6">
+          <h2 className="border-b border-stone-100 pb-3 text-sm font-semibold text-stone-800">Mes informations</h2>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
@@ -240,7 +240,7 @@ export function MonProfilForm() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className={CLS_LABEL}>
-                Email <span className="text-xs font-normal text-gray-400">(optionnel)</span>
+                Email <span className="text-xs font-normal text-stone-400">(optionnel)</span>
               </label>
               <input
                 id="email"
@@ -254,7 +254,7 @@ export function MonProfilForm() {
             </div>
             <div>
               <label className={CLS_LABEL}>
-                Téléphone <span className="text-xs font-normal text-gray-400">(optionnel)</span>
+                Téléphone <span className="text-xs font-normal text-stone-400">(optionnel)</span>
               </label>
               <input
                 id="telephone"
@@ -268,27 +268,27 @@ export function MonProfilForm() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 border-t border-gray-100 pt-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 border-t border-stone-100 pt-2 sm:grid-cols-2">
             <div>
               <label className={CLS_LABEL_LECTURE}>Matricule</label>
-              <p className="text-sm text-gray-700">{profil.matricule || '—'}</p>
+              <p className="text-sm text-stone-700">{profil.matricule || '—'}</p>
             </div>
             <div>
               <label className={CLS_LABEL_LECTURE}>Rôle</label>
-              <p className="text-sm text-gray-700">
+              <p className="text-sm text-stone-700">
                 {libelleRoleAvecFonction(profil.role, profil.fonction, profil.brancheType)}
               </p>
             </div>
             {profil.paroisse && (
               <div className="sm:col-span-2">
                 <label className={CLS_LABEL_LECTURE}>Paroisse</label>
-                <p className="text-sm text-gray-700">{profil.paroisse.nom}</p>
+                <p className="text-sm text-stone-700">{profil.paroisse.nom}</p>
               </div>
             )}
             {profil.roleDistrict && (
               <div className="sm:col-span-2">
                 <label className={CLS_LABEL_LECTURE}>Affectation district</label>
-                <p className="text-sm text-gray-700">
+                <p className="text-sm text-stone-700">
                   {libelleRoleAvecFonction(profil.roleDistrict, profil.fonctionDistrict, profil.brancheTypeDistrict)}
                 </p>
               </div>
@@ -309,8 +309,8 @@ export function MonProfilForm() {
 
       {/* Section 2 — Changer mon mot de passe */}
       <form onSubmit={soumettreMdp} noValidate>
-        <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
-          <h2 className="border-b border-gray-100 pb-3 text-sm font-semibold text-gray-800">
+        <div className="space-y-4 rounded-xl border border-stone-200 bg-white p-5 sm:p-6">
+          <h2 className="border-b border-stone-100 pb-3 text-sm font-semibold text-stone-800">
             Changer mon mot de passe
           </h2>
 

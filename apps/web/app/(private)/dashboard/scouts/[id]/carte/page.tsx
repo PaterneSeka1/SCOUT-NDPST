@@ -68,16 +68,16 @@ export default function CarteScoutPage() {
             )}
           </div>
           <div>
-            <p className="text-lg font-bold text-gray-900">
+            <p className="text-lg font-bold text-stone-900">
               {scout.prenom} {scout.nom}
             </p>
-            <p className="text-sm text-gray-500">{LABELS_BRANCHES[scout.brancheType] ?? scout.brancheType}</p>
-            {scout.matricule && <p className="mt-0.5 font-mono text-xs text-gray-400">{scout.matricule}</p>}
+            <p className="text-sm text-stone-500">{LABELS_BRANCHES[scout.brancheType] ?? scout.brancheType}</p>
+            {scout.matricule && <p className="mt-0.5 font-mono text-xs text-stone-400">{scout.matricule}</p>}
           </div>
           <div className="flex justify-center py-2">
             <QRCodeScout scoutId={scout.id} taille={140} />
           </div>
-          <p className="text-[10px] text-gray-400">À présenter pour l&apos;émargement aux réunions et activités</p>
+          <p className="text-[10px] text-stone-400">À présenter pour l&apos;émargement aux réunions et activités</p>
         </div>
       </div>
     </div>

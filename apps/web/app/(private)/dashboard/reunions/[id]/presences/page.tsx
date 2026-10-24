@@ -166,11 +166,11 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
           <BackLink href="/dashboard/reunions">Retour</BackLink>
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-bold text-gray-900">
+          <h1 className="text-xl font-bold text-stone-900">
             {reunion.titre || `Réunion ${reunion.brancheType ? BRANCHES[reunion.brancheType] : ''}`}
           </h1>
           {dateAffichee && (
-            <p className="mt-0.5 text-sm text-gray-500">
+            <p className="mt-0.5 text-sm text-stone-500">
               {dateAffichee.toLocaleDateString('fr-FR', {
                 weekday: 'long',
                 day: '2-digit',
@@ -189,7 +189,7 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
       <div className="flex justify-end">
         <button
           onClick={handleExportCSV}
-          className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-50"
+          className="flex items-center gap-1.5 rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-600 transition-colors hover:bg-stone-50"
         >
           <Download className="h-4 w-4" strokeWidth={2} />
           Exporter CSV
@@ -215,7 +215,7 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
       {/* Actions rapides */}
       {scouts.length > 0 && (
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-xs font-medium text-gray-500">Tout marquer :</span>
+          <span className="text-xs font-medium text-stone-500">Tout marquer :</span>
           <button
             onClick={() => marquerTous('PRESENT')}
             className="rounded-lg border border-green-200 px-3 py-1.5 text-xs font-medium text-green-700 transition-colors hover:bg-green-50"
@@ -242,17 +242,17 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
 
       {/* Liste scouts */}
       {scouts.length === 0 ? (
-        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
-          <p className="text-sm text-gray-400">Aucun scout actif dans cette branche</p>
+        <div className="rounded-xl border border-stone-200 bg-white p-8 text-center">
+          <p className="text-sm text-stone-400">Aucun scout actif dans cette branche</p>
         </div>
       ) : (
-        <div className="divide-y divide-gray-50 rounded-xl border border-gray-200 bg-white">
+        <div className="divide-y divide-stone-50 rounded-xl border border-stone-200 bg-white">
           {scouts.map((scout, i) => {
             const statut = statuts[scout.id] ?? 'ABSENT'
             return (
               <div key={scout.id} className="flex items-center gap-3 px-4 py-3">
                 {/* Numéro */}
-                <span className="w-5 shrink-0 text-right text-xs text-gray-300">{i + 1}</span>
+                <span className="w-5 shrink-0 text-right text-xs text-stone-300">{i + 1}</span>
 
                 {/* Avatar */}
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-(--cp)/10">
@@ -275,10 +275,10 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
 
                 {/* Nom */}
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-gray-900">
+                  <p className="truncate text-sm font-medium text-stone-900">
                     {scout.prenom} {scout.nom}
                   </p>
-                  <p className="text-xs text-gray-400">{BRANCHES[scout.brancheType] ?? scout.brancheType}</p>
+                  <p className="text-xs text-stone-400">{BRANCHES[scout.brancheType] ?? scout.brancheType}</p>
                 </div>
 
                 {/* Boutons statut */}

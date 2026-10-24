@@ -108,7 +108,7 @@ export function SelecteurMembre({
 
   return (
     <div ref={conteneurRef} className="relative">
-      <label htmlFor={id} className="mb-1 block text-sm font-medium text-gray-700">
+      <label htmlFor={id} className="mb-1 block text-sm font-medium text-stone-700">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
 
@@ -137,15 +137,15 @@ export function SelecteurMembre({
               choisir(membresFiltres[0])
             }
           }}
-          className={`w-full rounded-lg border bg-white px-3 py-2 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:border-transparent focus:ring-2 focus:ring-(--cp) focus:outline-none disabled:bg-gray-50 disabled:text-gray-400 ${
-            error ? 'border-red-400' : 'border-gray-300'
+          className={`w-full rounded-lg border bg-white px-3 py-2 pr-10 text-sm text-stone-900 placeholder:text-stone-400 focus:border-transparent focus:ring-2 focus:ring-(--cp) focus:outline-none disabled:bg-stone-50 disabled:text-stone-400 ${
+            error ? 'border-red-400' : 'border-stone-300'
           }`}
         />
         {value && !disabled && (
           <button
             type="button"
             onClick={effacer}
-            className="absolute top-1/2 right-2 -translate-y-1/2 rounded px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+            className="absolute top-1/2 right-2 -translate-y-1/2 rounded px-2 py-1 text-xs font-medium text-stone-500 hover:bg-stone-100 hover:text-stone-700"
             aria-label="Changer de membre"
           >
             Effacer
@@ -156,11 +156,11 @@ export function SelecteurMembre({
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
 
       {membreSelectionne && (
-        <div className="mt-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
-          <p className="text-sm font-medium text-gray-900">
+        <div className="mt-2 rounded-lg border border-stone-100 bg-stone-50 px-3 py-2">
+          <p className="text-sm font-medium text-stone-900">
             {membreSelectionne.prenom} {membreSelectionne.nom}
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-stone-500">
             {membreSelectionne.matricule ?? 'Sans matricule'} —{' '}
             {LABELS_ROLES[membreSelectionne.role] ?? membreSelectionne.role}
             {membreSelectionne.paroisse ? ` — ${membreSelectionne.paroisse.nom}` : ''}
@@ -172,10 +172,10 @@ export function SelecteurMembre({
         <div
           id={listeId}
           role="listbox"
-          className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg"
+          className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-stone-200 bg-white shadow-lg"
         >
           {membresFiltres.length === 0 ? (
-            <p className="px-3 py-3 text-sm text-gray-500">{emptyMessage}</p>
+            <p className="px-3 py-3 text-sm text-stone-500">{emptyMessage}</p>
           ) : (
             <ul className="py-1">
               {membresFiltres.map((membre) => (
@@ -185,12 +185,12 @@ export function SelecteurMembre({
                     role="option"
                     aria-selected={membre.id === value}
                     onClick={() => choisir(membre)}
-                    className={`w-full px-3 py-2 text-left hover:bg-gray-50 ${membre.id === value ? 'bg-green-50' : ''}`}
+                    className={`w-full px-3 py-2 text-left hover:bg-stone-50 ${membre.id === value ? 'bg-green-50' : ''}`}
                   >
-                    <span className="block text-sm font-medium text-gray-900">
+                    <span className="block text-sm font-medium text-stone-900">
                       {membre.prenom} {membre.nom}
                     </span>
-                    <span className="block text-xs text-gray-500">
+                    <span className="block text-xs text-stone-500">
                       {membre.matricule ?? 'Sans matricule'} — {LABELS_ROLES[membre.role] ?? membre.role}
                       {membre.paroisse ? ` — ${membre.paroisse.nom}` : ''}
                     </span>

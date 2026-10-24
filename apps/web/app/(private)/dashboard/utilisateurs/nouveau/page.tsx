@@ -8,11 +8,11 @@ import { LABELS_BRANCHES } from '@scout/shared'
 import { useCreerUtilisateur } from '@/hooks/useUtilisateurs'
 import { BackLink } from '@/components/ui/BackLink'
 
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
-const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
-const CLS_SELECT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
-const CLS_SELECT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
-const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
+const CLS_INPUT = 'w-full border border-stone-300 rounded-lg px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_SELECT = 'w-full border border-stone-300 rounded-lg px-3 py-2 text-sm text-stone-900 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_SELECT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-stone-900 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_LABEL = 'block text-sm font-medium text-stone-700 mb-1'
 
 interface FormData {
   nom: string
@@ -89,12 +89,12 @@ export default function NouvelUtilisateurPage() {
   }
 
   if (creation) return (
-    <section className="max-w-2xl space-y-4 rounded-xl border border-gray-200 bg-white p-6" aria-labelledby="creation-titre">
+    <section className="max-w-2xl space-y-4 rounded-xl border border-stone-200 bg-white p-6" aria-labelledby="creation-titre">
       <h1 id="creation-titre" className="text-xl font-bold">Compte créé</h1>
       <p>Remettez ce mot de passe temporaire en personne au membre. Il ne sera plus affiché après avoir quitté cette page.</p>
       <label htmlFor="secret-temporaire" className="block font-medium">Mot de passe temporaire</label>
       <input id="secret-temporaire" readOnly value={creation.motDePasseTemporaire} autoComplete="off" className="w-full rounded-lg border p-3 font-mono" />
-      <p className="text-sm text-gray-600">Le membre devra définir son mot de passe personnel à sa première connexion.</p>
+      <p className="text-sm text-stone-600">Le membre devra définir son mot de passe personnel à sa première connexion.</p>
       <Link href="/dashboard/utilisateurs" className="inline-block rounded-lg bg-(--cp) px-4 py-2 text-white">Terminer</Link>
     </section>
   )
@@ -103,11 +103,11 @@ export default function NouvelUtilisateurPage() {
     <div className="space-y-6">
       <BackLink href="/dashboard/utilisateurs">Retour à la liste</BackLink>
 
-      <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Nouveau membre</h1>
+      <h1 className="text-xl sm:text-2xl font-bold text-stone-900">Nouveau membre</h1>
 
       <form onSubmit={handleSubmit} noValidate>
-        <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">
-          <h2 className="text-sm font-semibold text-gray-800 border-b border-gray-100 pb-3">Informations générales</h2>
+        <div className="bg-white rounded-xl border border-stone-200 p-5 sm:p-6 space-y-4">
+          <h2 className="text-sm font-semibold text-stone-800 border-b border-stone-100 pb-3">Informations générales</h2>
 
           {/* Nom + Prénom */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -155,7 +155,7 @@ export default function NouvelUtilisateurPage() {
               <label htmlFor="matricule" className={CLS_LABEL}>Matricule <span className="text-red-500">*</span></label>
               <input id="matricule" aria-invalid={Boolean(erreurs.matricule)} aria-describedby={erreurs.matricule ? 'matricule-erreur' : undefined} name="matricule" type="text" value={form.matricule} onChange={handleChange}
                 placeholder="Ex : 0545247O" className={`${erreurs.matricule ? CLS_INPUT_ERR : CLS_INPUT} font-mono`} />
-              <p className="mt-1 text-xs text-gray-400">Fourni par le mouvement scout</p>
+              <p className="mt-1 text-xs text-stone-400">Fourni par le mouvement scout</p>
               {erreurs.matricule && <p id="matricule-erreur" role="alert" className="mt-1 text-xs text-red-600">{erreurs.matricule}</p>}
             </div>
           )}
@@ -163,22 +163,22 @@ export default function NouvelUtilisateurPage() {
           {/* Téléphone */}
           <div>
             <label htmlFor="telephone" className={CLS_LABEL}>
-              Téléphone {estParent ? <span className="text-red-500">*</span> : <span className="text-xs text-gray-400 font-normal">(optionnel)</span>}
+              Téléphone {estParent ? <span className="text-red-500">*</span> : <span className="text-xs text-stone-400 font-normal">(optionnel)</span>}
             </label>
             <input id="telephone" aria-invalid={Boolean(erreurs.telephone)} aria-describedby={erreurs.telephone ? 'telephone-erreur' : undefined} name="telephone" type="tel" value={form.telephone} onChange={handleChange}
               placeholder="07 00 00 00 00" className={erreurs.telephone ? CLS_INPUT_ERR : CLS_INPUT} />
-            {estParent && <p className="mt-1 text-xs text-gray-400">Le parent se connecte avec ce numéro</p>}
+            {estParent && <p className="mt-1 text-xs text-stone-400">Le parent se connecte avec ce numéro</p>}
             {erreurs.telephone && <p id="telephone-erreur" role="alert" className="mt-1 text-xs text-red-600">{erreurs.telephone}</p>}
           </div>
 
           {/* Email */}
           <div>
-            <label htmlFor="email" className={CLS_LABEL}>Email <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
+            <label htmlFor="email" className={CLS_LABEL}>Email <span className="text-xs text-stone-400 font-normal">(optionnel)</span></label>
             <input id="email" name="email" type="email" value={form.email} onChange={handleChange}
               placeholder="exemple@email.com" className={CLS_INPUT} />
           </div>
 
-          <p className="text-sm text-gray-600">Un mot de passe temporaire sera généré. Le membre devra le remplacer à sa première connexion.</p>
+          <p className="text-sm text-stone-600">Un mot de passe temporaire sera généré. Le membre devra le remplacer à sa première connexion.</p>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="submit" disabled={isPending}
@@ -186,7 +186,7 @@ export default function NouvelUtilisateurPage() {
               {isPending ? 'Enregistrement…' : 'Créer le membre'}
             </button>
             <Link href="/dashboard/utilisateurs"
-              className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+              className="inline-flex items-center justify-center border border-stone-300 text-stone-700 px-4 py-2.5 rounded-lg hover:bg-stone-50 transition-colors text-sm">
               Annuler
             </Link>
           </div>

@@ -60,7 +60,7 @@ export default function FicheUtilisateurPage() {
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
           <BackLink href="/dashboard/utilisateurs">Retour</BackLink>
-          <h1 className="text-2xl font-bold text-gray-900">Fiche membre</h1>
+          <h1 className="text-2xl font-bold text-stone-900">Fiche membre</h1>
         </div>
 
         {utilisateur && (
@@ -73,7 +73,7 @@ export default function FicheUtilisateurPage() {
             </Link>
             <Link
               href={`/dashboard/utilisateurs/${utilisateur.id}/modifier`}
-              className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50 transition-colors text-sm font-medium"
+              className="border border-stone-300 text-stone-700 px-4 py-2 rounded-md hover:bg-stone-50 transition-colors text-sm font-medium"
             >
               Réinitialiser le mot de passe
             </Link>
@@ -95,9 +95,9 @@ export default function FicheUtilisateurPage() {
 
       {utilisateur && !chargement && (
         <>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-5">
+          <div className="bg-white rounded-lg shadow-sm border border-stone-200 p-6 space-y-5">
             {/* Matricule */}
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+            <div className="flex items-center justify-between pb-4 border-b border-stone-100">
               <p className="text-3xl font-mono font-bold text-(--cp) tracking-wider">
                 {utilisateur.matricule}
               </p>
@@ -106,7 +106,7 @@ export default function FicheUtilisateurPage() {
                   Actif
                 </span>
               ) : (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-500">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-stone-100 text-stone-500">
                   Inactif
                 </span>
               )}
@@ -115,27 +115,27 @@ export default function FicheUtilisateurPage() {
             {/* Informations */}
             <dl className="space-y-4">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                <dt className="text-sm font-medium text-gray-500 col-span-1">Nom complet</dt>
-                <dd className="text-sm text-gray-900 font-medium col-span-2">
+                <dt className="text-sm font-medium text-stone-500 col-span-1">Nom complet</dt>
+                <dd className="text-sm text-stone-900 font-medium col-span-2">
                   {utilisateur.nom} {utilisateur.prenom}
                 </dd>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                <dt className="text-sm font-medium text-gray-500 col-span-1">Email</dt>
-                <dd className="text-sm text-gray-900 col-span-2">
+                <dt className="text-sm font-medium text-stone-500 col-span-1">Email</dt>
+                <dd className="text-sm text-stone-900 col-span-2">
                   {utilisateur.email ?? (
-                    <span className="italic text-gray-400">Non renseigné</span>
+                    <span className="italic text-stone-400">Non renseigné</span>
                   )}
                 </dd>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                <dt className="text-sm font-medium text-gray-500 col-span-1">Rôle</dt>
+                <dt className="text-sm font-medium text-stone-500 col-span-1">Rôle</dt>
                 <dd className="col-span-2">
                   <span
                     className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                      COULEURS_ROLES[utilisateur.role] ?? 'bg-gray-100 text-gray-700'
+                      COULEURS_ROLES[utilisateur.role] ?? 'bg-stone-100 text-stone-700'
                     }`}
                   >
                     {LABELS_ROLES[utilisateur.role] ?? utilisateur.role}
@@ -144,14 +144,14 @@ export default function FicheUtilisateurPage() {
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                <dt className="text-sm font-medium text-gray-500 col-span-1">Statut</dt>
+                <dt className="text-sm font-medium text-stone-500 col-span-1">Statut</dt>
                 <dd className="col-span-2">
                   {utilisateur.actif ? (
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
                       Actif
                     </span>
                   ) : (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-stone-100 text-stone-500">
                       Inactif
                     </span>
                   )}
@@ -159,8 +159,8 @@ export default function FicheUtilisateurPage() {
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                <dt className="text-sm font-medium text-gray-500 col-span-1">Créé le</dt>
-                <dd className="text-sm text-gray-900 col-span-2">
+                <dt className="text-sm font-medium text-stone-500 col-span-1">Créé le</dt>
+                <dd className="text-sm text-stone-900 col-span-2">
                   {formaterDateFrancaise(utilisateur.createdAt)}
                 </dd>
               </div>

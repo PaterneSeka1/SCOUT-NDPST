@@ -237,31 +237,31 @@ export default function PageMesEnfants() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Mes enfants</h1>
-        <p className="mt-0.5 text-sm text-gray-500">Suivez la progression de vos enfants scouts</p>
+        <h1 className="text-xl font-bold text-stone-900 sm:text-2xl">Mes enfants</h1>
+        <p className="mt-0.5 text-sm text-stone-500">Suivez la progression de vos enfants scouts</p>
       </div>
 
       {enfants.length === 0 ? (
-        <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
-          <Baby className="mx-auto mb-3 h-10 w-10 text-gray-300" strokeWidth={2} />
-          <p className="text-sm text-gray-500">Aucun enfant lié à votre compte</p>
-          <p className="mt-1 text-xs text-gray-400">
+        <div className="rounded-xl border border-stone-200 bg-white p-12 text-center">
+          <Baby className="mx-auto mb-3 h-10 w-10 text-stone-300" strokeWidth={2} />
+          <p className="text-sm text-stone-500">Aucun enfant lié à votre compte</p>
+          <p className="mt-1 text-xs text-stone-400">
             Contactez le Chef de Groupe de votre paroisse pour associer vos enfants.
           </p>
         </div>
       ) : (
         <div className="space-y-4">
           {enfants.map((scout) => {
-            const [bgCls, textCls] = (COULEURS_BRANCHES[scout.brancheType] ?? 'bg-gray-100 text-gray-700').split(' ')
+            const [bgCls, textCls] = (COULEURS_BRANCHES[scout.brancheType] ?? 'bg-stone-100 text-stone-700').split(' ')
             const onglet = getOnglet(scout.id)
             const responsablesBranche = responsables.filter((r) => r.brancheType === scout.brancheType)
 
             return (
-              <div key={scout.id} className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+              <div key={scout.id} className="overflow-hidden rounded-xl border border-stone-200 bg-white">
                 {/* En-tête scout */}
                 <div className="p-5 pb-4">
                   <div className="flex items-center gap-4">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-xl font-bold text-gray-500">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-stone-100 text-xl font-bold text-stone-500">
                       {scout.photo ? (
                         <Image
                           width={56}
@@ -276,7 +276,7 @@ export default function PageMesEnfants() {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-gray-900">
+                      <p className="font-semibold text-stone-900">
                         {scout.prenom} {scout.nom}
                       </p>
                       <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -284,7 +284,7 @@ export default function PageMesEnfants() {
                           {LABELS_BRANCHES[scout.brancheType] ?? scout.brancheType}
                         </span>
                         <span
-                          className={`rounded-full px-2 py-0.5 text-xs ${scout.actif ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
+                          className={`rounded-full px-2 py-0.5 text-xs ${scout.actif ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-500'}`}
                         >
                           {scout.actif ? 'Actif' : 'Inactif'}
                         </span>
@@ -294,14 +294,14 @@ export default function PageMesEnfants() {
                 </div>
 
                 {/* Droit à l'image */}
-                <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-5 py-3">
+                <div className="flex items-center justify-between gap-3 border-t border-stone-100 px-5 py-3">
                   <div className="min-w-0">
-                    <p className="text-xs font-medium text-gray-700">Droit à l&apos;image</p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs font-medium text-stone-700">Droit à l&apos;image</p>
+                    <p className="text-xs text-stone-400">
                       Autorise l&apos;utilisation de la photo de {scout.prenom} dans l&apos;application et les
                       publications de la paroisse (réseaux sociaux, affichages).
                     </p>
-                    <p className="mt-0.5 text-xs text-gray-400">
+                    <p className="mt-0.5 text-xs text-stone-400">
                       {scout.consentementImage
                         ? `Autorisé le ${scout.consentementImageDate ? new Date(scout.consentementImageDate).toLocaleDateString('fr-FR') : ''}`
                         : "Photo non autorisée pour l'instant"}
@@ -312,7 +312,7 @@ export default function PageMesEnfants() {
                     disabled={enCours === `consentement-${scout.id}`}
                     className={`shrink-0 rounded-lg px-3 py-1.5 text-xs transition-all disabled:opacity-60 ${
                       scout.consentementImage
-                        ? 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                        ? 'border border-stone-300 text-stone-600 hover:bg-stone-50'
                         : 'bg-(--cp) text-white hover:brightness-110'
                     }`}
                   >
@@ -322,9 +322,9 @@ export default function PageMesEnfants() {
 
                 {/* Cotisations */}
                 {scout.cotisations.length > 0 && (
-                  <div className="border-t border-gray-100 px-5 py-3">
+                  <div className="border-t border-stone-100 px-5 py-3">
                     <div className="mb-2 flex items-center justify-between">
-                      <p className="text-xs font-medium text-gray-700">Cotisations</p>
+                      <p className="text-xs font-medium text-stone-700">Cotisations</p>
                       {scout.cotisations.some((c) => c.statut === 'EN_ATTENTE') && (
                         <p className="text-xs font-semibold text-amber-700">
                           Total dû :{' '}
@@ -339,7 +339,7 @@ export default function PageMesEnfants() {
                     <div className="space-y-1.5">
                       {scout.cotisations.map((c) => (
                         <div key={c.id} className="flex items-center justify-between gap-3">
-                          <span className="truncate text-xs text-gray-500">
+                          <span className="truncate text-xs text-stone-500">
                             {LABELS_TYPE_COTISATION[c.type] ?? c.type}
                             {c.libelle ? ` — ${c.libelle}` : ''} ({c.anneeScolaire}) · {formatMontantFCFA(c.montant)}
                           </span>
@@ -356,15 +356,15 @@ export default function PageMesEnfants() {
 
                 {/* Camps à venir — autorisations à signer */}
                 {(campsParEnfant[scout.id]?.length ?? 0) > 0 && (
-                  <div className="space-y-3 border-t border-gray-100 bg-amber-50/40 px-5 py-4">
-                    <p className="text-xs font-semibold tracking-wide text-gray-600 uppercase">
+                  <div className="space-y-3 border-t border-stone-100 bg-amber-50/40 px-5 py-4">
+                    <p className="text-xs font-semibold tracking-wide text-stone-600 uppercase">
                       Camps à venir — autorisations
                     </p>
                     {campsParEnfant[scout.id].map((camp) => (
-                      <div key={camp.id} className="space-y-2 rounded-lg border border-gray-200 bg-white p-3">
+                      <div key={camp.id} className="space-y-2 rounded-lg border border-stone-200 bg-white p-3">
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{camp.titre}</p>
-                          <p className="text-xs text-gray-400">
+                          <p className="text-sm font-medium text-stone-900">{camp.titre}</p>
+                          <p className="text-xs text-stone-400">
                             {new Date(camp.dateDebut).toLocaleDateString('fr-FR', {
                               day: 'numeric',
                               month: 'long',
@@ -379,7 +379,7 @@ export default function PageMesEnfants() {
                           const chargementLigne = enCours === cle
                           return (
                             <div key={type} className="flex items-center justify-between gap-3">
-                              <span className="text-xs text-gray-700">{LABELS_TYPE_AUTORISATION[type]}</span>
+                              <span className="text-xs text-stone-700">{LABELS_TYPE_AUTORISATION[type]}</span>
                               {signee ? (
                                 <span className="inline-flex items-center gap-1 rounded-full border border-green-100 bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
                                   <Check className="h-3 w-3" strokeWidth={2.5} /> Signée
@@ -393,7 +393,7 @@ export default function PageMesEnfants() {
                                   >
                                     {chargementLigne ? '…' : 'Je confirme'}
                                   </button>
-                                  <label className="cursor-pointer text-xs text-gray-500 underline">
+                                  <label className="cursor-pointer text-xs text-stone-500 underline">
                                     ou déposer un document signé
                                     <input
                                       type="file"
@@ -418,7 +418,7 @@ export default function PageMesEnfants() {
                 )}
 
                 {/* Onglets présences */}
-                <div className="border-t border-gray-100">
+                <div className="border-t border-stone-100">
                   <div className="flex gap-1 px-5 pt-3">
                     {(
                       [
@@ -429,7 +429,7 @@ export default function PageMesEnfants() {
                       <button
                         key={k}
                         onClick={() => setOnglet(scout.id, k)}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${onglet === k ? 'bg-(--cp) text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${onglet === k ? 'bg-(--cp) text-white' : 'text-stone-500 hover:bg-stone-100'}`}
                       >
                         {label}
                       </button>
@@ -440,7 +440,7 @@ export default function PageMesEnfants() {
                     {onglet === 'reunions' && (
                       <>
                         {scout.presencesReunion.length === 0 ? (
-                          <p className="text-xs text-gray-400 italic">Aucune réunion enregistrée</p>
+                          <p className="text-xs text-stone-400 italic">Aucune réunion enregistrée</p>
                         ) : (
                           <div className="space-y-2">
                             {scout.presencesReunion.map((pr, i) => {
@@ -449,10 +449,10 @@ export default function PageMesEnfants() {
                               return (
                                 <div key={i} className="flex items-center gap-3 text-xs">
                                   <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${cfg.dot}`} />
-                                  <span className="w-20 shrink-0 text-gray-500">
+                                  <span className="w-20 shrink-0 text-stone-500">
                                     {date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
                                   </span>
-                                  <span className="flex-1 truncate text-gray-700">
+                                  <span className="flex-1 truncate text-stone-700">
                                     {pr.jourReunion.titre ||
                                       `Réunion ${pr.jourReunion.brancheType ? (LABELS_BRANCHES[pr.jourReunion.brancheType] ?? pr.jourReunion.brancheType) : ''}`}
                                   </span>
@@ -470,14 +470,14 @@ export default function PageMesEnfants() {
                     {onglet === 'activites' && (
                       <>
                         {scout.presences.length === 0 ? (
-                          <p className="text-xs text-gray-400 italic">Aucune participation enregistrée</p>
+                          <p className="text-xs text-stone-400 italic">Aucune participation enregistrée</p>
                         ) : (
                           <div className="space-y-1.5">
                             {scout.presences.slice(0, 5).map((p, i) => (
-                              <div key={i} className="flex items-center gap-2 text-xs text-gray-600">
+                              <div key={i} className="flex items-center gap-2 text-xs text-stone-600">
                                 <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-400" />
                                 <span className="truncate">{p.activite.titre}</span>
-                                <span className="shrink-0 text-gray-400">
+                                <span className="shrink-0 text-stone-400">
                                   {new Date(p.activite.dateDebut).toLocaleDateString('fr-FR', {
                                     day: 'numeric',
                                     month: 'short',
@@ -494,8 +494,8 @@ export default function PageMesEnfants() {
 
                 {/* Responsables de la branche */}
                 {responsablesBranche.length > 0 && (
-                  <div className="border-t border-gray-100 bg-gray-50/50 px-5 py-4">
-                    <p className="mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                  <div className="border-t border-stone-100 bg-stone-50/50 px-5 py-4">
+                    <p className="mb-3 text-xs font-semibold tracking-wide text-stone-500 uppercase">
                       Responsables {LABELS_BRANCHES[scout.brancheType] ?? scout.brancheType}
                     </p>
                     <div className="space-y-2">
@@ -506,10 +506,10 @@ export default function PageMesEnfants() {
                             {r.utilisateur.nom[0]}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-gray-800">
+                            <p className="text-sm font-medium text-stone-800">
                               {r.utilisateur.prenom} {r.utilisateur.nom}
                             </p>
-                            <p className="text-xs text-gray-400">{LABELS_ROLE[r.role] ?? r.role}</p>
+                            <p className="text-xs text-stone-400">{LABELS_ROLE[r.role] ?? r.role}</p>
                           </div>
                           <div className="flex shrink-0 gap-2">
                             {r.utilisateur.telephone && (
@@ -568,8 +568,8 @@ export default function PageMesEnfants() {
 
       {/* Prochaines réunions */}
       {prochinesReunions.length > 0 && (
-        <div className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
-          <h2 className="mb-4 text-sm font-semibold text-gray-800">Prochaines réunions</h2>
+        <div className="rounded-xl border border-stone-200 bg-white p-5 sm:p-6">
+          <h2 className="mb-4 text-sm font-semibold text-stone-800">Prochaines réunions</h2>
           <div className="space-y-3">
             {prochinesReunions.map((r) => {
               const date = new Date(r.dateReportee ?? r.dateHeure)
@@ -584,10 +584,10 @@ export default function PageMesEnfants() {
                     </span>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-gray-900">
+                    <p className="truncate text-sm font-medium text-stone-900">
                       {r.titre || `Réunion ${r.brancheType ? (LABELS_BRANCHES[r.brancheType] ?? r.brancheType) : ''}`}
                     </p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-stone-400">
                       {date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                       {r.lieu ? ` · ${r.lieu}` : ''}
                     </p>
@@ -601,8 +601,8 @@ export default function PageMesEnfants() {
 
       {/* Prochaines activités */}
       {prochaines.length > 0 && (
-        <div className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
-          <h2 className="mb-4 text-sm font-semibold text-gray-800">Prochaines activités</h2>
+        <div className="rounded-xl border border-stone-200 bg-white p-5 sm:p-6">
+          <h2 className="mb-4 text-sm font-semibold text-stone-800">Prochaines activités</h2>
           <div className="space-y-3">
             {prochaines.map((a) => (
               <div key={a.id} className="flex items-center gap-4">
@@ -615,8 +615,8 @@ export default function PageMesEnfants() {
                   </span>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-gray-900">{a.titre}</p>
-                  <p className="text-xs text-gray-400">
+                  <p className="truncate text-sm font-medium text-stone-900">{a.titre}</p>
+                  <p className="text-xs text-stone-400">
                     {LABELS_TYPE_ACTIVITE[a.type] ?? a.type}
                     {a.brancheType ? ` · ${LABELS_BRANCHES[a.brancheType] ?? a.brancheType}` : ''}
                     {a.lieu ? ` · ${a.lieu}` : ''}

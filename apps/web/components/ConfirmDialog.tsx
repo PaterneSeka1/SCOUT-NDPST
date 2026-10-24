@@ -108,10 +108,10 @@ export function ConfirmDialogHost() {
         className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="confirm-dialog-titre" className="text-lg font-bold text-gray-900">
+        <h2 id="confirm-dialog-titre" className="text-lg font-bold text-stone-900">
           {demande.titre}
         </h2>
-        <p id="confirm-dialog-description" className="text-sm text-gray-600 leading-relaxed">
+        <p id="confirm-dialog-description" className="text-sm text-stone-600 leading-relaxed">
           {demande.description}
         </p>
         <div className="flex flex-col sm:flex-row sm:justify-end gap-3 pt-2">
@@ -119,7 +119,7 @@ export function ConfirmDialogHost() {
             type="button"
             autoFocus
             onClick={() => repondre(false)}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+            className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50 transition"
           >
             {demande.labelAnnuler ?? 'Annuler'}
           </button>

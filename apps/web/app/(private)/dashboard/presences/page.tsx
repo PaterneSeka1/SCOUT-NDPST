@@ -58,12 +58,12 @@ export default function PagePresences() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Présences</h1>
-        <p className="mt-0.5 text-sm text-gray-500">Gérez les feuilles de présence par activité</p>
+        <h1 className="text-xl font-bold text-stone-900 sm:text-2xl">Présences</h1>
+        <p className="mt-0.5 text-sm text-stone-500">Gérez les feuilles de présence par activité</p>
       </div>
 
       {activites.length === 0 ? (
-        <div className="rounded-xl border border-gray-200 bg-white">
+        <div className="rounded-xl border border-stone-200 bg-white">
           <EmptyState
             icon={ClipboardList}
             title="Aucune activité enregistrée"
@@ -84,7 +84,7 @@ export default function PagePresences() {
             const date = new Date(a.dateDebut)
             const passee = date < new Date()
             return (
-              <div key={a.id} className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-4">
+              <div key={a.id} className="flex items-center gap-4 rounded-xl border border-stone-200 bg-white p-4">
                 <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-(--cp)/10">
                   <span className="text-xs leading-none font-bold text-(--cp)">
                     {date.toLocaleDateString('fr-FR', { day: '2-digit' })}
@@ -94,26 +94,26 @@ export default function PagePresences() {
                   </span>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-gray-900">{a.titre}</p>
+                  <p className="truncate text-sm font-semibold text-stone-900">{a.titre}</p>
                   <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                    <span className="text-xs text-gray-500">{LABELS_TYPE_ACTIVITE[a.type] ?? a.type}</span>
+                    <span className="text-xs text-stone-500">{LABELS_TYPE_ACTIVITE[a.type] ?? a.type}</span>
                     {a.brancheType && (
                       <>
-                        <span className="text-gray-300">·</span>
-                        <span className="text-xs text-gray-500">{LABELS_BRANCHES[a.brancheType] ?? a.brancheType}</span>
+                        <span className="text-stone-300">·</span>
+                        <span className="text-xs text-stone-500">{LABELS_BRANCHES[a.brancheType] ?? a.brancheType}</span>
                       </>
                     )}
                     {a.lieu && (
                       <>
-                        <span className="text-gray-300">·</span>
-                        <span className="truncate text-xs text-gray-500">{a.lieu}</span>
+                        <span className="text-stone-300">·</span>
+                        <span className="truncate text-xs text-stone-500">{a.lieu}</span>
                       </>
                     )}
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   <span
-                    className={`rounded-full px-2 py-0.5 text-xs ${passee ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-700'}`}
+                    className={`rounded-full px-2 py-0.5 text-xs ${passee ? 'bg-stone-100 text-stone-600' : 'bg-blue-50 text-blue-700'}`}
                   >
                     {passee ? `${a._count.presences} présent${a._count.presences > 1 ? 's' : ''}` : 'À venir'}
                   </span>

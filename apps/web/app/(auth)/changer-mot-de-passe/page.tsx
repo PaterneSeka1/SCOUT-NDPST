@@ -43,7 +43,7 @@ export default function ChangerMotDePassePage() {
           <p role="status">Votre mot de passe personnel est enregistré. Reconnectez-vous pour ouvrir votre espace.</p>
           <a href="/connexion" className="inline-block rounded-lg bg-(--cp) px-4 py-2 text-white">Se reconnecter</a>
         </> : <>
-          <p className="text-sm text-gray-600">Remplacez votre mot de passe temporaire pour accéder à votre espace.</p>
+          <p className="text-sm text-stone-600">Remplacez votre mot de passe temporaire pour accéder à votre espace.</p>
           <form onSubmit={soumettre} className="space-y-4" aria-describedby={erreur ? 'erreur-motdepasse' : undefined}>
             <div>
               <label htmlFor="actuel" className="mb-1 block text-sm font-medium">Mot de passe actuel ou temporaire</label>
@@ -52,7 +52,7 @@ export default function ChangerMotDePassePage() {
             <div>
               <label htmlFor="nouveau" className="mb-1 block text-sm font-medium">Nouveau mot de passe personnel</label>
               <PasswordInput id="nouveau" value={nouveau} onChange={(e) => setNouveau(e.target.value)} required autoComplete="new-password" aria-describedby="regle-motdepasse" className="w-full rounded-lg border p-3" />
-              <p id="regle-motdepasse" className="mt-1 text-xs text-gray-600">{REGLE_MOT_DE_PASSE}</p>
+              <p id="regle-motdepasse" className="mt-1 text-xs text-stone-600">{REGLE_MOT_DE_PASSE}</p>
             </div>
             <div>
               <label htmlFor="confirmation" className="mb-1 block text-sm font-medium">Confirmer le nouveau mot de passe</label>

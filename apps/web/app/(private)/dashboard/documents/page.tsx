@@ -48,20 +48,20 @@ export default function PageDocumentsExpirations() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Documents à renouveler</h1>
-        <p className="mt-0.5 text-sm text-gray-500">Certificats médicaux et autres documents arrivant à expiration</p>
+        <h1 className="text-xl font-bold text-stone-900 sm:text-2xl">Documents à renouveler</h1>
+        <p className="mt-0.5 text-sm text-stone-500">Certificats médicaux et autres documents arrivant à expiration</p>
       </div>
 
-      <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
+      <div className="space-y-4 rounded-xl border border-stone-200 bg-white p-5 sm:p-6">
         <div className="flex items-center gap-3">
-          <label className="text-sm text-gray-600">Fenêtre de vigilance :</label>
+          <label className="text-sm text-stone-600">Fenêtre de vigilance :</label>
           <select
             value={joursAvant}
             onChange={(e) => {
               setChargement(true)
               setJoursAvant(Number(e.target.value))
             }}
-            className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:ring-2 focus:ring-(--cp) focus:outline-none"
+            className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-900 focus:ring-2 focus:ring-(--cp) focus:outline-none"
           >
             <option value={15}>15 jours</option>
             <option value={30}>30 jours</option>
@@ -107,16 +107,16 @@ function LigneDocument({ doc }: { doc: DocumentExpiration }) {
   return (
     <Link
       href={`/dashboard/scouts/${doc.scout.id}`}
-      className="flex items-center gap-3 rounded-lg border border-gray-100 p-3 transition-colors hover:bg-gray-50"
+      className="flex items-center gap-3 rounded-lg border border-stone-100 p-3 transition-colors hover:bg-stone-50"
     >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-500">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-stone-50 text-stone-500">
         <IconeDocument className="h-4 w-4" strokeWidth={2} />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-gray-900">
+        <p className="truncate text-sm font-medium text-stone-900">
           {doc.scout.prenom} {doc.scout.nom}
         </p>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-stone-500">
           {LABELS_TYPE_DOCUMENT[doc.type] ?? doc.type} ·{' '}
           {LABELS_BRANCHES[doc.scout.brancheType] ?? doc.scout.brancheType}
           {doc.scout.matricule ? ` · ${doc.scout.matricule}` : ''}

@@ -67,11 +67,11 @@ export function InstallationPwa({ nomSite, logoSite }: { nomSite: string; logoSi
 
   return (
     <div className="fixed inset-x-4 bottom-4 z-50 sm:inset-x-auto sm:right-6 sm:left-auto sm:w-96">
-      <div className="relative rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl">
+      <div className="relative rounded-2xl border border-stone-200 bg-white p-5 shadow-2xl">
         <button
           onClick={ecarter}
           aria-label="Fermer"
-          className="absolute top-3 right-3 text-gray-400 transition hover:text-gray-600"
+          className="absolute top-3 right-3 text-stone-400 transition hover:text-stone-600"
         >
           <X className="h-4 w-4" strokeWidth={2} />
         </button>
@@ -84,7 +84,7 @@ export function InstallationPwa({ nomSite, logoSite }: { nomSite: string; logoSi
             <img
               src={logoSite}
               alt=""
-              className="h-11 w-11 shrink-0 rounded-xl border border-gray-100 object-contain"
+              className="h-11 w-11 shrink-0 rounded-xl border border-stone-100 object-contain"
             />
           ) : (
             <div
@@ -95,8 +95,8 @@ export function InstallationPwa({ nomSite, logoSite }: { nomSite: string; logoSi
             </div>
           )}
           <div className="flex-1">
-            <p className="text-sm font-bold text-gray-900">Installer {nomSite}</p>
-            <p className="mt-0.5 text-xs leading-relaxed text-gray-500">
+            <p className="text-sm font-bold text-stone-900">Installer {nomSite}</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-stone-500">
               {estIOS ? (
                 <>
                   Appuyez sur <strong>Partager</strong> (icône{' '}
@@ -114,7 +114,7 @@ export function InstallationPwa({ nomSite, logoSite }: { nomSite: string; logoSi
           <div className="mt-4 flex justify-end gap-2">
             <button
               onClick={ecarter}
-              className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-100"
+              className="rounded-lg px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:bg-stone-100"
             >
               Plus tard
             </button>

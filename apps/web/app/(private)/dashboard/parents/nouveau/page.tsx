@@ -7,9 +7,9 @@ import { useCreerUtilisateur } from '@/hooks/useUtilisateurs'
 import { SelecteurEnfants } from '@/components/SelecteurEnfants'
 import { BackLink } from '@/components/ui/BackLink'
 
-const CLS_INPUT = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
-const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
-const CLS_LABEL = 'block text-sm font-medium text-gray-700 mb-1'
+const CLS_INPUT = 'w-full border border-stone-300 rounded-lg px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_INPUT_ERR = 'w-full border border-red-400 rounded-lg px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
+const CLS_LABEL = 'block text-sm font-medium text-stone-700 mb-1'
 
 interface FormData {
   nom: string
@@ -83,11 +83,11 @@ export default function NouveauParentPage() {
     <div className="space-y-6">
       <BackLink href="/dashboard/parents">Retour à la liste</BackLink>
 
-      <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Nouveau parent</h1>
+      <h1 className="text-xl sm:text-2xl font-bold text-stone-900">Nouveau parent</h1>
 
       <form onSubmit={handleSubmit} noValidate>
-        <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">
-          <h2 className="text-sm font-semibold text-gray-800 border-b border-gray-100 pb-3">Informations générales</h2>
+        <div className="bg-white rounded-xl border border-stone-200 p-5 sm:p-6 space-y-4">
+          <h2 className="text-sm font-semibold text-stone-800 border-b border-stone-100 pb-3">Informations générales</h2>
 
           {/* Nom + Prénom */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -110,18 +110,18 @@ export default function NouveauParentPage() {
             <label className={CLS_LABEL}>Téléphone <span className="text-red-500">*</span></label>
             <input id="telephone" name="telephone" type="tel" value={form.telephone} onChange={handleChange}
               placeholder="07 00 00 00 00" className={erreurs.telephone ? CLS_INPUT_ERR : CLS_INPUT} />
-            <p className="mt-1 text-xs text-gray-400">Le parent se connecte avec ce numéro</p>
+            <p className="mt-1 text-xs text-stone-400">Le parent se connecte avec ce numéro</p>
             {erreurs.telephone && <p className="mt-1 text-xs text-red-600">{erreurs.telephone}</p>}
           </div>
 
           {/* Email */}
           <div>
-            <label className={CLS_LABEL}>Email <span className="text-xs text-gray-400 font-normal">(optionnel)</span></label>
+            <label className={CLS_LABEL}>Email <span className="text-xs text-stone-400 font-normal">(optionnel)</span></label>
             <input id="email" name="email" type="email" value={form.email} onChange={handleChange}
               placeholder="exemple@email.com" className={CLS_INPUT} />
           </div>
 
-          <div className="border-t border-gray-100 pt-4">
+          <div className="border-t border-stone-100 pt-4">
             <SelecteurEnfants
               scoutIds={form.scoutIds}
               onChange={(scoutIds) => setForm((p) => ({ ...p, scoutIds }))}
@@ -134,7 +134,7 @@ export default function NouveauParentPage() {
               {isPending ? 'Enregistrement…' : 'Créer le parent'}
             </button>
             <Link href="/dashboard/parents"
-              className="inline-flex items-center justify-center border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+              className="inline-flex items-center justify-center border border-stone-300 text-stone-700 px-4 py-2.5 rounded-lg hover:bg-stone-50 transition-colors text-sm">
               Annuler
             </Link>
           </div>

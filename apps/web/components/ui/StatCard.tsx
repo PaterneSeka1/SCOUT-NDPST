@@ -17,7 +17,7 @@ function tonePastille(tone: Tone): { className: string; style?: React.CSSPropert
     case 'warning':
       return { className: 'bg-amber-50 text-amber-600' }
     case 'neutral':
-      return { className: 'bg-gray-100 text-gray-500' }
+      return { className: 'bg-stone-100 text-stone-500' }
   }
 }
 
@@ -34,25 +34,25 @@ export function StatCard({
 }) {
   const pastille = tonePastille(tone)
   return (
-    <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6">
+    <div className="rounded-xl border border-stone-100 bg-white p-4 shadow-sm sm:p-6">
       <div
         className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl sm:h-12 sm:w-12 ${pastille.className}`}
         style={pastille.style}
       >
         <Icon className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2} />
       </div>
-      <p className="text-2xl leading-none font-bold text-gray-800 sm:text-3xl">{value}</p>
-      <p className="mt-1.5 text-sm leading-tight text-gray-500">{label}</p>
+      <p className="text-2xl leading-none font-bold text-stone-800 sm:text-3xl">{value}</p>
+      <p className="mt-1.5 text-sm leading-tight text-stone-500">{label}</p>
     </div>
   )
 }
 
 export function StatCardSkeleton() {
   return (
-    <div className="animate-pulse rounded-xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6">
-      <div className="mb-4 h-10 w-10 rounded-xl bg-gray-200 sm:h-12 sm:w-12" />
-      <div className="mb-2 h-7 w-16 rounded bg-gray-200" />
-      <div className="h-3 w-24 rounded bg-gray-100" />
+    <div className="animate-pulse rounded-xl border border-stone-100 bg-white p-4 shadow-sm sm:p-6">
+      <div className="mb-4 h-10 w-10 rounded-xl bg-stone-200 sm:h-12 sm:w-12" />
+      <div className="mb-2 h-7 w-16 rounded bg-stone-200" />
+      <div className="h-3 w-24 rounded bg-stone-100" />
     </div>
   )
 }
