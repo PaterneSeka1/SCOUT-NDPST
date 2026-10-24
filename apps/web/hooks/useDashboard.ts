@@ -15,7 +15,7 @@ export function useDashboard() {
   const utilisateur = session?.user
   const hydrate = useSyncExternalStore(abonnementHydratation, snapshotClient, snapshotServeur)
   const requete = useQuery({
-    queryKey: ['dashboard-kpis', utilisateur?.id, utilisateur?.role],
+    queryKey: ['tableau-de-bord', utilisateur?.id, utilisateur?.role],
     enabled: Boolean(utilisateur?.id),
     retry: false,
     retryOnMount: false,
@@ -23,7 +23,7 @@ export function useDashboard() {
     // Laisser la promesse se terminer pendant un démontage permet de la
     // partager lors du remontage StrictMode ; sa clé conserve le périmètre initial.
     queryFn: async () => {
-      const reponse = await fetch('/api/dashboard/kpis')
+      const reponse = await fetch('/api/tableau-de-bord')
       return lireDashboard(reponse)
     },
   })
