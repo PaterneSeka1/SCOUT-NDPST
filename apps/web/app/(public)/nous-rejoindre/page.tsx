@@ -119,7 +119,7 @@ export default async function PageNousRejoindre({ searchParams }: Props) {
 
             <section id="contact" aria-labelledby="titre-contact" className="rounded-lg bg-profond p-6 text-white">
               <h2 id="titre-contact" className="signal text-sm text-or-300">
-                Contacter le groupe
+                Coordonnées du groupe
               </h2>
               {coordonnees ? (
                 <ul className="mt-4 space-y-3">
