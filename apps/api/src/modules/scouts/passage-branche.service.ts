@@ -1,7 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { brancheSelonAge, calculerAge } from '@scout/shared'
 import { AuditService } from '../../common/audit.service'
-import { paroisseIdRequise } from '../../common/paroisse'
 import type { UtilisateurSession } from '../../common/types'
 import { PrismaService } from '../../prisma/prisma.service'
 import type { DonneesPassagesBranche } from './scouts.schemas'
@@ -26,14 +25,12 @@ export class PassageBrancheService {
   // Calcule, pour chaque scout actif, la branche correspondant à son âge à la
   // date de référence, et propose un changement si elle diffère de la branche
   // actuelle. Ne modifie rien : c'est une prévisualisation.
-  async previsualiser(utilisateur: UtilisateurSession, dateRefParam: string | null) {
+  async previsualiser(dateRefParam: string | null) {
     const dateReference = dateRefParam ? new Date(dateRefParam) : new Date()
     if (Number.isNaN(dateReference.getTime())) throw new BadRequestException('Date de référence invalide')
 
-    const paroisseId = paroisseIdRequise(utilisateur)
-
     const scouts = await this.prisma.scout.findMany({
-      where: { paroisseId, actif: true },
+      where: { actif: true },
       select: { id: true, nom: true, prenom: true, matricule: true, dateNaissance: true, brancheType: true },
       orderBy: [{ brancheType: 'asc' }, { nom: 'asc' }],
     })
@@ -70,13 +67,10 @@ export class PassageBrancheService {
   async appliquer(utilisateur: UtilisateurSession, corps: DonneesPassagesBranche) {
     const { passages } = corps
 
-    const paroisseId = paroisseIdRequise(utilisateur)
-
-    // Vérifie que tous les scouts appartiennent bien à la paroisse de l'appelant,
-    // et récupère leur branche actuelle pour la trace d'audit (ancienne → nouvelle).
+    // Vérifie que tous les scouts existent et récupère leur branche actuelle pour la trace d'audit (ancienne → nouvelle).
     const scoutIds = passages.map((p) => p.scoutId)
     const scoutsExistants = await this.prisma.scout.findMany({
-      where: { id: { in: scoutIds }, paroisseId },
+      where: { id: { in: scoutIds } },
       select: { id: true, brancheType: true },
     })
     if (scoutsExistants.length !== scoutIds.length) {
@@ -87,7 +81,11 @@ export class PassageBrancheService {
     await this.prisma.$transaction(
       passages.map((p) =>
         p.nouvelleBranche
-          ? this.prisma.scout.update({ where: { id: p.scoutId }, data: { brancheType: p.nouvelleBranche } })
+          ? // L'équipe appartient à l'ancienne branche : le scout en sort.
+            this.prisma.scout.update({
+              where: { id: p.scoutId },
+              data: { brancheType: p.nouvelleBranche, equipeId: null },
+            })
           : // nouvelleBranche null = sortie du mouvement (âge dépassé) : le scout
             // est désactivé plutôt que supprimé, pour conserver son historique.
             this.prisma.scout.update({ where: { id: p.scoutId }, data: { actif: false, desactiveLe: new Date() } }),
@@ -100,7 +98,6 @@ export class PassageBrancheService {
     await Promise.all(
       passages.map((p) =>
         this.audit.enregistrer({
-          paroisseId,
           acteurId: utilisateur.id,
           action: p.nouvelleBranche ? 'SCOUT_BRANCHE_MODIFIEE' : 'SCOUT_SORTIE_MOUVEMENT',
           entite: 'Scout',

@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { entierBorne, LABELS_TYPE_DOCUMENT, ROLES_BRANCHE } from '@scout/shared'
 import { env } from '../../config/env'
-import { paroisseIdRequise } from '../../common/paroisse'
 import { PerimetreService } from '../../common/perimetre.service'
 import { verifierSecretCron } from '../../common/lib/cron'
 import { logger } from '../../common/lib/logger'
@@ -25,7 +24,7 @@ export class DocumentsService {
   ) {}
 
   // Documents déjà expirés ou arrivant à expiration dans les N prochains jours
-  // (30 par défaut), pour les scouts actifs de la paroisse. Un responsable de
+  // (30 par défaut), pour les scouts actifs du groupe. Un responsable de
   // branche ne voit que les documents des scouts de sa propre branche.
   async expirations(utilisateur: UtilisateurSession, joursAvantParam: string | undefined) {
     const joursAvant = entierBorne(joursAvantParam ?? null, 30, 0, JOURS_AVANT_MAX)
@@ -33,13 +32,11 @@ export class DocumentsService {
     seuil.setDate(seuil.getDate() + joursAvant)
     seuil.setHours(23, 59, 59, 999)
 
-    const paroisseId = paroisseIdRequise(utilisateur)
-
     let brancheType: string | null = null
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
       brancheType = await this.perimetre.brancheUtilisateur(utilisateur.id)
       // Compte mal configuré (rôle de branche sans brancheType assigné) :
-      // aucun résultat plutôt que la paroisse entière par défaut.
+      // aucun résultat plutôt que tout le groupe par défaut.
       if (!brancheType) return { documents: [] }
     }
 
@@ -47,7 +44,6 @@ export class DocumentsService {
       where: {
         dateExpiration: { lte: seuil },
         scout: {
-          paroisseId,
           actif: true,
           ...(brancheType ? { brancheType: brancheType as BrancheType } : {}),
         },

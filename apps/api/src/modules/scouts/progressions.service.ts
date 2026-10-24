@@ -2,7 +2,6 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { ROLES_BRANCHE } from '@scout/shared'
 import { Prisma } from '../../generated/prisma/client'
 import { PerimetreService } from '../../common/perimetre.service'
-import { paroisseIdRequise } from '../../common/paroisse'
 import type { UtilisateurSession } from '../../common/types'
 import { PrismaService } from '../../prisma/prisma.service'
 import type { DonneesValidationProgression } from './scouts.schemas'
@@ -11,7 +10,6 @@ interface ScoutCible {
   id: string
   nom: string
   prenom: string
-  paroisseId: string
   brancheType: string
 }
 
@@ -23,38 +21,20 @@ export class ProgressionsService {
   ) {}
 
   // Détermine si l'utilisateur peut consulter/valider la progression de ce
-  // scout : responsable de branche de SA paroisse et de la même branche, ou
-  // assistant district chargé de cette branche pour une paroisse de son district.
+  // scout : encadrement de branche de la même branche uniquement.
   // Ne renvoie qu'un booléen : en cas de refus, l'appelant répond 404
   // "Scout introuvable" (même message qu'un scout absent) pour ne jamais révéler
-  // à un tiers non autorisé qu'un scout existe dans une autre paroisse/branche.
-  async autoriseSurScout(
-    utilisateur: UtilisateurSession,
-    scout: { paroisseId: string; brancheType: string },
-  ): Promise<boolean> {
-    if (ROLES_BRANCHE.includes(utilisateur.role)) {
-      const paroisseId = paroisseIdRequise(utilisateur)
-      if (scout.paroisseId === paroisseId) {
-        const brancheUtilisateur = await this.perimetre.brancheUtilisateur(utilisateur.id)
-        if (brancheUtilisateur === scout.brancheType) return true
-      }
-    }
-
-    if (utilisateur.roleDistrict === 'ASSISTANT_DISTRICT') {
-      const brancheDistrict = await this.perimetre.brancheDistrictUtilisateur(utilisateur.id)
-      if (brancheDistrict && brancheDistrict === scout.brancheType) {
-        const { paroisses } = await this.perimetre.paroissesDuDistrict(paroisseIdRequise(utilisateur))
-        if (paroisses.some((p) => p.id === scout.paroisseId)) return true
-      }
-    }
-
-    return false
+  // à un tiers non autorisé qu'un scout existe dans une autre branche.
+  async autoriseSurScout(utilisateur: UtilisateurSession, scout: { brancheType: string }): Promise<boolean> {
+    if (!ROLES_BRANCHE.includes(utilisateur.role)) return false
+    const brancheUtilisateur = await this.perimetre.brancheUtilisateur(utilisateur.id)
+    return !!brancheUtilisateur && brancheUtilisateur === scout.brancheType
   }
 
   private async scoutAutorise(utilisateur: UtilisateurSession, id: string): Promise<ScoutCible> {
     const scout = await this.prisma.scout.findUnique({
       where: { id },
-      select: { id: true, nom: true, prenom: true, paroisseId: true, brancheType: true },
+      select: { id: true, nom: true, prenom: true, brancheType: true },
     })
     if (!scout || !(await this.autoriseSurScout(utilisateur, scout))) {
       throw new NotFoundException('Scout introuvable')

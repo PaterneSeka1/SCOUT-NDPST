@@ -21,24 +21,12 @@ const SchemaEnv = z.object({
   // relus en base à chaque rafraîchissement), session totale de 12 h.
   JWT_ACCESS_TTL_SECONDES: z.coerce.number().int().min(60).max(3600).default(300),
 
-  // Identifiant de cette installation (ex. « district-abidjan »,
-  // « paroisse-wiradjuri ») : émetteur (iss) des jetons qu'elle signe.
+  // Identifiant de cette installation (ex. « paroisse-wiradjuri ») : émetteur
+  // (iss) des jetons qu'elle signe.
   INSTALLATION_ID: z
     .string()
     .regex(/^[a-z0-9-]{3,40}$/, 'minuscules, chiffres et tirets uniquement (3 à 40 caractères)')
     .default('scout-ascci-api'),
-  // Administrateur plateforme unique pour plusieurs installations :
-  // - l'installation qui HÉBERGE le compte (district) signe ses jetons avec
-  //   une clé privée ECDSA P-256 (ADMIN_CLE_PRIVEE_FICHIER) ;
-  // - les installations qu'il ADMINISTRE (paroisse) n'ont que la clé publique
-  //   correspondante et l'identifiant de l'émetteur : elles vérifient ces
-  //   jetons sans pouvoir en fabriquer, et seulement pour ADMIN_PLATEFORME.
-  ADMIN_CLE_PRIVEE_FICHIER: z.string().optional(),
-  ADMIN_EMETTEUR_CONFIANCE: z.string().optional(),
-  ADMIN_CLE_PUBLIQUE_FICHIER: z.string().optional(),
-  // URL fixe de /api/auth/session sur l'installation émettrice. Aucun hôte
-  // n'est dérivé d'un jeton ou d'une entrée utilisateur.
-  ADMIN_URL_VERIFICATION_SESSION: z.preprocess(videEnAbsent, z.string().url().optional()),
   SESSION_TTL_SECONDES: z.coerce
     .number()
     .int()
@@ -46,10 +34,10 @@ const SchemaEnv = z.object({
     .max(7 * 24 * 3600)
     .default(12 * 3600),
 
-  // Origines autorisées à appeler l'API avec des cookies (frontends des
-  // différentes plateformes), séparées par des virgules. Vide = aucune
-  // requête cross-origin (cas du frontend paroissial, qui passe par son
-  // propre proxy /api et reste donc same-origin).
+  // Origines autorisées à appeler l'API avec des cookies, séparées par des
+  // virgules. Vide (recommandé) = aucune requête cross-origin : le frontend
+  // relaie /api côté serveur et reste same-origin. Toute future
+  // interconnexion doit être conçue et autorisée séparément.
   CORS_ORIGINES: z.string().default(''),
   // Domaine des cookies de session (ex. ".scout-ascci.ci" pour partager la
   // session entre sous-domaines). Vide = cookie limité à l'hôte appelant.
@@ -125,29 +113,6 @@ const SchemaEnvValide = SchemaEnv.superRefine((cfg, ctx) => {
       manque('SMTP_HOST', 'serveur SMTP obligatoire en production (réinitialisation du mot de passe)')
     if (!renseigne(cfg.SMTP_FROM)) manque('SMTP_FROM', "adresse d'expédition obligatoire en production")
     if (!renseigne(cfg.CRON_SECRET)) manque('CRON_SECRET', 'secret des tâches planifiées obligatoire en production')
-  }
-
-  if (renseigne(cfg.ADMIN_EMETTEUR_CONFIANCE) !== renseigne(cfg.ADMIN_CLE_PUBLIQUE_FICHIER)) {
-    manque('ADMIN_CLE_PUBLIQUE_FICHIER', 'ADMIN_EMETTEUR_CONFIANCE et ADMIN_CLE_PUBLIQUE_FICHIER vont ensemble')
-  }
-  if (renseigne(cfg.ADMIN_EMETTEUR_CONFIANCE) && cfg.ADMIN_EMETTEUR_CONFIANCE === cfg.INSTALLATION_ID) {
-    manque('ADMIN_EMETTEUR_CONFIANCE', 'doit désigner une AUTRE installation que celle-ci')
-  }
-  if (cfg.NODE_ENV === 'production' && renseigne(cfg.ADMIN_EMETTEUR_CONFIANCE) && !cfg.ADMIN_URL_VERIFICATION_SESSION) {
-    manque('ADMIN_URL_VERIFICATION_SESSION', 'URL de revalidation de l’émetteur obligatoire avec un administrateur externe')
-  }
-  if (cfg.ADMIN_URL_VERIFICATION_SESSION) {
-    const url = new URL(cfg.ADMIN_URL_VERIFICATION_SESSION)
-    if (
-      url.username ||
-      url.password ||
-      url.search ||
-      url.hash ||
-      (url.protocol !== 'https:' &&
-        !(url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)))
-    ) {
-      manque('ADMIN_URL_VERIFICATION_SESSION', 'HTTPS ou HTTP loopback requis, sans identifiants ni paramètres')
-    }
   }
 
   if (renseigne(cfg.STORAGE_S3_BUCKET)) {

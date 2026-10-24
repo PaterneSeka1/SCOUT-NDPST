@@ -5,14 +5,11 @@ import type { BrancheType, RoleUtilisateur } from '../../generated/prisma/client
 import { PrismaService } from '../../prisma/prisma.service'
 import { AuditService } from '../../common/audit.service'
 import { AuthService } from '../../auth/auth.service'
-import { paroisseIdRequise } from '../../common/paroisse'
 import type { UtilisateurSession } from '../../common/types'
 import type { CorpsChangementMotDePasse, CorpsConsentement, CorpsModificationProfil } from './profil.schemas'
 
 // Profil en libre-service : accessible à tout utilisateur authentifié, quel que
-// soit son rôle (y compris ADMIN_PLATEFORME, dont paroisseId est toujours nul).
-// `paroisse` est incluse via la relation Prisma : elle vaut naturellement
-// `null` quand paroisseId est nul, aucune requête séparée n'est nécessaire.
+// soit son rôle (y compris ADMINISTRATEUR).
 const SELECTION_PROFIL = {
   id: true,
   nom: true,
@@ -23,10 +20,7 @@ const SELECTION_PROFIL = {
   role: true,
   fonction: true,
   brancheType: true,
-  roleDistrict: true,
-  fonctionDistrict: true,
-  brancheTypeDistrict: true,
-  paroisse: { select: { id: true, nom: true } },
+  editeurContenu: true,
 } as const
 
 @Injectable()
@@ -48,7 +42,7 @@ export class ProfilService {
 
   async modifierProfil(session: UtilisateurSession, corps: CorpsModificationProfil) {
     // Corps validé par SchemaModificationProfil : seuls les champs
-    // auto-modifiables y figurent — role, actif, matricule et paroisseId
+    // auto-modifiables y figurent — role, actif, matricule ou editeurContenu
     // éventuellement envoyés par un client malveillant sont retirés.
     const { nom, prenom, email, telephone } = corps
 
@@ -131,7 +125,6 @@ export class ProfilService {
     // courante : l'utilisateur doit se reconnecter avec le nouveau mot de passe.
 
     await this.audit.enregistrer({
-      paroisseId: session.paroisseId,
       acteurId: session.id,
       action: 'UTILISATEUR_MOT_DE_PASSE_MODIFIE',
       entite: 'Utilisateur',
@@ -147,12 +140,9 @@ export class ProfilService {
       select: { id: true },
     })
     if (!utilisateur) throw new NotFoundException('Utilisateur introuvable')
-    if (!session.paroisseId) throw new ForbiddenException('Accès refusé')
-
-    const paroisseId = session.paroisseId
 
     const liens = await this.prisma.lienParentScout.findMany({
-      where: { parentId: utilisateur.id, scout: { paroisseId } },
+      where: { parentId: utilisateur.id },
       include: {
         scout: {
           include: {
@@ -197,7 +187,6 @@ export class ProfilService {
     // (fiche médicale + autorisation parentale).
     const campsAVenir = await this.prisma.activite.findMany({
       where: {
-        paroisseId,
         type: 'CAMP',
         dateDebut: { gte: new Date() },
         OR: [{ brancheType: null }, { brancheType: { in: branches } }],
@@ -236,7 +225,7 @@ export class ProfilService {
 
     const responsablesUtilisateurs = await this.prisma.utilisateur.findMany({
       where: {
-        paroisseId,
+        actif: true,
         brancheType: { in: branches },
         role: { in: ROLES_BRANCHE as RoleUtilisateur[] },
       },
@@ -251,9 +240,9 @@ export class ProfilService {
       utilisateur: { id: u.id, prenom: u.prenom, nom: u.nom, telephone: u.telephone, email: u.email, role: u.role },
     }))
 
-    // Prochaines activités de la paroisse.
+    // Prochaines activités du groupe.
     const prochaines = await this.prisma.activite.findMany({
-      where: { paroisseId, dateDebut: { gte: new Date() } },
+      where: { dateDebut: { gte: new Date() } },
       orderBy: { dateDebut: 'asc' },
       take: 5,
       select: { id: true, titre: true, dateDebut: true, lieu: true, type: true, brancheType: true },
@@ -263,7 +252,6 @@ export class ProfilService {
     // attendu par le frontend).
     const prochinesReunions = await this.prisma.jourReunion.findMany({
       where: {
-        paroisseId,
         statut: { in: ['PLANIFIEE', 'REPORTEE'] },
         dateHeure: { gte: new Date() },
         ...(branches.length > 0 ? { OR: [{ brancheType: null }, { brancheType: { in: branches } }] } : {}),
@@ -278,18 +266,17 @@ export class ProfilService {
 
   // Un parent accorde ou révoque le consentement à l'utilisation de l'image de
   // SON enfant (photo affichée dans l'application, publications de la
-  // paroisse…). Restreint aux scouts effectivement rattachés au parent via
+  // groupe…). Restreint aux scouts effectivement rattachés au parent via
   // LienParentScout — jamais à un scout quelconque.
   async consentementImage(session: UtilisateurSession, scoutId: string, corps: CorpsConsentement) {
     const { consentement } = corps
-    const paroisseId = paroisseIdRequise(session)
 
     // Le rôle du compte n'est jamais la condition d'accès : un membre du
     // staff ou un compte SCOUT (Ressources Adultes) peut être par ailleurs
-    // parent d'un scout de la paroisse (voir LienParentScout). Seul le lien
+    // parent d'un scout du groupe (voir LienParentScout). Seul le lien
     // réel est contrôlé techniquement; l’autorité juridique du compte n’est pas vérifiée.
     const lien = await this.prisma.lienParentScout.findFirst({
-      where: { parentId: session.id, scoutId, scout: { paroisseId } },
+      where: { parentId: session.id, scoutId },
     })
     if (!lien) throw new ForbiddenException("Cet enfant n'est pas rattaché à votre compte")
 
@@ -305,7 +292,6 @@ export class ProfilService {
     })
 
     await this.audit.enregistrer({
-      paroisseId,
       acteurId: session.id,
       action: 'SCOUT_CONSENTEMENT_IMAGE_MODIFIE',
       entite: 'Scout',
@@ -324,11 +310,10 @@ export class ProfilService {
   // données de santé de l'enfant (fiche médicale, informations sanitaires).
   async consentementSante(session: UtilisateurSession, scoutId: string, corps: CorpsConsentement) {
     const { consentement } = corps
-    const paroisseId = paroisseIdRequise(session)
 
     // Seul le lien LienParentScout réel fait foi, jamais le rôle du compte.
     const lien = await this.prisma.lienParentScout.findFirst({
-      where: { parentId: session.id, scoutId, scout: { paroisseId } },
+      where: { parentId: session.id, scoutId },
     })
     if (!lien) throw new ForbiddenException("Cet enfant n'est pas rattaché à votre compte")
 
@@ -344,7 +329,6 @@ export class ProfilService {
     })
 
     await this.audit.enregistrer({
-      paroisseId,
       acteurId: session.id,
       action: 'SCOUT_CONSENTEMENT_SANTE_MODIFIE',
       entite: 'Scout',
@@ -387,10 +371,9 @@ export class ProfilService {
       orderBy: { ordre: 'asc' },
     })
 
-    // Prochaines activités concernant la branche du scout ou toute la paroisse.
+    // Prochaines activités concernant la branche du scout ou tout le groupe.
     const prochainesActivites = await this.prisma.activite.findMany({
       where: {
-        paroisseId: scout.paroisseId,
         dateDebut: { gte: new Date() },
         OR: [{ brancheType: null }, { brancheType: scout.brancheType }],
       },

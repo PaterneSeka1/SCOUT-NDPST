@@ -1,10 +1,10 @@
 import { z } from 'zod'
-import { anneeScolaireValide } from '@scout/shared'
-import { StatutCotisation, TypeCotisation } from '../../generated/prisma/client'
+import { BrancheTypeSchema, anneeScolaireValide } from '@scout/shared'
+import { StatutCotisation, TypeCotisation, type BrancheType } from '../../generated/prisma/client'
 
 // Schémas des corps de requête du module Cotisations. Seule la forme des
-// données est contrôlée ici ; le périmètre (paroisse, branche), l'existence des
-// scouts et la cohérence avec le montant dû restent dans CotisationsService.
+// données est contrôlée ici ; le périmètre (branche), l'existence des
+// scouts et de l'activité et la cohérence avec le montant dû restent dans CotisationsService.
 
 // Historiquement, un corps qui n'est pas un objet est traité comme un objet
 // vide (les champs requis sont alors signalés comme manquants).
@@ -33,6 +33,13 @@ export const SchemaCreationCotisation = z.preprocess(
         .min(0, { error: 'Le montant doit être un entier positif' }),
       libelle: texteOptionnel('libelle'),
       anneeScolaire: texteOptionnel('anneeScolaire'),
+      // Cotisation d'activité (camp, sortie…) : existence vérifiée par le service.
+      activiteId: z
+        .string({ error: 'Activité invalide' })
+        .trim()
+        .max(64, 'Activité invalide')
+        .nullish()
+        .transform((valeur) => valeur || undefined),
     })
     .transform(({ scoutId, scoutIds, ...corps }, ctx) => {
       const cibles: unknown[] =
@@ -83,3 +90,61 @@ export const SchemaStatutCotisant = z.preprocess(
 )
 
 export type CorpsStatutCotisant = z.infer<typeof SchemaStatutCotisant>
+
+// ---------------------------------------------------------------------------
+// Barème des cotisations (montants de référence par année, type et branche)
+// ---------------------------------------------------------------------------
+
+const MESSAGE_MONTANT_BAREME = 'Le montant doit être un entier positif ou nul'
+
+const montantBareme = z
+  .number({ error: MESSAGE_MONTANT_BAREME })
+  .int({ error: MESSAGE_MONTANT_BAREME })
+  .min(0, { error: MESSAGE_MONTANT_BAREME })
+  .max(100_000_000, { error: 'Montant trop élevé' })
+
+const anneeScolaireBareme = z
+  .string({ error: 'Année scolaire invalide' })
+  .trim()
+  .refine(anneeScolaireValide, 'Année scolaire invalide')
+
+// null ou '' = barème valable pour toutes les branches.
+const brancheBareme = z
+  .enum([...BrancheTypeSchema.options, ''], { error: 'Branche invalide' })
+  .nullable()
+  .transform((valeur): BrancheType | null => valeur || null)
+
+// Libellé facultatif : vide = aucun.
+const libelleBareme = z
+  .string({ error: 'libelle doit être une chaîne de caractères' })
+  .trim()
+  .max(200, 'Libellé trop long (200 caractères maximum)')
+  .nullable()
+  .transform((valeur) => valeur || null)
+
+export const SchemaCreationBareme = z.preprocess(
+  objetOuVide,
+  z.object({
+    anneeScolaire: anneeScolaireBareme,
+    type: z.enum(TypeCotisation, { error: 'Type de cotisation invalide' }),
+    brancheType: brancheBareme.optional().transform((valeur) => valeur ?? null),
+    libelle: libelleBareme.optional().transform((valeur) => valeur ?? null),
+    montant: montantBareme,
+  }),
+)
+
+export type CorpsCreationBareme = z.infer<typeof SchemaCreationBareme>
+
+// Mise à jour partielle : un champ absent reste inchangé.
+export const SchemaModificationBareme = z.preprocess(
+  objetOuVide,
+  z.object({
+    anneeScolaire: anneeScolaireBareme.optional(),
+    type: z.enum(TypeCotisation, { error: 'Type de cotisation invalide' }).optional(),
+    brancheType: brancheBareme.optional(),
+    libelle: libelleBareme.optional(),
+    montant: montantBareme.optional(),
+  }),
+)
+
+export type CorpsModificationBareme = z.infer<typeof SchemaModificationBareme>

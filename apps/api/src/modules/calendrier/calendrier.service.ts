@@ -7,8 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import { randomBytes } from 'crypto'
-import { ROLES_BRANCHE } from '@scout/shared'
-import { paroisseIdRequise } from '../../common/paroisse'
+import { ROLES_BRANCHE, ROLES_TOUT_STAFF } from '@scout/shared'
 import { PerimetreService } from '../../common/perimetre.service'
 import { genererICS } from '../../common/lib/calendrier'
 import { limiterTaux } from '../../common/lib/rateLimit'
@@ -19,7 +18,7 @@ import { PrismaService } from '../../prisma/prisma.service'
 const FENETRE_PASSEE_JOURS = 30
 const FENETRE_FUTURE_JOURS = 180
 
-// Filtre « branche du compte ou toute la paroisse » appliqué aux activités et
+// Filtre « branche du compte ou tout le groupe » appliqué aux activités et
 // réunions (brancheType null = événement commun à toutes les branches).
 function conditionBranche(filtreBranche: string | null) {
   return filtreBranche ? { OR: [{ brancheType: filtreBranche as BrancheType }, { brancheType: null }] } : {}
@@ -35,8 +34,6 @@ export class CalendrierService {
   // Événements (activités + réunions) du mois demandé (« YYYY-MM »), pour la
   // vue calendrier du tableau de bord.
   async evenementsDuMois(utilisateur: UtilisateurSession, mois: string | undefined) {
-    const paroisseId = paroisseIdRequise(utilisateur)
-
     const reference = mois ? new Date(`${mois}-01T00:00:00.000Z`) : new Date()
     if (isNaN(reference.getTime())) throw new BadRequestException('Paramètre mois invalide')
 
@@ -47,7 +44,7 @@ export class CalendrierService {
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
       filtreBranche = await this.perimetre.brancheUtilisateur(utilisateur.id)
       // Compte mal configuré (rôle de branche sans brancheType assigné) :
-      // aucun résultat plutôt que la paroisse entière par défaut.
+      // aucun résultat plutôt que tout le groupe par défaut.
       if (!filtreBranche) return { evenements: [] }
     }
 
@@ -55,7 +52,7 @@ export class CalendrierService {
 
     const [activites, reunions] = await Promise.all([
       this.prisma.activite.findMany({
-        where: { paroisseId, dateDebut: { gte: debutMois, lt: finMois }, ...condBranche },
+        where: { dateDebut: { gte: debutMois, lt: finMois }, ...condBranche },
         select: {
           id: true,
           titre: true,
@@ -70,7 +67,6 @@ export class CalendrierService {
       }),
       this.prisma.jourReunion.findMany({
         where: {
-          paroisseId,
           // Une réunion apparaît à sa date effective (dateReportee si reportée,
           // sinon dateHeure), pas à sa date d'origine — sinon une réunion
           // reportée hors du mois consulté resterait affichée à son ancienne date.
@@ -144,13 +140,12 @@ export class CalendrierService {
 
     const utilisateur = await this.prisma.utilisateur.findUnique({
       where: { tokenCalendrier: token },
-      select: { id: true, prenom: true, nom: true, role: true, actif: true, paroisseId: true },
+      select: { id: true, prenom: true, nom: true, role: true, actif: true },
     })
     if (!utilisateur || !utilisateur.actif) throw new NotFoundException('Jeton invalide')
-    // Jeton émis uniquement pour le personnel paroissial (voir genererJeton) :
-    // filet de sécurité si un compte sans paroisse en détenait un.
-    const paroisseId = utilisateur.paroisseId
-    if (!paroisseId) throw new ForbiddenException('Route réservée au personnel paroissial')
+    // Jeton émis uniquement pour la maîtrise (voir genererJeton) : filet de
+    // sécurité si un compte ayant perdu son rôle en détenait encore un.
+    if (!ROLES_TOUT_STAFF.includes(utilisateur.role)) throw new ForbiddenException('Route réservée à la maîtrise')
 
     const nomCalendrier = `SCOUT ASCCI — ${utilisateur.prenom} ${utilisateur.nom}`
 
@@ -158,7 +153,7 @@ export class CalendrierService {
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
       filtreBranche = await this.perimetre.brancheUtilisateur(utilisateur.id)
       // Compte mal configuré (rôle de branche sans brancheType assigné) :
-      // flux vide plutôt que toute la paroisse par défaut.
+      // flux vide plutôt que tout le groupe par défaut.
       if (!filtreBranche) return genererICS(nomCalendrier, [])
     }
 
@@ -169,12 +164,11 @@ export class CalendrierService {
 
     const [activites, reunions] = await Promise.all([
       this.prisma.activite.findMany({
-        where: { paroisseId, dateDebut: { gte: debut, lt: fin }, ...condBranche },
+        where: { dateDebut: { gte: debut, lt: fin }, ...condBranche },
         select: { id: true, titre: true, description: true, dateDebut: true, dateFin: true, lieu: true },
       }),
       this.prisma.jourReunion.findMany({
         where: {
-          paroisseId,
           // Cf. evenementsDuMois : une réunion apparaît à sa date effective
           // (dateReportee si reportée), et une réunion annulée est exclue du
           // flux — sinon elle continuerait de s'afficher comme un rendez-vous

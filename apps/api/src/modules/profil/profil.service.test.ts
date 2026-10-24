@@ -15,8 +15,7 @@ const MOI: UtilisateurSession = {
   nom: 'Yao',
   prenom: 'Awa',
   role: 'ADJOINT_GROUPE',
-  roleDistrict: null,
-  paroisseId: 'paroisse-1',
+  editeurContenu: false,
 }
 
 function creerContexte() {
@@ -106,7 +105,7 @@ describe('ProfilService', () => {
       ForbiddenException,
     )
     expect(ctx.prisma.lienParentScout.findFirst).toHaveBeenCalledWith({
-      where: { parentId: 'moi', scoutId: 'scout-x', scout: { paroisseId: 'paroisse-1' } },
+      where: { parentId: 'moi', scoutId: 'scout-x' },
     })
     expect(ctx.prisma.scout.update).not.toHaveBeenCalled()
     expect(ctx.audit.enregistrer).not.toHaveBeenCalled()
@@ -176,7 +175,7 @@ describe('Schémas du profil', () => {
 
   it('modification : ne conserve que les champs auto-modifiables', () => {
     expect(
-      SchemaModificationProfil.parse({ nom: 'Yao', email: null, role: 'CHEF_GROUPE', paroisseId: 'p2', actif: false }),
+      SchemaModificationProfil.parse({ nom: 'Yao', email: null, role: 'CHEF_GROUPE', editeurContenu: true, actif: false }),
     ).toEqual({ nom: 'Yao', email: null })
   })
 

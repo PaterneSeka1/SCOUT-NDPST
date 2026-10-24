@@ -21,8 +21,7 @@ function utilisateur(role: string): UtilisateurSession {
     nom: 'Kouassi',
     prenom: 'Awa',
     role,
-    roleDistrict: null,
-    paroisseId: 'p1',
+    editeurContenu: false,
   }
 }
 
@@ -63,24 +62,25 @@ describe('Cloisonnement par branche des scouts', () => {
     await scouts.lister(utilisateur('RESPONSABLE_BRANCHE'), { ...filtres, branche: 'ECLAIREURS' })
 
     const where = prisma.scout.findMany.mock.calls[0][0].where
-    expect(where).toMatchObject({ paroisseId: 'p1', brancheType: 'LOUVETEAUX' })
+    expect(where).toMatchObject({ brancheType: 'LOUVETEAUX' })
+    expect(where).not.toHaveProperty('paroisseId')
     expect(prisma.scout.count.mock.calls[0][0].where.brancheType).toBe('LOUVETEAUX')
   })
 
-  it('ne renvoie rien à un rôle de branche sans branche assignée (jamais toute la paroisse)', async () => {
+  it('ne renvoie rien à un rôle de branche sans branche assignée (jamais tout le groupe)', async () => {
     prisma = prismaSimule(null)
     const { scouts } = services(prisma)
     const resultat = await scouts.lister(utilisateur('ADJOINT_BRANCHE'), { ...filtres, branche: null })
 
-    expect(resultat).toEqual({ scouts: [], total: 0, page: 1, totalPages: 0 })
+    expect(resultat).toEqual({ scouts: [], total: 0, page: 1, limite: 20, totalPages: 0 })
     expect(prisma.scout.findMany).not.toHaveBeenCalled()
   })
 
-  it('laisse un chef de groupe filtrer librement, toujours limité à sa paroisse', async () => {
+  it('laisse un chef de groupe filtrer librement', async () => {
     const { scouts } = services(prisma)
     await scouts.lister(utilisateur('CHEF_GROUPE'), { ...filtres, branche: 'ECLAIREURS' })
 
-    expect(prisma.scout.findMany.mock.calls[0][0].where).toMatchObject({ paroisseId: 'p1', brancheType: 'ECLAIREURS' })
+    expect(prisma.scout.findMany.mock.calls[0][0].where).toEqual({ brancheType: 'ECLAIREURS' })
     expect(prisma.utilisateur.findUnique).not.toHaveBeenCalled()
   })
 
@@ -90,7 +90,6 @@ describe('Cloisonnement par branche des scouts', () => {
 
     expect(prisma.scout.findFirst.mock.calls[0][0].where).toEqual({
       id: 's-autre',
-      paroisseId: 'p1',
       brancheType: 'LOUVETEAUX',
     })
   })

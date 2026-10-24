@@ -160,3 +160,46 @@ describe('SchemaPresencesActivite', () => {
     expect(premierMessage(SchemaPresencesActivite, corps)).toBe('Format invalide')
   })
 })
+
+describe('Activités — champs de suivi et publication', () => {
+  const base = { titre: 'Camp', dateDebut: '2026-12-20T08:00:00Z' }
+
+  it('accepte statut, bilan, responsable et publication explicite', () => {
+    const corps = SchemaCreationActivite.parse({
+      ...base,
+      statut: 'EN_COURS',
+      bilan: '  Bon camp ',
+      responsableId: 'u-1',
+      publique: true,
+      descriptionPublique: ' Camp de Noël ',
+    })
+    expect(corps).toMatchObject({
+      statut: 'EN_COURS',
+      bilan: 'Bon camp',
+      responsableId: 'u-1',
+      publique: true,
+      descriptionPublique: 'Camp de Noël',
+    })
+  })
+
+  it('ne rend jamais publique implicitement et ignore paroisseId', () => {
+    const corps = SchemaCreationActivite.parse({ ...base, paroisseId: 'p-autre' })
+    expect(corps.publique).toBeUndefined()
+    expect(corps).not.toHaveProperty('paroisseId')
+  })
+
+  it('rejette un statut inconnu, un publique non booléen et une publication sans texte public', () => {
+    expect(premierMessage(SchemaCreationActivite, { ...base, statut: 'FINIE' })).toBe("Statut d'activité invalide")
+    expect(premierMessage(SchemaCreationActivite, { ...base, publique: 'oui' })).toBe(
+      'Le champ « publique » doit être un booléen',
+    )
+    expect(premierMessage(SchemaCreationActivite, { ...base, publique: true })).toBe(
+      'Une description publique est requise pour publier une activité',
+    )
+  })
+
+  it('modification : responsable vide = retiré', () => {
+    expect(SchemaModificationActivite.parse({ responsableId: '' })).toEqual({ responsableId: null })
+    expect(SchemaModificationActivite.parse({ responsableId: null })).toEqual({ responsableId: null })
+  })
+})

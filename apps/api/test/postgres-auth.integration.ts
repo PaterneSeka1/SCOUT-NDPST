@@ -32,8 +32,6 @@ const auth = new AuthService(prisma, jwt)
 const passwords = new MotDePasseService(prisma, auth)
 const guard = new AuthGuard(new Reflector(), jwt, prisma)
 const createdUsers: string[] = []
-const createdParishes: string[] = []
-const createdDistricts: string[] = []
 const INITIAL = 'InitialSecret123!'
 const PERSONAL = 'PersonnelSecret456!'
 
@@ -49,13 +47,9 @@ function context(token: string, activationAllowed = false): ExecutionContext {
 
 async function account(temporary = false) {
   const suffix = randomUUID()
-  const district = await prisma.district.create({ data: { nom: `Integration ${suffix}` } })
-  createdDistricts.push(district.id)
-  const parish = await prisma.paroisse.create({ data: { nom: 'Synthétique', ville: 'Test', diocese: 'Test', districtId: district.id } })
-  createdParishes.push(parish.id)
   const user = await prisma.utilisateur.create({ data: {
     nom: 'Synthétique', prenom: 'Test', matricule: `IT-${suffix}`, role: 'CHEF_GROUPE',
-    paroisseId: parish.id, password: await hash(INITIAL, 4), doitChangerMotDePasse: temporary,
+    password: await hash(INITIAL, 4), doitChangerMotDePasse: temporary,
   } })
   createdUsers.push(user.id)
   return user
@@ -64,7 +58,7 @@ async function account(temporary = false) {
 beforeAll(async () => {
   await prisma.$connect()
   // Ne pas exécuter de nettoyage global dans une base ayant des données.
-  if (await prisma.utilisateur.count() !== 0 || await prisma.paroisse.count() !== 0 || await prisma.district.count() !== 0) {
+  if (await prisma.utilisateur.count() !== 0 || await prisma.scout.count() !== 0) {
     throw new Error('La base dédiée doit être vide de données applicatives avant cette suite')
   }
 })
@@ -76,8 +70,6 @@ afterEach(async () => {
     await prisma.tokenReinitialisation.deleteMany({ where: { utilisateurId: id } })
     await prisma.utilisateur.delete({ where: { id } })
   }
-  for (const id of createdParishes.splice(0)) await prisma.paroisse.delete({ where: { id } })
-  for (const id of createdDistricts.splice(0)) await prisma.district.delete({ where: { id } })
 })
 afterAll(() => prisma.$disconnect())
 

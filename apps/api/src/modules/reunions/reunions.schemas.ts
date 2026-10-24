@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { BrancheTypeSchema, StatutPresenceReunionSchema, StatutReunionSchema } from '@scout/shared'
 
 // Schémas des corps de requête du module Réunions. Seule la forme des données
-// est contrôlée ici ; le périmètre (paroisse, branche de l'utilisateur) et
+// est contrôlée ici ; le périmètre (branche de l'utilisateur) et
 // l'appartenance des scouts à la réunion restent dans ReunionsService.
 
 const MAX_REUNIONS_SERIE = 60

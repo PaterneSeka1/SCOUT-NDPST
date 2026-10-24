@@ -31,26 +31,29 @@ export class ReunionsController {
   // Routes « config » déclarées avant « :id » : sinon /reunions/config serait
   // capturée comme une réunion d'identifiant « config ».
 
-  // Réservé au staff paroissial (exclut notamment ADMIN_PLATEFORME, sans paroisse).
+  // Réservé à la maîtrise (exclut notamment l'administration technique).
   @Get('config')
   @Roles(...ROLES_TOUT_STAFF)
-  listerConfigs(@UtilisateurCourant() utilisateur: UtilisateurSession) {
-    return this.reunions.listerConfigs(utilisateur)
+  listerConfigs() {
+    return this.reunions.listerConfigs()
   }
 
   @Put('config')
   @Roles(...ROLES_GROUPE)
-  enregistrerConfig(
-    @UtilisateurCourant() utilisateur: UtilisateurSession,
-    @Body(new ZodPipe(SchemaConfigReunion)) corps: CorpsConfigReunion,
-  ) {
-    return this.reunions.enregistrerConfig(utilisateur, corps)
+  enregistrerConfig(@Body(new ZodPipe(SchemaConfigReunion)) corps: CorpsConfigReunion) {
+    return this.reunions.enregistrerConfig(corps)
   }
 
   @Get()
   @Roles(...ROLES_TOUT_STAFF)
   lister(@UtilisateurCourant() utilisateur: UtilisateurSession, @Query() query: Record<string, unknown>) {
-    return this.reunions.lister(utilisateur, texteQuery(query.branche), texteQuery(query.statut))
+    return this.reunions.lister(utilisateur, {
+      branche: texteQuery(query.branche),
+      statut: texteQuery(query.statut),
+      recherche: texteQuery(query.recherche),
+      page: texteQuery(query.page),
+      limite: texteQuery(query.limite),
+    })
   }
 
   // Groupe ou branche ; un chef de branche ne crée que pour sa propre branche.

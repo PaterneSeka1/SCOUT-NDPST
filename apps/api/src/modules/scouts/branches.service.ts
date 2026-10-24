@@ -1,21 +1,17 @@
-import { BadRequestException, Injectable } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
 import { ROLES_BRANCHE } from '@scout/shared'
 import type { RoleUtilisateur } from '../../generated/prisma/client'
-import type { UtilisateurSession } from '../../common/types'
 import { PrismaService } from '../../prisma/prisma.service'
 
 @Injectable()
 export class BranchesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // Encadrement de chaque branche de la paroisse et effectif actif par branche.
-  async synthese(utilisateur: UtilisateurSession) {
-    const paroisseId = utilisateur.paroisseId
-    if (!paroisseId) throw new BadRequestException('Aucune paroisse')
-
+  // Encadrement de chaque branche et effectif actif par branche.
+  async synthese() {
     const [utilisateursBranche, scoutsParBranche] = await Promise.all([
       this.prisma.utilisateur.findMany({
-        where: { paroisseId, role: { in: ROLES_BRANCHE as RoleUtilisateur[] }, brancheType: { not: null } },
+        where: { actif: true, role: { in: ROLES_BRANCHE as RoleUtilisateur[] }, brancheType: { not: null } },
         select: {
           id: true,
           nom: true,
@@ -30,8 +26,9 @@ export class BranchesService {
       }),
       this.prisma.scout.groupBy({
         by: ['brancheType'],
-        where: { paroisseId, actif: true },
+        where: { actif: true },
         _count: { id: true },
+        orderBy: { brancheType: 'asc' },
       }),
     ])
 

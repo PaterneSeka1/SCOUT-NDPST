@@ -26,11 +26,10 @@ function construire() {
     scout: {
       findMany: vi.fn().mockResolvedValue([{ id: 's1' }]),
       findUnique: vi.fn().mockResolvedValue({
-        paroisseId: 'p1',
         dateNaissance: new Date('2012-06-15T00:00:00Z'),
-        photo: '/api/fichiers/p1/photo.png',
-        documents: [{ url: '/api/fichiers/p1/fiche.pdf' }],
-        autorisationsCamp: [{ documentUrl: '/api/fichiers/p1/autorisation.pdf' }],
+        photo: '/api/fichiers/groupe/photo.png',
+        documents: [{ url: '/api/fichiers/groupe/fiche.pdf' }],
+        autorisationsCamp: [{ documentUrl: '/api/fichiers/groupe/autorisation.pdf' }],
       }),
       update: operation(),
     },
@@ -118,9 +117,9 @@ describe('cron/purge', () => {
     expect(prisma.lienParentScout.deleteMany).toHaveBeenCalledWith({ where: { scoutId: 's1' } })
     expect(prisma.$transaction).toHaveBeenCalledOnce()
     expect(fichiers.supprimerSiOrphelin.mock.calls.map((c) => c[0])).toEqual([
-      '/api/fichiers/p1/photo.png',
-      '/api/fichiers/p1/fiche.pdf',
-      '/api/fichiers/p1/autorisation.pdf',
+      '/api/fichiers/groupe/photo.png',
+      '/api/fichiers/groupe/fiche.pdf',
+      '/api/fichiers/groupe/autorisation.pdf',
     ])
     expect(audit.enregistrer).toHaveBeenCalledWith(expect.objectContaining({ action: 'SCOUT_ANONYMISE', entiteId: 's1' }))
   })

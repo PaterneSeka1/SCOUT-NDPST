@@ -1,16 +1,15 @@
-// Initialisation d'une installation NEUVE (base vide) : crée en une seule
-// transaction le compte administrateur plateforme (sauf --sans-admin), le
-// district, la paroisse et son Chef de Groupe. Le frontend paroissial n'a pas d'écrans
-// d'administration : c'est le seul moyen prévu pour amorcer la plateforme.
+// Initialisation de l'installation (identité de LA paroisse et premiers comptes).
+//
+//   npm run initialiser               # base NEUVE : identité, administrateur et Chef de Groupe
+//   npm run initialiser -- --admin    # base EXISTANTE sans administrateur actif (par
+//                                     # exemple après la migration mono-paroissiale) :
+//                                     # crée seulement un compte administrateur
 //
 // Interactif (à lancer dans un terminal SSH) : les mots de passe sont saisis
 // sans écho, jamais passés en argument ni en variable d'environnement (ils
 // finiraient dans l'historique du shell ou la liste des processus).
-// Refuse de s'exécuter si la base contient déjà un compte.
-//
-// Usage, depuis apps/api avec son .env chargé :
-//   npm run initialiser                     # installation qui héberge l'administrateur (district)
-//   npm run initialiser -- --sans-admin     # installation administrée à distance (paroisse)
+// L'identité de la paroisse est une configuration unique : ce script la
+// complète, il n'en crée jamais une seconde.
 
 import 'dotenv/config'
 import { createInterface } from 'readline'
@@ -85,74 +84,109 @@ async function motDePasse(pour: string): Promise<string> {
   }
 }
 
+interface Compte {
+  nom: string
+  prenom: string
+  matricule: string
+  telephone: string
+  email: string
+}
+
+async function compte(intitule: string): Promise<Compte> {
+  console.log(`\n— ${intitule}`)
+  return {
+    nom: await question('Nom'),
+    prenom: await question('Prénom'),
+    matricule: await question('Matricule (identifiant de connexion)'),
+    telephone: await question('Téléphone', { optionnel: true }),
+    email: await question('E-mail', { optionnel: true }),
+  }
+}
+
 async function main() {
   const url = process.env.DATABASE_URL?.trim()
   if (!url) throw new Error('DATABASE_URL est manquant (apps/api/.env).')
   const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: url }) })
+  const adminSeul = process.argv.includes('--admin')
 
   try {
-    if ((await prisma.utilisateur.count()) > 0 || (await prisma.paroisse.count()) > 0) {
+    if (adminSeul) {
+      if ((await prisma.utilisateur.count({ where: { role: 'ADMINISTRATEUR', actif: true } })) > 0) {
+        throw new Error('Un administrateur actif existe déjà : créez les autres comptes depuis l’application.')
+      }
+      console.log('\n=== Création d’un compte administrateur ===')
+      const admin = await compte('Administrateur (gestion technique de la plateforme)')
+      const motDePasseAdmin = await motDePasse('l’administrateur')
+      const cree = await prisma.utilisateur.create({
+        data: {
+          nom: admin.nom,
+          prenom: admin.prenom,
+          matricule: admin.matricule,
+          telephone: admin.telephone || null,
+          email: admin.email || null,
+          password: await hash(motDePasseAdmin, 12),
+          role: 'ADMINISTRATEUR',
+        },
+      })
+      await prisma.journalAudit.create({
+        data: { action: 'UTILISATEUR_CREE', entite: 'Utilisateur', entiteId: cree.id, details: { role: 'ADMINISTRATEUR', origine: 'initialiser --admin' } },
+      })
+      console.log(`\nAdministrateur créé : connexion avec le matricule ${admin.matricule}.`)
+      return
+    }
+
+    if ((await prisma.utilisateur.count()) > 0) {
       throw new Error(
-        'La base contient déjà des comptes ou des paroisses : initialisation refusée (installation neuve uniquement).',
+        'La base contient déjà des comptes : initialisation refusée (installation neuve uniquement, voir --admin).',
       )
     }
 
-    console.log('\n=== Initialisation de SCOUT ASCCI ===\n')
-    // --sans-admin : installation administrée par l'administrateur plateforme
-    // d'une autre installation (district), dont elle accepte les jetons.
-    const avecAdmin = !process.argv.includes('--sans-admin')
-    let admin: { nom: string; prenom: string; matricule: string; email: string; password: string } | null = null
-    if (avecAdmin) {
-      console.log('— Administrateur plateforme (se connecte à l’application district)')
-      admin = {
-        nom: await question('Nom'),
-        prenom: await question('Prénom'),
-        matricule: await question('Matricule (identifiant de connexion)'),
-        email: await question('E-mail', { optionnel: true }),
-        password: await motDePasse('l’administrateur'),
-      }
-    } else {
-      console.log('— Sans compte administrateur local : administration depuis l’installation district')
+    console.log('\n=== Initialisation de SCOUT-NDPST ===')
+    console.log('\n— Identité de la paroisse (modifiable ensuite dans Administration > Identité et configuration)')
+    const identite = {
+      nomParoisse: await question('Nom officiel de la paroisse'),
+      nomGroupe: await question('Nom du groupe scout', { optionnel: true }),
+      ville: await question('Ville', { optionnel: true }),
+      diocese: await question('Diocèse', { optionnel: true }),
     }
 
-    console.log('\n— District et paroisse')
-    const nomDistrict = await question('Nom du district')
-    const paroisse = {
-      nom: await question('Nom de la paroisse'),
-      ville: await question('Ville'),
-      diocese: await question('Diocèse'),
-    }
+    const admin = await compte('Administrateur (gestion technique : comptes, configuration, contenus)')
+    const motDePasseAdmin = await motDePasse('l’administrateur')
+    const chef = await compte('Chef de Groupe (direction scoute du groupe)')
+    if (chef.matricule === admin.matricule) throw new Error('Les deux comptes doivent avoir des matricules différents.')
+    const motDePasseChef = await motDePasse('le Chef de Groupe')
 
-    console.log('\n— Chef de Groupe (administrateur de la paroisse dans le frontend)')
-    const chef = {
-      nom: await question('Nom'),
-      prenom: await question('Prénom'),
-      matricule: await question('Matricule (identifiant de connexion)'),
-      telephone: await question('Téléphone', { optionnel: true }),
-      email: await question('E-mail', { optionnel: true }),
-    }
-    if (chef.matricule === admin?.matricule)
-      throw new Error('Les deux comptes doivent avoir des matricules différents.')
-    const passwordChef = await motDePasse('le Chef de Groupe')
+    const [hashAdmin, hashChef] = await Promise.all([hash(motDePasseAdmin, 12), hash(motDePasseChef, 12)])
 
-    const [hashAdmin, hashChef] = await Promise.all([admin ? hash(admin.password, 12) : null, hash(passwordChef, 12)])
-
-    const resultat = await prisma.$transaction(async (tx) => {
-      if (admin && hashAdmin) {
-        await tx.utilisateur.create({
-          data: {
-            nom: admin.nom,
-            prenom: admin.prenom,
-            matricule: admin.matricule,
-            email: admin.email || null,
-            password: hashAdmin,
-            role: 'ADMIN_PLATEFORME',
-          },
-        })
-      }
-      const district = await tx.district.create({ data: { nom: nomDistrict } })
-      const nouvelleParoisse = await tx.paroisse.create({ data: { ...paroisse, districtId: district.id } })
+    await prisma.$transaction(async (tx) => {
+      await tx.configurationInstallation.upsert({
+        where: { id: 'installation' },
+        create: {
+          id: 'installation',
+          nomParoisse: identite.nomParoisse,
+          nomGroupe: identite.nomGroupe,
+          ville: identite.ville || null,
+          diocese: identite.diocese || null,
+        },
+        update: {
+          nomParoisse: identite.nomParoisse,
+          nomGroupe: identite.nomGroupe,
+          ville: identite.ville || null,
+          diocese: identite.diocese || null,
+        },
+      })
       await tx.utilisateur.create({
+        data: {
+          nom: admin.nom,
+          prenom: admin.prenom,
+          matricule: admin.matricule,
+          telephone: admin.telephone || null,
+          email: admin.email || null,
+          password: hashAdmin,
+          role: 'ADMINISTRATEUR',
+        },
+      })
+      const chefCree = await tx.utilisateur.create({
         data: {
           nom: chef.nom,
           prenom: chef.prenom,
@@ -162,23 +196,23 @@ async function main() {
           password: hashChef,
           doitChangerMotDePasse: true,
           role: 'CHEF_GROUPE',
-          paroisseId: nouvelleParoisse.id,
         },
+      })
+      await tx.mandat.create({
+        data: { utilisateurId: chefCree.id, role: 'CHEF_GROUPE', motif: 'Initialisation de l’installation' },
       })
       await tx.journalAudit.create({
         data: {
-          paroisseId: nouvelleParoisse.id,
           action: 'PLATEFORME_INITIALISEE',
-          entite: 'Paroisse',
-          entiteId: nouvelleParoisse.id,
-          details: { district: nomDistrict },
+          entite: 'ConfigurationInstallation',
+          entiteId: 'installation',
+          details: { nomParoisse: identite.nomParoisse },
         },
       })
-      return nouvelleParoisse
     })
 
-    console.log(`\nInitialisation terminée : paroisse « ${resultat.nom} » créée.`)
-    console.log(`Le Chef de Groupe se connecte au frontend avec le matricule ${chef.matricule}.`)
+    console.log(`\nInitialisation terminée pour « ${identite.nomParoisse} ».`)
+    console.log(`Administrateur : matricule ${admin.matricule}. Chef de Groupe : matricule ${chef.matricule}.`)
   } finally {
     await prisma.$disconnect()
     lecteur.close()

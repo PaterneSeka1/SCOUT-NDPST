@@ -1,7 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { BrancheTypeSchema, ROLES_BRANCHE, ROLES_GROUPE } from '@scout/shared'
 import type { BrancheType } from '../../generated/prisma/client'
-import { paroisseIdRequise } from '../../common/paroisse'
 import { PerimetreService } from '../../common/perimetre.service'
 import type { UtilisateurSession } from '../../common/types'
 import { PrismaService } from '../../prisma/prisma.service'
@@ -24,8 +23,6 @@ export class ProgrammesService {
   ) {}
 
   async lister(utilisateur: UtilisateurSession, branche: string | undefined) {
-    const paroisseId = paroisseIdRequise(utilisateur)
-
     // Les responsables de branche ne voient QUE leur branche (+ les programmes
     // du groupe, brancheType null, qu'ils doivent aussi pouvoir consulter) —
     // toute valeur "branche" fournie par le client est ignorée pour ce rôle.
@@ -33,7 +30,7 @@ export class ProgrammesService {
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
       const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
       // Compte mal configuré (rôle de branche sans brancheType assigné) :
-      // aucun résultat plutôt que la paroisse entière par défaut.
+      // aucun résultat plutôt que tout le groupe par défaut.
       if (!bt) return []
       filtreBranche = bt
     }
@@ -43,7 +40,6 @@ export class ProgrammesService {
 
     return this.prisma.programme.findMany({
       where: {
-        paroisseId,
         ...(filtreBranche
           ? {
               OR: [{ brancheType: filtreBranche as BrancheType }, { brancheType: null }],
@@ -61,42 +57,17 @@ export class ProgrammesService {
   async creer(utilisateur: UtilisateurSession, corps: CorpsCreationProgramme) {
     const estGroupe = ROLES_GROUPE.includes(utilisateur.role)
     const estBranche = ROLES_BRANCHE.includes(utilisateur.role)
-    const paroisseIdCorps = corps.paroisseId
-    const estAssistantDistrict = utilisateur.roleDistrict === 'ASSISTANT_DISTRICT'
-    const creationDistrict = estAssistantDistrict && !!paroisseIdCorps
-    if (!estGroupe && !estBranche && !creationDistrict) throw new ForbiddenException('Accès refusé')
+    if (!estGroupe && !estBranche) throw new ForbiddenException('Accès refusé')
 
     // Forme, dates et ordre des dates déjà validés par SchemaCreationProgramme.
     const { titre, description, periodeDebut: debut, periodeFin: fin, brancheType } = corps
 
-    let paroisseId: string
-    let brancheEffective: string | null = brancheType ?? null
-
-    // La création via le district (choix de la paroisse cible) n'est utilisée
-    // que par /district/ma-branche/programmes/nouveau, seule à envoyer
-    // paroisseId dans le corps — un ASSISTANT_DISTRICT qui exerce par ailleurs
-    // un rôle paroissial de groupe/branche crée normalement via l'autre
-    // branche ci-dessous quand ce champ est absent (formulaire du tableau de bord).
-    if (creationDistrict && paroisseIdCorps) {
-      // Assistant au Commissaire de District chargé d'une branche : choisit la
-      // paroisse cible parmi celles de son district, brancheType forcé à sa
-      // branche — toute valeur envoyée par le client pour brancheType est ignorée.
-      const bt = await this.perimetre.brancheDistrictUtilisateur(utilisateur.id)
+    let brancheEffective: BrancheType | null = brancheType ?? null
+    // Un responsable de branche ne peut créer que le programme de sa propre branche
+    if (estBranche) {
+      const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
       if (!bt) throw new ForbiddenException('Aucune branche assignée')
-      const { paroisses } = await this.perimetre.paroissesDuDistrict(paroisseIdRequise(utilisateur))
-      if (!paroisses.some((p) => p.id === paroisseIdCorps)) {
-        throw new BadRequestException('Paroisse invalide ou manquante')
-      }
-      paroisseId = paroisseIdCorps
-      brancheEffective = bt
-    } else {
-      paroisseId = paroisseIdRequise(utilisateur)
-      // Un responsable de branche ne peut créer que le programme de sa propre branche
-      if (estBranche) {
-        const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
-        if (!bt) throw new ForbiddenException('Aucune branche assignée')
-        brancheEffective = bt
-      }
+      brancheEffective = bt as BrancheType
     }
 
     return this.prisma.programme.create({
@@ -105,8 +76,7 @@ export class ProgrammesService {
         description: description ?? null,
         periodeDebut: debut,
         periodeFin: fin,
-        brancheType: (brancheEffective as BrancheType | null) ?? null,
-        paroisseId,
+        brancheType: brancheEffective,
         creePar: utilisateur.id,
       },
       include: {
@@ -116,9 +86,8 @@ export class ProgrammesService {
   }
 
   async detail(utilisateur: UtilisateurSession, id: string) {
-    const paroisseId = paroisseIdRequise(utilisateur)
     const programme = await this.prisma.programme.findFirst({
-      where: { id, paroisseId },
+      where: { id },
       include: {
         creeParUtilisateur: { select: { prenom: true, nom: true } },
         lignes: {
@@ -132,10 +101,9 @@ export class ProgrammesService {
   }
 
   async modifier(utilisateur: UtilisateurSession, id: string, corps: CorpsModificationProgramme) {
-    const paroisseId = paroisseIdRequise(utilisateur)
     const { titre, description, periodeDebut, periodeFin } = corps
 
-    const existant = await this.programmeAutorise(utilisateur, paroisseId, id)
+    const existant = await this.programmeAutorise(utilisateur, id)
 
     const debut = periodeDebut ?? existant.periodeDebut
     const fin = periodeFin ?? existant.periodeFin
@@ -155,15 +123,13 @@ export class ProgrammesService {
   }
 
   async supprimer(utilisateur: UtilisateurSession, id: string) {
-    const paroisseId = paroisseIdRequise(utilisateur)
-    await this.programmeAutorise(utilisateur, paroisseId, id)
+    await this.programmeAutorise(utilisateur, id)
     await this.prisma.programme.delete({ where: { id } })
     return { ok: true }
   }
 
   async ajouterLigne(utilisateur: UtilisateurSession, programmeId: string, corps: CorpsCreationLigne) {
-    const paroisseId = paroisseIdRequise(utilisateur)
-    await this.programmeAutorise(utilisateur, paroisseId, programmeId)
+    await this.programmeAutorise(utilisateur, programmeId)
 
     const { theme, objectif, datePrevue } = corps
 
@@ -190,14 +156,13 @@ export class ProgrammesService {
     ligneId: string,
     corps: CorpsModificationLigne,
   ) {
-    const paroisseId = paroisseIdRequise(utilisateur)
-    await this.ligneAutorisee(utilisateur, paroisseId, programmeId, ligneId)
+    await this.ligneAutorisee(utilisateur, programmeId, ligneId)
 
     const { theme, objectif, datePrevue, ordre, activiteId } = corps
 
     if (activiteId) {
       const activite = await this.prisma.activite.findFirst({
-        where: { id: activiteId, paroisseId },
+        where: { id: activiteId },
       })
       if (!activite) throw new BadRequestException('Activité introuvable')
     }
@@ -216,34 +181,28 @@ export class ProgrammesService {
   }
 
   async supprimerLigne(utilisateur: UtilisateurSession, programmeId: string, ligneId: string) {
-    const paroisseId = paroisseIdRequise(utilisateur)
-    await this.ligneAutorisee(utilisateur, paroisseId, programmeId, ligneId)
+    await this.ligneAutorisee(utilisateur, programmeId, ligneId)
     await this.prisma.ligneProgramme.delete({ where: { id: ligneId } })
     return { ok: true }
   }
 
-  // Programme de la paroisse ; un responsable de branche ne peut agir que sur
+  // Programme existant ; un responsable de branche ne peut agir que sur
   // le programme de sa propre branche (ni ceux du groupe, ni ceux d'une autre branche).
-  private async programmeAutorise(utilisateur: UtilisateurSession, paroisseId: string, id: string) {
+  private async programmeAutorise(utilisateur: UtilisateurSession, id: string) {
     const programme = await this.prisma.programme.findFirst({
-      where: { id, paroisseId },
+      where: { id },
     })
     if (!programme) throw new NotFoundException('Programme introuvable')
     await this.verifierBranche(utilisateur, programme.brancheType)
     return programme
   }
 
-  private async ligneAutorisee(
-    utilisateur: UtilisateurSession,
-    paroisseId: string,
-    programmeId: string,
-    ligneId: string,
-  ) {
+  private async ligneAutorisee(utilisateur: UtilisateurSession, programmeId: string, ligneId: string) {
     const ligne = await this.prisma.ligneProgramme.findFirst({
       where: { id: ligneId, programmeId },
       include: { programme: true },
     })
-    if (!ligne || ligne.programme.paroisseId !== paroisseId) throw new NotFoundException('Ligne introuvable')
+    if (!ligne) throw new NotFoundException('Ligne introuvable')
     await this.verifierBranche(utilisateur, ligne.programme.brancheType)
     return ligne
   }

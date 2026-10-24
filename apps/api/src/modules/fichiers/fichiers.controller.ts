@@ -24,7 +24,7 @@ export class FichiersController {
   constructor(private readonly fichiers: FichiersService) {}
 
   // Téléversement multipart : champs « fichier » et « visibilite »
-  // (« publique » ou, par défaut, « privee »).
+  // (« publique », « galerie » ou, par défaut, « privee »).
   @Post('upload')
   @HttpCode(200)
   @UseInterceptors(FichierTeleverseInterceptor)
@@ -38,16 +38,16 @@ export class FichiersController {
 
   // Sert les fichiers privés (photos de scouts, documents, autorisations de
   // camp…) téléversés via /api/upload. Ce stockage n'est jamais exposé
-  // directement : chaque requête exige une session valide et vérifie que
-  // l'utilisateur appartient à la paroisse propriétaire du fichier.
-  @Get('fichiers/:paroisseId/:fichier')
+  // directement : chaque requête exige une session valide et vérifie les
+  // droits sur le scout (ou la galerie) auquel le fichier est rattaché.
+  @Get('fichiers/:dossier/:fichier')
   async lirePrive(
     @UtilisateurCourant() utilisateur: UtilisateurSession,
-    @Param('paroisseId') paroisseId: string,
+    @Param('dossier') dossier: string,
     @Param('fichier') fichier: string,
     @Res() reponse: Response,
   ) {
-    const lu = await this.fichiers.lirePrive(utilisateur, paroisseId, fichier)
+    const lu = await this.fichiers.lirePrive(utilisateur, dossier, fichier)
     envoyerFichier(reponse, lu, 'private, max-age=3600')
   }
 

@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { BrancheType, Sexe, TypeDocument } from '../../generated/prisma/client'
 
 // Schémas Zod des routes /scouts. Ils ne portent que la forme des données :
-// cloisonnement par paroisse et par branche, existence en base, unicité du
+// cloisonnement par branche, existence en base (équipe comprise), unicité du
 // matricule, rattachement des fichiers et règles sur les contacts restent dans
 // les services.
 
@@ -73,6 +73,8 @@ export const SchemaCreationScout = corpsScout({
   photo: champTexteOuNull('photo'),
   allergies: champTexteOuNull('allergies'),
   traitementsMedicaux: champTexteOuNull('traitementsMedicaux'),
+  // Équipe facultative : vérifiée par le service (active, même branche).
+  equipeId: champTexteOuNull('equipeId'),
   contactsUrgence: z.array(z.unknown(), { error: MESSAGE_CONTACTS }).min(1, { error: MESSAGE_CONTACTS }),
 }).transform((corps, ctx) => {
   const rejeter = (message: string, champ: string) => {
@@ -109,6 +111,7 @@ export const SchemaCreationScout = corpsScout({
     photo: nettoyeOuNul(corps.photo),
     allergies: nettoyeOuNul(corps.allergies),
     traitementsMedicaux: nettoyeOuNul(corps.traitementsMedicaux),
+    equipeId: nettoyeOuNul(corps.equipeId),
     contactsUrgence,
   }
 })
@@ -128,6 +131,8 @@ export const SchemaModificationScout = corpsScout({
   traitementsMedicaux: champTexteOuNull('traitementsMedicaux'),
   consentementImage: champBooleen('consentementImage'),
   consentementSante: champBooleen('consentementSante'),
+  // Absent = inchangée ; null ou '' = retire le scout de son équipe.
+  equipeId: champTexteOuNull('equipeId'),
 }).transform((corps, ctx) => {
   const dateNaissance = corps.dateNaissance !== undefined ? new Date(corps.dateNaissance) : undefined
   if (dateNaissance && Number.isNaN(dateNaissance.getTime())) {
@@ -150,6 +155,7 @@ export const SchemaModificationScout = corpsScout({
     traitementsMedicaux: effacable(corps.traitementsMedicaux),
     consentementImage: corps.consentementImage,
     consentementSante: corps.consentementSante,
+    equipeId: effacable(corps.equipeId),
   }
 })
 export type DonneesModificationScout = z.infer<typeof SchemaModificationScout>
@@ -252,3 +258,52 @@ export const SchemaValidationProgression = corpsScout({
   commentaire: champTexte('commentaire').transform(nettoyeOuNul),
 })
 export type DonneesValidationProgression = z.infer<typeof SchemaValidationProgression>
+
+// GET /scouts/doublons — correspondances potentielles avant une inscription.
+export const SchemaRechercheDoublons = z.object(
+  {
+    nom: champTexteRequis('nom', 'Le nom est requis').pipe(z.string().max(100, { error: 'Nom trop long' })),
+    prenom: champTexteRequis('prenom', 'Le prénom est requis').pipe(z.string().max(100, { error: 'Prénom trop long' })),
+    // Facultative : affine la recherche au même jour de naissance.
+    dateNaissance: z
+      .string({ error: 'La date de naissance est invalide' })
+      .optional()
+      .transform((valeur, ctx) => {
+        if (!valeur) return undefined
+        const date = new Date(valeur)
+        if (Number.isNaN(date.getTime())) {
+          ctx.addIssue({ code: 'custom', message: 'La date de naissance est invalide' })
+          return z.NEVER
+        }
+        return date
+      }),
+  },
+  { error: 'Paramètres invalides' },
+)
+export type DonneesRechercheDoublons = z.infer<typeof SchemaRechercheDoublons>
+
+// Équipes (sous-groupes d'une branche).
+const nomEquipe = champTexteRequis('nom', "Le nom de l'équipe est requis").pipe(
+  z.string().max(100, { error: "Nom d'équipe trop long (100 caractères maximum)" }),
+)
+const descriptionEquipe = z
+  .string({ error: 'Champ description invalide' })
+  .max(500, { error: 'Description trop longue (500 caractères maximum)' })
+  .nullish()
+
+// POST /equipes
+export const SchemaCreationEquipe = corpsScout({
+  nom: nomEquipe,
+  brancheType: z.enum(BrancheType, { error: 'La branche est invalide ou manquante' }),
+  description: descriptionEquipe.transform(nettoyeOuNul),
+})
+export type DonneesCreationEquipe = z.infer<typeof SchemaCreationEquipe>
+
+// PATCH /equipes/:id — la branche d'une équipe ne change pas (ses scouts y
+// sont rattachés) : seuls nom, description et activation sont modifiables.
+export const SchemaModificationEquipe = corpsScout({
+  nom: nomEquipe.optional(),
+  description: descriptionEquipe.transform(effacable),
+  actif: champBooleen('actif'),
+})
+export type DonneesModificationEquipe = z.infer<typeof SchemaModificationEquipe>

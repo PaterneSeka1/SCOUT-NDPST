@@ -1,14 +1,12 @@
-import { Body, Controller, Get, Put, Query } from '@nestjs/common'
+import { Controller, Get, Query } from '@nestjs/common'
 import { ApiTags } from '@nestjs/swagger'
-import { ROLES_PLATEFORME } from '@scout/shared'
+import { ROLES_SUPERVISION } from '@scout/shared'
 import { Roles } from '../../common/decorators/roles.decorator'
-import type { z } from 'zod'
-import { ZodPipe } from '../../common/pipes/zod.pipe'
-import { SchemaConfigurationSite } from './plateforme.schemas'
 import { PlateformeService } from './plateforme.service'
 
-@ApiTags('Administration plateforme')
-@Roles(...ROLES_PLATEFORME)
+// Journal d'audit : administrateur et Chef de Groupe.
+@ApiTags('Administration')
+@Roles(...ROLES_SUPERVISION)
 @Controller('admin/audit')
 export class AdminAuditController {
   constructor(private readonly plateforme: PlateformeService) {}
@@ -16,25 +14,5 @@ export class AdminAuditController {
   @Get()
   journal(@Query() requete: Record<string, unknown>) {
     return this.plateforme.journalAudit(requete)
-  }
-}
-
-@ApiTags('Administration plateforme')
-@Roles(...ROLES_PLATEFORME)
-@Controller('admin/site-config')
-export class AdminSiteConfigController {
-  constructor(private readonly plateforme: PlateformeService) {}
-
-  // Réservé à l'administrateur plateforme comme le reste du module (la route
-  // Next laissait la lecture ouverte, mais les pages publiques lisent la
-  // configuration directement en base).
-  @Get()
-  lire() {
-    return this.plateforme.lireConfig()
-  }
-
-  @Put()
-  modifier(@Body(new ZodPipe(SchemaConfigurationSite)) corps: z.infer<typeof SchemaConfigurationSite>) {
-    return this.plateforme.modifierConfig(corps)
   }
 }

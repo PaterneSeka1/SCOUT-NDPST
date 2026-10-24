@@ -18,7 +18,8 @@ const creationValide = { titre: 'Trimestre 1', periodeDebut: '2026-09-01', perio
 describe('SchemaCreationProgramme', () => {
   it('accepte un corps valide et convertit les dates', () => {
     const corps = SchemaCreationProgramme.parse({ ...creationValide, brancheType: null, paroisseId: 42 })
-    expect(corps).toMatchObject({ titre: 'Trimestre 1', brancheType: null, paroisseId: undefined })
+    expect(corps).toMatchObject({ titre: 'Trimestre 1', brancheType: null })
+    expect(corps).not.toHaveProperty('paroisseId')
     expect(corps.periodeDebut).toEqual(new Date('2026-09-01'))
   })
 

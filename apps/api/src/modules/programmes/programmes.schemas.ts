@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { BrancheTypeSchema } from '@scout/shared'
 
 // Schémas des corps de requête du module Programmes. Seule la forme des
-// données est contrôlée ici ; les droits (rôle, branche, district), l'existence
+// données est contrôlée ici ; les droits (rôle, branche), l'existence
 // en base et la cohérence avec les dates existantes restent dans ProgrammesService.
 
 // Historiquement, un corps qui n'est pas un objet est traité comme un objet vide.
@@ -59,12 +59,6 @@ export const SchemaCreationProgramme = z.preprocess(
       periodeFin: date('periodeFin', MESSAGE_TITRE_PERIODE_REQUIS),
       // null = programme du groupe (toutes branches).
       brancheType: z.enum(BrancheTypeSchema.options, { error: 'Branche invalide' }).nullish(),
-      // Lu uniquement pour la création via le district (contrôlée par le
-      // service selon le rôle) ; une valeur non textuelle est ignorée.
-      paroisseId: z
-        .unknown()
-        .transform((valeur) => (typeof valeur === 'string' ? valeur : undefined))
-        .optional(),
     })
     .refine(
       (corps) => corps.periodeFin > corps.periodeDebut,

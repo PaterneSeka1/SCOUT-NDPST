@@ -1,10 +1,9 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
-import { BrancheTypeSchema, LABELS_BRANCHES, ROLES_BRANCHE, StatutReunionSchema } from '@scout/shared'
+import { BrancheTypeSchema, LABELS_BRANCHES, ROLES_BRANCHE, StatutReunionSchema, entierBorne } from '@scout/shared'
 import type { BrancheType, Prisma } from '../../generated/prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
 import { AuditService } from '../../common/audit.service'
 import { PerimetreService } from '../../common/perimetre.service'
-import { paroisseIdRequise } from '../../common/paroisse'
 import { champCsv as champ, contentDispositionTelechargement } from '../../common/lib/csv'
 import type { UtilisateurSession } from '../../common/types'
 import type {
@@ -21,6 +20,14 @@ const LABELS_STATUT: Record<string, string> = {
 }
 
 const SELECTION_SCOUT = { id: true, prenom: true, nom: true, photo: true, brancheType: true } as const
+
+export interface FiltresReunions {
+  branche: string | null
+  statut: string | null
+  recherche?: string | null
+  page?: string | null
+  limite?: string | null
+}
 
 export interface ExportCsv {
   contenu: string
@@ -56,8 +63,15 @@ export class ReunionsService {
   // Liste et création en série
   // ---------------------------------------------------------------------------
 
-  async lister(utilisateur: UtilisateurSession, branche: string | null, statut: string | null) {
-    const paroisseId = paroisseIdRequise(utilisateur)
+  // Contrat historique : tableau complet (consommé tel quel par le frontend).
+  // Dès que `page` ou `limite` est fourni, la réponse devient paginée côté
+  // serveur : { reunions, pagination } (limite bornée à 100).
+  async lister(utilisateur: UtilisateurSession, filtres: FiltresReunions) {
+    const { branche, statut } = filtres
+    const recherche = filtres.recherche?.trim() ?? ''
+    const pagine = filtres.page != null || filtres.limite != null
+    const page = entierBorne(filtres.page ?? null, 1, 1, Number.MAX_SAFE_INTEGER)
+    const limite = entierBorne(filtres.limite ?? null, 20, 1, 100)
 
     const statutValide = StatutReunionSchema.safeParse(statut)
     if (statut && !statutValide.success) throw new BadRequestException('Statut invalide')
@@ -72,8 +86,8 @@ export class ReunionsService {
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
       const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
       // Compte mal configuré (rôle de branche sans brancheType assigné) :
-      // aucun résultat plutôt que la paroisse entière par défaut.
-      if (!bt) return []
+      // aucun résultat plutôt que toutes les branches par défaut.
+      if (!bt) return pagine ? { reunions: [], pagination: { page, limite, total: 0, totalPages: 0 } } : []
       filtreBranche = { brancheType: bt as BrancheType }
     } else if (branche) {
       const brancheValide = BrancheTypeSchema.safeParse(branche)
@@ -81,23 +95,39 @@ export class ReunionsService {
       filtreBranche = { brancheType: brancheValide.data }
     }
 
-    return this.prisma.jourReunion.findMany({
-      where: {
-        paroisseId,
-        ...filtreBranche,
-        ...(statut && statutValide.success ? { statut: statutValide.data } : {}),
-      },
+    const where: Prisma.JourReunionWhereInput = {
+      ...filtreBranche,
+      ...(statut && statutValide.success ? { statut: statutValide.data } : {}),
+      ...(recherche
+        ? {
+            OR: [
+              { titre: { contains: recherche, mode: 'insensitive' } },
+              { lieu: { contains: recherche, mode: 'insensitive' } },
+              { notes: { contains: recherche, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    }
+    const requete = {
+      where,
       include: {
         _count: { select: { presences: true } },
         creeParUtilisateur: { select: { prenom: true, nom: true } },
       },
       orderBy: { dateHeure: 'asc' },
-    })
+    } satisfies Prisma.JourReunionFindManyArgs
+
+    if (!pagine) return this.prisma.jourReunion.findMany(requete)
+
+    const [reunions, total] = await Promise.all([
+      this.prisma.jourReunion.findMany({ ...requete, skip: (page - 1) * limite, take: limite }),
+      this.prisma.jourReunion.count({ where }),
+    ])
+    return { reunions, pagination: { page, limite, total, totalPages: Math.ceil(total / limite) } }
   }
 
   // Corps déjà validé par SchemaCreationReunions (dates, branche, textes).
   async creer(utilisateur: UtilisateurSession, corps: CorpsCreationReunions) {
-    const paroisseId = paroisseIdRequise(utilisateur)
     const { dates: datesObj, brancheType, titre, lieu, dureeMinutes, notes } = corps
 
     // Un chef de branche ne peut créer que pour sa propre branche
@@ -112,7 +142,6 @@ export class ReunionsService {
       datesObj.map((d) =>
         this.prisma.jourReunion.create({
           data: {
-            paroisseId,
             creePar: utilisateur.id,
             dateHeure: d,
             brancheType: brancheEffective,
@@ -131,11 +160,10 @@ export class ReunionsService {
   // ---------------------------------------------------------------------------
 
   async detail(utilisateur: UtilisateurSession, id: string) {
-    const paroisseId = paroisseIdRequise(utilisateur)
     const branche = await this.brancheRequise(utilisateur)
 
     const reunion = await this.prisma.jourReunion.findFirst({
-      where: { id, paroisseId, ...(branche ? { brancheType: branche } : {}) },
+      where: { id, ...(branche ? { brancheType: branche } : {}) },
       include: {
         creeParUtilisateur: { select: { prenom: true, nom: true } },
         _count: { select: { presences: true } },
@@ -148,10 +176,9 @@ export class ReunionsService {
 
   // Corps déjà validé par SchemaModificationReunion (statut, dates, report).
   async modifier(utilisateur: UtilisateurSession, id: string, corps: CorpsModificationReunion) {
-    const paroisseId = paroisseIdRequise(utilisateur)
     const { statut, dateReportee, dateHeure, brancheType, titre, lieu, dureeMinutes, notes } = corps
 
-    const existant = await this.prisma.jourReunion.findFirst({ where: { id, paroisseId } })
+    const existant = await this.prisma.jourReunion.findFirst({ where: { id } })
     if (!existant) throw new NotFoundException('Réunion introuvable')
 
     // Un chef de branche ne peut modifier que les réunions de sa propre branche
@@ -179,10 +206,8 @@ export class ReunionsService {
   }
 
   async supprimer(utilisateur: UtilisateurSession, id: string) {
-    const paroisseId = paroisseIdRequise(utilisateur)
-
     const existant = await this.prisma.jourReunion.findFirst({
-      where: { id, paroisseId },
+      where: { id },
       include: { _count: { select: { presences: true } } },
     })
     if (!existant) throw new NotFoundException('Réunion introuvable')
@@ -197,7 +222,6 @@ export class ReunionsService {
     // Suppression cascade sur tout l'historique de présence de cette réunion
     // (PresenceReunion.onDelete: Cascade) : action sensible à journaliser.
     await this.audit.enregistrer({
-      paroisseId,
       acteurId: utilisateur.id,
       action: 'REUNION_SUPPRIMEE',
       entite: 'JourReunion',
@@ -212,8 +236,8 @@ export class ReunionsService {
   // Présences
   // ---------------------------------------------------------------------------
 
-  private async reunionPourPresences(utilisateur: UtilisateurSession, paroisseId: string, id: string) {
-    const reunion = await this.prisma.jourReunion.findFirst({ where: { id, paroisseId } })
+  private async reunionPourPresences(utilisateur: UtilisateurSession, id: string) {
+    const reunion = await this.prisma.jourReunion.findFirst({ where: { id } })
     if (!reunion) throw new NotFoundException('Réunion introuvable')
     await this.verifierAccesBranche(utilisateur, reunion.brancheType)
     return reunion
@@ -221,19 +245,16 @@ export class ReunionsService {
 
   // Feuille de présences : réunion + scouts de la branche + statuts existants
   async feuillePresences(utilisateur: UtilisateurSession, id: string) {
-    const paroisseId = paroisseIdRequise(utilisateur)
-    const reunion = await this.reunionPourPresences(utilisateur, paroisseId, id)
+    const reunion = await this.reunionPourPresences(utilisateur, id)
 
     // Scouts de la branche concernée (ou tous si inter-branches)
     const scoutsBranche = await this.prisma.scout.findMany({
-      where: { paroisseId, actif: true, ...(reunion.brancheType ? { brancheType: reunion.brancheType } : {}) },
+      where: { actif: true, ...(reunion.brancheType ? { brancheType: reunion.brancheType } : {}) },
       select: SELECTION_SCOUT,
     })
 
     const presences = await this.prisma.presenceReunion.findMany({
-      // Filtre paroisse en défense en profondeur : scoutsHistoriques ne doit
-      // jamais exposer un scout d'une autre paroisse.
-      where: { jourReunionId: id, scout: { paroisseId } },
+      where: { jourReunionId: id },
       select: { scoutId: true, statut: true, note: true, scout: { select: SELECTION_SCOUT } },
     })
 
@@ -256,19 +277,17 @@ export class ReunionsService {
 
   // Enregistre / met à jour les présences en masse (upsert)
   async enregistrerPresences(utilisateur: UtilisateurSession, id: string, corps: CorpsPresencesReunion) {
-    const paroisseId = paroisseIdRequise(utilisateur)
-    const reunion = await this.reunionPourPresences(utilisateur, paroisseId, id)
+    const reunion = await this.reunionPourPresences(utilisateur, id)
 
     const lignes = corps.presences
 
-    // Seuls les scouts de la paroisse de la branche de la réunion (tous pour une
+    // Seuls les scouts de la branche de la réunion (tous pour une
     // réunion inter-branches), ou déjà pointés sur cette réunion (cf.
     // scoutsHistoriques de la feuille), peuvent être pointés.
     const scoutIds = [...new Set(lignes.map((p) => p.scoutId))]
     const autorises = await this.prisma.scout.findMany({
       where: {
         id: { in: scoutIds },
-        paroisseId,
         OR: [
           reunion.brancheType ? { brancheType: reunion.brancheType } : {},
           { presencesReunion: { some: { jourReunionId: id } } },
@@ -301,16 +320,15 @@ export class ReunionsService {
   // Export CSV (séparateur point-virgule, BOM UTF-8 pour Excel) de la feuille
   // de présences d'une réunion.
   async exporterPresences(utilisateur: UtilisateurSession, id: string): Promise<ExportCsv> {
-    const paroisseId = paroisseIdRequise(utilisateur)
     const branche = await this.brancheRequise(utilisateur)
 
     const reunion = await this.prisma.jourReunion.findFirst({
-      where: { id, paroisseId, ...(branche ? { brancheType: branche } : {}) },
+      where: { id, ...(branche ? { brancheType: branche } : {}) },
     })
     if (!reunion) throw new NotFoundException('Réunion introuvable')
 
     const scouts = await this.prisma.scout.findMany({
-      where: { paroisseId, actif: true, ...(reunion.brancheType ? { brancheType: reunion.brancheType } : {}) },
+      where: { actif: true, ...(reunion.brancheType ? { brancheType: reunion.brancheType } : {}) },
       select: { id: true, prenom: true, nom: true, brancheType: true, matricule: true },
       orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
     })
@@ -379,20 +397,18 @@ export class ReunionsService {
   // Configuration des réunions hebdomadaires par branche
   // ---------------------------------------------------------------------------
 
-  listerConfigs(utilisateur: UtilisateurSession) {
-    const paroisseId = paroisseIdRequise(utilisateur)
-    return this.prisma.configReunionBranche.findMany({ where: { paroisseId }, orderBy: { brancheType: 'asc' } })
+  listerConfigs() {
+    return this.prisma.configReunionBranche.findMany({ orderBy: { brancheType: 'asc' } })
   }
 
   // Corps déjà validé par SchemaConfigReunion (branche, jour, heure).
-  async enregistrerConfig(utilisateur: UtilisateurSession, corps: CorpsConfigReunion) {
-    const paroisseId = paroisseIdRequise(utilisateur)
+  async enregistrerConfig(corps: CorpsConfigReunion) {
     const { brancheType, jourSemaine, heureDebut, dureeMinutes, lieu } = corps
 
     const valeurs = { jourSemaine, heureDebut, dureeMinutes: dureeMinutes ?? 90, lieu: lieu ?? null }
     return this.prisma.configReunionBranche.upsert({
-      where: { paroisseId_brancheType: { paroisseId, brancheType } },
-      create: { paroisseId, brancheType, ...valeurs },
+      where: { brancheType },
+      create: { brancheType, ...valeurs },
       update: valeurs,
     })
   }

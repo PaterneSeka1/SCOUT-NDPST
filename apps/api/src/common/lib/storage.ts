@@ -10,7 +10,7 @@ import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } fro
 // qui exposent tous la même API) — sans changement ailleurs dans le code :
 // les routes appelantes n'ont pas besoin de savoir lequel est actif.
 //
-// Les fichiers privés gardent la même URL (/api/fichiers/<paroisseId>/<nom>)
+// Les fichiers privés gardent la même URL (/api/fichiers/<dossier>/<nom>)
 // quel que soit le pilote : ils ne sont jamais exposés publiquement même sur
 // S3, toujours servis via la route authentifiée qui vérifie la session.
 
@@ -30,6 +30,10 @@ function bucketS3(): string | undefined {
 // historique, valide pour un vrai AWS S3 où l'ACL par objet fonctionne.
 function bucketS3Public(): string | undefined {
   return process.env.STORAGE_S3_BUCKET_PUBLIC || bucketS3()
+}
+
+export function utiliseStockageExterne(): boolean {
+  return utiliseS3()
 }
 
 function utiliseS3(): boolean {
@@ -67,8 +71,8 @@ export function cleFichierPublic(nomFichier: string): string {
   return `public/${nomFichier}`
 }
 
-export function cleFichierPrive(paroisseId: string, nomFichier: string): string {
-  return `prive/${paroisseId}/${nomFichier}`
+export function cleFichierPrive(dossier: string, nomFichier: string): string {
+  return `prive/${dossier}/${nomFichier}`
 }
 
 // Extensions/MIME acceptées par /api/upload (voir lib/fileSignature.ts) —
@@ -135,7 +139,7 @@ export async function lireFichierPublicLocal(nomFichier: string): Promise<Buffer
 }
 
 export async function sauvegarderFichierPrive(
-  paroisseId: string,
+  dossier: string,
   nomFichier: string,
   buffer: Buffer,
   contentType: string,
@@ -144,43 +148,43 @@ export async function sauvegarderFichierPrive(
     await getClientS3().send(
       new PutObjectCommand({
         Bucket: bucketS3(),
-        Key: cleFichierPrive(paroisseId, nomFichier),
+        Key: cleFichierPrive(dossier, nomFichier),
         Body: buffer,
         ContentType: contentType,
       }),
     )
   } else {
-    const dossier = path.join(dossierStockageLocal(), 'uploads-prives', paroisseId)
-    await mkdir(dossier, { recursive: true })
-    await writeFile(path.join(dossier, nomFichier), buffer)
+    const repertoire = path.join(dossierStockageLocal(), 'uploads-prives', dossier)
+    await mkdir(repertoire, { recursive: true })
+    await writeFile(path.join(repertoire, nomFichier), buffer)
   }
 
-  return `/api/fichiers/${paroisseId}/${nomFichier}`
+  return `/api/fichiers/${dossier}/${nomFichier}`
 }
 
-export async function lireFichierPrive(paroisseId: string, nomFichier: string): Promise<Buffer> {
+export async function lireFichierPrive(dossier: string, nomFichier: string): Promise<Buffer> {
   if (utiliseS3()) {
     const resultat = await getClientS3().send(
-      new GetObjectCommand({ Bucket: bucketS3(), Key: cleFichierPrive(paroisseId, nomFichier) }),
+      new GetObjectCommand({ Bucket: bucketS3(), Key: cleFichierPrive(dossier, nomFichier) }),
     )
     const bytes = await resultat.Body!.transformToByteArray()
     return Buffer.from(bytes)
   }
 
-  const chemin = path.join(dossierStockageLocal(), 'uploads-prives', paroisseId, nomFichier)
+  const chemin = path.join(dossierStockageLocal(), 'uploads-prives', dossier, nomFichier)
   return readFile(chemin)
 }
 
 // Suppression définitive d'un fichier privé (document retiré d'une fiche) :
 // une fiche médicale supprimée ne doit pas survivre dans le stockage.
-export async function supprimerFichierPrive(paroisseId: string, nomFichier: string): Promise<void> {
+export async function supprimerFichierPrive(dossier: string, nomFichier: string): Promise<void> {
   if (utiliseS3()) {
     await getClientS3().send(
-      new DeleteObjectCommand({ Bucket: bucketS3(), Key: cleFichierPrive(paroisseId, nomFichier) }),
+      new DeleteObjectCommand({ Bucket: bucketS3(), Key: cleFichierPrive(dossier, nomFichier) }),
     )
     return
   }
-  await rm(path.join(dossierStockageLocal(), 'uploads-prives', paroisseId, nomFichier), { force: true })
+  await rm(path.join(dossierStockageLocal(), 'uploads-prives', dossier, nomFichier), { force: true })
 }
 
 // Racine du stockage disque local (pilote par défaut). Configurable pour que

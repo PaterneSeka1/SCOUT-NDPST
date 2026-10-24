@@ -19,7 +19,7 @@ import { FiltreErreurs } from '../src/common/filters/erreurs.filter'
 @Controller()
 class RoutesMetierTemoins {
   @Get('admin/temoin')
-  @Roles('ADMIN_PLATEFORME')
+  @Roles('ADMINISTRATEUR')
   admin() { return { ok: true } }
 
   @Get('metier/temoin')
@@ -30,7 +30,7 @@ const SECRET = 'http-test-secret-'.repeat(3)
 const EMETTEUR = 'installation-http-test'
 const administrateur = {
   id: 'admin-http', matricule: 'ADM-HTTP', email: '', nom: 'Admin', prenom: 'Test',
-  role: 'ADMIN_PLATEFORME', roleDistrict: null, paroisseId: null, doitChangerMotDePasse: false,
+  role: 'ADMINISTRATEUR', editeurContenu: false, doitChangerMotDePasse: false,
 }
 
 describe('HTTP Nest — session persistante et activation obligatoire', () => {
@@ -40,7 +40,7 @@ describe('HTTP Nest — session persistante et activation obligatoire', () => {
   const motDePasse = { changerPersonnel: vi.fn() }
   const session = () => ({
     utilisateurId: administrateur.id, revoqueeLe: null, expireLe: new Date(Date.now() + 60_000),
-    utilisateur: { ...administrateur, actif: true, paroisse: null },
+    utilisateur: { ...administrateur, actif: true },
   })
   const jeton = (charge: UtilisateurSession = administrateur) => {
     const { id, ...identite } = charge
@@ -83,8 +83,8 @@ describe('HTTP Nest — session persistante et activation obligatoire', () => {
   })
 
   it('applique aussi RolesGuard après l’authentification persistante', async () => {
-    const chef = { ...administrateur, role: 'CHEF_GROUPE', paroisseId: 'paroisse-http' }
-    prisma.sessionUtilisateur.findUnique.mockResolvedValue({ ...session(), utilisateur: { ...chef, actif: true, paroisse: { actif: true } } })
+    const chef = { ...administrateur, role: 'CHEF_GROUPE' }
+    prisma.sessionUtilisateur.findUnique.mockResolvedValue({ ...session(), utilisateur: { ...chef, actif: true } })
     await request(app.getHttpServer()).get('/api/admin/temoin').set('Authorization', `Bearer ${jeton(chef)}`).expect(403)
   })
 

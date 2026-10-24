@@ -1,5 +1,7 @@
-// Schéma Prisma — Application SCOUT ASCCI (Côte d'Ivoire)
-// Suivi pédagogique du mouvement scout catholique
+// Schéma Prisma — SCOUT-NDPST
+// Plateforme d'UNE seule paroisse : son identité est une configuration unique
+// (ConfigurationInstallation), jamais une entité métier gérée en plusieurs
+// exemplaires. Aucune notion de district, de région ni de multi-paroisses.
 
 generator client {
   provider            = "prisma-client"
@@ -27,19 +29,13 @@ enum BrancheType {
 }
 
 enum RoleUtilisateur {
-  ADMIN_PLATEFORME // Rôle global, transverse à toutes les paroisses (paroisseId = null)
-  CHEF_GROUPE
+  ADMINISTRATEUR // Administration technique : comptes, configuration, contenus publics, audit
+  CHEF_GROUPE // Direction scoute du groupe
   ADJOINT_GROUPE
   ASSISTANT_GROUPE
   RESPONSABLE_BRANCHE
   ADJOINT_BRANCHE
   ASSISTANT_BRANCHE
-  COMMISSAIRE_DISTRICT // Direction du district — au-dessus des Chefs de Groupe de plusieurs
-  // paroisses partageant le même Paroisse.district. Rattaché à une paroisse d'ancrage
-  // précise (paroisseId obligatoire, comme tout rôle ci-dessus) ; le périmètre réel
-  // se calcule via lib/district.ts à partir du district de cette paroisse.
-  ADJOINT_DISTRICT
-  ASSISTANT_DISTRICT // L'affectation district utilise fonctionDistrict ou brancheTypeDistrict.
   PARENT
   SCOUT
 }
@@ -57,6 +53,13 @@ enum TypeActivite {
   CELEBRATION
   FORMATION
   AUTRE
+}
+
+enum StatutActivite {
+  PREVUE
+  EN_COURS
+  TERMINEE
+  ANNULEE
 }
 
 enum TypeDocument {
@@ -92,119 +95,139 @@ enum StatutCotisation {
   EXONEREE
 }
 
+enum StatutPublication {
+  BROUILLON
+  PUBLIEE
+  ARCHIVEE
+}
+
+enum TypeEvenementHistorique {
+  ORIGINE
+  FONDATION
+  CHEF_DE_GROUPE
+  CAMP
+  ETAPE
+  TEMOIGNAGE
+  ARCHIVE
+}
+
+enum StatutValidationHistorique {
+  A_VERIFIER // Fait rapporté, en attente de confirmation par une source
+  VALIDE // Confirmé par une source citée
+}
+
+enum TypeDemande {
+  INSCRIPTION_JEUNE
+  ENGAGEMENT_ADULTE
+  INFORMATION
+}
+
+enum StatutDemande {
+  NOUVELLE
+  EN_COURS
+  ACCEPTEE
+  REFUSEE
+  ARCHIVEE
+}
+
 // ---------------------------------------------------------------------------
-// Paroisse
+// Configuration de l'installation — identité de LA paroisse. Ligne unique
+// (id fixe "installation"), créée par la migration ou l'initialisation et
+// seulement mise à jour ensuite (Administration > Identité et configuration).
 // ---------------------------------------------------------------------------
 
-model Paroisse {
+model ConfigurationInstallation {
+  id                   String   @id @default("installation")
+  nomParoisse          String   @default("")
+  nomGroupe            String   @default("")
+  ville                String?
+  diocese              String?
+  presentation         String?
+  messageBienvenue     String?
+  // Année d'accueil du scoutisme dans la paroisse (valorisée sur le site public).
+  anneeHistorique      Int?
+  // Mention historique complémentaire (ex. rang d'arrivée du scoutisme) : affichée
+  // publiquement seulement lorsque rangHistoriqueValide est vrai.
+  rangHistorique       String?
+  rangHistoriqueValide Boolean  @default(false)
+  sourceHistorique     String?
+  adresse              String?
+  telephone            String?
+  email                String?
+  horaires             String?
+  logoUrl              String?
+  couleurPrimaire      String   @default("#2f5d3a")
+  couleurAccent        String   @default("#b5653f")
+  couleurFond          String   @default("#1f3a28")
+  couleurHover         String   @default("#c27a52")
+  heroTitre            String?
+  heroSousTitre        String?
+  heroImageUrl         String?
+  heroImageAlt         String?
+  // { facebook?, instagram?, youtube?, whatsapp?, tiktok? } — URL https uniquement.
+  reseauxSociaux       Json?
+  inscriptionsOuvertes Boolean  @default(true)
+  updatedAt            DateTime @updatedAt
+  updatedById          String?
+}
+
+// ---------------------------------------------------------------------------
+// Archive des données retirées du modèle (district, multi-paroisses).
+// Conservées telles quelles (JSON) lors de la simplification mono-paroissiale :
+// aucune donnée n'est perdue, aucune n'est plus exploitée par l'application.
+// ---------------------------------------------------------------------------
+
+model ArchiveDonnees {
   id        String   @id @default(cuid())
-  nom       String
-  ville     String
-  diocese   String
-  ocean     String?
-  adresse   String?
-  telephone String?
-  email     String?  @unique
-  logo      String? // URL ou chemin vers le logo
-  actif     Boolean  @default(true) // Paroisse désactivée = accès bloqué pour ses utilisateurs
+  source    String // Table ou concept d'origine, ex. "District", "Paroisse"
+  sourceId  String?
+  donnees   Json
+  motif     String
+  archiveLe DateTime @default(now())
 
-  // Identité visuelle propre à la paroisse, visible par ses utilisateurs connectés.
-  // Null = pas personnalisée, on retombe sur les valeurs de ConfigurationPlateforme.
-  couleurPrimaire String?
-  couleurAccent   String?
-  couleurFond     String?
-  couleurHover    String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Toute paroisse appartient à un district — jamais nul. Restrict (pas
-  // Cascade) : supprimer un district alors que des paroisses y sont encore
-  // rattachées doit être explicitement refusé (voir DELETE /api/admin/districts/[id]),
-  // jamais les détacher ou les supprimer silencieusement en cascade.
-  districtId String
-  district   District @relation(fields: [districtId], references: [id], onDelete: Restrict)
-
-  // Relations
-  utilisateurs   Utilisateur[]
-  scouts         Scout[]
-  activites      Activite[]
-  joursReunion   JourReunion[]
-  configsReunion ConfigReunionBranche[]
-  programmes     Programme[]
-  journalAudit   JournalAudit[]
-  cotisations    Cotisation[]
-
-  @@index([ville])
-  @@index([diocese])
-  @@index([districtId])
+  @@index([source])
 }
 
 // ---------------------------------------------------------------------------
-// District — regroupe plusieurs paroisses sous l'autorité d'un Commissaire de
-// District (voir lib/district.ts, ROLES_DISTRICT_ETENDU). Entité à part
-// entière (et non un simple champ texte sur Paroisse) : un nom de district
-// choisi une fois pour toutes dans un select, jamais retapé paroisse par
-// paroisse — élimine les doublons par faute de frappe/casse.
+// Branche — présentation institutionnelle d'une branche active du groupe.
+// Le type (référentiel officiel) reste l'énumération BrancheType.
 // ---------------------------------------------------------------------------
 
-model District {
-  id        String   @id @default(cuid())
-  nom       String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  paroisses Paroisse[]
-  affectations AffectationDistrict[]
-}
-
-// Historique immuable des mandats district ; les colonnes Utilisateur restent
-// la projection courante. Les identités d'auteurs peuvent venir d'une autre
-// installation, comme celles du journal d'audit.
-model AffectationDistrict {
-  id String @id @default(cuid())
-  utilisateurId String
-  utilisateur Utilisateur @relation("AffectationResponsable", fields: [utilisateurId], references: [id], onDelete: Restrict)
-  districtId String
-  district District @relation(fields: [districtId], references: [id], onDelete: Restrict)
-  role RoleUtilisateur
-  fonction String?
-  brancheType BrancheType?
-  debutLe DateTime @default(now())
-  finLe DateTime?
-  auteurId String?
-  motif String?
-  revoqueParId String?
-  motifRevocation String?
-  reprise Boolean @default(false)
-
-  @@index([districtId, debutLe])
-  @@index([utilisateurId, debutLe])
+model Branche {
+  id             String      @id @default(cuid())
+  type           BrancheType @unique
+  slug           String      @unique
+  presentation   String?
+  identite       String? // Devise, symboles, couleurs (texte officiel fourni par le groupe)
+  objectifs      String?
+  pedagogie      String?
+  activitesTypes String?
+  imageUrl       String?
+  imageAlt       String?
+  active         Boolean     @default(true) // Branche ouverte dans le groupe
+  publiee        Boolean     @default(true) // Visible sur le site public
+  ordre          Int         @default(0)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 }
 
 // ---------------------------------------------------------------------------
-// Configuration plateforme — identité visuelle commune à toutes les paroisses
-// (page d'accueil et de connexion, avant qu'on sache à quelle paroisse un
-// visiteur appartient). Ligne unique (id fixe "platform"), gérée exclusivement
-// par ADMIN_PLATEFORME. Remplace l'ancien fichier config/site.json.
+// Équipe / unité au sein d'une branche (sizaine, patrouille, équipe…)
 // ---------------------------------------------------------------------------
 
-model ConfigurationPlateforme {
-  id              String   @id @default("platform")
-  nomSite         String   @default("SCOUT ASCCI")
-  sousTitreSite   String   @default("Côte d'Ivoire")
-  logoUrl         String?
-  couleurPrimaire String   @default("#1a4731")
-  couleurAccent   String   @default("#27ae60")
-  couleurFond     String   @default("#0f2418")
-  couleurHover    String   @default("#27ae60")
-  heroBadge       String?
-  heroTitre       String?
-  heroSousTitre   String?
-  heroImageUrl    String?
-  heroImageAlt    String?
-  stats           Json?
-  updatedAt       DateTime @updatedAt
+model Equipe {
+  id          String      @id @default(cuid())
+  nom         String
+  brancheType BrancheType
+  description String?
+  actif       Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  scouts Scout[]
+
+  @@unique([brancheType, nom])
+  @@index([brancheType])
 }
 
 // ---------------------------------------------------------------------------
@@ -212,50 +235,40 @@ model ConfigurationPlateforme {
 // ---------------------------------------------------------------------------
 
 model Utilisateur {
-  id        String          @id @default(cuid())
-  nom       String
-  prenom    String
-  matricule String?         @unique // Requis pour chefs/scouts, absent pour parents
-  telephone String?         @unique // Requis pour parents, optionnel pour les autres
-  email     String?         @unique
-  password  String
-  doitChangerMotDePasse Boolean @default(false)
-  affectationsDistrict AffectationDistrict[] @relation("AffectationResponsable")
-  role      RoleUtilisateur // Rôle PAROISSIAL (direction de groupe ou encadrement de branche) —
-                             // jamais une valeur de district, même si ce compte sert aussi le
-                             // district (voir roleDistrict) : les deux sont indépendants, une
-                             // personne désignée au district continue d'exercer son rôle paroissial.
-  fonction  String?         // Champ libre pour un rôle paroissial sans fonction structurée (non
-                             // utilisé actuellement, réservé pour un futur rôle de ce type)
-  brancheType BrancheType?  // Branche gérée par ce compte au niveau PAROISSIAL : RESPONSABLE_BRANCHE/
-                             // ADJOINT_BRANCHE/ASSISTANT_BRANCHE (voir lib/brancheUtilisateur.ts)
-  actif     Boolean         @default(true)
+  id                    String          @id @default(cuid())
+  nom                   String
+  prenom                String
+  matricule             String?         @unique // Requis pour chefs/scouts, absent pour parents
+  telephone             String?         @unique // Requis pour parents, optionnel pour les autres
+  email                 String?         @unique
+  password              String
+  doitChangerMotDePasse Boolean         @default(false)
+  role                  RoleUtilisateur
+  fonction              String? // Champ libre pour un rôle sans fonction structurée
+  brancheType           BrancheType? // Branche gérée par RESPONSABLE/ADJOINT/ASSISTANT_BRANCHE
+  actif                 Boolean         @default(true)
+  // Permission explicite de gérer les contenus publics (actualités, galerie,
+  // histoire) — toujours vraie de fait pour ADMINISTRATEUR.
+  editeurContenu        Boolean         @default(false)
 
-  // Affectation district — additive au rôle paroissial ci-dessus, jamais un
-  // remplacement : un Chef de Groupe désigné Commissaire de District reste
-  // Chef de Groupe de sa paroisse, il gagne seulement roleDistrict en plus.
-  // Éligible parmi ROLES_TOUT_STAFF (tout rôle non-PARENT/SCOUT) d'une des
-  // paroisses du district (voir lib/roles.ts, app/api/district/utilisateurs).
-  roleDistrict        RoleUtilisateur?
-  fonctionDistrict    String?          // Fonction libre de roleDistrict=ASSISTANT_DISTRICT quand
-                                        // brancheTypeDistrict est vide (ex. "Spiritualité")
-  brancheTypeDistrict BrancheType?     // Branche gérée à l'échelle du district par
-                                        // roleDistrict=ASSISTANT_DISTRICT
-  tokenCalendrier String?   @unique // Jeton d'abonnement au flux iCal personnel (généré à la demande)
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  // Présentation publique (page « Notre équipe ») : jamais affichée sans
+  // l'accord explicite de la personne (profilPublic).
+  profilPublic     Boolean @default(false)
+  fonctionPublique String?
+  photoPublique    String?
+  biographie       String?
+  ordrePublic      Int     @default(0)
 
-  // Clé étrangère — nulle uniquement pour ADMIN_PLATEFORME (rôle transverse, non
-  // rattaché à une paroisse). Contrainte CHECK ajoutée en migration pour garantir
-  // cette cohérence au niveau base (voir migration correspondante).
-  paroisseId String?
-  paroisse   Paroisse? @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
+  tokenCalendrier String?  @unique // Jeton d'abonnement au flux iCal personnel (généré à la demande)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   // Relations
   liensParent                 LienParentScout[]
-  contactsUrgence             ContactUrgence[] // Contacts d'urgence liés à ce compte
-  ficheScout                  Scout? // Fiche Scout liée (si rôle SCOUT)
+  contactsUrgence             ContactUrgence[]
+  ficheScout                  Scout?
   activitesCreees             Activite[]              @relation("ActiviteCreePar")
+  activitesResponsable        Activite[]              @relation("ActiviteResponsable")
   progressionsValidees        ProgressionScout[]      @relation("ProgressionValidePar")
   joursReunionCrees           JourReunion[]           @relation("JourReunionCreePar")
   presencesReunionMarquees    PresenceReunion[]       @relation("PresenceReunionMarquePar")
@@ -267,17 +280,36 @@ model Utilisateur {
   consentementsSanteConfirmes Scout[]                 @relation("ScoutConsentementSanteConfirmePar")
   actionsAudit                JournalAudit[]
   cotisationsEnregistrees     Cotisation[]            @relation("CotisationEnregistreePar")
+  publications                Publication[]           @relation("PublicationAuteur")
+  demandesTraitees            DemandeAdhesion[]       @relation("DemandeTraiteePar")
+  mandats                     Mandat[]
 
-  // Unicité "1 seul CHEF_GROUPE actif par paroisse" et "1 seul RESPONSABLE_BRANCHE
-  // actif par (paroisse, brancheType)" : non exprimable en index partiel dans le
-  // DSL Prisma (pas de clause WHERE sur @@unique) — appliquée manuellement via
-  // deux CREATE UNIQUE INDEX ... WHERE dans une migration (voir prisma/migrations).
-  @@index([matricule])
-  @@index([telephone])
-  @@index([paroisseId])
+  // Unicité « 1 seul CHEF_GROUPE actif » et « 1 seul RESPONSABLE_BRANCHE actif
+  // par branche » : index partiels créés en migration (pas de WHERE en DSL).
   @@index([role])
   @@index([brancheType])
-  @@index([roleDistrict])
+}
+
+// ---------------------------------------------------------------------------
+// Mandat — historique des responsabilités exercées dans la maîtrise.
+// Le rôle courant reste Utilisateur.role ; un mandat est ouvert à chaque
+// nomination et clos à chaque changement ou désactivation.
+// ---------------------------------------------------------------------------
+
+model Mandat {
+  id          String          @id @default(cuid())
+  role        RoleUtilisateur
+  brancheType BrancheType?
+  debutLe     DateTime        @default(now())
+  finLe       DateTime?
+  auteurId    String?
+  motif       String?
+
+  utilisateurId String
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Restrict)
+
+  @@index([utilisateurId, debutLe])
+  @@index([role])
 }
 
 // ---------------------------------------------------------------------------
@@ -300,8 +332,8 @@ model Scout {
   // Consentement des parents à l'utilisation de la photo/image du scout
   // (publications, communication de la paroisse). Refusé par défaut tant que
   // personne ne l'a explicitement accordé.
-  consentementImage     Boolean   @default(false)
-  consentementImageDate DateTime?
+  consentementImage        Boolean   @default(false)
+  consentementImageDate    DateTime?
   // Provenance de la déclaration, sans présumer l’autorité juridique du compte.
   consentementImageOrigine String?
 
@@ -309,8 +341,8 @@ model Scout {
   // (allergies, traitements, fiches médicales). Enregistré et journalisé, sans
   // bloquer la saisie : une information médicale manquante au camp serait
   // plus dangereuse qu'une fiche signalée « sans consentement ».
-  consentementSante     Boolean   @default(false)
-  consentementSanteDate DateTime?
+  consentementSante        Boolean   @default(false)
+  consentementSanteDate    DateTime?
   consentementSanteOrigine String?
 
   // Conservation (loi n° 2013-450) : date de désactivation, point de départ
@@ -321,9 +353,9 @@ model Scout {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Clé étrangère
-  paroisseId String
-  paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
+  // Équipe ou unité de la branche (facultative).
+  equipeId String?
+  equipe   Equipe? @relation(fields: [equipeId], references: [id], onDelete: SetNull)
 
   // Compte utilisateur optionnel (certains scouts ont un espace personnel)
   utilisateurId String?      @unique
@@ -347,12 +379,13 @@ model Scout {
   autorisationsCamp AutorisationCamp[]
   cotisations       Cotisation[]
 
-  @@index([paroisseId])
   @@index([brancheType])
+  @@index([equipeId])
   @@index([actif])
   @@index([photo])
   @@index([desactiveLe])
   @@index([consentementSanteParId])
+  @@index([nom, prenom])
 }
 
 // ---------------------------------------------------------------------------
@@ -405,33 +438,40 @@ model LienParentScout {
 // ---------------------------------------------------------------------------
 
 model Activite {
-  id          String       @id @default(cuid())
-  titre       String
-  description String?
-  dateDebut   DateTime
-  dateFin     DateTime?
-  lieu        String?
-  type        TypeActivite @default(REUNION)
-  brancheType BrancheType? // Null = activité inter-branches
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-
-  // Clés étrangères
-  paroisseId String
-  paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
+  id                  String         @id @default(cuid())
+  titre               String
+  description         String?
+  dateDebut           DateTime
+  dateFin             DateTime?
+  lieu                String?
+  type                TypeActivite   @default(REUNION)
+  brancheType         BrancheType? // Null = activité inter-branches
+  statut              StatutActivite @default(PREVUE)
+  bilan               String?
+  // Une activité n'est jamais publique par défaut : publication explicite,
+  // avec un texte destiné au public distinct de la description interne.
+  publique            Boolean        @default(false)
+  descriptionPublique String?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 
   creePar            String
   creeParUtilisateur Utilisateur @relation("ActiviteCreePar", fields: [creePar], references: [id], onDelete: Restrict)
+
+  responsableId String?
+  responsable   Utilisateur? @relation("ActiviteResponsable", fields: [responsableId], references: [id], onDelete: SetNull)
 
   // Relations
   presences         Presence[]
   ligneProgramme    LigneProgramme?
   autorisationsCamp AutorisationCamp[]
+  albums            Album[]
+  cotisations       Cotisation[]
 
-  @@index([paroisseId])
   @@index([brancheType])
   @@index([dateDebut])
   @@index([creePar])
+  @@index([publique, dateDebut])
 }
 
 // ---------------------------------------------------------------------------
@@ -546,15 +586,11 @@ model JourReunion {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
-  paroisseId String
-  paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
-
   creePar            String
   creeParUtilisateur Utilisateur @relation("JourReunionCreePar", fields: [creePar], references: [id], onDelete: Restrict)
 
   presences PresenceReunion[]
 
-  @@index([paroisseId])
   @@index([brancheType])
   @@index([dateHeure])
   @@index([statut])
@@ -613,15 +649,15 @@ model TokenReinitialisation {
 // acceptée quelques secondes (ancienneValideJusqua) pour absorber les
 // requêtes parallèles d'un même navigateur sans le déconnecter.
 model SessionUtilisateur {
-  id                    String    @id @default(cuid())
-  empreinteJeton        String    @unique
-  ancienneEmpreinte     String?   @unique
-  ancienneValideJusqua  DateTime?
-  expireLe              DateTime
-  revoqueeLe            DateTime?
-  agentUtilisateur      String?   // User-Agent tronqué, pour l'audit des sessions
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  id                   String    @id @default(cuid())
+  empreinteJeton       String    @unique
+  ancienneEmpreinte    String?   @unique
+  ancienneValideJusqua DateTime?
+  expireLe             DateTime
+  revoqueeLe           DateTime?
+  agentUtilisateur     String? // User-Agent tronqué, pour l'audit des sessions
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   utilisateurId String
   utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
@@ -636,19 +672,13 @@ model SessionUtilisateur {
 
 model ConfigReunionBranche {
   id           String      @id @default(cuid())
-  brancheType  BrancheType
+  brancheType  BrancheType @unique
   jourSemaine  Int // 0=dim, 1=lun, 2=mar, 3=mer, 4=jeu, 5=ven, 6=sam
   heureDebut   String // "09:00"
   dureeMinutes Int         @default(90)
   lieu         String?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
-
-  paroisseId String
-  paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Cascade)
-
-  @@unique([paroisseId, brancheType])
-  @@index([paroisseId])
 }
 
 // ---------------------------------------------------------------------------
@@ -666,15 +696,11 @@ model Programme {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
-  paroisseId String
-  paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
-
   creePar            String
   creeParUtilisateur Utilisateur @relation("ProgrammeCreePar", fields: [creePar], references: [id], onDelete: Restrict)
 
   lignes LigneProgramme[]
 
-  @@index([paroisseId])
   @@index([brancheType])
   @@index([periodeDebut])
   @@index([creePar])
@@ -741,9 +767,9 @@ model AutorisationCamp {
 
 // ---------------------------------------------------------------------------
 // Journal d'audit — trace les actions sensibles (gestion des comptes, des
-// scouts, des documents…) pour la responsabilité et la conformité. L'acteur
-// est conservé même si son compte est supprimé (onDelete: SetNull) : la trace
-// de l'action doit survivre à la suppression de celui qui l'a effectuée.
+// scouts, des documents, des contenus…) pour la responsabilité et la
+// conformité. L'acteur est conservé même si son compte est supprimé
+// (onDelete: SetNull) : la trace doit survivre à celui qui l'a effectuée.
 // ---------------------------------------------------------------------------
 
 model JournalAudit {
@@ -754,21 +780,12 @@ model JournalAudit {
   details   Json?
   createdAt DateTime @default(now())
 
-  // Nulle pour les actions de portée plateforme (gestion des paroisses, branding
-  // commun...) qui n'ont pas de paroisse naturelle à qui être rattachées.
-  // Restrict (pas Cascade) : cohérent avec le reste du schéma (une Paroisse
-  // n'est jamais supprimée physiquement) et surtout avec l'objectif même de ce
-  // modèle — le journal d'audit doit survivre, il ne doit jamais pouvoir
-  // disparaître silencieusement avec l'entité qu'il concerne.
-  paroisseId String?
-  paroisse   Paroisse? @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
-
   acteurId String?
   acteur   Utilisateur? @relation(fields: [acteurId], references: [id], onDelete: SetNull)
 
-  @@index([paroisseId, createdAt])
   @@index([entite, entiteId])
   @@index([acteurId])
+  @@index([action])
   @@index([createdAt]) // Purge selon la durée de conservation (RETENTION_AUDIT_JOURS)
 }
 
@@ -791,22 +808,164 @@ model Cotisation {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
-  // Restrict (pas Cascade) : un scout ou une paroisse ne sont jamais supprimés
-  // physiquement dans l'application (désactivés, pour conserver l'historique) —
-  // et si une suppression manuelle était un jour nécessaire, elle ne doit
-  // jamais effacer silencieusement un historique de paiement.
+  // Restrict (pas Cascade) : un scout n'est jamais supprimé physiquement dans
+  // l'application (désactivé, pour conserver l'historique) — et si une
+  // suppression manuelle était un jour nécessaire, elle ne doit jamais effacer
+  // silencieusement un historique de paiement.
   scoutId String
   scout   Scout  @relation(fields: [scoutId], references: [id], onDelete: Restrict)
 
-  paroisseId String
-  paroisse   Paroisse @relation(fields: [paroisseId], references: [id], onDelete: Restrict)
+  // Cotisation d'activité (camp, sortie…) : facultatif.
+  activiteId String?
+  activite   Activite? @relation(fields: [activiteId], references: [id], onDelete: SetNull)
 
   enregistreParId String?
   enregistrePar   Utilisateur? @relation("CotisationEnregistreePar", fields: [enregistreParId], references: [id], onDelete: SetNull)
 
-  @@index([paroisseId])
   @@index([scoutId])
   @@index([statut])
   @@index([anneeScolaire])
   @@index([enregistreParId])
+  @@index([activiteId])
+}
+
+// Barème configurable des cotisations : aucun tarif n'est codé en dur. Une
+// ligne sans branche s'applique à toutes les branches.
+model BaremeCotisation {
+  id            String         @id @default(cuid())
+  anneeScolaire String
+  type          TypeCotisation
+  brancheType   BrancheType?
+  libelle       String?
+  montant       Int
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([anneeScolaire])
+}
+
+// ---------------------------------------------------------------------------
+// Contenus publics : actualités (CMS), galerie, histoire, demandes d'adhésion
+// ---------------------------------------------------------------------------
+
+model CategoriePublication {
+  id        String   @id @default(cuid())
+  nom       String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  publications Publication[]
+}
+
+model Publication {
+  id              String            @id @default(cuid())
+  titre           String
+  slug            String            @unique
+  resume          String?
+  // Contenu en texte structuré léger (paragraphes, titres « ## », listes « - »),
+  // rendu côté frontend sans HTML brut : aucune injection possible.
+  contenu         String
+  imageCouverture String?
+  imageAlt        String?
+  statut          StatutPublication @default(BROUILLON)
+  datePublication DateTime?
+  seoTitre        String?
+  seoDescription  String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  categorieId String?
+  categorie   CategoriePublication? @relation(fields: [categorieId], references: [id], onDelete: SetNull)
+
+  auteurId String?
+  auteur   Utilisateur? @relation("PublicationAuteur", fields: [auteurId], references: [id], onDelete: SetNull)
+
+  @@index([statut, datePublication])
+  @@index([categorieId])
+}
+
+model Album {
+  id            String    @id @default(cuid())
+  titre         String
+  slug          String    @unique
+  description   String?
+  categorie     String?
+  dateEvenement DateTime?
+  publie        Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  activiteId String?
+  activite   Activite? @relation(fields: [activiteId], references: [id], onDelete: SetNull)
+
+  medias Media[]
+
+  @@index([publie, dateEvenement])
+}
+
+model Media {
+  id                  String   @id @default(cuid())
+  url                 String
+  legende             String?
+  texteAlt            String?
+  ordre               Int      @default(0)
+  // Une photo n'est publique que si elle est explicitement publiée ET, quand
+  // elle montre des mineurs, que le consentement à l'image a été vérifié.
+  publie              Boolean  @default(false)
+  contientMineurs     Boolean  @default(true)
+  consentementVerifie Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  albumId String
+  album   Album  @relation(fields: [albumId], references: [id], onDelete: Cascade)
+
+  @@index([albumId, ordre])
+  @@index([url])
+}
+
+model EvenementHistorique {
+  id               String                     @id @default(cuid())
+  annee            Int
+  date             DateTime?
+  titre            String
+  description      String?
+  type             TypeEvenementHistorique    @default(ETAPE)
+  auteurTemoignage String?
+  imageUrl         String?
+  imageAlt         String?
+  documentUrl      String?
+  source           String?
+  statutValidation StatutValidationHistorique @default(A_VERIFIER)
+  publie           Boolean                    @default(false)
+  ordre            Int                        @default(0)
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
+
+  @@index([publie, annee])
+}
+
+model DemandeAdhesion {
+  id                 String        @id @default(cuid())
+  type               TypeDemande   @default(INSCRIPTION_JEUNE)
+  nomContact         String
+  prenomContact      String
+  telephone          String
+  email              String?
+  nomJeune           String?
+  prenomJeune        String?
+  dateNaissanceJeune DateTime?
+  brancheSouhaitee   BrancheType?
+  message            String?
+  consentementLe     DateTime
+  statut             StatutDemande @default(NOUVELLE)
+  notesInternes      String?
+  traiteeLe          DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  traiteeParId String?
+  traiteePar   Utilisateur? @relation("DemandeTraiteePar", fields: [traiteeParId], references: [id], onDelete: SetNull)
+
+  @@index([statut, createdAt])
 }

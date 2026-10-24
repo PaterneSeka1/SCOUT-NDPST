@@ -15,10 +15,8 @@ const UTILISATEUR = {
   nom: 'Nom',
   prenom: 'Prénom',
   role: 'CHEF_GROUPE',
-  roleDistrict: null,
-  paroisseId: 'p1',
+  editeurContenu: false,
   actif: true,
-  paroisse: { actif: true },
 }
 
 function prismaSimule(session: Record<string, unknown> | null) {

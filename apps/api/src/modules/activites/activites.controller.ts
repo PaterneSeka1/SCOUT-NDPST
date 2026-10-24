@@ -37,15 +37,15 @@ export class ActivitesController {
       limite: texteQuery(query.limite),
       recherche: texteQuery(query.recherche),
       type: texteQuery(query.type),
+      statut: texteQuery(query.statut),
       brancheType: texteQuery(query.brancheType),
       aVenir: texteQuery(query.aVenir),
     })
   }
 
-  // Pas de @Roles : le staff paroissial OU un ASSISTANT_DISTRICT peut créer
-  // (règle « l'un ou l'autre » vérifiée dans le service).
   @Post()
   @HttpCode(201)
+  @Roles(...ROLES_TOUT_STAFF)
   creer(
     @UtilisateurCourant() utilisateur: UtilisateurSession,
     @Body(new ZodPipe(SchemaCreationActivite)) corps: CorpsCreationActivite,

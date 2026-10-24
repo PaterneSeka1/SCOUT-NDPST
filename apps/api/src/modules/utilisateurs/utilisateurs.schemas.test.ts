@@ -4,6 +4,7 @@ import type { ZodType } from 'zod'
 import {
   SchemaCreationUtilisateur,
   SchemaModificationUtilisateur,
+  SchemaProfilPublic,
   SchemaReinitialisationMotDePasse,
 } from './utilisateurs.schemas'
 
@@ -13,7 +14,13 @@ function premierMessage(schema: ZodType, valeur: unknown): string | undefined {
   return resultat.success ? undefined : resultat.error.issues[0]?.message
 }
 
-const creationValide = { nom: ' Kouassi ', prenom: ' Awa ', role: 'ADJOINT_GROUPE', password: 'Secret123', matricule: 'M9' }
+const creationValide = {
+  nom: ' Kouassi ',
+  prenom: ' Awa ',
+  role: 'ADJOINT_GROUPE',
+  password: 'Secret123',
+  matricule: 'M9',
+}
 
 describe('SchemaCreationUtilisateur', () => {
   it('accepte un corps valide, nettoie nom et prénom, dédoublonne les enfants', () => {
@@ -59,10 +66,10 @@ describe('SchemaCreationUtilisateur', () => {
 
 describe('SchemaModificationUtilisateur', () => {
   it('laisse absents les champs non envoyés (mise à jour partielle)', () => {
-    expect(SchemaModificationUtilisateur.parse({ prenom: ' Awa ', role: 'ADMIN_PLATEFORME' })).toEqual({
+    expect(SchemaModificationUtilisateur.parse({ prenom: ' Awa ', role: 'ADMINISTRATEUR' })).toEqual({
       prenom: 'Awa',
       // Valeur d'enum connue : la hiérarchie des rôles est contrôlée par le service.
-      role: 'ADMIN_PLATEFORME',
+      role: 'ADMINISTRATEUR',
     })
   })
 
@@ -76,6 +83,8 @@ describe('SchemaModificationUtilisateur', () => {
 
   it.each([
     [{ role: 'CHEF' }, 'Rôle invalide'],
+    [{ role: 'ADMIN_PLATEFORME' }, 'Rôle invalide'],
+    [{ role: 'COMMISSAIRE_DISTRICT' }, 'Rôle invalide'],
     [{ nom: ' ' }, 'Le nom est invalide'],
     [{ prenom: null }, 'Le prénom est invalide'],
     [{ email: 1 }, 'L’adresse e-mail est invalide'],
@@ -100,4 +109,44 @@ describe('SchemaReinitialisationMotDePasse', () => {
       expect(premierMessage(SchemaReinitialisationMotDePasse, corps)).toBe(REGLE_MOT_DE_PASSE)
     },
   )
+})
+
+describe('SchemaProfilPublic', () => {
+  it('nettoie les textes, efface les valeurs vides et laisse absents les champs non envoyés', () => {
+    expect(
+      SchemaProfilPublic.parse({
+        profilPublic: true,
+        fonctionPublique: ' Chef de Groupe ',
+        photoPublique: '',
+        biographie: null,
+        paroisseId: 'ignoré',
+      }),
+    ).toEqual({ profilPublic: true, fonctionPublique: 'Chef de Groupe', photoPublique: null, biographie: null })
+    expect(SchemaProfilPublic.parse({})).toEqual({})
+  })
+
+  it('accepte une photo servie localement', () => {
+    expect(SchemaProfilPublic.parse({ photoPublique: '/api/fichiers-publics/equipe/a.jpg' }).photoPublique).toBe(
+      '/api/fichiers-publics/equipe/a.jpg',
+    )
+  })
+
+  it.each([
+    [{ profilPublic: 'oui' }, 'Le champ profilPublic est invalide'],
+    [
+      { photoPublique: 'https://exemple.com/a.png' },
+      'La photo doit être un chemin local (ex : /api/fichiers-publics/…) ou une URL de stockage autorisée',
+    ],
+    [
+      { photoPublique: 'javascript:alert(1)' },
+      'La photo doit être un chemin local (ex : /api/fichiers-publics/…) ou une URL de stockage autorisée',
+    ],
+    [{ fonctionPublique: 'x'.repeat(121) }, 'La fonction publique est invalide (120 caractères au plus)'],
+    [{ biographie: 'x'.repeat(2001) }, 'La biographie est invalide (2000 caractères au plus)'],
+    [{ ordrePublic: 1.5 }, 'L’ordre d’affichage est invalide'],
+    [{ ordrePublic: '2' }, 'L’ordre d’affichage est invalide'],
+    [[], 'Données invalides'],
+  ])('rejette %j avec « %s »', (corps, message) => {
+    expect(premierMessage(SchemaProfilPublic, corps)).toBe(message)
+  })
 })

@@ -1,128 +1,76 @@
 import { describe, it, expect } from 'vitest'
 import {
-  ROLES_GROUPE,
-  ROLES_GROUPE_ETENDU,
-  ROLES_BRANCHE,
-  ROLES_TOUT_STAFF,
-  ROLES_GESTION,
-  ROLES_PLATEFORME,
-  ROLES_DISTRICT,
-  ROLES_DISTRICT_ETENDU,
-  ROLES_ASSIGNABLES_DISTRICT,
+  LABELS_ROLES,
+  ROLES_ADMIN,
+  ROLES_ASSIGNABLES_ADMIN,
   ROLES_ASSIGNABLES_PAROISSE,
   ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT,
-  LABELS_ROLES,
+  ROLES_BRANCHE,
+  ROLES_GESTION,
+  ROLES_GROUPE,
+  ROLES_GROUPE_ETENDU,
+  ROLES_TOUT_STAFF,
   libelleRoleAvecFonction,
+  peutGererContenus,
 } from './roles'
-import { PERIMETRE_V1 } from './perimetreV1'
+import { ESPACES_FAMILLES_ACTIFS } from './perimetre'
 
-// Ces constantes pilotent le contrôle d'accès d'une vingtaine de routes API
-// (voir la centralisation RBAC). Un test de non-régression ici évite qu'une
-// modification future n'élargisse ou ne restreigne silencieusement un groupe.
-describe('groupes de rôles RBAC', () => {
-  it('ROLES_GROUPE contient exactement la direction de la paroisse (Chef de Groupe)', () => {
-    expect([...ROLES_GROUPE].sort()).toEqual(['CHEF_GROUPE'])
+describe('groupes de rôles', () => {
+  it('ne contient aucun rôle district ni plateforme', () => {
+    for (const role of Object.keys(LABELS_ROLES)) {
+      expect(role).not.toMatch(/DISTRICT|PLATEFORME/)
+    }
   })
 
-  it('ROLES_GROUPE_ETENDU ajoute les adjoints/assistants de groupe', () => {
-    expect([...ROLES_GROUPE_ETENDU].sort()).toEqual(
-      ['ADJOINT_GROUPE', 'ASSISTANT_GROUPE', 'CHEF_GROUPE'],
-    )
+  it('ROLES_GROUPE ne contient que le Chef de Groupe', () => {
+    expect(ROLES_GROUPE).toEqual(['CHEF_GROUPE'])
   })
 
-  it("ROLES_BRANCHE contient l'encadrement de branche", () => {
-    expect([...ROLES_BRANCHE].sort()).toEqual(
-      ['ADJOINT_BRANCHE', 'ASSISTANT_BRANCHE', 'RESPONSABLE_BRANCHE'],
-    )
+  it('ROLES_GROUPE_ETENDU ajoute adjoint et assistant de groupe', () => {
+    expect(ROLES_GROUPE_ETENDU).toEqual(['CHEF_GROUPE', 'ADJOINT_GROUPE', 'ASSISTANT_GROUPE'])
   })
 
-  it('ROLES_TOUT_STAFF réunit tout le staff (6 rôles, ni PARENT ni SCOUT, ni ADMIN_PLATEFORME)', () => {
+  it('ROLES_TOUT_STAFF réunit la maîtrise (6 rôles), sans administrateur, parent ni scout', () => {
     expect(ROLES_TOUT_STAFF).toHaveLength(6)
-    expect(ROLES_TOUT_STAFF).not.toContain('PARENT')
-    expect(ROLES_TOUT_STAFF).not.toContain('SCOUT')
-    expect(ROLES_TOUT_STAFF).not.toContain('ADMIN_PLATEFORME')
+    for (const r of ['ADMINISTRATEUR', 'PARENT', 'SCOUT']) expect(ROLES_TOUT_STAFF).not.toContain(r)
   })
 
   it('ROLES_GESTION exclut les adjoints/assistants de groupe', () => {
-    expect(ROLES_GESTION).not.toContain('ADJOINT_GROUPE')
-    expect(ROLES_GESTION).not.toContain('ASSISTANT_GROUPE')
-    expect([...ROLES_GESTION].sort()).toEqual(
-      ['ADJOINT_BRANCHE', 'ASSISTANT_BRANCHE', 'CHEF_GROUPE', 'RESPONSABLE_BRANCHE'],
-    )
+    expect(ROLES_GESTION).toEqual(['CHEF_GROUPE', ...ROLES_BRANCHE])
   })
 
-  it('ROLES_PLATEFORME ne contient que le rôle global, jamais mélangé aux rôles de paroisse', () => {
-    expect(ROLES_PLATEFORME).toEqual(['ADMIN_PLATEFORME'])
-    for (const roles of [ROLES_GROUPE, ROLES_GROUPE_ETENDU, ROLES_BRANCHE, ROLES_TOUT_STAFF, ROLES_GESTION]) {
-      expect(roles).not.toContain('ADMIN_PLATEFORME')
-    }
+  it("l'administrateur est distinct du Chef de Groupe", () => {
+    expect(ROLES_ADMIN).toEqual(['ADMINISTRATEUR'])
+    expect(ROLES_GROUPE_ETENDU).not.toContain('ADMINISTRATEUR')
   })
 
-  it('ROLES_ASSIGNABLES_PAROISSE exclut ADMIN_PLATEFORME et les rôles de district', () => {
-    expect(ROLES_ASSIGNABLES_PAROISSE).not.toContain('ADMIN_PLATEFORME')
-    for (const roleDistrict of ROLES_DISTRICT_ETENDU) {
-      expect(ROLES_ASSIGNABLES_PAROISSE).not.toContain(roleDistrict)
-    }
-    // Périmètre V1 : PARENT et SCOUT sont également exclus (voir lib/perimetreV1.ts).
-    const horsV1 = PERIMETRE_V1 ? 2 : 0
-    expect(ROLES_ASSIGNABLES_PAROISSE.length).toBe(Object.keys(LABELS_ROLES).length - 1 - ROLES_DISTRICT_ETENDU.length - horsV1)
+  it('la gestion de la maîtrise ne peut pas créer d’administrateur', () => {
+    expect(ROLES_ASSIGNABLES_PAROISSE).not.toContain('ADMINISTRATEUR')
+    expect(ROLES_ASSIGNABLES_ADMIN).toContain('ADMINISTRATEUR')
   })
 
-  it('en périmètre V1, ROLES_ASSIGNABLES_PAROISSE se limite au staff paroissial', () => {
-    if (!PERIMETRE_V1) return
-    expect([...ROLES_ASSIGNABLES_PAROISSE].sort()).toEqual([...ROLES_TOUT_STAFF].sort())
+  it.runIf(!ESPACES_FAMILLES_ACTIFS)('PARENT et SCOUT ne sont pas attribuables tant que les espaces familles sont fermés', () => {
+    expect(ROLES_ASSIGNABLES_PAROISSE).not.toContain('PARENT')
+    expect(ROLES_ASSIGNABLES_PAROISSE).not.toContain('SCOUT')
+    expect(ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT).toEqual(ROLES_TOUT_STAFF)
   })
+})
 
-  it('chaque rôle utilisé dans les groupes a un libellé défini', () => {
-    for (const role of ROLES_TOUT_STAFF) {
-      expect(LABELS_ROLES[role]).toBeTruthy()
-    }
+describe('libelleRoleAvecFonction', () => {
+  it('ajoute la branche quand elle est renseignée', () => {
+    expect(libelleRoleAvecFonction('RESPONSABLE_BRANCHE', null, 'ECLAIREURS')).toBe('Responsable de Branche — Éclaireurs')
   })
-
-  it('ROLES_DISTRICT contient exactement la direction du district (Commissaire de District)', () => {
-    expect([...ROLES_DISTRICT].sort()).toEqual(['COMMISSAIRE_DISTRICT'])
+  it('ajoute la fonction libre sinon, et ignore une fonction vide', () => {
+    expect(libelleRoleAvecFonction('ASSISTANT_GROUPE', 'Trésorier')).toBe('Assistant de Groupe — Trésorier')
+    expect(libelleRoleAvecFonction('ASSISTANT_GROUPE', '  ')).toBe('Assistant de Groupe')
   })
+})
 
-  it('ROLES_DISTRICT_ETENDU ajoute l\'adjoint et les assistants de district', () => {
-    expect([...ROLES_DISTRICT_ETENDU].sort()).toEqual(
-      ['ADJOINT_DISTRICT', 'ASSISTANT_DISTRICT', 'COMMISSAIRE_DISTRICT'],
-    )
-  })
-
-  it('ROLES_ASSIGNABLES_DISTRICT ne contient jamais COMMISSAIRE_DISTRICT (créé uniquement par ADMIN_PLATEFORME)', () => {
-    expect([...ROLES_ASSIGNABLES_DISTRICT].sort()).toEqual(['ADJOINT_DISTRICT', 'ASSISTANT_DISTRICT'])
-  })
-
-  it('ROLES_DISTRICT_ETENDU (rôles transverses à plusieurs paroisses) n\'est jamais mélangé aux rôles paroissiaux', () => {
-    for (const roles of [ROLES_GROUPE, ROLES_GROUPE_ETENDU, ROLES_BRANCHE, ROLES_TOUT_STAFF, ROLES_GESTION]) {
-      for (const roleDistrict of ROLES_DISTRICT_ETENDU) {
-        expect(roles).not.toContain(roleDistrict)
-      }
-    }
-  })
-
-  it('ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT exclut PARENT et tous les rôles de district', () => {
-    expect(ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT).not.toContain('PARENT')
-    for (const roleDistrict of ROLES_DISTRICT_ETENDU) {
-      expect(ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT).not.toContain(roleDistrict)
-    }
-  })
-
-  it('chaque rôle de district a un libellé défini', () => {
-    for (const role of ROLES_DISTRICT_ETENDU) {
-      expect(LABELS_ROLES[role]).toBeTruthy()
-    }
-  })
-
-  it('libelleRoleAvecFonction ajoute la fonction seulement si renseignée', () => {
-    expect(libelleRoleAvecFonction('ASSISTANT_DISTRICT', 'Spiritualité')).toBe('Assistant au Commissaire de District — Spiritualité')
-    expect(libelleRoleAvecFonction('ASSISTANT_DISTRICT', null)).toBe('Assistant au Commissaire de District')
-    expect(libelleRoleAvecFonction('ASSISTANT_DISTRICT', '  ')).toBe('Assistant au Commissaire de District')
-    expect(libelleRoleAvecFonction('COMMISSAIRE_DISTRICT')).toBe('Commissaire de District')
-  })
-
-  it('libelleRoleAvecFonction privilégie brancheType sur fonction quand les deux sont fournis', () => {
-    expect(libelleRoleAvecFonction('ASSISTANT_DISTRICT', null, 'ECLAIREURS')).toBe('Assistant au Commissaire de District — Branche Éclaireurs')
-    expect(libelleRoleAvecFonction('ASSISTANT_DISTRICT', 'Spiritualité', 'COMPAGNONS')).toBe('Assistant au Commissaire de District — Branche Compagnons (Routiers)')
+describe('peutGererContenus', () => {
+  it('autorise l’administrateur et les éditeurs explicitement désignés seulement', () => {
+    expect(peutGererContenus({ role: 'ADMINISTRATEUR' })).toBe(true)
+    expect(peutGererContenus({ role: 'CHEF_GROUPE', editeurContenu: true })).toBe(true)
+    expect(peutGererContenus({ role: 'CHEF_GROUPE', editeurContenu: false })).toBe(false)
+    expect(peutGererContenus({ role: 'RESPONSABLE_BRANCHE' })).toBe(false)
   })
 })

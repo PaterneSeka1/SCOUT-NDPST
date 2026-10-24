@@ -4,9 +4,6 @@ import { PrismaService } from '../prisma/prisma.service'
 import { logger } from './lib/logger'
 
 export interface EntreeAudit {
-  // Null pour les actions de portée plateforme (gestion des paroisses,
-  // branding commun...) qui n'ont pas de paroisse naturelle à qui être rattachées.
-  paroisseId: string | null
   acteurId?: string | null
   action: string
   entite: string
@@ -23,17 +20,16 @@ export class AuditService {
   // l'opération métier qui l'a déclenchée.
   async enregistrer(entree: EntreeAudit): Promise<void> {
     try {
-      // Administrateur plateforme d'une autre installation : il n'existe pas
-      // dans cette base (clé étrangère impossible). Son identifiant est
-      // conservé dans les détails pour que l'action reste attribuée.
+      // Acteur absent de la base (compte supprimé entre-temps, script) :
+      // son identifiant est conservé dans les détails pour que l'action
+      // reste attribuée.
       const acteurLocal =
         entree.acteurId && (await this.prisma.utilisateur.count({ where: { id: entree.acteurId } })) > 0
       const details =
-        entree.acteurId && !acteurLocal ? { ...entree.details, acteurExterneId: entree.acteurId } : entree.details
+        entree.acteurId && !acteurLocal ? { ...entree.details, acteurInconnuId: entree.acteurId } : entree.details
 
       await this.prisma.journalAudit.create({
         data: {
-          paroisseId: entree.paroisseId,
           acteurId: acteurLocal ? entree.acteurId : null,
           action: entree.action,
           entite: entree.entite,

@@ -5,7 +5,7 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['test/postgres-auth.integration.ts'],
+    include: ['test/postgres-*.integration.ts'],
     fileParallelism: false,
     testTimeout: 15000,
     hookTimeout: 15000,

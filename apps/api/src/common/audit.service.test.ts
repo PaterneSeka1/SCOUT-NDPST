@@ -13,26 +13,24 @@ describe('AuditService', () => {
   it('rattache l’action à l’acteur quand il existe dans cette base', async () => {
     const prisma = prismaSimule(true)
     await new AuditService(prisma as unknown as PrismaService).enregistrer({
-      paroisseId: 'p1',
       acteurId: 'u1',
-      action: 'PAROISSE_MODIFIEE',
-      entite: 'Paroisse',
+      action: 'CONFIGURATION_MODIFIEE',
+      entite: 'ConfigurationInstallation',
       details: { champ: 'nom' },
     })
     expect(prisma.journalAudit.create.mock.calls[0][0].data).toMatchObject({ acteurId: 'u1', details: { champ: 'nom' } })
   })
 
-  it('conserve l’identifiant d’un administrateur externe dans les détails, sans clé étrangère', async () => {
+  it('conserve l’identifiant d’un acteur absent de la base dans les détails, sans clé étrangère', async () => {
     const prisma = prismaSimule(false)
     await new AuditService(prisma as unknown as PrismaService).enregistrer({
-      paroisseId: null,
-      acteurId: 'admin-district',
-      action: 'CONFIG_PLATEFORME_MODIFIEE',
-      entite: 'ConfigurationPlateforme',
+      acteurId: 'compte-supprime',
+      action: 'CONFIGURATION_MODIFIEE',
+      entite: 'ConfigurationInstallation',
     })
     expect(prisma.journalAudit.create.mock.calls[0][0].data).toMatchObject({
       acteurId: null,
-      details: { acteurExterneId: 'admin-district' },
+      details: { acteurInconnuId: 'compte-supprime' },
     })
   })
 })

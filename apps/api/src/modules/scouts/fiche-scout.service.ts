@@ -97,7 +97,7 @@ export class FicheScoutService {
   }
 
   async ajouterDocument(utilisateur: UtilisateurSession, scoutId: string, corps: DonneesAjoutDocument) {
-    const paroisseId = await this.acces.verifierScoutGere(utilisateur, scoutId)
+    await this.acces.verifierScoutGere(utilisateur, scoutId)
     const { type, nomFichier, url, dateExpiration } = corps
     await this.fichiers.verifierRattachable(utilisateur, url.trim(), scoutId)
 
@@ -112,7 +112,6 @@ export class FicheScoutService {
     })
 
     await this.audit.enregistrer({
-      paroisseId,
       acteurId: utilisateur.id,
       action: 'DOCUMENT_AJOUTE',
       entite: 'Document',
@@ -124,7 +123,7 @@ export class FicheScoutService {
   }
 
   async supprimerDocument(utilisateur: UtilisateurSession, scoutId: string, documentId: string) {
-    const paroisseId = await this.acces.verifierScoutGere(utilisateur, scoutId)
+    await this.acces.verifierScoutGere(utilisateur, scoutId)
 
     const document = await this.prisma.document.findFirst({ where: { id: documentId, scoutId } })
     if (!document) throw new NotFoundException('Document introuvable')
@@ -133,7 +132,6 @@ export class FicheScoutService {
     await this.fichiers.supprimerSiOrphelin(document.url)
 
     await this.audit.enregistrer({
-      paroisseId,
       acteurId: utilisateur.id,
       action: 'DOCUMENT_SUPPRIME',
       entite: 'Document',

@@ -1,17 +1,16 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import {
   BrancheTypeSchema,
-  PERIMETRE_V1,
   ROLES_BRANCHE,
   ROLES_TOUT_STAFF,
+  StatutActiviteSchema,
   TypeActiviteSchema,
   entierBorne,
 } from '@scout/shared'
-import { BrancheType, Prisma } from '../../generated/prisma/client'
+import { BrancheType, Prisma, RoleUtilisateur } from '../../generated/prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
 import { AccesFichiersService } from '../../common/acces-fichiers.service'
 import { PerimetreService } from '../../common/perimetre.service'
-import { paroisseIdRequise } from '../../common/paroisse'
 import type { UtilisateurSession } from '../../common/types'
 import type {
   CorpsConfirmationAutorisation,
@@ -26,11 +25,17 @@ export interface FiltresActivites {
   limite: string | null
   recherche: string | null
   type: string | null
+  statut: string | null
   brancheType: string | null
   aVenir: string | null
 }
 
-const AVEC_NOMBRE_PRESENCES = { _count: { select: { presences: true } } } as const
+// Inclus dans les listes et le détail : nombre de présences et responsable
+// désigné (identité minimale, jamais le compte complet).
+const AVEC_NOMBRE_PRESENCES = {
+  _count: { select: { presences: true } },
+  responsable: { select: { id: true, nom: true, prenom: true, role: true, brancheType: true } },
+} as const
 
 const SELECTION_SCOUT_PRESENCE = {
   id: true,
@@ -53,20 +58,24 @@ export class ActivitesService {
   // ---------------------------------------------------------------------------
 
   async lister(utilisateur: UtilisateurSession, filtres: FiltresActivites) {
-    const paroisseId = paroisseIdRequise(utilisateur)
     const page = entierBorne(filtres.page, 1, 1, Number.MAX_SAFE_INTEGER)
     const limite = entierBorne(filtres.limite, 20, 1, 100)
     const decalage = (page - 1) * limite
     const recherche = filtres.recherche ?? ''
     const type = filtres.type ?? ''
     const brancheType = filtres.brancheType ?? ''
+    const statut = filtres.statut ?? ''
 
     const typeValide = TypeActiviteSchema.safeParse(type)
     if (type && !typeValide.success) {
       throw new BadRequestException("Type d'activité invalide")
     }
+    const statutValide = StatutActiviteSchema.safeParse(statut)
+    if (statut && !statutValide.success) {
+      throw new BadRequestException("Statut d'activité invalide")
+    }
 
-    const conditions: Prisma.ActiviteWhereInput[] = [{ paroisseId }]
+    const conditions: Prisma.ActiviteWhereInput[] = []
 
     // Les responsables de branche ne voient que leur branche + les activités
     // inter-branches (brancheType null) — toute valeur "brancheType" fournie
@@ -74,7 +83,7 @@ export class ActivitesService {
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
       const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
       // Compte mal configuré (rôle de branche sans brancheType assigné) :
-      // aucun résultat plutôt que la paroisse entière par défaut.
+      // aucun résultat plutôt que toutes les branches par défaut.
       if (!bt) {
         return { activites: [], pagination: { page, limite, total: 0, totalPages: 0 } }
       }
@@ -96,6 +105,7 @@ export class ActivitesService {
       })
     }
     if (type && typeValide.success) conditions.push({ type: typeValide.data })
+    if (statut && statutValide.success) conditions.push({ statut: statutValide.data })
 
     // `?aVenir=1` : uniquement les activités à venir, de la plus proche à la
     // plus lointaine (par défaut : toutes, de la plus récente à la plus ancienne).
@@ -121,53 +131,48 @@ export class ActivitesService {
     }
   }
 
+  // Le responsable désigné d'une activité doit être un compte actif de la
+  // maîtrise (staff du groupe ou de branche) : jamais un parent, un scout ni
+  // un compte d'administration technique. null = aucun responsable.
+  private async verifierResponsable(responsableId: string | null | undefined): Promise<void> {
+    if (!responsableId) return
+    const responsable = await this.prisma.utilisateur.findFirst({
+      where: { id: responsableId, actif: true, role: { in: ROLES_TOUT_STAFF as RoleUtilisateur[] } },
+      select: { id: true },
+    })
+    if (!responsable) throw new BadRequestException('Responsable invalide : compte actif de la maîtrise requis')
+  }
+
   // Corps déjà validé par SchemaCreationActivite (forme, dates, enums).
   async creer(utilisateur: UtilisateurSession, corps: CorpsCreationActivite) {
-    const estAssistantDistrict = utilisateur.roleDistrict === 'ASSISTANT_DISTRICT'
-    const estStaff = ROLES_TOUT_STAFF.includes(utilisateur.role)
-    if (!estStaff && !estAssistantDistrict) throw new ForbiddenException('Accès refusé')
+    if (!ROLES_TOUT_STAFF.includes(utilisateur.role)) throw new ForbiddenException('Accès refusé')
 
-    const { titre, description, dateDebut, dateFin, lieu, type, brancheType, paroisseId: paroisseIdCorps } = corps
+    const {
+      titre,
+      description,
+      dateDebut,
+      dateFin,
+      lieu,
+      type,
+      brancheType,
+      statut,
+      bilan,
+      publique,
+      descriptionPublique,
+      responsableId,
+    } = corps
 
-    let paroisseId: string
     let brancheEffective: BrancheType | null = brancheType ?? null
-
-    // La création via le district (choix de la paroisse cible) n'est utilisée
-    // que par /district/ma-branche/activites/nouvelle, seule à envoyer
-    // paroisseId dans le corps — un ASSISTANT_DISTRICT qui exerce par ailleurs
-    // un rôle paroissial de branche crée normalement via l'autre branche
-    // ci-dessous quand ce champ est absent (formulaire du tableau de bord).
-    if (estAssistantDistrict && paroisseIdCorps) {
-      // Espace district masqué en V1 (voir perimetreV1 dans @scout/shared) : ce
-      // chemin reste dans le code mais n'est pas accessible tant que le
-      // périmètre V1 est actif.
-      if (PERIMETRE_V1) throw new ForbiddenException('Fonctionnalité indisponible')
-      // Assistant au Commissaire de District chargé d'une branche : choisit la
-      // paroisse cible parmi celles de son district, brancheType forcé à sa
-      // branche — toute valeur envoyée par le client pour brancheType est ignorée.
-      const bt = await this.perimetre.brancheDistrictUtilisateur(utilisateur.id)
+    // Un responsable de branche ne peut créer une activité que pour sa propre
+    // branche — décider d'une activité inter-branches (brancheType null) reste
+    // une décision du groupe.
+    if (ROLES_BRANCHE.includes(utilisateur.role)) {
+      const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
       if (!bt) throw new ForbiddenException('Aucune branche assignée')
-      const { paroisses } = await this.perimetre.paroissesDuDistrict(paroisseIdRequise(utilisateur))
-      if (typeof paroisseIdCorps !== 'string' || !paroisses.some((p) => p.id === paroisseIdCorps)) {
-        throw new BadRequestException('Paroisse invalide ou manquante')
-      }
-      paroisseId = paroisseIdCorps
       brancheEffective = bt as BrancheType
-    } else {
-      // Sans paroisseId dans le corps, seul le staff paroissial crée une
-      // activité de sa paroisse (un ASSISTANT_DISTRICT sans rôle de staff
-      // n'a rien à créer ici).
-      if (!estStaff) throw new ForbiddenException('Accès refusé')
-      paroisseId = paroisseIdRequise(utilisateur)
-      // Un responsable de branche ne peut créer une activité que pour sa propre
-      // branche — décider d'une activité inter-branches (brancheType null) reste
-      // une décision du groupe.
-      if (ROLES_BRANCHE.includes(utilisateur.role)) {
-        const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
-        if (!bt) throw new ForbiddenException('Aucune branche assignée')
-        brancheEffective = bt as BrancheType
-      }
     }
+
+    await this.verifierResponsable(responsableId)
 
     return this.prisma.activite.create({
       data: {
@@ -178,7 +183,12 @@ export class ActivitesService {
         lieu: lieu ?? null,
         type: type ?? 'REUNION',
         brancheType: brancheEffective,
-        paroisseId,
+        statut: statut ?? 'PREVUE',
+        bilan: bilan ?? null,
+        // Jamais publique sans demande explicite (publique === true).
+        publique: publique === true,
+        descriptionPublique: descriptionPublique ?? null,
+        responsableId: responsableId ?? null,
         creePar: utilisateur.id,
       },
       include: AVEC_NOMBRE_PRESENCES,
@@ -199,11 +209,10 @@ export class ActivitesService {
   }
 
   async detail(utilisateur: UtilisateurSession, id: string) {
-    const paroisseId = paroisseIdRequise(utilisateur)
     const filtreBranche = await this.filtreBrancheLecture(utilisateur)
 
     const activite = await this.prisma.activite.findFirst({
-      where: { id, paroisseId, ...filtreBranche },
+      where: { id, ...filtreBranche },
       include: AVEC_NOMBRE_PRESENCES,
     })
     if (!activite) throw new NotFoundException('Activité introuvable')
@@ -211,18 +220,29 @@ export class ActivitesService {
   }
 
   async modifier(utilisateur: UtilisateurSession, id: string, corps: CorpsModificationActivite) {
-    const paroisseId = paroisseIdRequise(utilisateur)
-
     // Un responsable de branche ne peut modifier que les activités de sa propre
     // branche (ou inter-branches), et ne peut pas déplacer une activité vers
     // une autre branche.
     const estBranche = ROLES_BRANCHE.includes(utilisateur.role)
     const filtreBranche = await this.filtreBrancheLecture(utilisateur)
 
-    const existante = await this.prisma.activite.findFirst({ where: { id, paroisseId, ...filtreBranche } })
+    const existante = await this.prisma.activite.findFirst({ where: { id, ...filtreBranche } })
     if (!existante) throw new NotFoundException('Activité introuvable')
 
-    const { titre, description, dateDebut, dateFin, lieu, type, brancheType } = corps
+    const {
+      titre,
+      description,
+      dateDebut,
+      dateFin,
+      lieu,
+      type,
+      brancheType,
+      statut,
+      bilan,
+      publique,
+      descriptionPublique,
+      responsableId,
+    } = corps
     // brancheType : undefined = inchangée, null = inter-branches.
     if (estBranche && brancheType !== undefined && brancheType !== existante.brancheType) {
       throw new ForbiddenException('Le changement de branche est réservé au groupe')
@@ -234,6 +254,17 @@ export class ActivitesService {
       throw new BadRequestException('La date de fin doit être après la date de début')
     }
 
+    // Publication explicite uniquement, avec un texte destiné au public
+    // (jamais la description interne).
+    const publiqueFinale = publique ?? existante.publique
+    const descriptionPubliqueFinale =
+      descriptionPublique !== undefined ? descriptionPublique : existante.descriptionPublique
+    if (publiqueFinale && !descriptionPubliqueFinale) {
+      throw new BadRequestException('Une description publique est requise pour publier une activité')
+    }
+
+    await this.verifierResponsable(responsableId)
+
     return this.prisma.activite.update({
       where: { id },
       data: {
@@ -244,15 +275,18 @@ export class ActivitesService {
         ...(lieu !== undefined && { lieu }),
         ...(type !== undefined && { type }),
         ...(brancheType !== undefined && { brancheType }),
+        ...(statut !== undefined && { statut }),
+        ...(bilan !== undefined && { bilan }),
+        ...(publique !== undefined && { publique }),
+        ...(descriptionPublique !== undefined && { descriptionPublique }),
+        ...(responsableId !== undefined && { responsableId }),
       },
       include: AVEC_NOMBRE_PRESENCES,
     })
   }
 
   async supprimer(utilisateur: UtilisateurSession, id: string) {
-    const paroisseId = paroisseIdRequise(utilisateur)
-
-    const existante = await this.prisma.activite.findFirst({ where: { id, paroisseId } })
+    const existante = await this.prisma.activite.findFirst({ where: { id } })
     if (!existante) throw new NotFoundException('Activité introuvable')
 
     const peutSupprimer = existante.creePar === utilisateur.id || utilisateur.role === 'CHEF_GROUPE'
@@ -275,7 +309,6 @@ export class ActivitesService {
 
   private async peutAgirSurScout(
     utilisateur: UtilisateurSession,
-    paroisseId: string,
     scoutId: string,
     scoutBranche: string,
   ): Promise<boolean> {
@@ -289,10 +322,10 @@ export class ActivitesService {
     }
     // Le rôle n'est jamais la condition d'accès pour un lien de parenté : un
     // compte staff ou SCOUT (Ressources Adultes) par ailleurs parent d'un
-    // scout de la paroisse (LienParentScout) peut agir sur les autorisations
+    // scout du groupe (LienParentScout) peut agir sur les autorisations
     // de camp de cet enfant, au même titre qu'un compte PARENT dédié.
     const lien = await this.prisma.lienParentScout.findFirst({
-      where: { parentId: utilisateur.id, scoutId, scout: { paroisseId } },
+      where: { parentId: utilisateur.id, scoutId },
     })
     return !!lien
   }
@@ -302,9 +335,7 @@ export class ActivitesService {
     activiteId: string,
     corps: CorpsConfirmationAutorisation,
   ) {
-    const paroisseId = paroisseIdRequise(utilisateur)
-
-    const activite = await this.prisma.activite.findFirst({ where: { id: activiteId, paroisseId } })
+    const activite = await this.prisma.activite.findFirst({ where: { id: activiteId } })
     if (!activite) throw new NotFoundException('Activité introuvable')
     if (activite.type !== 'CAMP') {
       throw new BadRequestException('Cette confirmation ne concerne que les activités de type Camp')
@@ -313,10 +344,10 @@ export class ActivitesService {
     // Présence du document et chemin local déjà vérifiés par SchemaConfirmationAutorisation.
     const { scoutId, type, parDocument, documentUrl: urlDocument, documentNomFichier: nomDocument } = corps
 
-    const scout = await this.prisma.scout.findFirst({ where: { id: scoutId, paroisseId } })
+    const scout = await this.prisma.scout.findFirst({ where: { id: scoutId } })
     if (!scout) throw new NotFoundException('Scout introuvable')
 
-    if (!(await this.peutAgirSurScout(utilisateur, paroisseId, scoutId, scout.brancheType))) {
+    if (!(await this.peutAgirSurScout(utilisateur, scoutId, scout.brancheType))) {
       throw new ForbiddenException('Accès refusé')
     }
     if (parDocument) await this.fichiers.verifierRattachable(utilisateur, urlDocument, scoutId)
@@ -343,15 +374,13 @@ export class ActivitesService {
   }
 
   async retirerAutorisation(utilisateur: UtilisateurSession, activiteId: string, corps: CorpsRetraitAutorisation) {
-    const paroisseId = paroisseIdRequise(utilisateur)
-
-    const activite = await this.prisma.activite.findFirst({ where: { id: activiteId, paroisseId } })
+    const activite = await this.prisma.activite.findFirst({ where: { id: activiteId } })
     if (!activite) throw new NotFoundException('Activité introuvable')
 
     const { scoutId, type } = corps
 
     const existante = await this.prisma.autorisationCamp.findFirst({
-      where: { activiteId, scoutId, type, scout: { paroisseId } },
+      where: { activiteId, scoutId, type },
       include: { scout: { select: { brancheType: true } } },
     })
     if (!existante) throw new NotFoundException('Autorisation introuvable')
@@ -360,8 +389,7 @@ export class ActivitesService {
     // parent qui se rend compte d'une erreur) ; sinon, même cloisonnement par
     // branche que pour la création (voir peutAgirSurScout ci-dessus).
     const estAuteur = existante.confirmeParId === utilisateur.id
-    const autorise =
-      estAuteur || (await this.peutAgirSurScout(utilisateur, paroisseId, scoutId, existante.scout.brancheType))
+    const autorise = estAuteur || (await this.peutAgirSurScout(utilisateur, scoutId, existante.scout.brancheType))
     if (!autorise) throw new ForbiddenException('Accès refusé')
 
     await this.prisma.autorisationCamp.delete({ where: { id: existante.id } })
@@ -373,11 +401,11 @@ export class ActivitesService {
   // Présences
   // ---------------------------------------------------------------------------
 
-  // Charge une activité de la paroisse et vérifie qu'un responsable de branche
+  // Charge une activité et vérifie qu'un responsable de branche
   // n'accède qu'à une activité de sa propre branche (une activité sans branche
   // = inter-branches, ouverte à tout le staff).
-  private async activitePourPresences(utilisateur: UtilisateurSession, paroisseId: string, id: string) {
-    const activite = await this.prisma.activite.findFirst({ where: { id, paroisseId } })
+  private async activitePourPresences(utilisateur: UtilisateurSession, id: string) {
+    const activite = await this.prisma.activite.findFirst({ where: { id } })
     if (!activite) throw new NotFoundException('Activité introuvable')
 
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
@@ -390,8 +418,7 @@ export class ActivitesService {
   }
 
   async listerPresences(utilisateur: UtilisateurSession, id: string) {
-    const paroisseId = paroisseIdRequise(utilisateur)
-    const activite = await this.activitePourPresences(utilisateur, paroisseId, id)
+    const activite = await this.activitePourPresences(utilisateur, id)
 
     // Pour les camps, on indique en plus si le parent a signé (fiche médicale +
     // autorisation) pour CE camp précis (information seule, non bloquant — la
@@ -426,7 +453,7 @@ export class ActivitesService {
     // Si aucune présence n'existe encore, retourner tous les scouts de la branche concernée
     if (presences.length === 0) {
       const scouts = await this.prisma.scout.findMany({
-        where: { paroisseId, actif: true, ...(activite.brancheType ? { brancheType: activite.brancheType } : {}) },
+        where: { actif: true, ...(activite.brancheType ? { brancheType: activite.brancheType } : {}) },
         select: SELECTION_SCOUT_PRESENCE,
         orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
       })
@@ -442,23 +469,21 @@ export class ActivitesService {
   }
 
   async enregistrerPresences(utilisateur: UtilisateurSession, id: string, corps: CorpsPresencesActivite) {
-    const paroisseId = paroisseIdRequise(utilisateur)
     // Cf. listerPresences : un responsable de branche ne peut enregistrer les
     // présences que d'une activité de sa propre branche (ou inter-branches).
-    const activite = await this.activitePourPresences(utilisateur, paroisseId, id)
+    const activite = await this.activitePourPresences(utilisateur, id)
 
     const lignes = corps.presences
 
-    // Seuls les scouts de la paroisse appartenant à la branche de l'activité
+    // Seuls les scouts appartenant à la branche de l'activité
     // (tous pour une activité inter-branches, comme la liste du GET) peuvent
     // être pointés — plus ceux déjà pointés sur cette activité, qui ont pu
     // changer de branche depuis. Empêche d'écrire une présence pour un scout
-    // d'une autre paroisse ou d'une autre branche.
+    // inexistant ou d'une autre branche.
     const scoutIds = [...new Set(lignes.map((p) => p.scoutId))]
     const autorises = await this.prisma.scout.findMany({
       where: {
         id: { in: scoutIds },
-        paroisseId,
         OR: [
           activite.brancheType ? { brancheType: activite.brancheType } : {},
           { presences: { some: { activiteId: id } } },

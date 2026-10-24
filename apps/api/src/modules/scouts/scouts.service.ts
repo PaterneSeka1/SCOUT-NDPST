@@ -10,7 +10,6 @@ import { hash } from 'bcryptjs'
 import { BrancheType, Prisma, Sexe } from '../../generated/prisma/client'
 import { AccesFichiersService } from '../../common/acces-fichiers.service'
 import { AuditService } from '../../common/audit.service'
-import { paroisseIdRequise } from '../../common/paroisse'
 import type { UtilisateurSession } from '../../common/types'
 import { logger } from '../../common/lib/logger'
 import { PrismaService } from '../../prisma/prisma.service'
@@ -22,7 +21,36 @@ import type {
   DonneesCreationCompteScout,
   DonneesMatriculeScout,
   DonneesImportScouts,
+  DonneesRechercheDoublons,
 } from './scouts.schemas'
+
+// Comparaison des noms insensible à la casse, aux accents et aux espaces
+// multiples. Côté base, `translate` couvre les lettres accentuées usuelles
+// (minuscules et majuscules, sans dépendre de l'extension PostgreSQL unaccent
+// ni de la locale) ; ces tables restent alignées sur normaliserNom (vérifié
+// par les tests).
+const ACCENTS_MINUSCULES = 'àáâãäåāăąçćĉċčďèéêëēĕėęěìíîïĩīĭįñńňòóôõöōŏőùúûüũūŭůűųýÿŷźżž'
+const BASES_MINUSCULES = 'aaaaaaaaacccccdeeeeeeeeeiiiiiiiinnnoooooooouuuuuuuuuuyyyzzz'
+export const ACCENTS_SOURCE = ACCENTS_MINUSCULES + ACCENTS_MINUSCULES.toUpperCase()
+export const ACCENTS_CIBLE = BASES_MINUSCULES + BASES_MINUSCULES
+
+export function normaliserNom(valeur: string): string {
+  return valeur
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ')
+}
+
+export interface CorrespondanceDoublon {
+  id: string
+  nom: string
+  prenom: string
+  brancheType: BrancheType
+  dateNaissance: Date
+  actif: boolean
+}
 
 export interface FiltresListe {
   page: string | null
@@ -63,25 +91,23 @@ export class ScoutsService {
   async lister(utilisateur: UtilisateurSession, filtres: FiltresListe) {
     const page = entierBorne(filtres.page, 1, 1, Number.MAX_SAFE_INTEGER)
     const limite = entierBorne(filtres.limite, 20, 1, 100)
-    const recherche = filtres.recherche || undefined
-    const paroisseId = paroisseIdRequise(utilisateur)
+    const recherche = filtres.recherche?.trim() || undefined
 
     // Les responsables de branche ne voient QUE leur branche — toute valeur
     // "branche" fournie par le client est ignorée pour ce groupe de rôles,
-    // sinon un simple `?branche=AUTRE` dans l'URL suffirait à voir toute la paroisse.
+    // sinon un simple `?branche=AUTRE` dans l'URL suffirait à voir tout le groupe.
     let branche: string | undefined = filtres.branche ?? undefined
     if (this.acces.estRoleBranche(utilisateur)) {
       const bt = await this.acces.brancheImposee(utilisateur)
       // Compte mal configuré (rôle de branche sans brancheType assigné) :
-      // aucun résultat plutôt que la paroisse entière par défaut.
-      if (!bt) return { scouts: [], total: 0, page, totalPages: 0 }
+      // aucun résultat plutôt que tout le groupe par défaut.
+      if (!bt) return { scouts: [], total: 0, page, limite, totalPages: 0 }
       branche = bt
     } else if (branche && !estValeurEnum(BrancheType, branche)) {
       throw new BadRequestException('Branche invalide')
     }
 
     const where: Prisma.ScoutWhereInput = {
-      paroisseId,
       ...(branche ? { brancheType: branche as BrancheType } : {}),
       ...(filtres.actif !== null ? { actif: filtres.actif === 'true' } : {}),
       ...(recherche
@@ -108,9 +134,10 @@ export class ScoutsService {
           matricule: true,
           actif: true,
           photo: true,
-          paroisseId: true,
           utilisateurId: true,
           createdAt: true,
+          equipeId: true,
+          equipe: { select: { id: true, nom: true } },
           _count: { select: { contactsUrgence: true } },
         },
         orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
@@ -120,13 +147,67 @@ export class ScoutsService {
       this.prisma.scout.count({ where }),
     ])
 
-    return { scouts, total, page, totalPages: Math.ceil(total / limite) }
+    return { scouts, total, page, limite, totalPages: Math.ceil(total / limite) }
+  }
+
+  // Équipe facultative : doit exister, être active et appartenir à la branche
+  // du scout. null = aucune équipe.
+  private async verifierEquipe(equipeId: string | null | undefined, brancheType: BrancheType): Promise<void> {
+    if (!equipeId) return
+    const equipe = await this.prisma.equipe.findUnique({
+      where: { id: equipeId },
+      select: { actif: true, brancheType: true },
+    })
+    if (!equipe || !equipe.actif || equipe.brancheType !== brancheType) {
+      throw new BadRequestException('Équipe invalide : équipe active de la branche du scout requise')
+    }
+  }
+
+  // Détection de doublons avant inscription : même nom et prénom (insensible
+  // à la casse et aux accents, inversion nom/prénom comprise), et même date de
+  // naissance si elle est fournie. Réponse volontairement minimale (identité,
+  // branche, date de naissance) : aucune donnée de fiche n'est exposée.
+  async doublons(criteres: DonneesRechercheDoublons): Promise<{ correspondances: CorrespondanceDoublon[] }> {
+    const nom = normaliserNom(criteres.nom)
+    const prenom = normaliserNom(criteres.prenom)
+    const colonne = (nomColonne: 'nom' | 'prenom') =>
+      Prisma.sql`translate(lower(regexp_replace(trim(${Prisma.raw(`"${nomColonne}"`)}), '[[:space:]]+', ' ', 'g')), ${ACCENTS_SOURCE}, ${ACCENTS_CIBLE})`
+    let filtreDate = Prisma.empty
+    if (criteres.dateNaissance) {
+      // Comparaison au jour près (UTC), quelle que soit l'heure saisie.
+      const debut = new Date(criteres.dateNaissance)
+      debut.setUTCHours(0, 0, 0, 0)
+      const fin = new Date(debut.getTime() + 24 * 60 * 60 * 1000)
+      filtreDate = Prisma.sql`AND "dateNaissance" >= ${debut} AND "dateNaissance" < ${fin}`
+    }
+
+    const correspondances = await this.prisma.$queryRaw<CorrespondanceDoublon[]>`
+      SELECT "id", "nom", "prenom", "brancheType", "dateNaissance", "actif"
+      FROM "Scout"
+      WHERE "anonymiseLe" IS NULL
+        AND (
+          (${colonne('nom')} = ${nom} AND ${colonne('prenom')} = ${prenom})
+          OR (${colonne('nom')} = ${prenom} AND ${colonne('prenom')} = ${nom})
+        )
+        ${filtreDate}
+      ORDER BY "nom" ASC, "prenom" ASC
+      LIMIT 20`
+    return { correspondances }
   }
 
   async creer(utilisateur: UtilisateurSession, corps: DonneesCreationScout) {
-    const paroisseId = paroisseIdRequise(utilisateur)
-    const { nom, prenom, dateNaissance, sexe, brancheType, photo, allergies, traitementsMedicaux, contactsUrgence } =
-      corps
+    const {
+      nom,
+      prenom,
+      dateNaissance,
+      sexe,
+      brancheType,
+      photo,
+      allergies,
+      traitementsMedicaux,
+      equipeId,
+      contactsUrgence,
+    } = corps
     if (photo?.trim()) await this.fichiers.verifierRattachable(utilisateur, photo.trim())
 
     // Un responsable de branche ne peut inscrire un scout que dans sa propre branche.
@@ -136,6 +217,7 @@ export class ScoutsService {
       if (!bt) throw new ForbiddenException('Aucune branche assignée')
       brancheEffective = bt
     }
+    await this.verifierEquipe(equipeId, brancheEffective)
 
     // Créer le scout et ses contacts en transaction
     const scout = await this.prisma.$transaction(async (tx) => {
@@ -149,7 +231,7 @@ export class ScoutsService {
           photo: photo?.trim() || null,
           allergies: allergies?.trim() || null,
           traitementsMedicaux: traitementsMedicaux?.trim() || null,
-          paroisseId,
+          equipeId: equipeId ?? null,
         },
       })
 
@@ -160,12 +242,11 @@ export class ScoutsService {
 
       return tx.scout.findUniqueOrThrow({
         where: { id: nouveauScout.id },
-        include: { contactsUrgence: true },
+        include: { contactsUrgence: true, equipe: { select: { id: true, nom: true } } },
       })
     })
 
     await this.audit.enregistrer({
-      paroisseId,
       acteurId: utilisateur.id,
       action: 'SCOUT_CREE',
       entite: 'Scout',
@@ -190,15 +271,14 @@ export class ScoutsService {
       return scoutPropre
     }
 
-    const paroisseId = paroisseIdRequise(utilisateur)
-
     // Un responsable de branche ne peut consulter que les scouts de sa propre branche.
     const branche = await this.acces.brancheImposee(utilisateur)
     if (branche === null) throw new NotFoundException('Scout introuvable')
 
     const scout = await this.prisma.scout.findFirst({
-      where: { id, paroisseId, ...(branche ? { brancheType: branche } : {}) },
+      where: { id, ...(branche ? { brancheType: branche } : {}) },
       include: {
+        equipe: { select: { id: true, nom: true, brancheType: true, actif: true } },
         contactsUrgence: { orderBy: [{ principal: 'desc' }, { nom: 'asc' }] },
         documents: { orderBy: { createdAt: 'desc' } },
         liensParents: {
@@ -229,7 +309,6 @@ export class ScoutsService {
     // Fiche complète d'un mineur (allergies, traitements, documents) :
     // chaque consultation est tracée (loi n° 2013-450, données sensibles).
     await this.audit.enregistrer({
-      paroisseId,
       acteurId: utilisateur.id,
       action: 'FICHE_SCOUT_CONSULTEE',
       entite: 'Scout',
@@ -239,15 +318,13 @@ export class ScoutsService {
   }
 
   async modifier(utilisateur: UtilisateurSession, id: string, corps: DonneesModificationScout) {
-    const paroisseId = paroisseIdRequise(utilisateur)
-
     // Un responsable de branche ne peut modifier que les scouts de sa propre branche.
     const brancheUtilisateur = await this.acces.brancheImposee(utilisateur)
     if (brancheUtilisateur === null) throw new NotFoundException('Scout introuvable')
 
     const existant = await this.prisma.scout.findFirst({
-      where: { id, paroisseId, ...(brancheUtilisateur ? { brancheType: brancheUtilisateur } : {}) },
-      select: { id: true, brancheType: true, photo: true, actif: true },
+      where: { id, ...(brancheUtilisateur ? { brancheType: brancheUtilisateur } : {}) },
+      select: { id: true, brancheType: true, photo: true, actif: true, equipeId: true },
     })
     if (!existant) throw new NotFoundException('Scout introuvable')
     const {
@@ -262,6 +339,7 @@ export class ScoutsService {
       traitementsMedicaux,
       consentementImage,
       consentementSante,
+      equipeId,
     } = corps
     // Le changement de branche est réservé au groupe (fonctionnalité dédiée
     // "passage de branche") — un responsable de branche ne peut pas déplacer
@@ -271,6 +349,13 @@ export class ScoutsService {
     }
     if (photo?.trim()) await this.fichiers.verifierRattachable(utilisateur, photo.trim(), id)
 
+    // Équipe : vérifiée contre la branche finale du scout. Un changement de
+    // branche sans nouvelle équipe retire le scout de son ancienne équipe.
+    const brancheFinale = (brancheType ?? existant.brancheType) as BrancheType
+    let equipeFinale: string | null | undefined = equipeId
+    if (equipeId === undefined && brancheFinale !== existant.brancheType && existant.equipeId) equipeFinale = null
+    await this.verifierEquipe(equipeFinale, brancheFinale)
+
     const scout = await this.prisma.scout.update({
       where: { id },
       data: {
@@ -279,6 +364,7 @@ export class ScoutsService {
         ...(dateNaissance ? { dateNaissance } : {}),
         ...(sexe !== undefined ? { sexe: sexe as Sexe } : {}),
         ...(brancheType !== undefined ? { brancheType: brancheType as BrancheType } : {}),
+        ...(equipeFinale !== undefined ? { equipeId: equipeFinale } : {}),
         // desactiveLe : point de départ du délai de conservation (anonymisation).
         ...(actif !== undefined
           ? { actif, ...(actif !== existant.actif ? { desactiveLe: actif ? null : new Date() } : {}) }
@@ -303,7 +389,7 @@ export class ScoutsService {
             }
           : {}),
       },
-      include: { contactsUrgence: true },
+      include: { contactsUrgence: true, equipe: { select: { id: true, nom: true } } },
     })
 
     if (photo !== undefined && existant.photo && existant.photo !== scout.photo) {
@@ -313,7 +399,6 @@ export class ScoutsService {
     if (allergies !== undefined || traitementsMedicaux !== undefined) {
       // Le contenu n'est jamais copié dans le journal : seuls les champs modifiés.
       await this.audit.enregistrer({
-        paroisseId,
         acteurId: utilisateur.id,
         action: 'SCOUT_DONNEES_MEDICALES_MODIFIEES',
         entite: 'Scout',
@@ -329,7 +414,6 @@ export class ScoutsService {
 
     if (consentementImage !== undefined) {
       await this.audit.enregistrer({
-        paroisseId,
         acteurId: utilisateur.id,
         action: 'SCOUT_CONSENTEMENT_IMAGE_MODIFIE',
         entite: 'Scout',
@@ -344,7 +428,6 @@ export class ScoutsService {
 
     if (consentementSante !== undefined) {
       await this.audit.enregistrer({
-        paroisseId,
         acteurId: utilisateur.id,
         action: 'SCOUT_CONSENTEMENT_SANTE_MODIFIE',
         entite: 'Scout',
@@ -362,10 +445,8 @@ export class ScoutsService {
 
   // Création du compte utilisateur (rôle SCOUT) rattaché à un scout.
   async creerCompte(utilisateur: UtilisateurSession, id: string, corps: DonneesCreationCompteScout) {
-    const paroisseId = paroisseIdRequise(utilisateur)
-
     const scout = await this.prisma.scout.findFirst({
-      where: { id, paroisseId },
+      where: { id },
       select: { id: true, nom: true, prenom: true, matricule: true, utilisateurId: true },
     })
     if (!scout) throw new NotFoundException('Scout introuvable')
@@ -396,7 +477,6 @@ export class ScoutsService {
           role: 'SCOUT',
           password: passwordHache,
           doitChangerMotDePasse: true,
-          paroisseId,
         },
         select: { id: true, nom: true, prenom: true, matricule: true, role: true, actif: true },
       })
@@ -408,10 +488,8 @@ export class ScoutsService {
   }
 
   async attribuerMatricule(utilisateur: UtilisateurSession, id: string, corps: DonneesMatriculeScout) {
-    const paroisseId = paroisseIdRequise(utilisateur)
-
     const existant = await this.prisma.scout.findFirst({
-      where: { id, paroisseId },
+      where: { id },
       select: { id: true, matricule: true },
     })
     if (!existant) throw new NotFoundException('Scout introuvable')
@@ -440,7 +518,6 @@ export class ScoutsService {
     }
 
     await this.audit.enregistrer({
-      paroisseId,
       acteurId: utilisateur.id,
       action: 'SCOUT_MATRICULE_ATTRIBUE',
       entite: 'Scout',
@@ -453,8 +530,6 @@ export class ScoutsService {
 
   async importer(utilisateur: UtilisateurSession, corps: DonneesImportScouts) {
     const { scouts } = corps
-
-    const paroisseId = paroisseIdRequise(utilisateur)
 
     // Comme POST /api/scouts : un responsable de branche n'inscrit que dans sa
     // propre branche — la branche du fichier est ignorée et forcée.
@@ -511,7 +586,6 @@ export class ScoutsService {
               sexe: validation.sexe,
               brancheType: brancheForcee ?? validation.brancheType,
               matricule: validation.matricule,
-              paroisseId,
             },
           })
           await tx.contactUrgence.create({
@@ -531,7 +605,6 @@ export class ScoutsService {
 
     if (nbSucces > 0) {
       await this.audit.enregistrer({
-        paroisseId,
         acteurId: utilisateur.id,
         action: 'SCOUTS_IMPORTES',
         entite: 'Scout',

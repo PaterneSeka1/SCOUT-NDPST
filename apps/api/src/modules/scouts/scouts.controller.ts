@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from '@nestjs/common'
 import { ApiTags } from '@nestjs/swagger'
-import { ROLES_GROUPE, ROLES_GROUPE_ETENDU, ROLES_TOUT_STAFF } from '@scout/shared'
+import { ROLES_BRANCHE, ROLES_GROUPE, ROLES_GROUPE_ETENDU, ROLES_TOUT_STAFF } from '@scout/shared'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator'
 import type { UtilisateurSession } from '../../common/types'
@@ -17,6 +17,7 @@ import {
   SchemaAjoutDocument,
   SchemaPassagesBranche,
   SchemaValidationProgression,
+  SchemaRechercheDoublons,
 } from './scouts.schemas'
 import { premiereValeur } from './corps'
 import { FicheScoutService } from './fiche-scout.service'
@@ -24,7 +25,7 @@ import { PassageBrancheService } from './passage-branche.service'
 import { ProgressionsService } from './progressions.service'
 import { ScoutsService } from './scouts.service'
 
-// Ordre de déclaration significatif : les routes statiques (import,
+// Ordre de déclaration significatif : les routes statiques (import, doublons,
 // passage-branche) doivent précéder `:id`, sinon GET /scouts/passage-branche
 // serait capturé par GET /scouts/:id.
 @ApiTags('Scouts')
@@ -78,13 +79,17 @@ export class ScoutsController {
     return this.scouts.importer(utilisateur, corps)
   }
 
+  // Détection de doublons avant inscription (nom, prénom, date de naissance).
+  @Get('doublons')
+  @Roles(...ROLES_TOUT_STAFF)
+  doublons(@Query(new ZodPipe(SchemaRechercheDoublons)) criteres: z.infer<typeof SchemaRechercheDoublons>) {
+    return this.scouts.doublons(criteres)
+  }
+
   @Get('passage-branche')
   @Roles(...ROLES_GROUPE)
-  previsualiserPassages(
-    @UtilisateurCourant() utilisateur: UtilisateurSession,
-    @Query('dateReference') dateReference?: unknown,
-  ) {
-    return this.passages.previsualiser(utilisateur, premiereValeur(dateReference))
+  previsualiserPassages(@Query('dateReference') dateReference?: unknown) {
+    return this.passages.previsualiser(premiereValeur(dateReference))
   }
 
   @Post('passage-branche')
@@ -187,15 +192,17 @@ export class ScoutsController {
     return this.fiche.supprimerDocument(utilisateur, id, documentId)
   }
 
-  // Pas de @Roles : l'accès dépend du rôle de branche OU de l'affectation
-  // district (ASSISTANT_DISTRICT), vérifié scout par scout dans le service.
+  // Réservé à l'encadrement de branche, limité à sa branche (vérifié scout par
+  // scout dans le service).
   @Get(':id/progressions')
+  @Roles(...ROLES_BRANCHE)
   listerProgressions(@UtilisateurCourant() utilisateur: UtilisateurSession, @Param('id') id: string) {
     return this.progressions.lister(utilisateur, id)
   }
 
   @Post(':id/progressions')
   @HttpCode(201)
+  @Roles(...ROLES_BRANCHE)
   validerProgression(
     @UtilisateurCourant() utilisateur: UtilisateurSession,
     @Param('id') id: string,

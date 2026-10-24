@@ -7,7 +7,6 @@ import type { Prisma } from '../generated/prisma/client'
 import { env } from '../config/env'
 import { limiteAtteinte, limiterTaux } from '../common/lib/rateLimit'
 import { logger } from '../common/lib/logger'
-import { ALGORITHME_ADMIN, clesAdmin } from './cles-admin'
 import type { UtilisateurSession } from '../common/types'
 
 const MAX_TENTATIVES_CONNEXION = 5
@@ -24,11 +23,9 @@ const SELECTION_UTILISATEUR = {
   nom: true,
   prenom: true,
   role: true,
-  roleDistrict: true,
-  paroisseId: true,
+  editeurContenu: true,
   actif: true,
   doitChangerMotDePasse: true,
-  paroisse: { select: { actif: true } },
 } as const
 
 export interface JetonsEmis {
@@ -80,14 +77,13 @@ export class AuthService {
     })
 
     // Message identique dans tous les cas d'échec : ne révèle pas si le
-    // compte existe, est désactivé ou si sa paroisse l'est.
+    // compte existe ou est désactivé.
     const echec = async () => {
       await Promise.all(limites.map(([cle, max]) => limiterTaux(cle, max, FENETRE_CONNEXION_MS)))
       logger.warn('auth.connexion_refusee', { ip })
       return new UnauthorizedException('Identifiant ou mot de passe incorrect')
     }
     if (!utilisateur || !utilisateur.actif) throw await echec()
-    if (utilisateur.paroisse && !utilisateur.paroisse.actif) throw await echec()
     if (!(await compare(motDePasse, utilisateur.password))) throw await echec()
 
     const jetonSession = genererJeton()
@@ -101,11 +97,7 @@ export class AuthService {
         where: { id: utilisateur.id },
         select: { ...SELECTION_UTILISATEUR, password: true },
       })
-      if (
-        !courant?.actif ||
-        courant.password !== utilisateur.password ||
-        (courant.paroisse && !courant.paroisse.actif)
-      ) {
+      if (!courant?.actif || courant.password !== utilisateur.password) {
         throw new UnauthorizedException('Identifiant ou mot de passe incorrect')
       }
       const sessionCreee = await tx.sessionUtilisateur.create({
@@ -130,7 +122,7 @@ export class AuthService {
   }
 
   // Émet un nouveau jeton d'accès à partir du jeton de session, après avoir
-  // relu en base le rôle et le statut actif du compte et de sa paroisse.
+  // relu en base le rôle et le statut actif du compte.
   async rafraichir(jetonSession: string): Promise<JetonsEmis> {
     const hash = empreinte(jetonSession)
     const maintenant = new Date()
@@ -143,7 +135,7 @@ export class AuthService {
     if (!session || session.revoqueeLe || session.expireLe <= maintenant) throw expiree
 
     const { utilisateur } = session
-    if (!utilisateur.actif || (utilisateur.paroisse && !utilisateur.paroisse.actif)) {
+    if (!utilisateur.actif) {
       await this.revoquer(session.id)
       throw expiree
     }
@@ -216,18 +208,13 @@ export class AuthService {
   private signerAcces(session: UtilisateurSession, sessionId: string): Promise<string> {
     const { id, ...identite } = session
     const charge = { ...identite, sid: sessionId }
-    const communes = { subject: id, issuer: env().INSTALLATION_ID, expiresIn: env().JWT_ACCESS_TTL_SECONDES }
-    // Administrateur plateforme hébergé ici : jeton à clé privée, vérifiable
-    // par les autres installations qu'il administre (clé publique seule).
-    const { clePrivee } = clesAdmin()
-    if (session.role === 'ADMIN_PLATEFORME' && clePrivee) {
-      return this.jwt.signAsync(charge, {
-        ...communes,
-        privateKey: clePrivee.export({ type: 'pkcs8', format: 'pem' }).toString(),
-        algorithm: ALGORITHME_ADMIN,
-      })
-    }
-    return this.jwt.signAsync(charge, { ...communes, secret: env().JWT_ACCESS_SECRET, algorithm: 'HS256' })
+    return this.jwt.signAsync(charge, {
+      subject: id,
+      issuer: env().INSTALLATION_ID,
+      expiresIn: env().JWT_ACCESS_TTL_SECONDES,
+      secret: env().JWT_ACCESS_SECRET,
+      algorithm: 'HS256',
+    })
   }
 }
 
@@ -246,8 +233,7 @@ function versSession(u: {
   nom: string
   prenom: string
   role: string
-  roleDistrict: string | null
-  paroisseId: string | null
+  editeurContenu: boolean
   doitChangerMotDePasse?: boolean
 }): UtilisateurSession {
   return {
@@ -257,8 +243,7 @@ function versSession(u: {
     nom: u.nom,
     prenom: u.prenom,
     role: u.role,
-    roleDistrict: u.roleDistrict,
-    paroisseId: u.paroisseId,
+    editeurContenu: u.editeurContenu,
     doitChangerMotDePasse: u.doitChangerMotDePasse ?? false,
   }
 }

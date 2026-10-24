@@ -8,12 +8,12 @@ import { ReunionsService } from './reunions.service'
 import type { UtilisateurSession } from '../../common/types'
 
 function utilisateur(role: string): UtilisateurSession {
-  return { id: 'u1', matricule: null, email: '', nom: 'Yao', prenom: 'Koffi', role, roleDistrict: null, paroisseId: 'p1' }
+  return { id: 'u1', matricule: null, email: '', nom: 'Yao', prenom: 'Koffi', role, editeurContenu: false }
 }
 
 function construire() {
   const prisma = {
-    jourReunion: { findFirst: vi.fn(), update: vi.fn(), delete: vi.fn() },
+    jourReunion: { findFirst: vi.fn(), findMany: vi.fn().mockResolvedValue([]), count: vi.fn().mockResolvedValue(0), update: vi.fn(), delete: vi.fn() },
     scout: { findMany: vi.fn().mockResolvedValue([]) },
     presenceReunion: { findMany: vi.fn().mockResolvedValue([]), upsert: vi.fn() },
     $transaction: vi.fn(),
@@ -66,7 +66,7 @@ describe('ReunionsService — accès par branche', () => {
     expect(ctx.prisma.jourReunion.update).not.toHaveBeenCalled()
   })
 
-  it('le chef de groupe supprime toute réunion de sa paroisse et la suppression est journalisée', async () => {
+  it('le chef de groupe supprime toute réunion et la suppression est journalisée', async () => {
     ctx.prisma.jourReunion.findFirst.mockResolvedValue({
       id: 'r5',
       brancheType: null,
@@ -76,8 +76,32 @@ describe('ReunionsService — accès par branche', () => {
     })
     await expect(ctx.service.supprimer(utilisateur('CHEF_GROUPE'), 'r5')).resolves.toEqual({ ok: true })
     expect(ctx.prisma.jourReunion.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 'r5', paroisseId: 'p1' } }),
+      expect.objectContaining({ where: { id: 'r5' } }),
     )
     expect(ctx.audit.enregistrer).toHaveBeenCalledWith(expect.objectContaining({ action: 'REUNION_SUPPRIMEE' }))
+  })
+
+  it('liste : tableau historique sans pagination, objet paginé borné sinon', async () => {
+    ctx.prisma.jourReunion.findMany.mockResolvedValue([{ id: 'r1' }])
+    ctx.prisma.jourReunion.count.mockResolvedValue(1)
+    await expect(ctx.service.lister(utilisateur('CHEF_GROUPE'), { branche: null, statut: null })).resolves.toEqual([
+      { id: 'r1' },
+    ])
+    const pagine = await ctx.service.lister(utilisateur('CHEF_GROUPE'), {
+      branche: null,
+      statut: null,
+      recherche: 'camp',
+      page: '2',
+      limite: '1000',
+    })
+    expect(pagine).toEqual({ reunions: [{ id: 'r1' }], pagination: { page: 2, limite: 100, total: 1, totalPages: 1 } })
+    const appel = ctx.prisma.jourReunion.findMany.mock.calls[1][0]
+    expect(appel).toMatchObject({ skip: 100, take: 100 })
+    expect(appel.where.OR).toHaveLength(3)
+  })
+
+  it('liste : un rôle de branche reste limité à sa branche malgré ?branche=', async () => {
+    await ctx.service.lister(utilisateur('RESPONSABLE_BRANCHE'), { branche: 'ECLAIREURS', statut: null })
+    expect(ctx.prisma.jourReunion.findMany.mock.calls[0][0].where).toEqual({ brancheType: 'LOUVETEAUX' })
   })
 })

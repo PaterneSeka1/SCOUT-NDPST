@@ -71,14 +71,13 @@ export class MaintenanceService {
   // Anonymisation d'un scout inactif : tout ce qui identifie l'enfant ou
   // concerne sa santé disparaît (identité, matricule, photo, données
   // médicales, contacts, liens parents, documents et leurs fichiers). Restent
-  // les données nécessaires aux statistiques de la paroisse : branche, sexe,
+  // les données nécessaires aux statistiques du groupe : branche, sexe,
   // année de naissance, présences, progressions et cotisations, sans
   // commentaire libre.
   private async anonymiserScout(scoutId: string, maintenant: Date): Promise<void> {
     const scout = await this.prisma.scout.findUnique({
       where: { id: scoutId },
       select: {
-        paroisseId: true,
         dateNaissance: true,
         photo: true,
         documents: { select: { url: true } },
@@ -130,7 +129,6 @@ export class MaintenanceService {
     for (const url of urls) await this.fichiers.supprimerSiOrphelin(url)
 
     await this.audit.enregistrer({
-      paroisseId: scout.paroisseId,
       acteurId: null,
       action: 'SCOUT_ANONYMISE',
       entite: 'Scout',

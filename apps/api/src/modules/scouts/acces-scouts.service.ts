@@ -2,7 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common'
 import { ROLES_BRANCHE } from '@scout/shared'
 import type { BrancheType } from '../../generated/prisma/client'
 import { PerimetreService } from '../../common/perimetre.service'
-import { paroisseIdRequise } from '../../common/paroisse'
 import type { UtilisateurSession } from '../../common/types'
 import { PrismaService } from '../../prisma/prisma.service'
 
@@ -23,7 +22,7 @@ export class AccesScoutsService {
   }
 
   // Branche imposée à l'utilisateur :
-  // - undefined : rôle de groupe, toute la paroisse ;
+  // - undefined : rôle de groupe, toutes les branches ;
   // - null : rôle de branche sans brancheType assigné (compte mal configuré) ;
   // - sinon la branche gérée.
   async brancheImposee(utilisateur: UtilisateurSession): Promise<BrancheType | null | undefined> {
@@ -31,19 +30,17 @@ export class AccesScoutsService {
     return (await this.perimetre.brancheUtilisateur(utilisateur.id)) as BrancheType | null
   }
 
-  // Vérifie que le scout appartient à la paroisse de l'utilisateur (et à sa
-  // branche pour un rôle de branche). Répond 404 "Scout introuvable" dans tous
-  // les cas de refus, pour ne pas révéler l'existence d'un scout hors périmètre.
-  async verifierScoutGere(utilisateur: UtilisateurSession, scoutId: string): Promise<string> {
-    const paroisseId = paroisseIdRequise(utilisateur)
+  // Vérifie que le scout existe (et appartient à la branche de l'utilisateur
+  // pour un rôle de branche). Répond 404 "Scout introuvable" dans tous les cas
+  // de refus, pour ne pas révéler l'existence d'un scout hors périmètre.
+  async verifierScoutGere(utilisateur: UtilisateurSession, scoutId: string): Promise<void> {
     const branche = await this.brancheImposee(utilisateur)
     if (branche === null) throw new NotFoundException('Scout introuvable')
 
     const scout = await this.prisma.scout.findFirst({
-      where: { id: scoutId, paroisseId, ...(branche ? { brancheType: branche } : {}) },
+      where: { id: scoutId, ...(branche ? { brancheType: branche } : {}) },
       select: { id: true },
     })
     if (!scout) throw new NotFoundException('Scout introuvable')
-    return paroisseId
   }
 }

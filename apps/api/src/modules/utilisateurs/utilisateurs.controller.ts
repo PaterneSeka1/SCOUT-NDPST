@@ -1,6 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common'
 import { ApiTags } from '@nestjs/swagger'
-import { ROLES_GROUPE } from '@scout/shared'
+import { ROLES_ADMIN, ROLES_GROUPE, ROLES_TOUT_STAFF } from '@scout/shared'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { UtilisateurCourant } from '../../common/decorators/utilisateur-courant.decorator'
 import { ZodPipe } from '../../common/pipes/zod.pipe'
@@ -8,9 +8,11 @@ import type { UtilisateurSession } from '../../common/types'
 import {
   SchemaCreationUtilisateur,
   SchemaModificationUtilisateur,
+  SchemaProfilPublic,
   SchemaReinitialisationMotDePasse,
   type CorpsCreationUtilisateur,
   type CorpsModificationUtilisateur,
+  type CorpsProfilPublic,
   type CorpsReinitialisationMotDePasse,
 } from './utilisateurs.schemas'
 import { UtilisateursService } from './utilisateurs.service'
@@ -21,9 +23,10 @@ function texte(valeur: unknown): string | undefined {
   return typeof valeur === 'string' ? valeur : undefined
 }
 
-// Gestion des comptes de la paroisse : réservée au Chef de Groupe
-// (ROLES_GROUPE). Le périmètre paroisse et la hiérarchie (pas d'auto-promotion,
-// comptes district protégés) sont contrôlés dans le service.
+// Gestion de la maîtrise : réservée au Chef de Groupe (ROLES_GROUPE), sauf
+// l'organigramme (toute la maîtrise) et le profil public (Chef de Groupe ou
+// administrateur). La hiérarchie (pas d'auto-promotion, comptes
+// administrateurs hors d'atteinte) est contrôlée dans le service.
 @ApiTags('Utilisateurs')
 @Roles(...ROLES_GROUPE)
 @Controller('utilisateurs')
@@ -40,6 +43,13 @@ export class UtilisateursController {
     })
   }
 
+  // Déclarée avant `:id` pour ne pas être capturée par la route paramétrée.
+  @Get('maitrise')
+  @Roles(...ROLES_TOUT_STAFF)
+  maitrise() {
+    return this.utilisateurs.maitrise()
+  }
+
   // 201 par défaut sur un POST, comme la route Next.
   @Post()
   creer(
@@ -50,8 +60,13 @@ export class UtilisateursController {
   }
 
   @Get(':id')
-  detail(@UtilisateurCourant() utilisateur: UtilisateurSession, @Param('id') id: string) {
-    return this.utilisateurs.detail(utilisateur, id)
+  detail(@Param('id') id: string) {
+    return this.utilisateurs.detail(id)
+  }
+
+  @Get(':id/mandats')
+  mandats(@Param('id') id: string) {
+    return this.utilisateurs.mandats(id)
   }
 
   @Put(':id')
@@ -61,6 +76,16 @@ export class UtilisateursController {
     @Body(new ZodPipe(SchemaModificationUtilisateur)) corps: CorpsModificationUtilisateur,
   ) {
     return this.utilisateurs.modifier(utilisateur, id, corps)
+  }
+
+  @Patch(':id/profil-public')
+  @Roles(...ROLES_GROUPE, ...ROLES_ADMIN)
+  modifierProfilPublic(
+    @UtilisateurCourant() utilisateur: UtilisateurSession,
+    @Param('id') id: string,
+    @Body(new ZodPipe(SchemaProfilPublic)) corps: CorpsProfilPublic,
+  ) {
+    return this.utilisateurs.modifierProfilPublic(utilisateur, id, corps)
   }
 
   // Désactivation (jamais de suppression physique).

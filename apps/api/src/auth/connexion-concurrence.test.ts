@@ -22,11 +22,9 @@ const compte = {
   nom: 'Test',
   prenom: 'Compte',
   role: 'ASSISTANT_GROUPE',
-  roleDistrict: null,
-  paroisseId: 'paroisse-test',
+  editeurContenu: false,
   actif: true,
   doitChangerMotDePasse: true,
-  paroisse: { actif: true },
 }
 
 async function contexte(changement: Record<string, unknown> = {}) {
@@ -69,7 +67,6 @@ describe('connexion concurrente avec changement de mot de passe ou désactivatio
 
   it.each([
     ['compte désactivé', { actif: false }],
-    ['paroisse désactivée', { paroisse: { actif: false } }],
   ])('refuse une %s pendant bcrypt sans créer de session', async (_cas, changement) => {
     const ctx = await contexte(changement)
     await expect(ctx.service.connecter('M-TEST', SECRET, '127.0.0.1')).rejects.toBeInstanceOf(UnauthorizedException)

@@ -28,11 +28,10 @@ export class ProgrammesController {
     return this.programmes.lister(utilisateur, typeof branche === 'string' ? branche : undefined)
   }
 
-  // Pas de @Roles : la création est ouverte à la direction (groupe, branches)
-  // ET à un ASSISTANT_DISTRICT qui cible une paroisse de son district — règle
-  // combinée rôle paroissial / affectation district, vérifiée par le service.
+  // Groupe ou encadrement de branche (branche forcée par le service).
   @Post()
   @HttpCode(201)
+  @Roles(...ROLES_GESTION)
   creer(
     @UtilisateurCourant() utilisateur: UtilisateurSession,
     @Body(new ZodPipe(SchemaCreationProgramme)) corps: CorpsCreationProgramme,

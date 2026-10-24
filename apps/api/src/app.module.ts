@@ -7,19 +7,23 @@ import { FiltreErreurs } from './common/filters/erreurs.filter'
 import { AuthGuard } from './common/guards/auth.guard'
 import { RolesGuard } from './common/guards/roles.guard'
 import { ActivitesModule } from './modules/activites/activites.module'
+import { AdhesionsModule } from './modules/adhesions/adhesions.module'
 import { AdminModule } from './modules/admin/admin.module'
 import { CalendrierModule } from './modules/calendrier/calendrier.module'
+import { ConfigurationModule } from './modules/configuration/configuration.module'
 import { CotisationsModule } from './modules/cotisations/cotisations.module'
-import { DistrictModule } from './modules/district/district.module'
 import { DocumentsModule } from './modules/documents/documents.module'
 import { FichiersModule } from './modules/fichiers/fichiers.module'
+import { GalerieModule } from './modules/galerie/galerie.module'
+import { HistoireModule } from './modules/histoire/histoire.module'
 import { MaintenanceModule } from './modules/maintenance/maintenance.module'
-import { ParoisseModule } from './modules/paroisse/paroisse.module'
-import { PlateformePubliqueModule } from './modules/plateforme-publique/plateforme-publique.module'
 import { ProfilModule } from './modules/profil/profil.module'
 import { ProgrammesModule } from './modules/programmes/programmes.module'
+import { PublicationsModule } from './modules/publications/publications.module'
 import { ReunionsModule } from './modules/reunions/reunions.module'
 import { ScoutsModule } from './modules/scouts/scouts.module'
+import { SitePublicModule } from './modules/site-public/site-public.module'
+import { TableauDeBordModule } from './modules/tableau-de-bord/tableau-de-bord.module'
 import { UtilisateursModule } from './modules/utilisateurs/utilisateurs.module'
 import { PrismaModule } from './prisma/prisma.module'
 import { SanteController } from './sante/sante.controller'
@@ -33,20 +37,24 @@ import { SanteController } from './sante/sante.controller'
     CommunModule,
     AuthModule,
     // Modules métier.
+    ConfigurationModule,
     ActivitesModule,
+    AdhesionsModule,
     AdminModule,
     CalendrierModule,
     CotisationsModule,
-    DistrictModule,
     DocumentsModule,
     FichiersModule,
+    GalerieModule,
+    HistoireModule,
     MaintenanceModule,
-    ParoisseModule,
-    PlateformePubliqueModule,
     ProfilModule,
     ProgrammesModule,
+    PublicationsModule,
     ReunionsModule,
     ScoutsModule,
+    SitePublicModule,
+    TableauDeBordModule,
     UtilisateursModule,
   ],
   controllers: [SanteController],

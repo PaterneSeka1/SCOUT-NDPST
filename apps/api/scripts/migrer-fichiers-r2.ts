@@ -1,9 +1,9 @@
 // Reprise PONCTUELLE des fichiers téléversés sur le disque du VPS vers le
 // stockage externe (Cloudflare R2), avant la mise en service de l'API séparée.
 //
-// - Fichiers privés : <source>/uploads-prives/<paroisseId>/<nom> → clé
-//   prive/<paroisseId>/<nom> du bucket privé. Leur URL en base
-//   (/api/fichiers/<paroisseId>/<nom>) ne change pas : l'API les relit dans R2.
+// - Fichiers privés : <source>/uploads-prives/<dossier>/<nom> → clé
+//   prive/<dossier>/<nom> du bucket privé. Leur URL en base
+//   (/api/fichiers/<dossier>/<nom>) ne change pas : l'API les relit dans R2.
 // - Fichiers publics : <source>/uploads-publiques/<nom> (et, avec
 //   --public-ancien, les anciennes images de public/uploads/) → clé
 //   public/<nom> du bucket public. Leurs URL en base (/api/fichiers-publics/<nom>,
@@ -83,15 +83,15 @@ async function main() {
   // 1. Inventaire des fichiers locaux.
   const aEnvoyer: { local: string; bucket: string; cle: string }[] = []
   const dossierPrive = path.join(SOURCE, 'uploads-prives')
-  const paroisses = await readdir(dossierPrive, { withFileTypes: true }).catch(() => [])
-  for (const paroisse of paroisses.filter((e) => e.isDirectory())) {
-    const paroisseId = paroisse.name
-    const dossierParoisse = path.join(dossierPrive, paroisseId)
-    for (const nom of await lister(dossierParoisse)) {
+  const dossiers = await readdir(dossierPrive, { withFileTypes: true }).catch(() => [])
+  for (const entree of dossiers.filter((e) => e.isDirectory())) {
+    const dossier = entree.name
+    const repertoire = path.join(dossierPrive, dossier)
+    for (const nom of await lister(repertoire)) {
       aEnvoyer.push({
-        local: path.join(dossierParoisse, nom),
+        local: path.join(repertoire, nom),
         bucket: bucketPrive,
-        cle: cleFichierPrive(paroisseId, nom),
+        cle: cleFichierPrive(dossier, nom),
       })
     }
   }
@@ -140,24 +140,17 @@ async function main() {
     }
 
     let reecritures = 0
-    for (const paroisse of await prisma.paroisse.findMany({ select: { id: true, logo: true } })) {
-      const url = nouvelleUrl(paroisse.logo)
-      if (!url) continue
-      console.log(`  Paroisse ${paroisse.id} : logo → ${url}`)
-      if (APPLIQUER) await prisma.paroisse.update({ where: { id: paroisse.id }, data: { logo: url } })
-      reecritures++
-    }
-    const config = await prisma.configurationPlateforme.findUnique({ where: { id: 'platform' } })
+    const config = await prisma.configurationInstallation.findUnique({ where: { id: 'installation' } })
     if (config) {
       const logoUrl = nouvelleUrl(config.logoUrl)
       const heroImageUrl = nouvelleUrl(config.heroImageUrl)
       if (logoUrl || heroImageUrl) {
         console.log(
-          `  Plateforme : ${[logoUrl && 'logo', heroImageUrl && 'image d’accueil'].filter(Boolean).join(', ')}`,
+          `  Configuration : ${[logoUrl && 'logo', heroImageUrl && 'image d’accueil'].filter(Boolean).join(', ')}`,
         )
         if (APPLIQUER) {
-          await prisma.configurationPlateforme.update({
-            where: { id: 'platform' },
+          await prisma.configurationInstallation.update({
+            where: { id: 'installation' },
             data: { ...(logoUrl ? { logoUrl } : {}), ...(heroImageUrl ? { heroImageUrl } : {}) },
           })
         }

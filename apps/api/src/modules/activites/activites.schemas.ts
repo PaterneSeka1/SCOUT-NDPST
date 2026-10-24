@@ -1,9 +1,15 @@
 import { z } from 'zod'
-import { BrancheTypeSchema, TypeActiviteSchema, TypeAutorisationCampSchema, estCheminLocalValide } from '@scout/shared'
+import {
+  BrancheTypeSchema,
+  StatutActiviteSchema,
+  TypeActiviteSchema,
+  TypeAutorisationCampSchema,
+  estCheminLocalValide,
+} from '@scout/shared'
 
 // Schémas des corps de requête du module Activités. Seule la forme des données
 // est contrôlée ici (types, formats, dates) ; les règles d'autorisation et de
-// périmètre (rôle, branche, paroisse, existence en base) restent dans
+// périmètre (rôle, branche, responsable actif, existence en base) restent dans
 // ActivitesService.
 
 const MESSAGE_CORPS_INVALIDE = 'Données invalides'
@@ -27,6 +33,29 @@ const texteLibre = z
   .optional()
 
 const typeActivite = z.enum(TypeActiviteSchema.options, { error: MESSAGE_TYPE_INVALIDE })
+const statutActivite = z.enum(StatutActiviteSchema.options, { error: "Statut d'activité invalide" })
+
+// Publication sur le site public : uniquement sur demande explicite (booléen).
+const publique = z.boolean({ error: 'Le champ « publique » doit être un booléen' }).optional()
+
+// Responsable désigné : identifiant d'un compte de la maîtrise (vérifié en
+// base par le service). null ou '' = aucun responsable.
+const responsableId = z
+  .string({ error: 'Responsable invalide' })
+  .trim()
+  .max(64, 'Responsable invalide')
+  .nullable()
+  .transform((valeur) => valeur || null)
+  .optional()
+
+// Champs de suivi communs à la création et à la modification.
+const champsSuivi = {
+  statut: statutActivite.optional(),
+  bilan: texteLibre,
+  publique,
+  descriptionPublique: texteLibre,
+  responsableId,
+}
 
 // ---------------------------------------------------------------------------
 // Création et modification
@@ -53,15 +82,17 @@ export const SchemaCreationActivite = z
       brancheType: z.enum(BrancheTypeSchema.options, { error: MESSAGE_BRANCHE_INVALIDE }).nullish(),
       description: texteLibre,
       lieu: texteLibre,
-      // Lu uniquement pour la création via le district : son contrôle dépend
-      // du rôle de l'appelant et reste donc dans le service.
-      paroisseId: z.unknown().optional(),
+      ...champsSuivi,
     },
     { error: MESSAGE_CORPS_INVALIDE },
   )
   .refine(
     (corps) => !corps.dateFin || corps.dateFin > corps.dateDebut,
     'La date de fin doit être après la date de début',
+  )
+  .refine(
+    (corps) => corps.publique !== true || !!corps.descriptionPublique,
+    'Une description publique est requise pour publier une activité',
   )
 
 export type CorpsCreationActivite = z.infer<typeof SchemaCreationActivite>
@@ -92,6 +123,7 @@ export const SchemaModificationActivite = z.object(
       .optional(),
     description: texteLibre,
     lieu: texteLibre,
+    ...champsSuivi,
   },
   { error: MESSAGE_CORPS_INVALIDE },
 )

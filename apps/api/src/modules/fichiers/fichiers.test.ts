@@ -26,15 +26,14 @@ const utilisateur: UtilisateurSession = {
   nom: 'Kouassi',
   prenom: 'Awa',
   role: 'CHEF_GROUPE',
-  roleDistrict: null,
-  paroisseId: 'paroisse-a',
+  editeurContenu: false,
 }
 
 // Règles fines d'accès (scout, branche, parent) : voir acces-fichiers.service.test.ts.
-// Ici, seul le cloisonnement par paroisse est simulé.
+// Ici, un refus d'accès est simulé pour le dossier « interdit ».
 const accesSimule = {
-  autorisationLecture: vi.fn(async (u: UtilisateurSession, paroisseId: string) =>
-    u.paroisseId === paroisseId ? { scoutId: null as string | null, sensible: false } : null,
+  autorisationLecture: vi.fn(async (_u: UtilisateurSession, dossier: string) =>
+    dossier !== 'interdit' ? { scoutId: null as string | null, sensible: false } : null,
   ),
 }
 const auditSimule = { enregistrer: vi.fn() }
@@ -44,26 +43,43 @@ describe('FichiersService', () => {
 
   it("journalise la consultation d'un document sensible", async () => {
     accesSimule.autorisationLecture.mockResolvedValueOnce({ scoutId: 's1', sensible: true })
-    await service.lirePrive(utilisateur, 'paroisse-a', 'fiche.pdf')
+    await service.lirePrive(utilisateur, 'groupe', 'fiche.pdf')
     expect(auditSimule.enregistrer).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'DOCUMENT_CONSULTE', entiteId: 's1', acteurId: 'u1' }),
     )
   })
 
-  it("refuse un fichier privé d'une autre paroisse", async () => {
-    await expect(service.lirePrive(utilisateur, 'paroisse-b', 'photo.png')).rejects.toBeInstanceOf(ForbiddenException)
+  it("refuse un fichier privé non autorisé", async () => {
+    await expect(service.lirePrive(utilisateur, 'interdit', 'photo.png')).rejects.toBeInstanceOf(ForbiddenException)
   })
 
   it('refuse un nom de fichier avec traversée de chemin', async () => {
-    await expect(service.lirePrive(utilisateur, 'paroisse-a', '../../.env')).rejects.toBeInstanceOf(BadRequestException)
+    await expect(service.lirePrive(utilisateur, 'groupe', '../../.env')).rejects.toBeInstanceOf(BadRequestException)
     await expect(service.lirePublic('../.env')).rejects.toBeInstanceOf(BadRequestException)
     expect(() => nomFichierSur('sous/dossier.png')).toThrow(BadRequestException)
     expect(nomFichierSur('123-abc.png')).toBe('123-abc.png')
   })
 
-  it('sert un fichier privé de sa propre paroisse avec le type fixé par la liste blanche', async () => {
-    const lu = await service.lirePrive(utilisateur, 'paroisse-a', '123-abc.png')
+  it('sert un fichier privé autorisé avec le type fixé par la liste blanche', async () => {
+    const lu = await service.lirePrive(utilisateur, 'groupe', '123-abc.png')
     expect(lu.typeMime).toBe('image/png')
+  })
+
+  it('refuse un dossier invalide', async () => {
+    await expect(service.lirePrive(utilisateur, 'a.b', 'photo.png')).rejects.toBeInstanceOf(BadRequestException)
+  })
+
+  it('réserve le téléversement de photos de galerie aux gestionnaires de contenus', async () => {
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+    await expect(service.televerser(utilisateur, { buffer: png, size: png.length }, 'galerie')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    )
+    const resultat = await service.televerser(
+      { ...utilisateur, editeurContenu: true },
+      { buffer: png, size: png.length },
+      'galerie',
+    )
+    expect(resultat.url).toMatch(/^\/api\/fichiers\/galerie\//)
   })
 
   it('refuse un fichier dont la signature ne correspond à aucun type autorisé', async () => {
@@ -97,7 +113,7 @@ describe('FichiersController (HTTP)', () => {
         { provide: AuditService, useValue: auditSimule },
         { provide: APP_FILTER, useClass: FiltreErreurs },
         {
-          // Remplace AuthGuard : session simulée de paroisse-a.
+          // Remplace AuthGuard : session simulée.
           provide: APP_GUARD,
           useValue: {
             canActivate: (ctx: { switchToHttp: () => { getRequest: () => RequeteAuthentifiee } }) => {
@@ -117,14 +133,14 @@ describe('FichiersController (HTTP)', () => {
     await app.close()
   })
 
-  it("renvoie 403 { erreur } pour un fichier privé d'une autre paroisse", async () => {
-    const res = await request(app.getHttpServer()).get('/api/fichiers/paroisse-b/photo.png')
+  it("renvoie 403 { erreur } pour un fichier privé non autorisé", async () => {
+    const res = await request(app.getHttpServer()).get('/api/fichiers/interdit/photo.png')
     expect(res.status).toBe(403)
     expect(res.body).toEqual({ erreur: 'Accès refusé' })
   })
 
   it('renvoie 400 { erreur } pour une traversée de chemin encodée', async () => {
-    const res = await request(app.getHttpServer()).get('/api/fichiers/paroisse-a/..%2F..%2F.env')
+    const res = await request(app.getHttpServer()).get('/api/fichiers/groupe/..%2F..%2F.env')
     expect(res.status).toBe(400)
     expect(res.body).toEqual({ erreur: 'Fichier invalide' })
 
@@ -134,7 +150,7 @@ describe('FichiersController (HTTP)', () => {
   })
 
   it('sert un fichier privé autorisé avec les en-têtes attendus', async () => {
-    const res = await request(app.getHttpServer()).get('/api/fichiers/paroisse-a/123-abc.png')
+    const res = await request(app.getHttpServer()).get('/api/fichiers/groupe/123-abc.png')
     expect(res.status).toBe(200)
     expect(res.headers['content-type']).toBe('image/png')
     expect(res.headers['cache-control']).toBe('private, max-age=3600')
@@ -159,6 +175,6 @@ describe('FichiersController (HTTP)', () => {
     const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0])
     const res = await request(app.getHttpServer()).post('/api/upload').attach('fichier', png, 'photo.png')
     expect(res.status).toBe(200)
-    expect(res.body.url).toMatch(/^\/api\/fichiers\/paroisse-a\/[0-9a-f]{16}-[0-9a-f]{32}\.png$/)
+    expect(res.body.url).toMatch(/^\/api\/fichiers\/groupe\/[0-9a-f]{16}-[0-9a-f]{32}\.png$/)
   })
 })

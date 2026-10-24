@@ -4,17 +4,15 @@ import { JwtService } from '@nestjs/jwt'
 import { CLE_PUBLIC } from '../decorators/public.decorator'
 import type { RequeteAuthentifiee, UtilisateurSession } from '../types'
 import { COOKIE_ACCES } from '../../auth/cookies'
-import { ALGORITHME_ADMIN, clesAdmin } from '../../auth/cles-admin'
 import { env } from '../../config/env'
 import { PrismaService } from '../../prisma/prisma.service'
 import { CLE_MOT_DE_PASSE_TEMPORAIRE } from '../decorators/mot-de-passe-temporaire.decorator'
 
-type ChargeJeton = Omit<UtilisateurSession, 'id' | 'externe'> & { sub: string; iss?: string; sid?: string }
+type ChargeJeton = Omit<UtilisateurSession, 'id'> & { sub: string; sid?: string }
 
 // Garde globale : refuse par défaut toute route non marquée @Public().
 // Le jeton d'accès est lu dans le cookie httpOnly (navigateur) ou dans
-// l'en-tête Authorization: Bearer (autres clients : futures plateformes,
-// scripts). Sur une route publique, un jeton valide est tout de même décodé
+// l'en-tête Authorization: Bearer (scripts, clients autorisés). Sur une route publique, un jeton valide est tout de même décodé
 // (identité optionnelle), un jeton invalide est ignoré.
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -57,69 +55,15 @@ export class AuthGuard implements CanActivate {
     return true
   }
 
-  // Deux familles de jetons, jamais interchangeables :
-  // - HS256 : comptes de CETTE installation, signés avec son secret ;
-  // - ES256 : administrateur plateforme partagé, signé par l'installation qui
-  //   héberge le compte et vérifié avec sa clé publique. L'algorithme et la
-  //   clé sont imposés par la famille, jamais choisis d'après le jeton seul.
+  // Jetons HS256 signés par cette installation uniquement : l'algorithme et
+  // l'émetteur sont imposés, jamais déduits du jeton.
   private async verifier(jeton: string): Promise<UtilisateurSession> {
-    const entete = this.jwt.decode<{ header?: { alg?: string }; payload?: { iss?: string } } | null>(jeton, {
-      complete: true,
+    const charge = await this.jwt.verifyAsync<ChargeJeton>(jeton, {
+      secret: env().JWT_ACCESS_SECRET,
+      algorithms: ['HS256'],
+      issuer: env().INSTALLATION_ID,
     })
-    const algorithme = entete?.header?.alg
-
-    if (algorithme === 'HS256') {
-      const charge = await this.jwt.verifyAsync<ChargeJeton>(jeton, {
-        secret: env().JWT_ACCESS_SECRET,
-        algorithms: ['HS256'],
-        issuer: env().INSTALLATION_ID,
-      })
-      return this.verifierSessionLocale(charge)
-    }
-
-    if (algorithme === ALGORITHME_ADMIN) {
-      const emetteur = entete?.payload?.iss
-      const clePublique = emetteur ? clesAdmin().clesPubliques.get(emetteur) : undefined
-      if (!emetteur || !clePublique) throw new UnauthorizedException('Émetteur non reconnu')
-      const charge = await this.jwt.verifyAsync<ChargeJeton>(jeton, {
-        publicKey: clePublique.export({ type: 'spki', format: 'pem' }).toString(),
-        algorithms: [ALGORITHME_ADMIN],
-        issuer: emetteur,
-      })
-      // Seul l'administrateur plateforme circule entre installations.
-      if (charge.role !== 'ADMIN_PLATEFORME') throw new UnauthorizedException('Jeton non autorisé')
-      if (emetteur === env().INSTALLATION_ID) return this.verifierSessionLocale(charge)
-      // Vérification en ligne auprès de l'émetteur : aucune fenêtre de droits
-      // résiduels ni cache positif. Une installation indisponible ferme l'accès.
-      const url = env().ADMIN_URL_VERIFICATION_SESSION
-      if (!url) throw new UnauthorizedException('Vérification de session externe non configurée')
-      const reponse = await fetch(url, {
-        headers: { Authorization: `Bearer ${jeton}` },
-        signal: AbortSignal.timeout(3000),
-        redirect: 'error',
-      })
-      if (!reponse.ok) throw new UnauthorizedException('Session externe expirée')
-      const resultat = (await reponse.json()) as { utilisateur?: UtilisateurSession }
-      const courant = resultat.utilisateur
-      if (
-        !courant ||
-        courant.id !== charge.sub ||
-        courant.role !== 'ADMIN_PLATEFORME' ||
-        courant.externe ||
-        courant.doitChangerMotDePasse
-      ) {
-        throw new UnauthorizedException('Session externe refusée')
-      }
-      return {
-        ...versUtilisateur(charge),
-        doitChangerMotDePasse: false,
-        paroisseId: null,
-        roleDistrict: null,
-        externe: emetteur,
-      }
-    }
-
-    throw new UnauthorizedException('Algorithme de jeton refusé')
+    return this.verifierSessionLocale(charge)
   }
 
   private async verifierSessionLocale(charge: ChargeJeton): Promise<UtilisateurSession> {
@@ -138,11 +82,9 @@ export class AuthGuard implements CanActivate {
             nom: true,
             prenom: true,
             role: true,
-            roleDistrict: true,
-            paroisseId: true,
+            editeurContenu: true,
             actif: true,
             doitChangerMotDePasse: true,
-            paroisse: { select: { actif: true } },
           },
         },
       },
@@ -154,10 +96,7 @@ export class AuthGuard implements CanActivate {
       session.revoqueeLe ||
       session.expireLe <= new Date() ||
       !u?.actif ||
-      (u.paroisse && !u.paroisse.actif) ||
-      u.role !== charge.role ||
-      u.roleDistrict !== charge.roleDistrict ||
-      u.paroisseId !== charge.paroisseId
+      u.role !== charge.role
     ) {
       throw new UnauthorizedException('Session expirée')
     }
@@ -168,26 +107,12 @@ export class AuthGuard implements CanActivate {
       nom: u.nom,
       prenom: u.prenom,
       role: u.role,
-      roleDistrict: u.roleDistrict,
-      paroisseId: u.paroisseId,
+      editeurContenu: u.editeurContenu,
       doitChangerMotDePasse: u.doitChangerMotDePasse,
     }
   }
 }
 
-function versUtilisateur(charge: ChargeJeton): UtilisateurSession {
-  return {
-    id: charge.sub,
-    matricule: charge.matricule,
-    email: charge.email,
-    nom: charge.nom,
-    prenom: charge.prenom,
-    role: charge.role,
-    roleDistrict: charge.roleDistrict,
-    paroisseId: charge.paroisseId,
-    doitChangerMotDePasse: charge.doitChangerMotDePasse,
-  }
-}
 
 function extraireJeton(requete: RequeteAuthentifiee): string | null {
   const entete = requete.headers.authorization

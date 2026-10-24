@@ -75,3 +75,37 @@ DO $$ BEGIN
  RAISE EXCEPTION 'Responsable historique supprime';
  EXCEPTION WHEN foreign_key_violation THEN RAISE NOTICE 'OK conservation responsable'; END;
 END $$;
+
+-- ---------------------------------------------------------------------------
+-- Simplification mono-paroissiale : archivage puis retrait du district.
+-- ---------------------------------------------------------------------------
+\ir ../../prisma/migrations/20261023200000_consentements_origine/migration.sql
+INSERT INTO "Scout" ("id", "nom", "prenom", "dateNaissance", "sexe", "brancheType", "paroisseId", "updatedAt")
+VALUES ('test-scout', 'Test', 'Scout', '2015-01-01', 'FEMININ', 'LOUVETEAUX', 'test-paroisse', NOW());
+INSERT INTO "Cotisation" ("id", "montant", "anneeScolaire", "scoutId", "paroisseId", "updatedAt")
+VALUES ('test-cotisation', 5000, '2026-2027', 'test-scout', 'test-paroisse', NOW());
+
+\ir ../../prisma/migrations/20261024100000_mono_paroisse/migration.sql
+
+DO $$ BEGIN
+ IF (SELECT COUNT(*) FROM "ArchiveDonnees" WHERE "source" = 'District') <> 1 THEN RAISE EXCEPTION 'District non archive'; END IF;
+ IF (SELECT COUNT(*) FROM "ArchiveDonnees" WHERE "source" = 'Paroisse') <> 1 THEN RAISE EXCEPTION 'Paroisse non archivee'; END IF;
+ IF (SELECT COUNT(*) FROM "ArchiveDonnees" WHERE "source" = 'AffectationDistrict') <> 2 THEN RAISE EXCEPTION 'Mandats district non archives'; END IF;
+ IF (SELECT COUNT(*) FROM "ArchiveDonnees" WHERE "source" = 'Utilisateur.district') <> 2 THEN RAISE EXCEPTION 'Affectations des comptes non archivees'; END IF;
+ IF (SELECT "nomParoisse" FROM "ConfigurationInstallation" WHERE "id" = 'installation') <> 'Paroisse test' THEN RAISE EXCEPTION 'Identite non reprise'; END IF;
+ IF (SELECT COUNT(*) FROM "ConfigurationInstallation") <> 1 THEN RAISE EXCEPTION 'Configuration non unique'; END IF;
+ IF (SELECT COUNT(*) FROM "Utilisateur") <> 3 OR (SELECT COUNT(*) FROM "Scout") <> 1 OR (SELECT COUNT(*) FROM "Cotisation") <> 1 THEN
+   RAISE EXCEPTION 'Donnees metier perdues';
+ END IF;
+ IF (SELECT COUNT(*) FROM "Mandat" WHERE "finLe" IS NULL) <> 3 THEN RAISE EXCEPTION 'Mandats de la maitrise non ouverts'; END IF;
+ IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND column_name IN ('paroisseId', 'roleDistrict')) THEN
+   RAISE EXCEPTION 'Colonnes multi-paroisses restantes';
+ END IF;
+ IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('Paroisse', 'District', 'AffectationDistrict', 'ConfigurationPlateforme')) THEN
+   RAISE EXCEPTION 'Tables multi-paroisses restantes';
+ END IF;
+ IF EXISTS (SELECT 1 FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid WHERE t.typname = 'RoleUtilisateur' AND e.enumlabel LIKE '%DISTRICT%') THEN
+   RAISE EXCEPTION 'Roles district restants';
+ END IF;
+ RAISE NOTICE 'OK simplification mono-paroissiale sans perte';
+END $$;

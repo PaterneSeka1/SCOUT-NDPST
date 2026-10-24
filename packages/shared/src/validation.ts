@@ -8,9 +8,8 @@ import { z } from 'zod'
 export const BrancheTypeSchema = z.enum(['OISILLONS', 'LOUVETEAUX', 'ECLAIREURS', 'CHEMINOTS', 'COMPAGNONS', 'RESSOURCES_ADULTES'])
 
 export const RoleUtilisateurSchema = z.enum([
-  'ADMIN_PLATEFORME', 'CHEF_GROUPE', 'ADJOINT_GROUPE', 'ASSISTANT_GROUPE',
-  'RESPONSABLE_BRANCHE', 'ADJOINT_BRANCHE', 'ASSISTANT_BRANCHE',
-  'COMMISSAIRE_DISTRICT', 'ADJOINT_DISTRICT', 'ASSISTANT_DISTRICT', 'PARENT', 'SCOUT',
+  'ADMINISTRATEUR', 'CHEF_GROUPE', 'ADJOINT_GROUPE', 'ASSISTANT_GROUPE',
+  'RESPONSABLE_BRANCHE', 'ADJOINT_BRANCHE', 'ASSISTANT_BRANCHE', 'PARENT', 'SCOUT',
 ])
 
 export const SexeSchema = z.enum(['MASCULIN', 'FEMININ'])
@@ -24,6 +23,10 @@ export const StatutReunionSchema = z.enum(['PLANIFIEE', 'REPORTEE', 'ANNULEE', '
 export const StatutPresenceReunionSchema = z.enum(['PRESENT', 'ABSENT', 'EXCUSE'])
 
 export const TypeAutorisationCampSchema = z.enum(['FICHE_MEDICALE', 'AUTORISATION_PARENTALE'])
+
+export const StatutActiviteSchema = z.enum(['PREVUE', 'EN_COURS', 'TERMINEE', 'ANNULEE'])
+
+export const TypeCotisationSchema = z.enum(['ADHESION_ANNUELLE', 'CAMP', 'AUTRE'])
 
 // N'accepte que des chemins locaux (ex : "/api/fichiers-publics/xxx.png" ou "/api/fichiers/…").
 // Refuse les URL absolues ("https://…", "//hote/…") pour empêcher qu'une URL

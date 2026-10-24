@@ -8,7 +8,7 @@ import { z } from 'zod'
 const MESSAGE_CORPS_INVALIDE = 'Données invalides'
 
 // Seuls les champs auto-modifiables sont conservés : role, actif, matricule ou
-// paroisseId envoyés par un client sont retirés par z.object.
+// editeurContenu envoyés par un client sont retirés par z.object.
 export const SchemaModificationProfil = z.object(
   {
     // nom et prénom sont obligatoires en base : null est refusé.

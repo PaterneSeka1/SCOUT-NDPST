@@ -7,16 +7,12 @@ import cookieParser from 'cookie-parser'
 import { json, urlencoded, type NextFunction, type Request, type Response } from 'express'
 import helmet from 'helmet'
 import { AppModule } from './app.module'
-import { chargerClesAdmin } from './auth/cles-admin'
 import { chargerEnv } from './config/env'
 import { logger } from './common/lib/logger'
 
 async function demarrer() {
   // Échoue immédiatement si la configuration est incomplète.
   const config = chargerEnv()
-  // Clés de l'administrateur plateforme partagé (voir auth/cles-admin.ts) :
-  // une clé absente ou invalide doit empêcher le démarrage.
-  chargerClesAdmin()
 
   // Analyse des corps gérée ici plutôt que par Nest, pour répondre au format
   // de l'API ({ erreur }) sans exposer le message technique du parseur.
@@ -62,7 +58,7 @@ async function demarrer() {
       app,
       new DocumentBuilder()
         .setTitle('API SCOUT ASCCI')
-        .setDescription('API commune aux plateformes paroisse, district, région et nation.')
+        .setDescription("API de la plateforme paroissiale SCOUT-NDPST (site public et gestion du groupe scout).")
         .setVersion('1.0')
         .addCookieAuth('scout_acces')
         .addBearerAuth()

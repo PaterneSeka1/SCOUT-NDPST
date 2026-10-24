@@ -1,7 +1,6 @@
-// Utilitaires de thème partagés entre l'identité plateforme (ConfigurationPlateforme,
-// gérée par ADMIN_PLATEFORME) et l'identité propre à chaque paroisse (couleurs sur
-// le modèle Paroisse, gérées par son Chef de Groupe). Centralisé ici pour éviter
-// trois copies de la même regex (app/layout.tsx, /api/admin/site-config, /api/paroisse).
+// Utilitaires du thème de l'installation (ConfigurationInstallation, réglé dans
+// Administration > Identité et configuration). Charte par défaut tirée du logo
+// du groupe : vert scout, terracotta, sable, crème et or discret.
 
 export type Theme = {
   couleurPrimaire: string
@@ -11,10 +10,10 @@ export type Theme = {
 }
 
 export const THEME_DEFAUT: Theme = {
-  couleurPrimaire: '#1a4731',
-  couleurAccent: '#27ae60',
-  couleurFond: '#0f2418',
-  couleurHover: '#27ae60',
+  couleurPrimaire: '#2f5d3a',
+  couleurAccent: '#b5653f',
+  couleurFond: '#1f3a28',
+  couleurHover: '#c27a52',
 }
 
 

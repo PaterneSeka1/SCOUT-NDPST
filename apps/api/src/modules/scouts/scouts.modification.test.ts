@@ -1,4 +1,4 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
 import type { UtilisateurSession } from '../../common/types'
 import { SchemaModificationScout } from './scouts.schemas'
@@ -11,8 +11,7 @@ const utilisateur: UtilisateurSession = {
   nom: 'N',
   prenom: 'P',
   role: 'CHEF_GROUPE',
-  roleDistrict: null,
-  paroisseId: 'p1',
+  editeurContenu: false,
 }
 
 function construire(actif = true) {
@@ -20,9 +19,10 @@ function construire(actif = true) {
     scout: {
       findFirst: vi
         .fn()
-        .mockResolvedValue({ id: 's1', brancheType: 'LOUVETEAUX', photo: '/api/fichiers/p1/ancienne.png', actif }),
+        .mockResolvedValue({ id: 's1', brancheType: 'LOUVETEAUX', photo: '/api/fichiers/groupe/ancienne.png', actif }),
       update: vi.fn().mockResolvedValue({ id: 's1', photo: null }),
     },
+    equipe: { findUnique: vi.fn().mockResolvedValue(null) },
   }
   const audit = { enregistrer: vi.fn() }
   const acces = { brancheImposee: vi.fn().mockResolvedValue(undefined) }
@@ -43,7 +43,7 @@ describe('ScoutsService — mises à jour validées et données sensibles', () =
     expect(ctx.prisma.scout.update).toHaveBeenCalledWith({
       where: { id: 's1' },
       data: { prenom: 'Awa' },
-      include: { contactsUrgence: true },
+      include: { contactsUrgence: true, equipe: { select: { id: true, nom: true } } },
     })
     expect(ctx.audit.enregistrer).not.toHaveBeenCalled()
     expect(ctx.fichiers.supprimerSiOrphelin).not.toHaveBeenCalled()
@@ -149,12 +149,58 @@ describe('ScoutsService — mises à jour validées et données sensibles', () =
     await ctx.service.modifier(
       utilisateur,
       's1',
-      SchemaModificationScout.parse({ photo: '/api/fichiers/p1/nouvelle.png' }),
+      SchemaModificationScout.parse({ photo: '/api/fichiers/groupe/nouvelle.png' }),
     )
-    expect(ctx.fichiers.verifierRattachable).toHaveBeenCalledWith(utilisateur, '/api/fichiers/p1/nouvelle.png', 's1')
+    expect(ctx.fichiers.verifierRattachable).toHaveBeenCalledWith(utilisateur, '/api/fichiers/groupe/nouvelle.png', 's1')
     expect(ctx.fichiers.verifierRattachable.mock.invocationCallOrder[0]).toBeLessThan(
       ctx.prisma.scout.update.mock.invocationCallOrder[0],
     )
-    expect(ctx.fichiers.supprimerSiOrphelin).toHaveBeenCalledWith('/api/fichiers/p1/ancienne.png')
+    expect(ctx.fichiers.supprimerSiOrphelin).toHaveBeenCalledWith('/api/fichiers/groupe/ancienne.png')
+  })
+})
+
+describe('ScoutsService — équipe facultative', () => {
+  it("refuse une équipe d'une autre branche (400) sans modifier le scout", async () => {
+    const ctx = construire()
+    ctx.prisma.equipe.findUnique.mockResolvedValue({ actif: true, brancheType: 'ECLAIREURS' })
+    await expect(
+      ctx.service.modifier(utilisateur, 's1', SchemaModificationScout.parse({ equipeId: 'e-ecl' })),
+    ).rejects.toBeInstanceOf(BadRequestException)
+    expect(ctx.prisma.scout.update).not.toHaveBeenCalled()
+  })
+
+  it('refuse une équipe inactive ou inexistante', async () => {
+    const ctx = construire()
+    ctx.prisma.equipe.findUnique.mockResolvedValue({ actif: false, brancheType: 'LOUVETEAUX' })
+    await expect(
+      ctx.service.modifier(utilisateur, 's1', SchemaModificationScout.parse({ equipeId: 'e-off' })),
+    ).rejects.toThrow('Équipe invalide')
+    ctx.prisma.equipe.findUnique.mockResolvedValue(null)
+    await expect(
+      ctx.service.modifier(utilisateur, 's1', SchemaModificationScout.parse({ equipeId: 'e-x' })),
+    ).rejects.toThrow('Équipe invalide')
+  })
+
+  it('rattache une équipe active de la même branche, et la retire avec une chaîne vide', async () => {
+    const ctx = construire()
+    ctx.prisma.equipe.findUnique.mockResolvedValue({ actif: true, brancheType: 'LOUVETEAUX' })
+    await ctx.service.modifier(utilisateur, 's1', SchemaModificationScout.parse({ equipeId: 'e-lou' }))
+    expect(ctx.prisma.scout.update.mock.calls[0][0].data).toEqual({ equipeId: 'e-lou' })
+
+    await ctx.service.modifier(utilisateur, 's1', SchemaModificationScout.parse({ equipeId: '' }))
+    expect(ctx.prisma.scout.update.mock.calls[1][0].data).toEqual({ equipeId: null })
+  })
+
+  it("un changement de branche sans nouvelle équipe retire l'ancienne", async () => {
+    const ctx = construire()
+    ctx.prisma.scout.findFirst.mockResolvedValue({
+      id: 's1',
+      brancheType: 'LOUVETEAUX',
+      photo: null,
+      actif: true,
+      equipeId: 'e-lou',
+    })
+    await ctx.service.modifier(utilisateur, 's1', SchemaModificationScout.parse({ brancheType: 'ECLAIREURS' }))
+    expect(ctx.prisma.scout.update.mock.calls[0][0].data).toEqual({ brancheType: 'ECLAIREURS', equipeId: null })
   })
 })

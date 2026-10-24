@@ -15,10 +15,10 @@ import { PerimetreService } from './perimetre.service'
 import type { UtilisateurSession } from './types'
 
 // Fichiers privés = photos, fiches médicales et autorisations de mineurs :
-// appartenir à la paroisse ne suffit pas pour les lire.
+// être connecté ne suffit pas pour les lire.
 
 function utilisateur(role: string, id = 'u1'): UtilisateurSession {
-  return { id, matricule: null, email: '', nom: 'Kouassi', prenom: 'Awa', role, roleDistrict: null, paroisseId: 'p1' }
+  return { id, matricule: null, email: '', nom: 'Kouassi', prenom: 'Awa', role, editeurContenu: false }
 }
 
 interface ScoutSimule {
@@ -34,6 +34,7 @@ function construire(scouts: ScoutSimule[], options: { brancheStaff?: string; lie
     scout: { findMany: vi.fn().mockResolvedValue(scouts), count: vi.fn().mockResolvedValue(0) },
     utilisateur: { findUnique: vi.fn().mockResolvedValue({ brancheType: options.brancheStaff ?? null }) },
     lienParentScout: { count: vi.fn().mockResolvedValue(options.lienParent ? 1 : 0) },
+    media: { count: vi.fn().mockResolvedValue(0) },
   }
   const p = prisma as unknown as PrismaService
   return { prisma, service: new AccesFichiersService(p, new PerimetreService(p)) }
@@ -49,13 +50,26 @@ const photoLouveteau: ScoutSimule = {
 const ficheMedicale: ScoutSimule = { ...photoLouveteau, documents: [{ id: 'd1' }] }
 
 describe('AccesFichiersService.autorisationLecture', () => {
-  it("refuse un fichier d'une autre paroisse sans interroger la base", async () => {
-    const { prisma, service } = construire([photoLouveteau])
-    expect(await service.autorisationLecture(utilisateur('CHEF_GROUPE'), 'p2', 'x.png')).toBeNull()
+  it('lit les anciens dossiers (identifiant de paroisse) comme le dossier courant', async () => {
+    const { service } = construire([photoLouveteau])
+    expect(await service.autorisationLecture(utilisateur('CHEF_GROUPE'), 'ancienne-paroisse', 'x.png')).toEqual({
+      scoutId: 's1',
+      sensible: false,
+    })
+  })
+
+  it('réserve les photos de galerie non publiées aux gestionnaires de contenus', async () => {
+    const { prisma, service } = construire([])
+    prisma.media.count.mockResolvedValue(1)
+    expect(await service.autorisationLecture(utilisateur('CHEF_GROUPE'), 'galerie', 'g.jpg')).toBeNull()
+    expect(await service.autorisationLecture(utilisateur('ADMINISTRATEUR'), 'galerie', 'g.jpg')).toEqual({
+      scoutId: null,
+      sensible: false,
+    })
     expect(prisma.scout.findMany).not.toHaveBeenCalled()
   })
 
-  it('autorise le staff de groupe sur toute la paroisse', async () => {
+  it('autorise le staff de groupe sur tous les scouts', async () => {
     const { service } = construire([ficheMedicale])
     expect(await service.autorisationLecture(utilisateur('ADJOINT_GROUPE'), 'p1', 'f.pdf')).toEqual({
       scoutId: 's1',
@@ -110,7 +124,7 @@ describe('AccesFichiersService.verifierRattachable', () => {
     ctx = construire([])
   })
 
-  it('accepte un fichier téléversé par le même utilisateur dans sa paroisse', async () => {
+  it('accepte un fichier téléversé par le même utilisateur', async () => {
     const url = `/api/fichiers/p1/${nomFichierPriveGenere('u1', 'pdf')}`
     await expect(ctx.service.verifierRattachable(utilisateur('PARENT'), url, 's1')).resolves.toBeUndefined()
   })
@@ -128,9 +142,9 @@ describe('AccesFichiersService.verifierRattachable', () => {
     await expect(ctx.service.verifierRattachable(utilisateur('CHEF_GROUPE'), url, 's1')).resolves.toBeUndefined()
   })
 
-  it("refuse un fichier d'une autre paroisse ou une URL hors /api/fichiers", async () => {
-    const autreParoisse = `/api/fichiers/p2/${nomFichierPriveGenere('u1', 'pdf')}`
-    await expect(ctx.service.verifierRattachable(utilisateur('PARENT'), autreParoisse)).rejects.toBeInstanceOf(
+  it('refuse une photo de galerie ou une URL hors /api/fichiers', async () => {
+    const galerie = `/api/fichiers/galerie/${nomFichierPriveGenere('u1', 'png')}`
+    await expect(ctx.service.verifierRattachable(utilisateur('PARENT'), galerie)).rejects.toBeInstanceOf(
       BadRequestException,
     )
     await expect(ctx.service.verifierRattachable(utilisateur('PARENT'), '/logo.png')).rejects.toBeInstanceOf(
@@ -150,7 +164,8 @@ describe('Noms de fichiers privés', () => {
   })
 
   it('analyse une URL de fichier privé et rejette tout le reste', () => {
-    expect(analyserUrlFichierPrive('/api/fichiers/p1/a.png')).toEqual({ paroisseId: 'p1', nomFichier: 'a.png' })
+    expect(analyserUrlFichierPrive('/api/fichiers/p1/a.png')).toEqual({ dossier: 'p1', nomFichier: 'a.png' })
+    expect(analyserUrlFichierPrive('/api/fichiers/p.1/a.png')).toBeNull()
     expect(analyserUrlFichierPrive('/api/fichiers/p1/../a.png')).toBeNull()
     expect(analyserUrlFichierPrive('/api/fichiers-publics/a.png')).toBeNull()
   })

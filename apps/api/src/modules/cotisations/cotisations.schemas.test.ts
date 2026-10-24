@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { ZodType } from 'zod'
-import { SchemaCreationCotisation, SchemaModificationCotisation, SchemaStatutCotisant } from './cotisations.schemas'
+import {
+  SchemaCreationBareme,
+  SchemaCreationCotisation,
+  SchemaModificationBareme,
+  SchemaModificationCotisation,
+  SchemaStatutCotisant,
+} from './cotisations.schemas'
 
 // Premier message d'erreur, tel que renvoyé par ZodPipe au client.
 function premierMessage(schema: ZodType, valeur: unknown): string | undefined {
@@ -77,5 +83,45 @@ describe('SchemaStatutCotisant', () => {
     [{ scoutId: 's1', cotisant: true, anneeScolaire: 2025 }, 'Année scolaire invalide'],
   ])('rejette %j avec « %s »', (corps, message) => {
     expect(premierMessage(SchemaStatutCotisant, corps)).toBe(message)
+  })
+})
+
+describe('Barème et activité', () => {
+  it('SchemaCreationCotisation accepte activiteId facultatif', () => {
+    expect(SchemaCreationCotisation.parse({ scoutId: 's1', type: 'CAMP', montant: 1, activiteId: 'a1' })).toEqual({
+      cibles: ['s1'],
+      type: 'CAMP',
+      montant: 1,
+      activiteId: 'a1',
+    })
+    expect(SchemaCreationCotisation.parse({ scoutId: 's1', type: 'CAMP', montant: 1, activiteId: '' })).toEqual({
+      cibles: ['s1'],
+      type: 'CAMP',
+      montant: 1,
+      activiteId: undefined,
+    })
+  })
+
+  it('SchemaCreationBareme normalise branche et libellé', () => {
+    expect(
+      SchemaCreationBareme.parse({ anneeScolaire: '2026-2027', type: 'ADHESION_ANNUELLE', montant: 0, brancheType: '' }),
+    ).toEqual({ anneeScolaire: '2026-2027', type: 'ADHESION_ANNUELLE', brancheType: null, libelle: null, montant: 0 })
+  })
+
+  it.each([
+    [{ anneeScolaire: '2026', type: 'CAMP', montant: 1 }, 'Année scolaire invalide'],
+    [{ anneeScolaire: '2026-2027', type: 'X', montant: 1 }, 'Type de cotisation invalide'],
+    [{ anneeScolaire: '2026-2027', type: 'CAMP', montant: -5 }, 'Le montant doit être un entier positif ou nul'],
+    [{ anneeScolaire: '2026-2027', type: 'CAMP', montant: 2.5 }, 'Le montant doit être un entier positif ou nul'],
+    [{ anneeScolaire: '2026-2027', type: 'CAMP', montant: 1, brancheType: 'MOUSSES' }, 'Branche invalide'],
+  ])('SchemaCreationBareme rejette %j', (corps, message) => {
+    expect(premierMessage(SchemaCreationBareme, corps)).toBe(message)
+  })
+
+  it('SchemaModificationBareme : mise à jour partielle', () => {
+    expect(SchemaModificationBareme.parse({ montant: 3000 })).toEqual({ montant: 3000 })
+    expect(premierMessage(SchemaModificationBareme, { montant: -1 })).toBe(
+      'Le montant doit être un entier positif ou nul',
+    )
   })
 })

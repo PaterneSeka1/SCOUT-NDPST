@@ -6,7 +6,7 @@ import { chargerEnv } from '../../config/env'
 import type { PrismaService } from '../../prisma/prisma.service'
 import { CLE_MOT_DE_PASSE_TEMPORAIRE } from '../decorators/mot-de-passe-temporaire.decorator'
 import { CLE_PUBLIC } from '../decorators/public.decorator'
-import { CLE_ROLES, CLE_ROLES_DISTRICT } from '../decorators/roles.decorator'
+import { CLE_EDITEUR_CONTENU, CLE_ROLES } from '../decorators/roles.decorator'
 import type { UtilisateurSession } from '../types'
 import { AuthGuard } from './auth.guard'
 import { RolesGuard } from './roles.guard'
@@ -31,8 +31,7 @@ const UTILISATEUR: UtilisateurSession = {
   nom: 'N',
   prenom: 'P',
   role: 'RESPONSABLE_BRANCHE',
-  roleDistrict: null,
-  paroisseId: 'p1',
+  editeurContenu: false,
   doitChangerMotDePasse: false,
 }
 
@@ -42,7 +41,7 @@ describe('AuthGuard', () => {
   const garde = new AuthGuard(new Reflector(), jwt, prisma as unknown as PrismaService)
   const session = () => ({
     utilisateurId: UTILISATEUR.id, revoqueeLe: null, expireLe: new Date(Date.now() + 60_000),
-    utilisateur: { ...UTILISATEUR, actif: true, paroisse: { actif: true } },
+    utilisateur: { ...UTILISATEUR, actif: true },
   })
 
   beforeEach(() => {
@@ -99,18 +98,27 @@ describe('AuthGuard', () => {
 
   it.each([
     ['compte désactivé', { actif: false }],
-    ['paroisse désactivée', { paroisse: { actif: false } }],
     ['rôle changé', { role: 'ASSISTANT_BRANCHE' }],
-    ['territoire changé', { paroisseId: 'autre-paroisse' }],
   ])('refuse immédiatement un ancien jeton après %s', async (_nom, changement) => {
     prisma.sessionUtilisateur.findUnique.mockResolvedValue({ ...session(), utilisateur: { ...session().utilisateur, ...changement } })
     await expect(garde.canActivate(contexte({ headers: {}, cookies: { scout_acces: signer() } }))).rejects.toBeInstanceOf(UnauthorizedException)
   })
 
-  it('refuse immédiatement un jeton dont le rôle district a été retiré', async () => {
+  it('refuse un jeton signé avec un autre algorithme (ES256 des anciennes installations)', async () => {
+    const { privateKey } = await import('crypto').then((c) => c.generateKeyPairSync('ec', { namedCurve: 'prime256v1' }))
     const { id, ...charge } = UTILISATEUR
-    const jeton = jwt.sign({ ...charge, roleDistrict: 'COMMISSAIRE_DISTRICT', sid: 'session-u1' }, { subject: id, secret: SECRET, issuer: EMETTEUR_LOCAL, expiresIn: 60 })
+    const jeton = jwt.sign(
+      { ...charge, role: 'ADMINISTRATEUR', sid: 'session-u1' },
+      { subject: id, privateKey: privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(), algorithm: 'ES256', issuer: EMETTEUR_LOCAL, expiresIn: 60 },
+    )
     await expect(garde.canActivate(contexte({ headers: {}, cookies: { scout_acces: jeton } }))).rejects.toBeInstanceOf(UnauthorizedException)
+  })
+
+  it('relit la permission editeurContenu en base à chaque requête', async () => {
+    prisma.sessionUtilisateur.findUnique.mockResolvedValue({ ...session(), utilisateur: { ...session().utilisateur, editeurContenu: true } })
+    const requete: Record<string, unknown> = { headers: {}, cookies: { scout_acces: signer() } }
+    await garde.canActivate(contexte(requete))
+    expect((requete.utilisateur as UtilisateurSession).editeurContenu).toBe(true)
   })
 
   it('refuse les routes protégées tant que le mot de passe personnel est requis', async () => {
@@ -151,14 +159,10 @@ describe('RolesGuard', () => {
     ).toBe(true)
   })
 
-  it('n’accorde jamais @RolesDistrict sur la seule base du rôle paroissial', () => {
-    const chef = { ...UTILISATEUR, role: 'COMMISSAIRE_DISTRICT', roleDistrict: null }
-    expect(() =>
-      garde.canActivate(contexte({ utilisateur: chef }, { [CLE_ROLES_DISTRICT]: ['COMMISSAIRE_DISTRICT'] })),
-    ).toThrow(ForbiddenException)
-    const commissaire = { ...UTILISATEUR, roleDistrict: 'COMMISSAIRE_DISTRICT' }
-    expect(
-      garde.canActivate(contexte({ utilisateur: commissaire }, { [CLE_ROLES_DISTRICT]: ['COMMISSAIRE_DISTRICT'] })),
-    ).toBe(true)
+  it("réserve @EditeurContenu à l'administrateur et aux éditeurs désignés", () => {
+    const meta = { [CLE_EDITEUR_CONTENU]: true }
+    expect(() => garde.canActivate(contexte({ utilisateur: { ...UTILISATEUR, role: 'CHEF_GROUPE' } }, meta))).toThrow(ForbiddenException)
+    expect(garde.canActivate(contexte({ utilisateur: { ...UTILISATEUR, editeurContenu: true } }, meta))).toBe(true)
+    expect(garde.canActivate(contexte({ utilisateur: { ...UTILISATEUR, role: 'ADMINISTRATEUR' } }, meta))).toBe(true)
   })
 })

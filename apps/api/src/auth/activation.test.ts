@@ -32,14 +32,15 @@ describe('activation et secret temporaire', () => {
   })
 
   it('crée un compte avec un secret généré haché et impose le changement', async () => {
-    const prisma = {
-      paroisse: { findUnique: vi.fn().mockResolvedValue({ id: 'p1' }) },
+    const prisma: Record<string, unknown> = {
+      mandat: { create: vi.fn(), updateMany: vi.fn() },
       utilisateur: {
         findUnique: vi.fn().mockResolvedValue(null),
         findFirst: vi.fn().mockResolvedValue(null),
         create: vi.fn().mockResolvedValue({ id: 'u1', role: 'ASSISTANT_GROUPE', email: null }),
       },
     }
+    prisma.$transaction = vi.fn((fn: (tx: unknown) => unknown) => fn(prisma))
     const audit = { enregistrer: vi.fn() }
     const service = new UtilisateursService(
       prisma as unknown as PrismaService,
@@ -48,7 +49,6 @@ describe('activation et secret temporaire', () => {
     )
     const resultat = await service.creer(
       SchemaCreationUtilisateur.parse({
-        paroisseId: 'p1',
         nom: 'Nom',
         prenom: 'Prénom',
         matricule: 'M1',
@@ -57,7 +57,7 @@ describe('activation et secret temporaire', () => {
       }),
       'admin',
     )
-    const data = prisma.utilisateur.create.mock.calls[0][0].data
+    const data = (prisma.utilisateur as { create: ReturnType<typeof vi.fn> }).create.mock.calls[0][0].data
     expect(data.doitChangerMotDePasse).toBe(true)
     expect(data.password).not.toBe(resultat.motDePasseTemporaire)
     expect(await compare(resultat.motDePasseTemporaire, data.password)).toBe(true)

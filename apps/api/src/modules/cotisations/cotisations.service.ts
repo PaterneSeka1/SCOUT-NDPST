@@ -1,19 +1,21 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import {
   ROLES_BRANCHE,
   STATUTS_COTISANT,
   anneeScolaireCourante,
   anneeScolaireValide,
+  entierBorne,
   estValeurEnum,
 } from '@scout/shared'
-import { BrancheType, StatutCotisation } from '../../generated/prisma/client'
+import { BrancheType, Prisma, StatutCotisation } from '../../generated/prisma/client'
 import { AuditService } from '../../common/audit.service'
-import { paroisseIdRequise } from '../../common/paroisse'
 import { PerimetreService } from '../../common/perimetre.service'
 import type { UtilisateurSession } from '../../common/types'
 import { PrismaService } from '../../prisma/prisma.service'
 import type {
+  CorpsCreationBareme,
   CorpsCreationCotisation,
+  CorpsModificationBareme,
   CorpsModificationCotisation,
   CorpsStatutCotisant,
 } from './cotisations.schemas'
@@ -22,6 +24,9 @@ export interface FiltresCotisations {
   anneeScolaire?: string
   statut?: string
   branche?: string
+  recherche?: string
+  page?: string
+  limite?: string
 }
 
 @Injectable()
@@ -32,12 +37,14 @@ export class CotisationsService {
     private readonly audit: AuditService,
   ) {}
 
-  // Liste des cotisations de la paroisse (staff uniquement). Les responsables
-  // de branche ne voient que les scouts de leur branche.
+  // Liste paginée des cotisations (staff uniquement). Les responsables de
+  // branche ne voient que les scouts de leur branche.
   async lister(utilisateur: UtilisateurSession, filtres: FiltresCotisations) {
-    const paroisseId = paroisseIdRequise(utilisateur)
     const anneeScolaire = filtres.anneeScolaire ?? anneeScolaireCourante()
     const statut = filtres.statut
+    const recherche = filtres.recherche?.trim() ?? ''
+    const page = entierBorne(filtres.page ?? null, 1, 1, Number.MAX_SAFE_INTEGER)
+    const limite = entierBorne(filtres.limite ?? null, 50, 1, 100)
 
     // Les responsables de branche ne voient QUE leur branche — toute valeur
     // "branche" fournie par le client est ignorée pour ce groupe de rôles.
@@ -45,8 +52,8 @@ export class CotisationsService {
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
       const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
       // Compte mal configuré (rôle de branche sans brancheType assigné) :
-      // aucun résultat plutôt que la paroisse entière par défaut.
-      if (!bt) return { cotisations: [] }
+      // aucun résultat plutôt que toutes les branches par défaut.
+      if (!bt) return { cotisations: [], pagination: { page, limite, total: 0, totalPages: 0 } }
       filtreBranche = bt
     }
 
@@ -57,30 +64,49 @@ export class CotisationsService {
       throw new BadRequestException('Branche invalide')
     }
 
-    const cotisations = await this.prisma.cotisation.findMany({
-      where: {
-        paroisseId,
-        anneeScolaire,
-        ...(statut ? { statut: statut as StatutCotisation } : {}),
-        ...(filtreBranche ? { scout: { brancheType: filtreBranche as BrancheType } } : {}),
-      },
-      include: {
-        scout: {
-          select: {
-            id: true,
-            nom: true,
-            prenom: true,
-            brancheType: true,
-            matricule: true,
-            actif: true,
-          },
-        },
-        enregistrePar: { select: { id: true, nom: true, prenom: true } },
-      },
-      orderBy: [{ statut: 'asc' }, { scout: { nom: 'asc' } }],
-    })
+    const filtreScout: Prisma.ScoutWhereInput = {
+      ...(filtreBranche ? { brancheType: filtreBranche as BrancheType } : {}),
+      ...(recherche
+        ? {
+            OR: [
+              { nom: { contains: recherche, mode: 'insensitive' } },
+              { prenom: { contains: recherche, mode: 'insensitive' } },
+              { matricule: { contains: recherche, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    }
+    const where: Prisma.CotisationWhereInput = {
+      anneeScolaire,
+      ...(statut ? { statut: statut as StatutCotisation } : {}),
+      ...(Object.keys(filtreScout).length > 0 ? { scout: filtreScout } : {}),
+    }
 
-    return { cotisations }
+    const [cotisations, total] = await Promise.all([
+      this.prisma.cotisation.findMany({
+        where,
+        include: {
+          scout: {
+            select: {
+              id: true,
+              nom: true,
+              prenom: true,
+              brancheType: true,
+              matricule: true,
+              actif: true,
+            },
+          },
+          activite: { select: { id: true, titre: true, dateDebut: true } },
+          enregistrePar: { select: { id: true, nom: true, prenom: true } },
+        },
+        orderBy: [{ statut: 'asc' }, { scout: { nom: 'asc' } }],
+        skip: (page - 1) * limite,
+        take: limite,
+      }),
+      this.prisma.cotisation.count({ where }),
+    ])
+
+    return { cotisations, pagination: { page, limite, total, totalPages: Math.ceil(total / limite) } }
   }
 
   // Crée une cotisation (à titre individuel) ou, si `scoutIds` est fourni,
@@ -89,17 +115,22 @@ export class CotisationsService {
   // le contrôleur) : c'est elle qui définit ce qui est dû, même si les
   // responsables de branche pourront ensuite enregistrer les paiements.
   async creer(utilisateur: UtilisateurSession, corps: CorpsCreationCotisation) {
-    const paroisseId = paroisseIdRequise(utilisateur)
     // Corps déjà validé par SchemaCreationCotisation (cibles, type, montant).
-    const { cibles, type, montant, libelle } = corps
+    const { cibles, type, montant, libelle, activiteId } = corps
     const annee = corps.anneeScolaire?.trim() || anneeScolaireCourante()
+    if (!anneeScolaireValide(annee)) throw new BadRequestException('Année scolaire invalide')
 
     const scouts = await this.prisma.scout.findMany({
-      where: { id: { in: cibles }, paroisseId },
+      where: { id: { in: cibles } },
       select: { id: true },
     })
-    if (scouts.length !== cibles.length) {
+    if (scouts.length !== new Set(cibles).size) {
       throw new NotFoundException('Un ou plusieurs scouts sont introuvables')
+    }
+
+    if (activiteId) {
+      const activite = await this.prisma.activite.findUnique({ where: { id: activiteId }, select: { id: true } })
+      if (!activite) throw new NotFoundException('Activité introuvable')
     }
 
     const cotisations = await this.prisma.$transaction(
@@ -107,11 +138,11 @@ export class CotisationsService {
         this.prisma.cotisation.create({
           data: {
             scoutId: s.id,
-            paroisseId,
             type,
             libelle: libelle?.trim() || null,
             montant,
             anneeScolaire: annee,
+            activiteId: activiteId ?? null,
           },
         }),
       ),
@@ -120,7 +151,6 @@ export class CotisationsService {
     await Promise.all(
       cotisations.map((c) =>
         this.audit.enregistrer({
-          paroisseId,
           acteurId: utilisateur.id,
           action: 'COTISATION_CREEE',
           entite: 'Cotisation',
@@ -130,6 +160,7 @@ export class CotisationsService {
             type: c.type,
             montant: c.montant,
             anneeScolaire: c.anneeScolaire,
+            activiteId: c.activiteId,
           },
         }),
       ),
@@ -142,8 +173,6 @@ export class CotisationsService {
   // direction (groupe + branches) : dans la pratique, ce sont souvent les
   // responsables de branche qui collectent les cotisations sur le terrain.
   async modifier(utilisateur: UtilisateurSession, id: string, corps: CorpsModificationCotisation) {
-    const paroisseId = paroisseIdRequise(utilisateur)
-
     // Un responsable de branche ne peut enregistrer un paiement que pour un
     // scout de sa propre branche.
     let brancheRequise: string | undefined
@@ -156,7 +185,6 @@ export class CotisationsService {
     const existante = await this.prisma.cotisation.findFirst({
       where: {
         id,
-        paroisseId,
         ...(brancheRequise ? { scout: { brancheType: brancheRequise as BrancheType } } : {}),
       },
     })
@@ -220,7 +248,6 @@ export class CotisationsService {
       const montantInchange = statutInchange && montantPayeSelonStatut[statut] === existante.montantPaye
       if (!montantInchange) {
         await this.audit.enregistrer({
-          paroisseId,
           acteurId: utilisateur.id,
           action: 'COTISATION_STATUT_MODIFIE',
           entite: 'Cotisation',
@@ -242,17 +269,14 @@ export class CotisationsService {
   // Supprime une cotisation créée par erreur. Réservé à la direction du
   // groupe (même logique que la création : eux seuls définissent ce qui est dû).
   async supprimer(utilisateur: UtilisateurSession, id: string) {
-    const paroisseId = paroisseIdRequise(utilisateur)
-
     const existante = await this.prisma.cotisation.findFirst({
-      where: { id, paroisseId },
+      where: { id },
     })
     if (!existante) throw new NotFoundException('Cotisation introuvable')
 
     await this.prisma.cotisation.delete({ where: { id } })
 
     await this.audit.enregistrer({
-      paroisseId,
       acteurId: utilisateur.id,
       action: 'COTISATION_SUPPRIMEE',
       entite: 'Cotisation',
@@ -276,7 +300,6 @@ export class CotisationsService {
   // Liste des scouts actifs avec leur statut de cotisation. Lecture ouverte à
   // tout le staff ; l'encadrement de branche ne voit que sa branche.
   async listerStatuts(utilisateur: UtilisateurSession, filtres: Omit<FiltresCotisations, 'statut'>) {
-    const paroisseId = paroisseIdRequise(utilisateur)
     const anneeScolaire = filtres.anneeScolaire ?? anneeScolaireCourante()
     if (!anneeScolaireValide(anneeScolaire)) {
       throw new BadRequestException('Année scolaire invalide')
@@ -294,7 +317,6 @@ export class CotisationsService {
 
     const scouts = await this.prisma.scout.findMany({
       where: {
-        paroisseId,
         actif: true,
         ...(filtreBranche ? { brancheType: filtreBranche as BrancheType } : {}),
       },
@@ -327,14 +349,13 @@ export class CotisationsService {
   }
 
   // Marque un scout cotisant ou non cotisant pour une année. Réservé au Chef
-  // de Groupe (administrateur de la paroisse), contrôlé par le contrôleur.
+  // de Groupe (direction du groupe), contrôlé par le contrôleur.
   async definirStatut(utilisateur: UtilisateurSession, corps: CorpsStatutCotisant) {
-    const paroisseId = paroisseIdRequise(utilisateur)
     const { scoutId, cotisant } = corps
     const anneeScolaire = corps.anneeScolaire ?? anneeScolaireCourante()
 
     const scout = await this.prisma.scout.findFirst({
-      where: { id: scoutId, paroisseId },
+      where: { id: scoutId },
       select: { id: true },
     })
     if (!scout) throw new NotFoundException('Scout introuvable')
@@ -343,7 +364,7 @@ export class CotisationsService {
     // pour la même année : on raisonne sur l'ensemble, comme le GET (cotisant
     // dès qu'une ligne est PAYEE/EXONEREE).
     const lignes = await this.prisma.cotisation.findMany({
-      where: { scoutId, paroisseId, anneeScolaire, type: 'ADHESION_ANNUELLE' },
+      where: { scoutId, anneeScolaire, type: 'ADHESION_ANNUELLE' },
       orderBy: { createdAt: 'desc' },
     })
     const lignesCotisant = lignes.filter((l) => STATUTS_COTISANT.includes(l.statut))
@@ -370,7 +391,6 @@ export class CotisationsService {
         : await this.prisma.cotisation.create({
             data: {
               scoutId,
-              paroisseId,
               anneeScolaire,
               type: 'ADHESION_ANNUELLE',
               montant: 0,
@@ -397,7 +417,6 @@ export class CotisationsService {
     await Promise.all(
       modifiees.map((m) =>
         this.audit.enregistrer({
-          paroisseId,
           acteurId: utilisateur.id,
           action: 'COTISATION_STATUT_MODIFIE',
           entite: 'Cotisation',
@@ -413,5 +432,107 @@ export class CotisationsService {
     )
 
     return { scoutId, anneeScolaire, cotisant }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Barème des cotisations — réservé à ROLES_FINANCES (contrôleur), journalisé.
+  // ---------------------------------------------------------------------------
+
+  async listerBaremes(anneeScolaire?: string) {
+    const annee = anneeScolaire?.trim() || anneeScolaireCourante()
+    if (!anneeScolaireValide(annee)) throw new BadRequestException('Année scolaire invalide')
+    const baremes = await this.prisma.baremeCotisation.findMany({
+      where: { anneeScolaire: annee },
+      orderBy: [{ type: 'asc' }, { brancheType: 'asc' }, { libelle: 'asc' }],
+    })
+    return { anneeScolaire: annee, baremes }
+  }
+
+  // Un même barème (année, type, branche, libellé) ne doit exister qu'une fois :
+  // deux montants concurrents rendraient la référence ambiguë.
+  private async verifierBaremeUnique(
+    cle: { anneeScolaire: string; type: CorpsCreationBareme['type']; brancheType: BrancheType | null; libelle: string | null },
+    exclureId?: string,
+  ) {
+    const doublon = await this.prisma.baremeCotisation.findFirst({
+      where: { ...cle, ...(exclureId ? { id: { not: exclureId } } : {}) },
+      select: { id: true },
+    })
+    if (doublon) throw new ConflictException('Un barème identique existe déjà pour cette année')
+  }
+
+  async creerBareme(utilisateur: UtilisateurSession, corps: CorpsCreationBareme) {
+    const { anneeScolaire, type, brancheType, libelle, montant } = corps
+    await this.verifierBaremeUnique({ anneeScolaire, type, brancheType, libelle })
+
+    const bareme = await this.prisma.baremeCotisation.create({
+      data: { anneeScolaire, type, brancheType, libelle, montant },
+    })
+    await this.audit.enregistrer({
+      acteurId: utilisateur.id,
+      action: 'BAREME_MODIFIE',
+      entite: 'BaremeCotisation',
+      entiteId: bareme.id,
+      details: { operation: 'CREATION', anneeScolaire, type, brancheType, libelle, montant },
+    })
+    return bareme
+  }
+
+  async modifierBareme(utilisateur: UtilisateurSession, id: string, corps: CorpsModificationBareme) {
+    const existant = await this.prisma.baremeCotisation.findUnique({ where: { id } })
+    if (!existant) throw new NotFoundException('Barème introuvable')
+
+    const final = {
+      anneeScolaire: corps.anneeScolaire ?? existant.anneeScolaire,
+      type: corps.type ?? existant.type,
+      brancheType: corps.brancheType !== undefined ? corps.brancheType : existant.brancheType,
+      libelle: corps.libelle !== undefined ? corps.libelle : existant.libelle,
+    }
+    await this.verifierBaremeUnique(final, id)
+
+    const bareme = await this.prisma.baremeCotisation.update({
+      where: { id },
+      data: { ...final, ...(corps.montant !== undefined ? { montant: corps.montant } : {}) },
+    })
+    await this.audit.enregistrer({
+      acteurId: utilisateur.id,
+      action: 'BAREME_MODIFIE',
+      entite: 'BaremeCotisation',
+      entiteId: id,
+      details: {
+        operation: 'MODIFICATION',
+        avant: {
+          anneeScolaire: existant.anneeScolaire,
+          type: existant.type,
+          brancheType: existant.brancheType,
+          libelle: existant.libelle,
+          montant: existant.montant,
+        },
+        apres: { ...final, montant: bareme.montant },
+      },
+    })
+    return bareme
+  }
+
+  async supprimerBareme(utilisateur: UtilisateurSession, id: string) {
+    const existant = await this.prisma.baremeCotisation.findUnique({ where: { id } })
+    if (!existant) throw new NotFoundException('Barème introuvable')
+
+    await this.prisma.baremeCotisation.delete({ where: { id } })
+    await this.audit.enregistrer({
+      acteurId: utilisateur.id,
+      action: 'BAREME_MODIFIE',
+      entite: 'BaremeCotisation',
+      entiteId: id,
+      details: {
+        operation: 'SUPPRESSION',
+        anneeScolaire: existant.anneeScolaire,
+        type: existant.type,
+        brancheType: existant.brancheType,
+        libelle: existant.libelle,
+        montant: existant.montant,
+      },
+    })
+    return { ok: true }
   }
 }

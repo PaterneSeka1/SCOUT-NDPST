@@ -1,35 +1,36 @@
 import { genererMotDePasseTemporaire } from '../../auth/secret-temporaire'
-import { historiserAffectation, verrouillerDistrict } from '../district/affectations'
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
-import { hash } from 'bcryptjs'
 import {
-  BrancheTypeSchema,
-  libelleRoleAvecFonction,
-  ROLES_ASSIGNABLES_PAROISSE,
-  ROLES_BRANCHE,
-  ROLES_DISTRICT_ETENDU,
-  ROLES_TOUT_STAFF,
-} from '@scout/shared'
-import { Prisma, type BrancheType, type RoleUtilisateur } from '../../generated/prisma/client'
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
+import { hash } from 'bcryptjs'
+import { libelleRoleAvecFonction, ROLES_ASSIGNABLES_ADMIN, ROLES_BRANCHE } from '@scout/shared'
+import type { Prisma } from '../../generated/prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
 import { AuditService } from '../../common/audit.service'
 import { AuthService } from '../../auth/auth.service'
 import { logger } from '../../common/lib/logger'
 import { envoyerEmailBienvenue } from '../../common/lib/notifications'
-import { entierBorneRequete, parametre, urlConnexion } from './admin.utils'
+import { historiserMandat, listerMandats, verrouillerPoste } from '../utilisateurs/mandats'
+import { conflitPosteUnique, estErreurUnicite } from '../utilisateurs/postes'
+import {
+  champsProfilModifies,
+  donneesProfilPublic,
+  profilPublicFinal,
+  SELECTION_PROFIL_PUBLIC,
+} from '../utilisateurs/profil-public'
+import { urlConnexion } from './admin.utils'
 import type {
   DonneesCreationUtilisateur,
   DonneesModificationUtilisateur,
   DonneesMotDePasseAdmin,
-  DonneesNomination,
+  FiltresUtilisateurs,
 } from './utilisateurs.schemas'
 
-// Une cible ADMIN_PLATEFORME n'existe jamais pour cette surface : un admin
-// plateforme ne gère pas d'autres admins plateforme via /api/admin/utilisateurs.
-// On la traite comme "introuvable" (404) plutôt que de révéler son existence.
-const CIBLE_GERABLE = { role: { not: 'ADMIN_PLATEFORME' } } as const
-
-const SELECTION_NOMINATION = {
+const SELECTION_LISTE = {
   id: true,
   nom: true,
   prenom: true,
@@ -39,22 +40,33 @@ const SELECTION_NOMINATION = {
   role: true,
   fonction: true,
   brancheType: true,
-  roleDistrict: true,
-  fonctionDistrict: true,
-  brancheTypeDistrict: true,
   actif: true,
+  editeurContenu: true,
+  profilPublic: true,
+  doitChangerMotDePasse: true,
   createdAt: true,
-  paroisse: { select: { id: true, nom: true, district: { select: { id: true, nom: true } } } },
 } as const
 
-const MESSAGE_CHEF_GROUPE_UNIQUE =
-  "Cette paroisse a déjà un Chef de Groupe actif. Désactivez-le avant d'en désigner un nouveau."
-const MESSAGE_RESPONSABLE_UNIQUE = 'Cette branche a déjà un Responsable de Branche actif dans la paroisse.'
+const SELECTION_DETAIL = {
+  ...SELECTION_LISTE,
+  ...SELECTION_PROFIL_PUBLIC,
+  updatedAt: true,
+} as const
 
-function estConflitUnicite(erreur: unknown): boolean {
-  return erreur instanceof Prisma.PrismaClientKnownRequestError && erreur.code === 'P2002'
+export const MESSAGE_DERNIER_ADMINISTRATEUR =
+  "Ce compte est le dernier administrateur actif : désignez d'abord un autre administrateur."
+
+// Le compte quitte-t-il l'administration (rôle retiré ou désactivation) ?
+function retireAdministrateur(
+  avant: { role: string; actif: boolean },
+  apres: { role: string; actif: boolean },
+): boolean {
+  return avant.role === 'ADMINISTRATEUR' && avant.actif && (apres.role !== 'ADMINISTRATEUR' || !apres.actif)
 }
 
+// Gestion de TOUS les comptes de l'installation par l'administrateur
+// (ADMINISTRATEUR). Contrairement à /utilisateurs (maîtrise, Chef de Groupe),
+// cette surface couvre aussi les comptes administrateurs.
 @Injectable()
 export class UtilisateursService {
   constructor(
@@ -63,141 +75,52 @@ export class UtilisateursService {
     private readonly auth: AuthService,
   ) {}
 
-  // Unicité des postes « 1 Chef de Groupe actif par paroisse » et « 1 Responsable
-  // de Branche actif par (paroisse, branche) » : garantie en base par des index
-  // partiels (migration 20260713150000_fixes_pre_production), vérifiée ici en
-  // amont pour renvoyer un message clair plutôt qu'une violation de contrainte.
-  async conflitPosteUnique(
-    paroisseId: string,
-    role: string,
-    brancheType: string | null,
-    exclureId?: string,
-  ): Promise<string | null> {
-    const exclusion = exclureId ? { NOT: { id: exclureId } } : {}
-    if (role === 'CHEF_GROUPE') {
-      const autre = await this.prisma.utilisateur.findFirst({
-        where: { paroisseId, role: 'CHEF_GROUPE', actif: true, ...exclusion },
-        select: { id: true },
-      })
-      if (autre) return MESSAGE_CHEF_GROUPE_UNIQUE
+  // Le dernier administrateur actif ne peut jamais être rétrogradé ni
+  // désactivé. Les comptes administrateurs actifs sont verrouillés (FOR
+  // UPDATE, ordre stable) avant toute autre ligne : deux rétrogradations
+  // croisées sont ainsi sérialisées, sans interblocage.
+  private async verifierAutreAdministrateur(tx: Prisma.TransactionClient, id: string): Promise<void> {
+    const administrateurs = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM "Utilisateur"
+      WHERE role = 'ADMINISTRATEUR' AND actif = true
+      ORDER BY id
+      FOR UPDATE`
+    if (!administrateurs.some((admin) => admin.id !== id)) {
+      throw new ConflictException(MESSAGE_DERNIER_ADMINISTRATEUR)
     }
-    if (role === 'RESPONSABLE_BRANCHE' && brancheType) {
-      const autre = await this.prisma.utilisateur.findFirst({
-        where: {
-          paroisseId,
-          role: 'RESPONSABLE_BRANCHE',
-          brancheType: brancheType as BrancheType,
-          actif: true,
-          ...exclusion,
-        },
-        select: { id: true },
-      })
-      if (autre) return MESSAGE_RESPONSABLE_UNIQUE
-    }
-    return null
   }
 
-  // Gestion transverse des comptes de toutes les paroisses par un admin
-  // plateforme. Contrairement à /api/utilisateurs (scopé à la paroisse de
-  // l'appelant), cette surface n'est jamais filtrée par une paroisseId
-  // d'appelant — l'admin plateforme n'en a pas — mais elle exclut toujours les
-  // comptes ADMIN_PLATEFORME.
-  async lister(requete: Record<string, unknown>) {
-    const page = entierBorneRequete(requete.page, 1)
-    const limite = entierBorneRequete(requete.limite, 20, 100)
-    const roleParam = parametre(requete.role)
-    const role = roleParam && ROLES_ASSIGNABLES_PAROISSE.includes(roleParam) ? roleParam : undefined
-    const roleDistrictParam = parametre(requete.roleDistrict) ?? ''
-    const categorie = parametre(requete.categorie) ?? ''
-    const statut = parametre(requete.statut) ?? ''
-    const paroisseId = parametre(requete.paroisseId)?.trim() || undefined
-    const districtId = parametre(requete.districtId)?.trim() || undefined
-    const recherche = parametre(requete.recherche)?.trim() || undefined
-    const brancheParam = parametre(requete.brancheType)
-    const brancheType =
-      brancheParam && BrancheTypeSchema.safeParse(brancheParam).success ? (brancheParam as BrancheType) : undefined
+  private async trouverCible<S extends Prisma.UtilisateurSelect>(id: string, select: S) {
+    const cible = await this.prisma.utilisateur.findUnique({ where: { id }, select })
+    if (!cible) throw new NotFoundException('Utilisateur introuvable')
+    return cible
+  }
 
-    let roleWhere: Prisma.EnumRoleUtilisateurFilter<'Utilisateur'> | RoleUtilisateur = { not: 'ADMIN_PLATEFORME' }
-    if (categorie === 'staff' || categorie === 'nommables-district') {
-      roleWhere = { in: ROLES_TOUT_STAFF as RoleUtilisateur[] }
-    }
-    if (role) roleWhere = role as RoleUtilisateur
-
-    let roleDistrictWhere: Prisma.EnumRoleUtilisateurNullableFilter<'Utilisateur'> | RoleUtilisateur | null | undefined
-    let brancheDistrictRequise = false
-    if (categorie === 'equipe-district') {
-      roleDistrictWhere = { in: ROLES_DISTRICT_ETENDU as RoleUtilisateur[] }
-    }
-    if (categorie === 'commissaires-branche') {
-      roleDistrictWhere = 'ASSISTANT_DISTRICT'
-      brancheDistrictRequise = true
-    }
-    if (categorie === 'nommables-district') {
-      roleDistrictWhere = null
-    }
-
-    if (roleDistrictParam === 'AUCUNE') {
-      roleDistrictWhere = null
-      brancheDistrictRequise = false
-    } else if (roleDistrictParam === 'EQUIPE_DISTRICT') {
-      roleDistrictWhere = { in: ROLES_DISTRICT_ETENDU as RoleUtilisateur[] }
-      brancheDistrictRequise = false
-    } else if (roleDistrictParam === 'COMMISSAIRES_BRANCHE') {
-      roleDistrictWhere = 'ASSISTANT_DISTRICT'
-      brancheDistrictRequise = true
-    } else if (ROLES_DISTRICT_ETENDU.includes(roleDistrictParam)) {
-      roleDistrictWhere = roleDistrictParam as RoleUtilisateur
-      brancheDistrictRequise = false
-    }
-
-    const et: Prisma.UtilisateurWhereInput[] = []
-    if (recherche) {
-      et.push({
-        OR: [
-          { nom: { contains: recherche, mode: 'insensitive' } },
-          { prenom: { contains: recherche, mode: 'insensitive' } },
-          { matricule: { contains: recherche, mode: 'insensitive' } },
-          { telephone: { contains: recherche, mode: 'insensitive' } },
-          { email: { contains: recherche, mode: 'insensitive' } },
-        ],
-      })
-    }
-    if (brancheType) {
-      et.push({ OR: [{ brancheType }, { brancheTypeDistrict: brancheType }] })
-    }
+  // Filtres déjà validés et bornés par SchemaFiltresUtilisateurs.
+  async lister(filtres: FiltresUtilisateurs) {
+    const { page, limite, role, actif, brancheType, recherche } = filtres
 
     const where: Prisma.UtilisateurWhereInput = {
-      role: roleWhere,
-      ...(paroisseId ? { paroisseId } : {}),
-      ...(districtId ? { paroisse: { districtId } } : {}),
-      ...(statut === 'actifs' ? { actif: true } : {}),
-      ...(statut === 'inactifs' ? { actif: false } : {}),
-      ...(categorie === 'nommables-district' && statut !== 'inactifs' ? { actif: true } : {}),
-      ...(roleDistrictWhere !== undefined ? { roleDistrict: roleDistrictWhere } : {}),
-      ...(brancheDistrictRequise ? { brancheTypeDistrict: { not: null } } : {}),
-      ...(et.length > 0 ? { AND: et } : {}),
+      ...(role ? { role } : {}),
+      ...(actif !== undefined ? { actif } : {}),
+      ...(brancheType ? { brancheType } : {}),
+      ...(recherche
+        ? {
+            OR: [
+              { nom: { contains: recherche, mode: 'insensitive' } },
+              { prenom: { contains: recherche, mode: 'insensitive' } },
+              { matricule: { contains: recherche, mode: 'insensitive' } },
+              { telephone: { contains: recherche, mode: 'insensitive' } },
+              { email: { contains: recherche, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
     }
 
     const [utilisateurs, total] = await Promise.all([
       this.prisma.utilisateur.findMany({
         where,
-        select: {
-          id: true,
-          nom: true,
-          prenom: true,
-          matricule: true,
-          telephone: true,
-          email: true,
-          role: true,
-          fonction: true,
-          brancheType: true,
-          roleDistrict: true,
-          fonctionDistrict: true,
-          brancheTypeDistrict: true,
-          actif: true,
-          createdAt: true,
-          paroisse: { select: { id: true, nom: true, district: { select: { id: true, nom: true } } } },
-        },
+        select: SELECTION_LISTE,
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limite,
         take: limite,
@@ -208,16 +131,13 @@ export class UtilisateursService {
     return { utilisateurs, total, page, totalPages: Math.max(1, Math.ceil(total / limite)) }
   }
 
-  // Corps validé par SchemaCreationUtilisateur (champs requis, mot de passe,
-  // rôle paroissial assignable, branche cohérente avec le rôle).
+  // Corps validé par SchemaCreationUtilisateur (champs requis, rôle
+  // assignable, branche cohérente avec le rôle).
   async creer(donnees: DonneesCreationUtilisateur, acteurId: string) {
-    const { paroisseId, nom, prenom, email, matricule, telephone, role, fonction, brancheType } = donnees
-
-    const paroisse = await this.prisma.paroisse.findUnique({ where: { id: paroisseId }, select: { id: true } })
-    if (!paroisse) throw new NotFoundException('Paroisse introuvable')
+    const { nom, prenom, email, matricule, telephone, role, fonction, brancheType, editeurContenu } = donnees
 
     // Un compte est créé actif : il ne doit pas doubler un poste unique.
-    const conflitPoste = await this.conflitPosteUnique(paroisseId, role, brancheType)
+    const conflitPoste = await conflitPosteUnique(this.prisma, role, brancheType)
     if (conflitPoste) throw new ConflictException(conflitPoste)
 
     if (matricule) {
@@ -243,38 +163,34 @@ export class UtilisateursService {
 
     let utilisateur
     try {
-      utilisateur = await this.prisma.utilisateur.create({
-        data: {
-          nom,
-          prenom,
-          email,
-          matricule,
-          telephone,
-          role: role as RoleUtilisateur,
-          fonction,
-          brancheType,
-          password: passwordHache,
-          doitChangerMotDePasse: true,
-          paroisseId,
-        },
-        select: {
-          id: true,
-          nom: true,
-          prenom: true,
-          matricule: true,
-          telephone: true,
-          email: true,
-          role: true,
-          fonction: true,
-          brancheType: true,
-          actif: true,
-          createdAt: true,
-          paroisseId: true,
-        },
+      utilisateur = await this.prisma.$transaction(async (tx) => {
+        const nouveau = await tx.utilisateur.create({
+          data: {
+            nom,
+            prenom,
+            email,
+            matricule,
+            telephone,
+            role,
+            fonction,
+            brancheType,
+            editeurContenu,
+            password: passwordHache,
+            doitChangerMotDePasse: true,
+          },
+          select: SELECTION_LISTE,
+        })
+        await historiserMandat(
+          tx,
+          null,
+          { role, brancheType, actif: true },
+          { utilisateurId: nouveau.id, auteurId: acteurId },
+        )
+        return nouveau
       })
     } catch (erreur) {
       // Création concurrente : la contrainte d'unicité en base a tranché.
-      if (estConflitUnicite(erreur)) {
+      if (estErreurUnicite(erreur)) {
         throw new ConflictException(
           'Conflit avec un compte existant : matricule, téléphone, adresse e-mail ou poste unique déjà attribué.',
         )
@@ -283,12 +199,11 @@ export class UtilisateursService {
     }
 
     await this.audit.enregistrer({
-      paroisseId,
       acteurId,
       action: 'UTILISATEUR_CREE',
       entite: 'Utilisateur',
       entiteId: utilisateur.id,
-      details: { role: utilisateur.role },
+      details: { role: utilisateur.role, brancheType: utilisateur.brancheType, editeurContenu },
     })
 
     if (utilisateur.email) {
@@ -303,71 +218,58 @@ export class UtilisateursService {
       }).catch((error: unknown) => logger.error('admin.utilisateurs.email_bienvenue_echoue', error))
     }
 
+    // Le secret temporaire n'est renvoyé qu'une seule fois, ici.
     return { ...utilisateur, motDePasseTemporaire }
   }
 
   async detail(id: string) {
-    const utilisateur = await this.prisma.utilisateur.findFirst({
-      where: { id, ...CIBLE_GERABLE },
-      select: {
-        id: true,
-        nom: true,
-        prenom: true,
-        matricule: true,
-        telephone: true,
-        email: true,
-        role: true,
-        fonction: true,
-        brancheType: true,
-        actif: true,
-        createdAt: true,
-        updatedAt: true,
-        paroisse: { select: { id: true, nom: true } },
-      },
-    })
-    if (!utilisateur) throw new NotFoundException('Utilisateur introuvable')
-    return utilisateur
+    return this.trouverCible(id, SELECTION_DETAIL)
   }
 
-  private async trouverCible(id: string) {
-    const cible = await this.prisma.utilisateur.findFirst({
-      where: { id, ...CIBLE_GERABLE },
-      select: { id: true, role: true, actif: true, fonction: true, brancheType: true, paroisseId: true },
-    })
-    if (!cible) throw new NotFoundException('Utilisateur introuvable')
-    return cible
+  async mandats(id: string) {
+    await this.trouverCible(id, { id: true })
+    return listerMandats(this.prisma, id)
   }
 
   // Forme des champs validée par SchemaModificationUtilisateur ; les règles qui
-  // dépendent du compte existant (rôle actuel, branche déjà affectée) restent ici.
+  // dépendent du compte existant (rôle actuel, branche, dernier administrateur)
+  // restent ici.
   async modifier(id: string, donnees: DonneesModificationUtilisateur, acteurId: string) {
-    const existant = await this.trouverCible(id)
-    const { nom, prenom, email, role, actif, fonction, brancheType } = donnees
+    const existant = await this.trouverCible(id, {
+      id: true,
+      role: true,
+      actif: true,
+      fonction: true,
+      brancheType: true,
+      editeurContenu: true,
+      ...SELECTION_PROFIL_PUBLIC,
+    })
+    const { nom, prenom, email, role, actif, fonction, brancheType, editeurContenu } = donnees
 
-    // Pas de réaffectation de paroisse : seuls nom, prenom, email, role, actif,
-    // fonction et brancheType sont modifiables via cette route. `role` est
-    // toujours un rôle PAROISSIAL, jamais une valeur de district — une
-    // affectation district (roleDistrict) se gère via la désignation du
-    // Commissaire ou les nominations. Un compte PARENT/SCOUT existant (hors
-    // périmètre V1) garde son rôle tel quel.
-    if (role !== undefined && role !== existant.role && !ROLES_ASSIGNABLES_PAROISSE.includes(role)) {
+    // Un compte PARENT/SCOUT existant (espaces familles fermés) garde son rôle
+    // tel quel, mais on n'y bascule personne.
+    if (role !== undefined && role !== existant.role && !ROLES_ASSIGNABLES_ADMIN.includes(role)) {
       throw new BadRequestException('Rôle invalide')
     }
 
-    // brancheType/fonction recalculés sur le RÔLE FINAL (nouveau si fourni,
-    // sinon existant) — un utilisateur qui change de rôle ne doit jamais
-    // conserver une branche héritée d'un rôle précédent.
-    const roleFinal = role !== undefined ? role : existant.role
+    const roleFinal = role ?? existant.role
+    const actifFinal = actif ?? existant.actif
+
+    // Un administrateur ne se retire jamais lui-même l'administration
+    // (rôle ou désactivation) : il verrouillerait son propre accès.
+    if (id === acteurId && retireAdministrateur(existant, { role: roleFinal, actif: actifFinal })) {
+      throw new ForbiddenException('Vous ne pouvez pas retirer votre propre rôle administrateur ni vous désactiver')
+    }
+
+    // brancheType/fonction recalculés sur le RÔLE FINAL — un compte qui change
+    // de rôle ne conserve jamais une branche héritée d'un rôle précédent.
     const estBrancheFinal = ROLES_BRANCHE.includes(roleFinal)
-    if (estBrancheFinal && brancheType === undefined && !existant.brancheType) {
-      throw new BadRequestException('La branche est requise pour ce rôle')
-    }
-    if (estBrancheFinal && brancheType === null) {
-      throw new BadRequestException('La branche est requise pour ce rôle')
-    }
     const brancheTypeFinal = estBrancheFinal ? (brancheType !== undefined ? brancheType : existant.brancheType) : null
-    // fonction et email arrivent déjà nettoyés (vide → null).
-    const fonctionFinal = fonction !== undefined ? fonction : existant.fonction
+    if (estBrancheFinal && !brancheTypeFinal) throw new BadRequestException('La branche est requise pour ce rôle')
+
+    // Profil public : refusé (400) s'il est demandé pour un rôle non éligible,
+    // retiré d'office si le nouveau rôle ne l'est plus.
+    const profilPublic = profilPublicFinal(roleFinal, donnees.profilPublic, existant.profilPublic)
 
     if (email) {
       const doublon = await this.prisma.utilisateur.findFirst({
@@ -377,324 +279,127 @@ export class UtilisateursService {
       if (doublon) throw new BadRequestException('Cette adresse e-mail est déjà utilisée')
     }
 
-    const actifFinal = actif !== undefined ? actif : existant.actif
-    if (actifFinal && existant.paroisseId) {
-      const conflitPoste = await this.conflitPosteUnique(existant.paroisseId, roleFinal, brancheTypeFinal, id)
+    if (actifFinal) {
+      const conflitPoste = await conflitPosteUnique(this.prisma, roleFinal, brancheTypeFinal, id)
       if (conflitPoste) throw new ConflictException(conflitPoste)
     }
 
-    let misAJour
+    const avant = { role: existant.role, brancheType: existant.brancheType, actif: existant.actif }
+    const apres = { role: roleFinal, brancheType: brancheTypeFinal, actif: actifFinal }
+    const changeRole = roleFinal !== existant.role
+    const changePoste = changeRole || brancheTypeFinal !== existant.brancheType
+
+    let utilisateur
     try {
-      misAJour = await this.prisma.utilisateur.update({
-        where: { id },
-        data: {
-          ...(nom !== undefined ? { nom } : {}),
-          ...(prenom !== undefined ? { prenom } : {}),
-          ...(email !== undefined ? { email } : {}),
-          ...(role !== undefined ? { role: role as RoleUtilisateur } : {}),
-          ...(actif !== undefined ? { actif } : {}),
-          fonction: fonctionFinal,
-          brancheType: brancheTypeFinal,
-        },
-        select: {
-          id: true,
-          nom: true,
-          prenom: true,
-          matricule: true,
-          telephone: true,
-          email: true,
-          role: true,
-          fonction: true,
-          brancheType: true,
-          actif: true,
-          createdAt: true,
-          updatedAt: true,
-          paroisseId: true,
-          paroisse: { select: { id: true, nom: true } },
-        },
+      utilisateur = await this.prisma.$transaction(async (tx) => {
+        if (retireAdministrateur(avant, apres)) await this.verifierAutreAdministrateur(tx, id)
+        await verrouillerPoste(tx, id, avant)
+
+        const misAJour = await tx.utilisateur.update({
+          where: { id },
+          data: {
+            ...(nom !== undefined ? { nom } : {}),
+            ...(prenom !== undefined ? { prenom } : {}),
+            // email et fonction arrivent déjà nettoyés (vide → null).
+            ...(email !== undefined ? { email } : {}),
+            ...(fonction !== undefined ? { fonction } : {}),
+            ...(role !== undefined ? { role } : {}),
+            ...(actif !== undefined ? { actif } : {}),
+            ...(editeurContenu !== undefined ? { editeurContenu } : {}),
+            ...donneesProfilPublic(donnees),
+            profilPublic,
+            brancheType: brancheTypeFinal,
+          },
+          select: SELECTION_DETAIL,
+        })
+
+        await historiserMandat(tx, avant, apres, { utilisateurId: id, auteurId: acteurId })
+
+        // Compte désactivé ou changement de poste : ses sessions ouvertes sont
+        // fermées immédiatement (editeurContenu est relu à chaque requête).
+        if (actif === false || changePoste) await this.auth.revoquerToutes(id, tx)
+        return misAJour
       })
     } catch (erreur) {
       // Modification concurrente : la contrainte d'unicité en base a tranché.
-      if (estConflitUnicite(erreur)) {
+      if (estErreurUnicite(erreur)) {
         throw new ConflictException('Conflit avec un compte existant : adresse e-mail ou poste unique déjà attribué.')
       }
       throw erreur
     }
-    const { paroisseId: paroisseIdCible, ...utilisateur } = misAJour
 
-    // Compte désactivé : ses sessions ouvertes sont fermées immédiatement.
-    if (actif === false || (role !== undefined && role !== existant.role) || brancheTypeFinal !== existant.brancheType)
-      await this.auth.revoquerToutes(id)
-
-    if (role !== undefined && role !== existant.role) {
+    if (changePoste) {
       await this.audit.enregistrer({
-        paroisseId: paroisseIdCible,
         acteurId,
         action: 'UTILISATEUR_ROLE_MODIFIE',
-        entite: 'Utilisateur',
-        entiteId: id,
-        details: { ancienRole: existant.role, nouveauRole: role },
-      })
-    }
-    if (actif !== undefined && actif !== existant.actif) {
-      await this.audit.enregistrer({
-        paroisseId: paroisseIdCible,
-        acteurId,
-        action: actif ? 'UTILISATEUR_REACTIVE' : 'UTILISATEUR_DESACTIVE',
-        entite: 'Utilisateur',
-        entiteId: id,
-      })
-    }
-
-    return utilisateur
-  }
-
-  async desactiver(id: string, acteurId: string) {
-    await this.trouverCible(id)
-
-    const { paroisseId: paroisseIdCible, ...utilisateur } = await this.prisma.utilisateur.update({
-      where: { id },
-      data: { actif: false },
-      select: {
-        id: true,
-        nom: true,
-        prenom: true,
-        matricule: true,
-        telephone: true,
-        email: true,
-        role: true,
-        actif: true,
-        createdAt: true,
-        updatedAt: true,
-        paroisseId: true,
-        paroisse: { select: { id: true, nom: true } },
-      },
-    })
-
-    await this.auth.revoquerToutes(id)
-
-    await this.audit.enregistrer({
-      paroisseId: paroisseIdCible,
-      acteurId,
-      action: 'UTILISATEUR_DESACTIVE',
-      entite: 'Utilisateur',
-      entiteId: id,
-    })
-
-    return utilisateur
-  }
-
-  async nommer(id: string, donnees: DonneesNomination, acteurId: string) {
-    const existant = await this.prisma.utilisateur.findFirst({
-      where: { id, ...CIBLE_GERABLE },
-      select: {
-        id: true,
-        role: true,
-        fonction: true,
-        brancheType: true,
-        roleDistrict: true,
-        fonctionDistrict: true,
-        brancheTypeDistrict: true,
-        actif: true,
-        matricule: true,
-        telephone: true,
-        paroisseId: true,
-        paroisse: { select: { districtId: true } },
-      },
-    })
-    if (!existant) throw new NotFoundException('Utilisateur introuvable')
-
-    // Forme et valeurs reconnues déjà contrôlées par SchemaNomination (textes
-    // nettoyés, vide → null) ; les règles liées au compte existant restent ici.
-    const {
-      role,
-      roleDistrict,
-      brancheType: brancheParoisseDemandee,
-      brancheTypeDistrict: brancheDistrictDemandee,
-      fonctionDistrict: fonctionDistrictDemandee,
-    } = donnees
-
-    // Un compte PARENT/SCOUT existant (hors périmètre V1) garde son rôle tel quel.
-    if (role !== undefined && role !== existant.role && !ROLES_ASSIGNABLES_PAROISSE.includes(role)) {
-      throw new BadRequestException('Rôle invalide')
-    }
-
-    const roleFinal: string = role !== undefined ? role : existant.role
-    const estRoleBranche = ROLES_BRANCHE.includes(roleFinal)
-
-    const brancheParoisseFinale = estRoleBranche
-      ? brancheParoisseDemandee !== undefined
-        ? brancheParoisseDemandee
-        : existant.brancheType
-      : null
-    if (estRoleBranche && !brancheParoisseFinale) {
-      throw new BadRequestException('La branche est requise pour ce rôle')
-    }
-
-    if (roleFinal === 'PARENT' && !existant.telephone?.trim()) {
-      throw new BadRequestException('Un parent doit avoir un numéro de téléphone avant cette nomination')
-    }
-    if (roleFinal !== 'PARENT' && !existant.matricule?.trim()) {
-      throw new BadRequestException('Un matricule est requis avant de nommer cette personne à ce rôle')
-    }
-
-    const roleDistrictFinal = roleDistrict !== undefined ? roleDistrict : existant.roleDistrict
-
-    if (roleDistrictFinal) {
-      if (!existant.actif) {
-        throw new BadRequestException('Le compte doit être actif pour recevoir une affectation district')
-      }
-      if (!ROLES_TOUT_STAFF.includes(roleFinal)) {
-        throw new BadRequestException('Seul un membre du staff peut recevoir une affectation district')
-      }
-      if (!existant.paroisseId || !existant.paroisse?.districtId) {
-        throw new BadRequestException('La personne doit être rattachée à une paroisse avec district')
-      }
-    }
-
-    const brancheDistrictFinale =
-      roleDistrictFinal === 'ASSISTANT_DISTRICT'
-        ? brancheDistrictDemandee !== undefined
-          ? brancheDistrictDemandee
-          : existant.brancheTypeDistrict
-        : null
-    const fonctionDistrictFinale =
-      roleDistrictFinal === 'ASSISTANT_DISTRICT' && !brancheDistrictFinale
-        ? fonctionDistrictDemandee !== undefined
-          ? fonctionDistrictDemandee
-          : existant.fonctionDistrict
-        : null
-
-    // Unicité des postes uniques, vérifiée en amont pour un message clair.
-    if (existant.actif && existant.paroisseId) {
-      const conflitPoste = await this.conflitPosteUnique(existant.paroisseId, roleFinal, brancheParoisseFinale, id)
-      if (conflitPoste) throw new ConflictException(conflitPoste)
-    }
-
-    let commissairesRemplaces: string[] = []
-    let utilisateur
-    try {
-      utilisateur = await this.prisma.$transaction(async (tx) => {
-        if (existant.paroisse?.districtId) await verrouillerDistrict(tx, existant.paroisse.districtId)
-        await tx.$queryRaw`SELECT id FROM "Utilisateur" WHERE id = ${id} FOR UPDATE`
-        const courant = await tx.utilisateur.findUniqueOrThrow({
-          where: { id },
-          select: {
-            role: true,
-            roleDistrict: true,
-            brancheType: true,
-            fonctionDistrict: true,
-            brancheTypeDistrict: true,
-            paroisseId: true,
-            paroisse: { select: { districtId: true } },
-            actif: true,
-          },
-        })
-        if (
-          courant.role !== existant.role ||
-          courant.roleDistrict !== existant.roleDistrict ||
-          courant.brancheType !== existant.brancheType ||
-          courant.fonctionDistrict !== existant.fonctionDistrict ||
-          courant.brancheTypeDistrict !== existant.brancheTypeDistrict ||
-          courant.paroisseId !== existant.paroisseId ||
-          courant.paroisse?.districtId !== existant.paroisse?.districtId ||
-          courant.actif !== existant.actif
-        ) {
-          throw new ConflictException('Ce compte a été modifié ; rechargez la fiche avant de nommer')
-        }
-        const dataDistrict = {
-          roleDistrict: roleDistrictFinal as RoleUtilisateur | null,
-          fonctionDistrict: fonctionDistrictFinale,
-          brancheTypeDistrict: brancheDistrictFinale as BrancheType | null,
-        }
-        if (existant.paroisse?.districtId) await historiserAffectation(tx, id, dataDistrict, acteurId)
-        if (roleFinal !== existant.role || brancheParoisseFinale !== existant.brancheType) {
-          await tx.sessionUtilisateur.updateMany({
-            where: { utilisateurId: id, revoqueeLe: null },
-            data: { revoqueeLe: new Date() },
-          })
-        }
-        if (roleDistrictFinal === 'COMMISSAIRE_DISTRICT' && existant.paroisse?.districtId) {
-          const commissairesExistants = await tx.utilisateur.findMany({
-            where: {
-              roleDistrict: 'COMMISSAIRE_DISTRICT',
-              paroisse: { districtId: existant.paroisse.districtId },
-              NOT: { id },
-            },
-            select: { id: true },
-          })
-          commissairesRemplaces = commissairesExistants.map((u) => u.id)
-          for (const remplacantId of commissairesRemplaces) {
-            await historiserAffectation(
-              tx,
-              remplacantId,
-              { roleDistrict: null, fonctionDistrict: null, brancheTypeDistrict: null },
-              acteurId,
-              'Remplacement du commissaire',
-            )
-          }
-          if (commissairesRemplaces.length > 0) {
-            await tx.utilisateur.updateMany({
-              where: { id: { in: commissairesRemplaces } },
-              data: { roleDistrict: null, fonctionDistrict: null, brancheTypeDistrict: null },
-            })
-          }
-        }
-
-        return tx.utilisateur.update({
-          where: { id },
-          data: {
-            role: roleFinal as RoleUtilisateur,
-            brancheType: brancheParoisseFinale as BrancheType | null,
-            roleDistrict: roleDistrictFinal as RoleUtilisateur | null,
-            fonctionDistrict: fonctionDistrictFinale,
-            brancheTypeDistrict: brancheDistrictFinale as BrancheType | null,
-          },
-          select: SELECTION_NOMINATION,
-        })
-      })
-    } catch (erreur) {
-      // Nomination concurrente : la contrainte d'unicité en base a tranché.
-      if (estConflitUnicite(erreur)) {
-        throw new ConflictException("Ce poste unique vient d'être attribué à un autre compte.")
-      }
-      throw erreur
-    }
-
-    if (roleFinal !== existant.role) {
-      await this.audit.enregistrer({
-        paroisseId: existant.paroisseId,
-        acteurId,
-        action: 'UTILISATEUR_ROLE_MODIFIE',
-        entite: 'Utilisateur',
-        entiteId: id,
-        details: { ancienRole: existant.role, nouveauRole: roleFinal },
-      })
-    }
-
-    const affectationDistrictChangee =
-      roleDistrictFinal !== existant.roleDistrict ||
-      fonctionDistrictFinale !== existant.fonctionDistrict ||
-      brancheDistrictFinale !== existant.brancheTypeDistrict
-
-    if (affectationDistrictChangee) {
-      await this.audit.enregistrer({
-        paroisseId: existant.paroisseId,
-        acteurId,
-        action: roleDistrictFinal
-          ? existant.roleDistrict
-            ? 'UTILISATEUR_ROLE_DISTRICT_MODIFIE'
-            : 'UTILISATEUR_ROLE_DISTRICT_AFFECTE'
-          : 'UTILISATEUR_ROLE_DISTRICT_RETIRE',
         entite: 'Utilisateur',
         entiteId: id,
         details: {
-          ancienRoleDistrict: existant.roleDistrict,
-          nouveauRoleDistrict: roleDistrictFinal,
-          fonctionDistrict: fonctionDistrictFinale,
-          brancheTypeDistrict: brancheDistrictFinale,
-          commissairesRemplaces,
+          ancienRole: existant.role,
+          nouveauRole: roleFinal,
+          ancienneBranche: existant.brancheType,
+          nouvelleBranche: brancheTypeFinal,
         },
+      })
+    }
+    if (actifFinal !== existant.actif) {
+      await this.audit.enregistrer({
+        acteurId,
+        action: actifFinal ? 'UTILISATEUR_REACTIVE' : 'UTILISATEUR_DESACTIVE',
+        entite: 'Utilisateur',
+        entiteId: id,
+      })
+    }
+    if (editeurContenu !== undefined && editeurContenu !== existant.editeurContenu) {
+      await this.audit.enregistrer({
+        acteurId,
+        action: 'UTILISATEUR_EDITEUR_CONTENU_MODIFIE',
+        entite: 'Utilisateur',
+        entiteId: id,
+        details: { editeurContenu },
+      })
+    }
+    const champsProfil = champsProfilModifies(existant, { ...donnees, profilPublic })
+    if (champsProfil.length > 0) {
+      await this.audit.enregistrer({
+        acteurId,
+        action: 'PROFIL_PUBLIC_MODIFIE',
+        entite: 'Utilisateur',
+        entiteId: id,
+        details: { champs: champsProfil, profilPublic },
+      })
+    }
+
+    return utilisateur
+  }
+
+  // Désactivation (jamais de suppression physique d'un compte).
+  async desactiver(id: string, acteurId: string) {
+    if (id === acteurId) throw new ForbiddenException('Vous ne pouvez pas vous désactiver vous-même')
+
+    const existant = await this.trouverCible(id, { id: true, role: true, brancheType: true, actif: true })
+    const avant = { role: existant.role, brancheType: existant.brancheType, actif: existant.actif }
+    const apres = { ...avant, actif: false }
+
+    const utilisateur = await this.prisma.$transaction(async (tx) => {
+      if (retireAdministrateur(avant, apres)) await this.verifierAutreAdministrateur(tx, id)
+      await verrouillerPoste(tx, id, avant)
+      const misAJour = await tx.utilisateur.update({
+        where: { id },
+        data: { actif: false },
+        select: SELECTION_DETAIL,
+      })
+      await historiserMandat(tx, avant, apres, { utilisateurId: id, auteurId: acteurId })
+      await this.auth.revoquerToutes(id, tx)
+      return misAJour
+    })
+
+    if (existant.actif) {
+      await this.audit.enregistrer({
+        acteurId,
+        action: 'UTILISATEUR_DESACTIVE',
+        entite: 'Utilisateur',
+        entiteId: id,
       })
     }
 
@@ -702,13 +407,7 @@ export class UtilisateursService {
   }
 
   async changerMotDePasse(id: string, { nouveauMotDePasse }: DonneesMotDePasseAdmin, acteurId: string) {
-    // Un admin plateforme ne réinitialise pas le mot de passe d'un autre
-    // admin plateforme via cette surface.
-    const existant = await this.prisma.utilisateur.findFirst({
-      where: { id, ...CIBLE_GERABLE },
-      select: { id: true, paroisseId: true },
-    })
-    if (!existant) throw new NotFoundException('Utilisateur introuvable')
+    await this.trouverCible(id, { id: true })
 
     const passwordHache = await hash(nouveauMotDePasse, 12)
     await this.prisma.utilisateur.update({
@@ -721,7 +420,6 @@ export class UtilisateursService {
     await this.auth.revoquerToutes(id)
 
     await this.audit.enregistrer({
-      paroisseId: existant.paroisseId,
       acteurId,
       action: 'UTILISATEUR_MOT_DE_PASSE_REINITIALISE',
       entite: 'Utilisateur',
