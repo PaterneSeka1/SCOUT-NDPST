@@ -28,7 +28,6 @@ export interface Utilisateur {
   brancheType?: string | null
   actif: boolean
   email: string | null
-  paroisseId?: string
   createdAt: string
   updatedAt?: string
   enfants?: EnfantLie[]

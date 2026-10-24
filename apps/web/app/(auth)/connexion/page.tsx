@@ -1,77 +1,104 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
 import { ParoisseLogoImageAuto } from '@/components/ParoisseLogoImage'
 import { useSiteInfo } from '@/components/useSiteInfo'
 import { PasswordInput } from '@/components/PasswordInput'
+import { ArrowLeft, Loader2 } from '@/lib/icons'
+
+const CHAMP =
+  'w-full rounded-md border border-ligne-forte bg-white px-4 py-3 text-[0.95rem] text-encre transition placeholder:text-encre-pale focus:border-primaire focus:ring-2 focus:ring-primaire/20 focus:outline-none'
 
 export default function LoginPage() {
   const router = useRouter()
   const [identifiant, setIdentifiant] = useState('')
   const [password, setPassword] = useState('')
   const [chargement, setChargement] = useState(false)
-  const { nomSite } = useSiteInfo()
+  const [erreur, setErreur] = useState<string | null>(null)
+  const { nomSite, sousTitreSite } = useSiteInfo()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setErreur(null)
+    if (!identifiant.trim() || !password) {
+      setErreur('Indiquez votre identifiant et votre mot de passe.')
+      return
+    }
     setChargement(true)
-
     try {
       const reponse = await fetch('/api/auth/connexion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifiant, password }),
+        body: JSON.stringify({ identifiant: identifiant.trim(), password }),
       })
       const data = (await reponse.json().catch(() => ({}))) as {
         erreur?: string
-        utilisateur?: { paroisseId: string | null; doitChangerMotDePasse?: boolean }
+        utilisateur?: { doitChangerMotDePasse?: boolean }
       }
 
-      if (!reponse.ok) {
-        toast.error(data.erreur ?? 'Identifiant ou mot de passe incorrect.')
-      } else if (!data.utilisateur?.paroisseId) {
-        // Compte sans paroisse (administration plateforme) : il relève d'une
-        // autre plateforme, la session ouverte est refermée aussitôt.
-        await fetch('/api/auth/deconnexion', { method: 'POST' })
-        toast.error("Ce compte n'est rattaché à aucune paroisse : il ne peut pas accéder à cet espace.")
+      if (!reponse.ok || !data.utilisateur) {
+        setErreur(
+          reponse.status === 429
+            ? 'Trop de tentatives. Patientez quelques minutes avant de réessayer.'
+            : (data.erreur ?? 'Identifiant ou mot de passe incorrect.'),
+        )
       } else if (data.utilisateur.doitChangerMotDePasse) {
         router.push('/changer-mot-de-passe')
         router.refresh()
       } else {
         const destination = new URLSearchParams(window.location.search).get('callbackUrl')
-        // Uniquement un chemin interne : jamais de redirection vers un autre site.
-        router.push(destination?.startsWith('/dashboard') ? destination : '/dashboard')
+        // Uniquement un chemin interne de l'espace privé : jamais vers un autre site.
+        const interne = destination && /^\/(dashboard|admin)(\/|$)/.test(destination) && !destination.startsWith('//')
+        router.push(interne ? destination : '/dashboard')
         router.refresh()
       }
     } catch {
-      toast.error('Connexion impossible. Vérifiez votre accès à Internet, puis réessayez.')
+      setErreur('Connexion impossible. Vérifiez votre accès à Internet, puis réessayez.')
     } finally {
       setChargement(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--cf)' }}>
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 overflow-hidden" style={{ backgroundColor: 'var(--cp)' }}>
-              <ParoisseLogoImageAuto taille="lg" />
-            </div>
-            <h1 className="text-2xl font-bold" style={{ color: 'var(--cp)' }}>{nomSite}</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Suivi pédagogique — Côte d&apos;Ivoire
-            </p>
-          </div>
+    <div className="grid min-h-dvh bg-papier lg:grid-cols-2">
+      <aside className="relative isolate hidden overflow-hidden bg-profond p-12 text-white lg:flex lg:flex-col lg:justify-between">
+        <div className="motif-topo-clair absolute inset-0 -z-10 opacity-[0.08]" aria-hidden />
+        <Link href="/" className="inline-flex items-center gap-2 text-sm text-white/80 hover:text-white focus-visible:outline-white">
+          <ArrowLeft className="h-4 w-4" aria-hidden />
+          Retour au site
+        </Link>
+        <div>
+          <p className="signal text-sm text-or-300">Espace membres</p>
+          <p className="titre-display mt-3 max-w-md text-4xl leading-tight font-semibold text-balance">{nomSite}</p>
+          {sousTitreSite && <p className="mt-2 text-white/75">{sousTitreSite}</p>}
+          <p className="mt-8 max-w-md leading-relaxed text-white/80">
+            Gestion des scouts, des activités, des présences, des cotisations et de la progression de chaque branche.
+          </p>
+        </div>
+        <p className="text-xs text-white/60">Accès réservé à la maîtrise et à l’administration du groupe.</p>
+      </aside>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+      <main className="flex items-center justify-center px-4 py-12 sm:px-8">
+        <div className="w-full max-w-sm">
+          <div className="mb-8 flex items-center gap-3 lg:hidden">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-ligne">
+              <ParoisseLogoImageAuto taille="md" />
+            </span>
+            <span className="titre-display text-lg leading-tight font-semibold text-encre">{nomSite}</span>
+          </div>
+          <h1 className="titre-display text-3xl font-semibold text-encre">Connexion</h1>
+          <p className="mt-1 text-encre-douce">Accédez à l’espace de gestion du groupe.</p>
+
+          <form onSubmit={handleSubmit} className="mt-8 space-y-5" noValidate>
+            {erreur && (
+              <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                {erreur}
+              </p>
+            )}
             <div>
-              <label
-                htmlFor="identifiant"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label htmlFor="identifiant" className="mb-1.5 block text-sm font-medium text-encre">
                 Matricule ou numéro de téléphone
               </label>
               <input
@@ -81,57 +108,45 @@ export default function LoginPage() {
                 onChange={(e) => setIdentifiant(e.target.value)}
                 required
                 autoComplete="username"
-                placeholder="Ex : 0545247O ou 0712345678"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-(--ca) focus:border-transparent transition text-gray-700 placeholder-gray-400"
+                aria-invalid={erreur ? true : undefined}
+                className={CHAMP}
               />
             </div>
-
             <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Mot de passe
-              </label>
+              <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                <label htmlFor="password" className="block text-sm font-medium text-encre">
+                  Mot de passe
+                </label>
+                <Link href="/mot-de-passe-oublie" className="text-sm text-primaire underline-offset-4 hover:underline">
+                  Mot de passe oublié ?
+                </Link>
+              </div>
               <PasswordInput
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
-                placeholder="••••••••"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-(--ca) focus:border-transparent transition text-gray-700 placeholder-gray-400"
+                aria-invalid={erreur ? true : undefined}
+                className={CHAMP}
               />
             </div>
-
             <button
               type="submit"
               disabled={chargement}
-              style={{ backgroundColor: 'var(--cp)' }}
-              className="w-full py-3 px-4 hover:brightness-110 text-white font-semibold rounded-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex w-full items-center justify-center gap-2 rounded-md bg-primaire px-4 py-3 font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {chargement ? (
-                <>
-                  <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                  Connexion en cours…
-                </>
-              ) : (
-                'Se connecter'
-              )}
+              {chargement && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+              {chargement ? 'Connexion en cours…' : 'Se connecter'}
             </button>
-
-            <div className="text-center">
-              <a href="/mot-de-passe-oublie" className="text-sm text-gray-500 hover:text-(--cp) transition-colors">
-                Mot de passe oublié ?
-              </a>
-            </div>
           </form>
 
-          <p className="text-center text-xs text-gray-400 mt-6">
-            Association Scouts Catholiques de Côte d&apos;Ivoire
-          </p>
+          <Link href="/" className="mt-10 inline-flex items-center gap-2 text-sm text-encre-douce hover:text-encre lg:hidden">
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+            Retour au site
+          </Link>
         </div>
-      </div>
+      </main>
     </div>
   )
 }
