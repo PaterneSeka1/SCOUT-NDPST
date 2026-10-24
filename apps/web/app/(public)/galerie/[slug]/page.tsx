@@ -31,21 +31,22 @@ export default async function PageAlbum({ params }: Props) {
 
   return (
     <>
-      <header className="motif-cercles bg-sable-50 pt-28 pb-12 sm:pt-36 sm:pb-16">
+      <header className="relative isolate overflow-hidden border-b border-ligne pt-10 pb-10 sm:pt-14 sm:pb-12">
+        <div className="motif-topo absolute inset-0 -z-10 opacity-[0.05]" aria-hidden />
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <LienRetour href="/galerie">Tous les albums</LienRetour>
-          <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-stone-500">
-            {album.categorie && <span className="font-semibold tracking-wide text-accent uppercase">{album.categorie}</span>}
+          <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-encre-pale">
+            {album.categorie && <span className="signal text-xs text-accent">{album.categorie}</span>}
             {album.dateEvenement && <time dateTime={album.dateEvenement}>{dateLongue(album.dateEvenement)}</time>}
-            <span>
+            <span className="chiffre-signal">
               {album.medias.length} photo{album.medias.length > 1 ? 's' : ''}
             </span>
           </div>
-          <h1 className="titre-display mt-3 text-4xl font-semibold text-stone-900 sm:text-5xl">{album.titre}</h1>
-          {album.description && <p className="mt-4 max-w-3xl text-lg leading-relaxed text-stone-600">{album.description}</p>}
+          <h1 className="titre-display mt-3 text-4xl font-semibold text-encre sm:text-5xl">{album.titre}</h1>
+          {album.description && <p className="mt-4 max-w-3xl text-lg leading-relaxed text-encre-douce">{album.description}</p>}
         </div>
       </header>
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8" aria-label="Photos de l’album">
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8" aria-label="Photos de l’album">
         <Visionneuse photos={album.medias} titreAlbum={album.titre} />
       </section>
     </>

@@ -8,8 +8,8 @@ export default async function LayoutPublic({ children }: { children: React.React
   const identite = await getIdentite()
   const nomSite = nomAffiche(identite)
   return (
-    <div className="flex min-h-dvh flex-col bg-creme">
-      <a href="#contenu" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2">
+    <div className="flex min-h-dvh flex-col bg-papier">
+      <a href="#contenu" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2 focus:shadow-flottante">
         Aller au contenu
       </a>
       <PublicHeader nomSite={nomSite} sousTitre={sousTitreAffiche(identite)} logoUrl={identite.logoUrl || LOGO_PAR_DEFAUT} />

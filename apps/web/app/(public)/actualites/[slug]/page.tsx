@@ -55,14 +55,14 @@ export default async function PageArticle({ params }: Props) {
   return (
     <article>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
-      <header className="motif-cercles bg-sable-50 pt-28 pb-12 sm:pt-36 sm:pb-16">
+      <header className="border-b border-ligne pt-10 pb-12 sm:pt-14 sm:pb-14">
         <div className="mx-auto max-w-3xl px-4 sm:px-6">
           <LienRetour href="/actualites">Toutes les actualités</LienRetour>
-          <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-stone-500">
+          <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-encre-pale">
             {article.categorie && (
               <Link
                 href={`/actualites?categorie=${encodeURIComponent(article.categorie.slug)}`}
-                className="font-semibold tracking-wide text-accent uppercase hover:underline"
+                className="signal text-xs text-accent hover:underline"
               >
                 {article.categorie.nom}
               </Link>
@@ -70,14 +70,14 @@ export default async function PageArticle({ params }: Props) {
             <time dateTime={article.datePublication}>{dateLongue(article.datePublication)}</time>
             {auteur && <span>Par {auteur}</span>}
           </div>
-          <h1 className="titre-display mt-3 text-3xl leading-tight font-semibold text-stone-900 sm:text-5xl">{article.titre}</h1>
-          {article.resume && <p className="mt-5 text-lg leading-relaxed text-stone-600">{article.resume}</p>}
+          <h1 className="titre-display mt-3 text-3xl leading-tight font-semibold text-encre sm:text-5xl">{article.titre}</h1>
+          {article.resume && <p className="mt-5 text-lg leading-relaxed text-encre-douce">{article.resume}</p>}
         </div>
       </header>
 
       {article.imageCouverture && (
-        <div className="mx-auto -mt-2 max-w-5xl px-4 sm:px-6">
-          <figure className="aspect-[16/9] overflow-hidden rounded-3xl bg-sable-100 shadow-flottante">
+        <div className="mx-auto mt-10 max-w-5xl px-4 sm:px-6">
+          <figure className="aspect-[16/9] overflow-hidden rounded-lg bg-papier-fonce">
             <ImagePublique src={article.imageCouverture} alt={article.imageAlt ?? ''} prioritaire />
           </figure>
         </div>
@@ -85,7 +85,7 @@ export default async function PageArticle({ params }: Props) {
 
       <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
         <ContenuRiche texte={article.contenu} className="text-lg" />
-        <div className="mt-14 border-t border-stone-200 pt-8">
+        <div className="mt-14 border-t border-ligne pt-8">
           <LienSuite href="/actualites">Lire d’autres actualités</LienSuite>
         </div>
       </div>

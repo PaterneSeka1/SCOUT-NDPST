@@ -1,11 +1,9 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { lirePublic } from '@/lib/api-public'
-import { BookOpen, Compass, Leaf, Lightbulb, Target } from '@/lib/icons'
-import type { LucideIcon } from '@/lib/icons'
+import { styleAccent } from '@/lib/branches-visuel'
 import { ContenuRiche } from '@/components/contenu/ContenuRiche'
-import { Section } from '@/components/public/EnTetePage'
-import { CarteActivite, CarteMembre, ImagePublique, LienRetour, LienSuite, VisuelVide } from '@/components/public/Cartes'
+import { CarteActivite, ImagePublique, LienRetour, LienSuite, Portrait } from '@/components/public/Cartes'
 import type { BrancheDetail } from '@/components/public/contrats'
 import { extrait } from '@/components/public/outils'
 
@@ -19,27 +17,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!branche) return { title: 'Branche introuvable' }
   return {
     title: branche.nom,
-    description: extrait(
-      branche.presentation || `La branche ${branche.nom}${branche.trancheAge ? ` (${branche.trancheAge})` : ''} du groupe scout.`,
-    ),
+    description: extrait(branche.presentation || `La branche ${branche.nom}${branche.trancheAge ? ` (${branche.trancheAge})` : ''} du groupe scout.`),
     alternates: { canonical: `/nos-branches/${branche.slug}` },
     openGraph: branche.imageUrl ? { images: [{ url: branche.imageUrl, alt: branche.imageAlt ?? '' }] } : undefined,
   }
-}
-
-function Bloc({ icone: Icone, titre, texte }: { icone: LucideIcon; titre: string; texte: string | null }) {
-  if (!texte?.trim()) return null
-  return (
-    <section className="rounded-2xl bg-white p-6 shadow-carte ring-1 ring-stone-200/70 sm:p-8">
-      <h2 className="titre-display flex items-center gap-3 text-2xl font-semibold text-stone-900">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-foret-50 text-primaire">
-          <Icone className="h-5 w-5" aria-hidden />
-        </span>
-        {titre}
-      </h2>
-      <ContenuRiche texte={texte} className="mt-4" />
-    </section>
-  )
 }
 
 export default async function PageBranche({ params }: Props) {
@@ -48,85 +29,121 @@ export default async function PageBranche({ params }: Props) {
   if (!branche) notFound()
 
   const blocs = [
-    { icone: Compass, titre: 'Identité', texte: branche.identite },
-    { icone: Target, titre: 'Objectifs', texte: branche.objectifs },
-    { icone: Lightbulb, titre: 'Pédagogie', texte: branche.pedagogie },
-    { icone: BookOpen, titre: 'Activités types', texte: branche.activitesTypes },
-  ]
-  const contenuDisponible = !!branche.presentation || blocs.some((b) => b.texte?.trim())
+    { titre: 'Identité', texte: branche.identite },
+    { titre: 'Objectifs', texte: branche.objectifs },
+    { titre: 'Pédagogie', texte: branche.pedagogie },
+    { titre: 'Activités types', texte: branche.activitesTypes },
+  ].filter((b) => b.texte?.trim())
 
   return (
-    <>
-      <section className="relative isolate overflow-hidden bg-profond pt-28 pb-14 text-white sm:pt-36 sm:pb-20">
-        <div className="absolute inset-0 -z-10 opacity-35">
-          {branche.imageUrl ? <ImagePublique src={branche.imageUrl} alt="" prioritaire /> : <VisuelVide icone={Leaf} className="bg-profond" />}
-        </div>
-        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-profond via-profond/70 to-profond/30" aria-hidden />
-        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+    <div style={styleAccent(branche.type)}>
+      <section className="relative isolate overflow-hidden bg-profond text-white">
+        {branche.imageUrl && (
+          <div className="absolute inset-0 -z-20 opacity-40">
+            <ImagePublique src={branche.imageUrl} alt="" prioritaire />
+          </div>
+        )}
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-profond via-profond/85 to-profond/40" aria-hidden />
+        <div className="motif-topo-clair absolute inset-0 -z-10 opacity-[0.07]" aria-hidden />
+        <span className="absolute inset-x-0 bottom-0 h-1.5 bg-(--accent-branche)" aria-hidden />
+        <div className="mx-auto max-w-7xl px-4 pt-10 pb-12 sm:px-6 sm:pt-14 sm:pb-16 lg:px-8">
           <LienRetour href="/nos-branches" clair>
             Toutes les branches
           </LienRetour>
-          <p className="mt-6 text-xs font-semibold tracking-[0.2em] text-or-300 uppercase">Branche</p>
-          <h1 className="titre-display mt-2 text-4xl font-semibold sm:text-6xl">{branche.nom}</h1>
+          <p className="signal mt-8 text-sm text-or-300">Branche</p>
+          <h1 className="titre-display mt-2 text-5xl font-semibold sm:text-6xl">{branche.nom}</h1>
           {branche.trancheAge && (
-            <p className="mt-4 inline-flex rounded-full bg-white/15 px-4 py-1.5 text-sm font-medium backdrop-blur-sm">
+            <p className="chiffre-signal mt-3 text-2xl text-white/90">
               <span className="sr-only">Tranche d’âge : </span>
               {branche.trancheAge}
             </p>
           )}
+          {branche.presentation && <p className="titre-display mt-6 max-w-3xl text-xl leading-relaxed text-white/90 sm:text-2xl">{branche.presentation}</p>}
         </div>
       </section>
 
-      <Section className="max-w-5xl">
-        {branche.imageUrl && (
-          <div className="mb-12 aspect-[16/9] overflow-hidden rounded-3xl bg-sable-100 shadow-flottante">
-            <ImagePublique src={branche.imageUrl} alt={branche.imageAlt ?? ''} />
-          </div>
-        )}
-        {contenuDisponible ? (
-          <div className="space-y-8">
-            {branche.presentation && <p className="titre-display text-xl leading-relaxed text-stone-800 sm:text-2xl">{branche.presentation}</p>}
-            {blocs.map((b) => (
-              <Bloc key={b.titre} {...b} />
-            ))}
-          </div>
-        ) : (
-          <p className="rounded-2xl bg-sable-50 p-8 text-center text-stone-600">La présentation de cette branche sera bientôt publiée.</p>
-        )}
-      </Section>
+      <div className="mx-auto grid max-w-7xl gap-12 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-12 lg:px-8">
+        <div className="lg:col-span-8">
+          {blocs.length > 0 ? (
+            <div className="divide-y divide-ligne">
+              {blocs.map((b) => (
+                <section key={b.titre} className="grid gap-3 py-8 first:pt-0 sm:grid-cols-[11rem_1fr] sm:gap-8">
+                  <h2 className="signal pt-1 text-sm text-(--accent-branche)">{b.titre}</h2>
+                  <ContenuRiche texte={b.texte} className="text-lg" />
+                </section>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-lg border border-ligne bg-white p-8 text-encre-douce">
+              La présentation détaillée de cette branche sera bientôt publiée. La direction du groupe peut d’ici là répondre à vos questions.
+            </p>
+          )}
+          {branche.imageUrl && branche.imageAlt && (
+            <figure className="mt-10 overflow-hidden rounded-lg">
+              <div className="aspect-[16/9]">
+                <ImagePublique src={branche.imageUrl} alt={branche.imageAlt} />
+              </div>
+            </figure>
+          )}
+        </div>
 
-      {branche.responsables.length > 0 && (
-        <section className="bg-sable-50" aria-labelledby="titre-responsables">
-          <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
-            <h2 id="titre-responsables" className="titre-display mb-8 text-3xl font-semibold text-stone-900">
-              Les responsables
+        <aside className="space-y-10 lg:col-span-4" aria-label="En pratique">
+          <section aria-labelledby="titre-encadrement" className="rounded-lg border border-ligne bg-white p-6">
+            <h2 id="titre-encadrement" className="signal text-sm text-encre-pale">
+              L’encadrement
             </h2>
-            <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {branche.responsables.map((m) => (
-                <li key={m.id}>
-                  <CarteMembre membre={m} />
+            {branche.responsables.length > 0 ? (
+              <ul className="mt-4 space-y-4">
+                {branche.responsables.map((m) => (
+                  <li key={m.id} className="flex items-center gap-3">
+                    <Portrait membre={{ ...m, brancheType: branche.type }} className="w-14 text-[0.55rem]" />
+                    <div className="min-w-0">
+                      <p className="font-semibold text-encre">
+                        {m.prenom} {m.nom}
+                      </p>
+                      <p className="text-sm text-encre-pale">{m.fonction}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-3 text-encre-douce">La présentation de l’équipe d’encadrement sera bientôt publiée.</p>
+            )}
+            <div className="mt-6">
+              <LienSuite href="/notre-equipe">Toute la maîtrise</LienSuite>
+            </div>
+          </section>
+          <section className="rounded-lg bg-primaire p-6 text-white">
+            <h2 className="titre-display text-xl font-semibold">Inscrire un jeune dans cette branche</h2>
+            <p className="mt-2 text-white/85">La direction confirme la branche selon l’âge de l’enfant.</p>
+            <div className="mt-5">
+              <LienSuite href="/nous-rejoindre?objet=inscription#formulaire" clair>
+                Nous rejoindre
+              </LienSuite>
+            </div>
+          </section>
+        </aside>
+      </div>
+
+      {branche.activites.length > 0 && (
+        <section aria-labelledby="titre-agenda-branche" className="border-t border-ligne bg-papier-fonce/50">
+          <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+            <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <h2 id="titre-agenda-branche" className="titre-display text-3xl font-semibold text-encre">
+                Prochains rendez-vous
+              </h2>
+              <LienSuite href="/activites">Tout l’agenda</LienSuite>
+            </div>
+            <ul className="grid gap-x-12 divide-y divide-ligne md:grid-cols-2 md:divide-y-0">
+              {branche.activites.map((a) => (
+                <li key={a.id} className="py-6">
+                  <CarteActivite activite={a} />
                 </li>
               ))}
             </ul>
           </div>
         </section>
       )}
-
-      {branche.activites.length > 0 && (
-        <Section className="max-w-5xl">
-          <h2 className="titre-display mb-8 text-3xl font-semibold text-stone-900">Prochains rendez-vous</h2>
-          <ul className="grid gap-5 md:grid-cols-2">
-            {branche.activites.map((a) => (
-              <li key={a.id}>
-                <CarteActivite activite={a} />
-              </li>
-            ))}
-          </ul>
-          <div className="mt-8">
-            <LienSuite href="/activites">Tout l’agenda</LienSuite>
-          </div>
-        </Section>
-      )}
-    </>
+    </div>
   )
 }

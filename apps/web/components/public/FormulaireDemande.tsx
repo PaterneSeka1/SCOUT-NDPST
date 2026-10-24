@@ -2,12 +2,11 @@
 
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
-import { LABELS_BRANCHES, LABELS_TYPE_DEMANDE, ORDRE_BRANCHES } from '@scout/shared'
+import { LABELS_BRANCHES, ORDRE_BRANCHES } from '@scout/shared'
 import { api, ErreurApi } from '@/lib/api'
 import { Alert, Button, Checkbox, Field, Input, Select, Textarea } from '@/components/ui'
 import { CheckCircle2, Send } from '@/lib/icons'
-
-type TypeDemande = 'INSCRIPTION_JEUNE' | 'ENGAGEMENT_ADULTE' | 'INFORMATION'
+import type { Parcours, TypeDemande } from './parcours'
 
 interface Valeurs {
   type: TypeDemande
@@ -51,22 +50,14 @@ function valider(v: Valeurs): Erreurs {
 }
 
 /**
- * Formulaire public « Nous rejoindre » / « Contact » → POST /api/public/demandes.
- * Aucune donnée de santé, aucun compte créé ; anti-spam par champ piège
- * (siteWeb) et horodatage d'ouverture (ouvertLe).
+ * Formulaire public « Nous rejoindre » → POST /api/public/demandes, pour un
+ * parcours choisi sur la page (inscription, engagement, information,
+ * contact). Aucune donnée de santé, aucun compte créé ; anti-spam par champ
+ * piège (siteWeb) et horodatage d'ouverture (ouvertLe).
  */
-export function FormulaireDemande({
-  mode,
-  inscriptionsOuvertes,
-}: {
-  mode: 'adhesion' | 'contact'
-  inscriptionsOuvertes: boolean
-}) {
-  const typesProposes: TypeDemande[] =
-    mode === 'contact' ? ['INFORMATION'] : inscriptionsOuvertes ? ['INSCRIPTION_JEUNE', 'ENGAGEMENT_ADULTE', 'INFORMATION'] : ['INFORMATION']
-
+export function FormulaireDemande({ parcours }: { parcours: Parcours }) {
   const [valeurs, setValeurs] = useState<Valeurs>({
-    type: typesProposes[0],
+    type: parcours.type,
     prenomContact: '',
     nomContact: '',
     telephone: '',
@@ -158,12 +149,12 @@ export function FormulaireDemande({
         ref={confirmation}
         tabIndex={-1}
         role="status"
-        className="rounded-2xl bg-white p-8 text-center shadow-carte ring-1 ring-stone-200/70 focus:outline-none"
+        className="rounded-lg border border-ligne bg-white p-8 text-center focus:outline-none"
       >
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-foret-50 text-foret-600">
           <CheckCircle2 className="h-7 w-7" aria-hidden />
         </div>
-        <h2 className="titre-display mt-4 text-2xl font-semibold text-stone-900">Votre demande a bien été reçue</h2>
+        <h2 className="titre-display mt-4 text-2xl font-semibold text-encre">Votre demande a bien été reçue</h2>
         <p className="mx-auto mt-3 max-w-md leading-relaxed text-stone-600">
           Votre demande a bien été reçue et sera examinée par la direction du groupe, qui vous recontactera par téléphone
           {valeurs.email.trim() ? ' ou par e-mail' : ''}. Aucun compte n&apos;est créé à cette étape.
@@ -178,7 +169,7 @@ export function FormulaireDemande({
   const listeErreurs = Object.entries(erreurs).filter(([, m]) => m) as [keyof Valeurs, string][]
 
   return (
-    <form noValidate onSubmit={soumettre} className="space-y-6 rounded-2xl bg-white p-6 shadow-carte ring-1 ring-stone-200/70 sm:p-8">
+    <form noValidate onSubmit={soumettre} className="space-y-7 rounded-lg border border-ligne bg-white p-5 sm:p-8">
       {listeErreurs.length > 0 && (
         <div ref={resume} tabIndex={-1} className="focus:outline-none">
           <Alert niveau="critique" titre="Le formulaire contient des erreurs">
@@ -192,34 +183,8 @@ export function FormulaireDemande({
       )}
       {erreurServeur && <Alert niveau="critique">{erreurServeur}</Alert>}
 
-      {typesProposes.length > 1 && (
-        <fieldset>
-          <legend className="mb-3 text-sm font-medium text-stone-700">Objet de votre demande</legend>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {typesProposes.map((t) => (
-              <label
-                key={t}
-                className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3.5 text-sm transition has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primaire ${
-                  valeurs.type === t ? 'border-primaire bg-foret-50 text-stone-900' : 'border-stone-300 text-stone-700 hover:border-stone-400'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="type"
-                  value={t}
-                  checked={valeurs.type === t}
-                  onChange={() => maj('type', t)}
-                  className="mt-0.5 accent-[var(--cp)]"
-                />
-                <span className="font-medium">{LABELS_TYPE_DEMANDE[t]}</span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
-      )}
-
       <fieldset className="space-y-4">
-        <legend className="titre-display text-lg font-semibold text-stone-900">
+        <legend className="titre-display text-xl font-semibold text-encre">
           {jeune ? 'Vos coordonnées (parent ou tuteur)' : 'Vos coordonnées'}
         </legend>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -240,7 +205,7 @@ export function FormulaireDemande({
 
       {jeune && (
         <fieldset className="space-y-4">
-          <legend className="titre-display text-lg font-semibold text-stone-900">Le jeune à inscrire</legend>
+          <legend className="titre-display text-xl font-semibold text-encre">Le jeune à inscrire</legend>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Prénom du jeune" requis erreur={erreurs.prenomJeune}>
               {(p) => <Input {...p} autoComplete="off" maxLength={100} value={valeurs.prenomJeune} onChange={(e) => maj('prenomJeune', e.target.value)} />}
@@ -275,7 +240,13 @@ export function FormulaireDemande({
       )}
 
       <Field
-        label={valeurs.type === 'INFORMATION' ? 'Votre message' : 'Message (facultatif)'}
+        label={
+          valeurs.type === 'INFORMATION'
+            ? 'Votre message'
+            : valeurs.type === 'ENGAGEMENT_ADULTE'
+              ? 'Votre parcours et vos motivations (facultatif)'
+              : 'Message (facultatif)'
+        }
         requis={valeurs.type === 'INFORMATION'}
         erreur={erreurs.message}
         aide="N’indiquez aucune information médicale : elle vous sera demandée plus tard, si nécessaire, par un canal adapté."
@@ -297,7 +268,7 @@ export function FormulaireDemande({
         />
       </div>
 
-      <div className="rounded-xl bg-sable-50 p-4 text-sm leading-relaxed text-stone-600">
+      <div className="rounded-md bg-papier p-4 text-sm leading-relaxed text-encre-douce">
         <p>
           Les informations saisies servent uniquement à traiter votre demande. Elles sont consultées par la direction du groupe et ne
           sont jamais publiées. Pour en savoir plus et exercer vos droits, consultez notre{' '}
@@ -324,7 +295,7 @@ export function FormulaireDemande({
       </div>
 
       <div className="flex flex-col-reverse items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs text-stone-500">
+        <p className="text-sm text-encre-pale">
           Les champs marqués d&apos;un astérisque (<span aria-hidden>*</span>
           <span className="sr-only">astérisque</span>) sont obligatoires.
         </p>

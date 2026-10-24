@@ -16,6 +16,8 @@ export interface MembrePublic {
   nom: string
   fonction: string
   branche: string | null
+  /** Code de branche ; null pour la direction du groupe. */
+  brancheType?: string | null
   photo: string | null
   biographie: string | null
 }

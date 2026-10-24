@@ -59,7 +59,7 @@ export function Visionneuse({ photos, titreAlbum }: { photos: PhotoVisionneuse[]
 
   return (
     <>
-      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
         {photos.map((p, i) => (
           <li key={p.id}>
             <button
@@ -68,7 +68,7 @@ export function Visionneuse({ photos, titreAlbum }: { photos: PhotoVisionneuse[]
               }}
               type="button"
               onClick={() => ouvrir(i)}
-              className="group block aspect-square w-full overflow-hidden rounded-xl bg-sable-100 shadow-carte focus-visible:outline-offset-4"
+              className="group block aspect-square w-full overflow-hidden rounded-md bg-papier-fonce focus-visible:outline-offset-4"
               aria-label={`Agrandir : ${alt(p, i)}`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -95,7 +95,7 @@ export function Visionneuse({ photos, titreAlbum }: { photos: PhotoVisionneuse[]
         }}
         onClose={fermer}
         onKeyDown={surTouche}
-        className="m-0 h-dvh max-h-none w-screen max-w-none bg-stone-950/95 p-0 text-white backdrop:bg-black/80"
+        className="m-0 h-dvh max-h-none w-screen max-w-none bg-[#0d1410]/95 p-0 text-white backdrop:bg-black/80"
       >
         {photo && index !== null && (
           <div className="flex h-full flex-col">

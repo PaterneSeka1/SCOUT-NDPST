@@ -57,9 +57,13 @@ const nextConfig: NextConfig = {
   // par ce serveur vers l'API NestJS (même origine, donc ni CORS ni cookie
   // tiers). En « fallback », une route encore servie par app/api/ reste
   // prioritaire : chaque route supprimée bascule automatiquement vers l'API.
-  // Ancienne adresse de connexion conservée pour les favoris existants.
+  // Anciennes adresses conservées pour les favoris existants. Le contact est
+  // intégré à « Nous rejoindre » (parcours « Contacter le groupe »).
   async redirects() {
-    return [{ source: '/login', destination: '/connexion', permanent: true }]
+    return [
+      { source: '/login', destination: '/connexion', permanent: true },
+      { source: '/contact', destination: '/nous-rejoindre?objet=contact', permanent: true },
+    ]
   },
   async rewrites() {
     return {
