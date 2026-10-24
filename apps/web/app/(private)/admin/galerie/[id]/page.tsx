@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { FicheAlbum } from '@/components/admin/galerie/FicheAlbum'
+import { FicheAlbum } from '@/components/admin/galerie/EditeurAlbum'
 
 export const metadata: Metadata = { title: 'Album photo' }
 
