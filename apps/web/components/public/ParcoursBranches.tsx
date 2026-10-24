@@ -21,7 +21,7 @@ export function ParcoursBranches({ branches, clair = false }: { branches: Branch
             <span className={`signal text-xs ${clair ? 'text-white/60' : 'text-encre-pale'}`}>Étape {i + 1}</span>
             <span className="titre-display mt-2 text-xl leading-tight font-semibold">{b.nom}</span>
             {b.trancheAge && (
-              <span className="chiffre-signal mt-1 text-lg" style={{ color: clair ? undefined : 'var(--accent-branche)' }}>
+              <span className="chiffre-signal mt-1 text-lg" style={{ color: clair ? undefined : 'var(--encre-branche)' }}>
                 {b.trancheAge}
               </span>
             )}

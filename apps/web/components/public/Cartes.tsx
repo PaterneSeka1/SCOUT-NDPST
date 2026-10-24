@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { LABELS_BRANCHES, LABELS_TYPE_ACTIVITE } from '@scout/shared'
 import { dateLongue, jourMois } from '@/lib/format'
-import { accentBranche, styleAccent } from '@/lib/branches-visuel'
+import { accentBranche, encreBranche, styleAccent } from '@/lib/branches-visuel'
 import {
   ArrowLeft,
   ArrowRight,
@@ -149,7 +149,7 @@ export function CarteBranche({ branche, titreNiveau = 'h3' }: { branche: Branche
     >
       <span className="h-1.5 w-full bg-(--accent-branche)" aria-hidden />
       <div className="flex flex-1 flex-col p-5">
-        {branche.trancheAge && <p className="chiffre-signal text-lg text-(--accent-branche)">{branche.trancheAge}</p>}
+        {branche.trancheAge && <p className="chiffre-signal text-lg text-(--encre-branche)">{branche.trancheAge}</p>}
         <Titre className="titre-display mt-1 text-xl font-semibold text-encre">
           <Link href={`/nos-branches/${branche.slug}`} className="after:absolute after:inset-0 focus-visible:outline-none">
             {branche.nom}
@@ -177,6 +177,7 @@ export function Portrait({
   className?: string
 }) {
   const accent = accentBranche(membre.brancheType)
+  const encre = encreBranche(membre.brancheType)
   return (
     <div
       className={`relative shrink-0 overflow-hidden ${forme === 'rond' ? 'aspect-square rounded-full' : 'aspect-[4/5] rounded-lg'} ${className}`}
@@ -185,7 +186,7 @@ export function Portrait({
       {membre.photo ? (
         <ImagePublique src={membre.photo} alt={`Portrait de ${membre.prenom} ${membre.nom}`} />
       ) : (
-        <span className="titre-display flex h-full w-full items-center justify-center text-[2.4em] font-semibold" style={{ color: accent }} aria-hidden>
+        <span className="titre-display flex h-full w-full items-center justify-center text-[2.4em] font-semibold" style={{ color: encre }} aria-hidden>
           {initiales(membre.prenom, membre.nom)}
         </span>
       )}

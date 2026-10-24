@@ -68,7 +68,7 @@ export default async function PageBranche({ params }: Props) {
             <div className="divide-y divide-ligne">
               {blocs.map((b) => (
                 <section key={b.titre} className="grid gap-3 py-8 first:pt-0 sm:grid-cols-[11rem_1fr] sm:gap-8">
-                  <h2 className="signal pt-1 text-sm text-(--accent-branche)">{b.titre}</h2>
+                  <h2 className="signal pt-1 text-sm text-(--encre-branche)">{b.titre}</h2>
                   <ContenuRiche texte={b.texte} className="text-lg" />
                 </section>
               ))}

@@ -53,7 +53,7 @@
   --color-papier-fonce: #ebe5d8;
   --color-encre: #1c1f1a;
   --color-encre-douce: #474c44;
-  --color-encre-pale: #646a60;
+  --color-encre-pale: #5e645a;
   --color-ligne: #e2dccf;
   --color-ligne-forte: #cbc2b0;
 
@@ -80,14 +80,22 @@
   --color-or-500: #b8913a;
   --color-or-700: #7a5c1c;
 
-  /* Accents des branches : une teinte par branche, désaturée pour rester dans
-     la charte. Toujours accompagnés du nom de la branche (jamais seuls). */
-  --color-branche-oisillons: #b7861a;
-  --color-branche-louveteaux: #c25e24;
-  --color-branche-eclaireurs: #2f7a45;
-  --color-branche-cheminots: #2a6299;
-  --color-branche-compagnons: #8b2f3c;
-  --color-branche-ressources: #2c706b;
+  /* Accents des branches (validés : séparation daltonisme et vision normale,
+     voir docs/refonte-ux-ui.md). Couleur de marque pour traits, pastilles et
+     graphiques ; variante « encre » (contraste AA) pour tout texte coloré.
+     Toujours accompagnés du nom de la branche, jamais seuls. */
+  --color-branche-oisillons: #c99a10;
+  --color-branche-louveteaux: #a63f18;
+  --color-branche-eclaireurs: #55a060;
+  --color-branche-cheminots: #24539a;
+  --color-branche-compagnons: #8e2f62;
+  --color-branche-ressources: #00949e;
+  --color-encre-oisillons: #7d5d00;
+  --color-encre-louveteaux: #8f3412;
+  --color-encre-eclaireurs: #2e6b38;
+  --color-encre-cheminots: #24539a;
+  --color-encre-compagnons: #8e2f62;
+  --color-encre-ressources: #00636a;
 
   --shadow-carte: 0 1px 2px rgba(28, 31, 26, 0.05), 0 6px 20px -12px rgba(28, 31, 26, 0.18);
   --shadow-flottante: 0 18px 48px -18px rgba(28, 31, 26, 0.35);

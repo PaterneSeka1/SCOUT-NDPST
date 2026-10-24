@@ -57,7 +57,7 @@ export default async function PageBranches() {
                   </div>
                 ) : (
                   // Sans photo publiée : repère d'âge en grand plutôt qu'un aplat vide.
-                  <p className="chiffre-signal text-4xl leading-none text-(--accent-branche) sm:text-5xl" aria-hidden>
+                  <p className="chiffre-signal text-4xl leading-none text-(--encre-branche) sm:text-5xl" aria-hidden>
                     {b.trancheAge ? b.trancheAge.replace(' ans et +', '+').replace(' ans', '').replace('-', '–') : `0${i + 1}`}
                     {b.trancheAge && <span className="signal mt-1 block text-sm text-encre-pale">ans</span>}
                   </p>
@@ -69,7 +69,7 @@ export default async function PageBranches() {
                     {b.trancheAge && b.imageUrl && (
                       <>
                         <span aria-hidden>·</span>
-                        <span className="text-(--accent-branche)">{b.trancheAge}</span>
+                        <span className="text-(--encre-branche)">{b.trancheAge}</span>
                       </>
                     )}
                   </p>
@@ -79,7 +79,7 @@ export default async function PageBranches() {
                   </p>
                   <Link
                     href={`/nos-branches/${b.slug}`}
-                    className="group mt-6 inline-flex items-center gap-2 rounded-full border-2 border-(--accent-branche) px-5 py-2.5 font-semibold text-encre transition hover:bg-(--accent-branche) hover:text-white"
+                    className="group mt-6 inline-flex items-center gap-2 rounded-full border-2 border-(--accent-branche) px-5 py-2.5 font-semibold text-encre transition hover:border-(--encre-branche) hover:bg-(--encre-branche) hover:text-white"
                   >
                     Découvrir les {b.nom}
                     <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" aria-hidden />
