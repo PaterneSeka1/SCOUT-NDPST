@@ -2,275 +2,140 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { confirmer } from '@/components/ConfirmDialog'
-import Link from 'next/link'
-import { LABELS_ROLES, COULEURS_ROLES, ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT } from '@scout/shared'
-import { useUtilisateurs, useModifierUtilisateur } from '@/hooks/useUtilisateurs'
-import type { Utilisateur } from '@/hooks/useUtilisateurs'
-import { Pagination } from '@/components/ui/Pagination'
+import { LABELS_BRANCHES, LABELS_ROLES, ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT } from '@scout/shared'
+import { useModifierUtilisateur, useUtilisateurs, type Utilisateur } from '@/hooks/useUtilisateurs'
+import { Pencil, Plus, Users } from '@/lib/icons'
+import { Badge, Button, ButtonLink, DataTable, FilterBar, PageHeader, Pagination, SearchInput, Select, confirmer, type Colonne } from '@/components/ui'
 
-// Page "Membres" = équipe d'encadrement, jamais les parents (page dédiée
-// /dashboard/parents). Sans filtre de rôle actif, on demande explicitement
-// tous les rôles hors PARENT plutôt que de laisser le paramètre vide, sans
+// Comptes de l'équipe d'encadrement, jamais les parents (page dédiée). Sans
+// filtre de rôle, on demande explicitement tous les rôles hors PARENT, sans
 // quoi l'API renverrait aussi les parents.
 const ROLES_FILTRE = ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT
 const ROLES_PAR_DEFAUT = ROLES_ASSIGNABLES_PAROISSE_HORS_PARENT.join(',')
 
-function SkeletonCard() {
-  return (
-    <div className="bg-white rounded-xl border border-stone-200 p-4 animate-pulse space-y-3">
-      <div className="flex justify-between">
-        <div className="h-4 bg-stone-200 rounded w-32" />
-        <div className="h-5 bg-stone-100 rounded-full w-12" />
-      </div>
-      <div className="h-3 bg-stone-100 rounded w-24" />
-      <div className="flex gap-3 pt-1">
-        <div className="h-3 bg-stone-100 rounded w-14" />
-        <div className="h-3 bg-stone-100 rounded w-16" />
-      </div>
-    </div>
-  )
-}
-
-function SkeletonRow() {
-  return (
-    <tr>
-      {Array.from({ length: 5 }).map((_, i) => (
-        <td key={i} className="px-4 py-3">
-          <div className="h-4 bg-stone-200 rounded animate-pulse w-3/4" />
-        </td>
-      ))}
-    </tr>
-  )
-}
-
-function CarteUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
+function ActionsCompte({ utilisateur }: { utilisateur: Utilisateur }) {
   const { mutateAsync, isPending } = useModifierUtilisateur(utilisateur.id)
-  const handleToggle = async () => {
-    if (utilisateur.actif && !await confirmer({
-      titre: 'Désactiver ce compte ?',
-      description: `Le compte de ${utilisateur.prenom} ${utilisateur.nom} perdra immédiatement ses accès et ses sessions seront révoquées.`,
-      labelConfirmer: 'Désactiver', danger: true,
-    })) return
-    try { await mutateAsync({ actif: !utilisateur.actif }) }
-    catch (erreur) { toast.error(erreur instanceof Error ? erreur.message : 'Impossible de modifier le compte.') }
+  const basculer = async () => {
+    if (
+      utilisateur.actif &&
+      !(await confirmer({
+        titre: 'Désactiver ce compte ?',
+        description: `Le compte de ${utilisateur.prenom} ${utilisateur.nom} perdra immédiatement ses accès et ses sessions seront révoquées.`,
+        labelConfirmer: 'Désactiver',
+        danger: true,
+      }))
+    )
+      return
+    try {
+      await mutateAsync({ actif: !utilisateur.actif })
+      toast.success(utilisateur.actif ? 'Compte désactivé.' : 'Compte réactivé.')
+    } catch (erreur) {
+      toast.error(erreur instanceof Error ? erreur.message : 'Impossible de modifier le compte.')
+    }
   }
-
   return (
-    <div className="bg-white rounded-xl border border-stone-200 p-4 space-y-2.5">
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-semibold text-stone-900 leading-tight">
-          {utilisateur.nom} {utilisateur.prenom}
-        </p>
-        <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-          utilisateur.actif ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-500'
-        }`}>
-          {utilisateur.actif ? 'Actif' : 'Inactif'}
-        </span>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-          COULEURS_ROLES[utilisateur.role] ?? 'bg-stone-100 text-stone-700'
-        }`}>
-          {LABELS_ROLES[utilisateur.role] ?? utilisateur.role}
-        </span>
-        {utilisateur.matricule && (
-          <span className="font-mono text-xs text-stone-500">{utilisateur.matricule}</span>
-        )}
-      </div>
-
-      <div className="flex items-center gap-3 pt-1 border-t border-stone-50">
-        <Link
-          href={`/dashboard/utilisateurs/${utilisateur.id}/modifier`}
-          className="text-(--cp) font-medium text-xs hover:underline"
-        >
-          Modifier
-        </Link>
-        <span className="text-stone-200">|</span>
-        <button
-          onClick={handleToggle}
-          disabled={isPending}
-          className={`text-xs font-medium disabled:opacity-50 ${
-            utilisateur.actif ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'
-          }`}
-        >
-          {isPending ? '…' : utilisateur.actif ? 'Désactiver' : 'Activer'}
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function LigneUtilisateur({ utilisateur }: { utilisateur: Utilisateur }) {
-  const { mutateAsync, isPending } = useModifierUtilisateur(utilisateur.id)
-  const handleToggle = async () => {
-    if (utilisateur.actif && !await confirmer({
-      titre: 'Désactiver ce compte ?',
-      description: `Le compte de ${utilisateur.prenom} ${utilisateur.nom} perdra immédiatement ses accès et ses sessions seront révoquées.`,
-      labelConfirmer: 'Désactiver', danger: true,
-    })) return
-    try { await mutateAsync({ actif: !utilisateur.actif }) }
-    catch (erreur) { toast.error(erreur instanceof Error ? erreur.message : 'Impossible de modifier le compte.') }
-  }
-
-  return (
-    <tr className="hover:bg-stone-50 transition-colors">
-      <td className="px-4 py-3 font-mono text-stone-700 text-sm">{utilisateur.matricule ?? '—'}</td>
-      <td className="px-4 py-3 text-stone-800 font-medium text-sm">
-        {utilisateur.nom} {utilisateur.prenom}
-      </td>
-      <td className="px-4 py-3">
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-          COULEURS_ROLES[utilisateur.role] ?? 'bg-stone-100 text-stone-700'
-        }`}>
-          {LABELS_ROLES[utilisateur.role] ?? utilisateur.role}
-        </span>
-      </td>
-      <td className="px-4 py-3">
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-          utilisateur.actif ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-500'
-        }`}>
-          {utilisateur.actif ? 'Actif' : 'Inactif'}
-        </span>
-      </td>
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/dashboard/utilisateurs/${utilisateur.id}/modifier`}
-            className="text-(--cp) hover:underline text-xs font-medium"
-          >
-            Modifier
-          </Link>
-          <span className="text-stone-300">|</span>
-          <button
-            onClick={handleToggle}
-            disabled={isPending}
-            className={`text-xs font-medium disabled:opacity-50 ${
-              utilisateur.actif ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'
-            }`}
-          >
-            {isPending ? '…' : utilisateur.actif ? 'Désactiver' : 'Activer'}
-          </button>
-        </div>
-      </td>
-    </tr>
+    <>
+      <ButtonLink href={`/dashboard/utilisateurs/${utilisateur.id}/modifier`} variante="fantome" taille="sm" icone={Pencil}>
+        Modifier<span className="sr-only"> {utilisateur.prenom} {utilisateur.nom}</span>
+      </ButtonLink>
+      <Button variante="fantome" taille="sm" chargement={isPending} onClick={() => void basculer()}>
+        {utilisateur.actif ? 'Désactiver' : 'Réactiver'}
+        <span className="sr-only"> {utilisateur.prenom} {utilisateur.nom}</span>
+      </Button>
+    </>
   )
 }
 
 export default function UtilisateursPage() {
   const [recherche, setRecherche] = useState('')
-  const [rechercheDebounce, setRechercheDebounce] = useState('')
   const [roleFiltre, setRoleFiltre] = useState('')
   const [page, setPage] = useState(1)
-  const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
 
-  const handleRechercheChange = (valeur: string) => {
-    setRecherche(valeur)
-    if (debounceTimer) clearTimeout(debounceTimer)
-    const timer = setTimeout(() => { setRechercheDebounce(valeur); setPage(1) }, 300)
-    setDebounceTimer(timer)
-  }
-
-  const { data, isLoading, isError, error } = useUtilisateurs({
+  const { data, isPending, isError, error, refetch } = useUtilisateurs({
     page,
-    recherche: rechercheDebounce || undefined,
+    recherche: recherche || undefined,
     role: roleFiltre || ROLES_PAR_DEFAUT,
   })
-
-  const utilisateurs = data?.utilisateurs ?? []
-  const totalPages = data?.totalPages ?? 1
   const total = data?.total ?? 0
 
+  const colonnes: Colonne<Utilisateur>[] = [
+    {
+      cle: 'nom',
+      titre: 'Membre',
+      principale: true,
+      rendu: (u) => (
+        <span>
+          <span className="block font-medium text-encre">
+            {u.prenom} {u.nom}
+          </span>
+          {u.matricule && <span className="font-mono text-xs text-encre-pale">{u.matricule}</span>}
+        </span>
+      ),
+    },
+    {
+      cle: 'role',
+      titre: 'Rôle',
+      rendu: (u) => (
+        <span>
+          {LABELS_ROLES[u.role] ?? u.role}
+          {u.brancheType && <span className="text-encre-pale"> · {LABELS_BRANCHES[u.brancheType] ?? u.brancheType}</span>}
+        </span>
+      ),
+    },
+    { cle: 'statut', titre: 'Statut', rendu: (u) => (u.actif ? <Badge ton="succes">Actif</Badge> : <Badge>Inactif</Badge>) },
+  ]
+
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* En-tête */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-stone-900">Membres</h1>
-          <p className="text-sm text-stone-500">{total} membre{total !== 1 ? 's' : ''} dans votre paroisse</p>
-        </div>
-        <Link
-          href="/dashboard/utilisateurs/nouveau"
-          className="inline-flex items-center justify-center bg-(--cp) text-white px-4 py-2 rounded-lg hover:brightness-110 transition-colors text-sm font-medium"
-        >
-          + Nouveau membre
-        </Link>
-      </div>
-
-      {/* Filtres */}
-      <div className="flex flex-col sm:flex-row gap-2">
-        <input
-          type="text"
-          placeholder="Rechercher…"
-          value={recherche}
-          onChange={(e) => handleRechercheChange(e.target.value)}
-          className="flex-1 border border-stone-300 rounded-lg px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-(--cp) bg-white"
+    <div>
+      <PageHeader
+        miettes={[{ libelle: 'Tableau de bord', href: '/dashboard' }, { libelle: 'Comptes de la maîtrise' }]}
+        titre="Comptes de la maîtrise"
+        description={data ? `${total} compte${total > 1 ? 's' : ''} d’encadrement` : 'Les comptes de connexion de l’équipe d’encadrement.'}
+        actions={
+          <ButtonLink href="/dashboard/utilisateurs/nouveau" icone={Plus}>
+            Nouveau membre
+          </ButtonLink>
+        }
+      />
+      <FilterBar>
+        <SearchInput
+          valeur={recherche}
+          onChange={(v) => {
+            setRecherche(v)
+            setPage(1)
+          }}
+          label="Rechercher un membre"
+          placeholder="Nom, matricule…"
+          className="sm:w-72"
         />
-        <select
+        <Select
+          aria-label="Filtrer par rôle"
+          vide="Tous les rôles"
           value={roleFiltre}
-          onChange={(e) => { setRoleFiltre(e.target.value); setPage(1) }}
-          className="sm:w-48 border border-stone-300 rounded-lg px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-(--cp) bg-white"
-        >
-          <option value="">Tous les rôles</option>
-          {ROLES_FILTRE.map((role) => (
-            <option key={role} value={role}>{LABELS_ROLES[role]}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Erreur */}
-      {isError && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-          {error instanceof Error ? error.message : 'Une erreur est survenue'}
-        </div>
-      )}
-
-      {/* Vue mobile — cartes */}
-      <div className="sm:hidden space-y-2">
-        {isLoading ? (
-          Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
-        ) : utilisateurs.length === 0 ? (
-          <p className="text-center text-stone-400 text-sm py-12">Aucun membre trouvé.</p>
-        ) : (
-          utilisateurs.map((u) => <CarteUtilisateur key={u.id} utilisateur={u} />)
-        )}
-      </div>
-
-      {/* Vue desktop — tableau */}
-      <div className="hidden sm:block bg-white rounded-xl border border-stone-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-stone-200 bg-stone-50">
-                {['Matricule', 'Nom Prénom', 'Rôle', 'Statut', 'Actions'].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-stone-100">
-              {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
-              ) : utilisateurs.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="text-center py-16 text-stone-400 text-sm">
-                    Aucun membre trouvé.
-                  </td>
-                </tr>
-              ) : (
-                utilisateurs.map((u) => <LigneUtilisateur key={u.id} utilisateur={u} />)
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Pagination */}
-      {!isLoading && (
-        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} total={total} itemLabel="membre" />
-      )}
+          onChange={(e) => {
+            setRoleFiltre(e.target.value)
+            setPage(1)
+          }}
+          options={ROLES_FILTRE.map((r) => ({ valeur: r, libelle: LABELS_ROLES[r] ?? r }))}
+          className="sm:w-56"
+        />
+      </FilterBar>
+      <DataTable
+        legende="Comptes de la maîtrise"
+        colonnes={colonnes}
+        lignes={data?.utilisateurs}
+        cleLigne={(u) => u.id}
+        chargement={isPending}
+        erreur={isError ? (error instanceof Error ? error.message : 'Une erreur est survenue.') : null}
+        onReessayer={() => void refetch()}
+        vide={{
+          icone: Users,
+          titre: recherche || roleFiltre ? 'Aucun membre ne correspond à ces critères.' : 'Aucun compte d’encadrement pour le moment.',
+          action: !recherche && !roleFiltre ? <ButtonLink href="/dashboard/utilisateurs/nouveau" icone={Plus}>Ajouter un membre</ButtonLink> : undefined,
+        }}
+        actions={(u) => <ActionsCompte utilisateur={u} />}
+      />
+      {data && <Pagination page={page} totalPages={data.totalPages} onPageChange={setPage} total={total} itemLabel="membre" />}
     </div>
   )
 }
