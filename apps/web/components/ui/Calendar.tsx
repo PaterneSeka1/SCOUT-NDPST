@@ -101,7 +101,7 @@ export function Calendar({
                 <ul className="mt-1 space-y-1">
                   {evts.slice(0, 3).map((e) => (
                     <li key={e.id}>
-                      <a href={e.href} className={`block truncate rounded px-1.5 py-0.5 text-[11px] font-medium ${TONS[e.ton ?? 'primaire']}`}>
+                      <a href={e.href} title={e.titre} className={`block truncate rounded px-1.5 py-0.5 text-[11px] font-medium ${TONS[e.ton ?? 'primaire']}`}>
                         {e.titre}
                       </a>
                     </li>

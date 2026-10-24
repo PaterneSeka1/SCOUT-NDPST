@@ -152,7 +152,7 @@ export function DataTable<T>({
                   .map((c) => (
                     <div key={c.cle} className="min-w-0">
                       <dt className="text-stone-500">{c.titre}</dt>
-                      <dd className="truncate text-stone-800">{c.rendu(ligne)}</dd>
+                      <dd className="break-words text-stone-800">{c.rendu(ligne)}</dd>
                     </div>
                   ))}
               </dl>
