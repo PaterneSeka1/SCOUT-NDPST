@@ -49,8 +49,16 @@ if [ ! -f "apps/api/.env" ]; then
   cp apps/api/.env.example apps/api/.env
   # Secret de signature des jetons généré localement, jamais commité.
   SECRET=$(node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))")
-  sed -i.bak "s#^JWT_ACCESS_SECRET=.*#JWT_ACCESS_SECRET=\"$SECRET\"#" apps/api/.env && rm -f apps/api/.env.bak
-  ok "apps/api/.env créé (secret JWT généré)"
+  SECRET_CRON=$(node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))")
+  # Développement : sans SMTP_HOST, les liens de réinitialisation sont
+  # affichés dans la console de l'API ; documentation Swagger sur /api/docs.
+  sed -i.bak \
+    -e "s#^JWT_ACCESS_SECRET=.*#JWT_ACCESS_SECRET=\"$SECRET\"#" \
+    -e "s#^CRON_SECRET=.*#CRON_SECRET=\"$SECRET_CRON\"#" \
+    -e "s#^SWAGGER_ACTIF=.*#SWAGGER_ACTIF=true#" \
+    -e "s#^SMTP_\(HOST\|USER\|PASS\)=.*#SMTP_\1=\"\"#" \
+    apps/api/.env && rm -f apps/api/.env.bak
+  ok "apps/api/.env créé (secrets générés, SMTP désactivé, Swagger actif)"
 else
   ok "apps/api/.env déjà présent"
 fi
@@ -92,9 +100,9 @@ npm run prisma:deploy
 ok "Base de données initialisée"
 
 # --- Seed ---
-info "Création du compte admin..."
+info "Création du compte admin et des comptes de démonstration..."
 npm run prisma:seed
-ok "Compte admin créé"
+ok "Comptes créés (liste affichée ci-dessus)"
 
 cd "$SCRIPT_DIR"
 
@@ -104,7 +112,9 @@ echo -e "${VERT}  Installation terminée avec succès !${RESET}"
 echo "=================================================="
 echo ""
 echo "  Compte admin → matricule: ADMIN001A  / mot de passe: Admin1234!"
-echo "  (personnalisable via ADMIN_* dans apps/api/.env — voir apps/api/.env.example)"
+echo "  Comptes de démonstration (un par rôle) → mot de passe: Scout1234!"
+echo "  (personnalisable via ADMIN_* et SEED_* dans apps/api/.env — voir apps/api/.env.example)"
+echo "  Réinitialiser les données de démonstration : npm run db:seed"
 echo ""
 echo "  Pour lancer l'application : ./start.sh"
 echo ""

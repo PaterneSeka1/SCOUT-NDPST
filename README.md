@@ -52,6 +52,29 @@ npm run test:e2e    # Chromium installé via npx playwright install chromium, AP
 
 La documentation interactive de l'API est servie sur `http://localhost:4000/api/docs` quand `SWAGGER_ACTIF=true` (voir `apps/api/.env.example`).
 
+### Comptes de test
+
+`npm run db:seed` (lancé par `./setup.sh`, relançable à tout moment pour remettre les comptes dans leur état initial) crée l'administrateur et un jeu de démonstration fictif : District Démo Nord (paroisses A et B) et District Démo Sud (paroisse C, pour vérifier l'isolement). Mot de passe commun : `Scout1234!` (`SEED_MOT_DE_PASSE`) ; administrateur : `Admin1234!` (`ADMIN_PASSWORD`). `SEED_DEMO=false` ne crée que l'administrateur.
+
+| Identifiant  | Rôle                                                    | Application |
+| ------------ | ------------------------------------------------------- | ----------- |
+| `ADMIN001A`  | Administrateur plateforme                               | 3001        |
+| `DEMOCGA`    | Chef de Groupe (paroisse A)                             | 3000        |
+| `DEMOAGA`    | Adjoint de Groupe (A)                                   | 3000        |
+| `DEMOSGA`    | Assistant de Groupe (A)                                 | 3000        |
+| `DEMORBA`    | Responsable de Branche Louveteaux (A)                   | 3000        |
+| `DEMOABA`    | Adjoint de Branche Louveteaux (A)                       | 3000        |
+| `DEMOSBA`    | Assistant de Branche Éclaireurs (A)                     | 3000        |
+| `0000000101` | Parent de deux scouts (A)                               | 3000        |
+| `DEMOSCA`    | Scout (A)                                               | 3000        |
+| `DEMOINA`    | Compte désactivé : connexion refusée attendue           | 3000        |
+| `DEMOCDN`    | Commissaire de District + Chef de Groupe (B)            | 3001 / 3000 |
+| `DEMOADN`    | Commissaire Adjoint + Adjoint de Groupe (B)             | 3001 / 3000 |
+| `DEMOSDN`    | Assistant District Éclaireurs + Responsable Branche (B) | 3001 / 3000 |
+| `DEMOCGC`    | Chef de Groupe (paroisse C, autre district)             | 3000        |
+
+Tant que `PERIMETRE_V1` vaut `true` (`packages/shared/src/perimetreV1.ts`), les espaces district, parent et scout restent masqués : ces comptes se connectent, mais les pages correspondantes sont redirigées.
+
 ## Migrations Prisma : lire avant de toucher au schéma
 
 Le schéma vit dans `apps/api/prisma/schema.prisma`.
