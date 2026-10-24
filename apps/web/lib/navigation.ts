@@ -105,7 +105,7 @@ const SECTIONS: { titre: string; elements: (ElementNavigation & { visible: Regle
 export function navigationPour(profil: ProfilNavigation): SectionNavigation[] {
   return SECTIONS.map((s) => ({
     titre: s.titre,
-    elements: s.elements.filter((e) => e.visible(profil) && !pageHorsPerimetre(e.href)).map(({ visible: _v, ...e }) => e),
+    elements: s.elements.filter((e) => e.visible(profil) && !pageHorsPerimetre(e.href)).map(({ libelle, href, icone }) => ({ libelle, href, icone })),
   })).filter((s) => s.elements.length > 0)
 }
 

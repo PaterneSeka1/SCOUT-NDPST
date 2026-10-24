@@ -15,8 +15,8 @@ export function useDashboard() {
   const utilisateur = session?.user
   const hydrate = useSyncExternalStore(abonnementHydratation, snapshotClient, snapshotServeur)
   const requete = useQuery({
-    queryKey: ['dashboard-kpis', utilisateur?.id, utilisateur?.role, utilisateur?.paroisseId],
-    enabled: Boolean(utilisateur?.id && utilisateur.paroisseId),
+    queryKey: ['dashboard-kpis', utilisateur?.id, utilisateur?.role],
+    enabled: Boolean(utilisateur?.id),
     retry: false,
     retryOnMount: false,
     staleTime: 60_000,

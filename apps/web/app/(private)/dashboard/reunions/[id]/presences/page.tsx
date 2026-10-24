@@ -9,7 +9,6 @@ import { decoderQrScout } from '@/lib/qr'
 import { LABELS_BRANCHES as BRANCHES } from '@scout/shared'
 import { BackLink } from '@/components/ui/BackLink'
 import { Download, Camera } from '@/lib/icons'
-import { PERIMETRE_V1 } from '@scout/shared'
 
 const STATUTS = [
   {
@@ -229,16 +228,13 @@ export default function PagePresencesReunion({ params }: { params: Promise<{ id:
           >
             Tous absents
           </button>
-          {/* Cartes QR hors périmètre V1 : rien à scanner. */}
-          {!PERIMETRE_V1 && (
-            <button
-              onClick={() => setScannerOuvert(true)}
-              className="ml-auto flex items-center gap-1.5 rounded-lg bg-(--cp) px-3 py-1.5 text-xs font-medium text-white transition-all hover:brightness-110"
-            >
-              <Camera className="h-3.5 w-3.5" strokeWidth={2} />
-              Scanner un QR
-            </button>
-          )}
+          <button
+            onClick={() => setScannerOuvert(true)}
+            className="ml-auto flex items-center gap-1.5 rounded-lg bg-(--cp) px-3 py-1.5 text-xs font-medium text-white transition-all hover:brightness-110"
+          >
+            <Camera className="h-3.5 w-3.5" strokeWidth={2} />
+            Scanner un QR
+          </button>
         </div>
       )}
 

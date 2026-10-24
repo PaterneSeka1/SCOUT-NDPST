@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_BRANCHES, COULEURS_BRANCHES, ORDRE_BRANCHES } from '@scout/shared'
 import { LABELS_TYPE_ACTIVITE } from '@scout/shared'
-import { ICONES_KPI, ICONE_KPI_DEFAUT, ArrowRight, Download } from '@/lib/icons'
+import { ICONES_INDICATEUR, ICONE_INDICATEUR_DEFAUT, ArrowRight, Download } from '@/lib/icons'
 
 interface Activite {
   id: string; titre: string; dateDebut: string; type: string; brancheType: string | null
@@ -97,12 +97,12 @@ export default function PageRapports() {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: 'Scouts actifs', valeur: rapport.scoutsActifs, couleur: 'bg-(--cp)' },
-          { label: 'Scouts inactifs', valeur: rapport.scoutsInactifs, couleur: 'bg-gray-500' },
-          { label: 'Activités ce mois', valeur: rapport.activitesMois, couleur: 'bg-(--ca)' },
-          { label: 'Réunions ce mois', valeur: rapport.reunionsMois, couleur: 'bg-blue-600' },
-        ].map(({ label, valeur, couleur }) => {
-          const Icone = ICONES_KPI[label] ?? ICONE_KPI_DEFAUT
+          { cle: 'effectif', label: 'Scouts actifs', valeur: rapport.scoutsActifs, couleur: 'bg-(--cp)' },
+          { cle: 'effectif', label: 'Scouts inactifs', valeur: rapport.scoutsInactifs, couleur: 'bg-gray-500' },
+          { cle: 'enCours', label: 'Activités ce mois', valeur: rapport.activitesMois, couleur: 'bg-(--ca)' },
+          { cle: 'reunions', label: 'Réunions ce mois', valeur: rapport.reunionsMois, couleur: 'bg-blue-600' },
+        ].map(({ cle, label, valeur, couleur }) => {
+          const Icone = ICONES_INDICATEUR[cle] ?? ICONE_INDICATEUR_DEFAUT
           return (
             <div key={label} className={`${couleur} text-white rounded-xl p-4`}>
               <Icone className="h-6 w-6 mb-2 opacity-90" strokeWidth={2} />

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import { toast } from 'sonner'
 import { LABELS_BRANCHES, ORDRE_BRANCHES, ROLES_BRANCHE, ROLES_GESTION, ROLES_GROUPE } from '@scout/shared'
 import {
@@ -467,5 +466,3 @@ function CarteConfig({ branche, config, modifiable }: { branche: string; config:
     </Card>
   )
 }
-
-export { titreReunion }

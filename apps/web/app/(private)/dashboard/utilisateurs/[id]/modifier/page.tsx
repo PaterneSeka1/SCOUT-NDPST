@@ -11,7 +11,7 @@ import { PasswordInput } from '@/components/PasswordInput'
 import { SelecteurEnfants } from '@/components/SelecteurEnfants'
 import { motDePasseValide, REGLE_MOT_DE_PASSE } from '@scout/shared'
 import { BackLink } from '@/components/ui/BackLink'
-import { PERIMETRE_V1 } from '@scout/shared'
+import { ESPACES_FAMILLES_ACTIFS } from '@scout/shared'
 
 const CLS_INPUT =
   'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-(--cp) focus:border-transparent'
@@ -293,8 +293,8 @@ function FormulaireUtilisateur({ id, utilisateur }: { id: string; utilisateur: U
             <span className="text-sm text-gray-700">Compte actif</span>
           </label>
 
-          {/* Espace parent hors périmètre V1 : les rattachements existants sont renvoyés tels quels. */}
-          {!PERIMETRE_V1 && (
+          {/* Conserver les rattachements existants tant que l'espace famille est fermé. */}
+          {ESPACES_FAMILLES_ACTIFS && (
             <div className="border-t border-gray-100 pt-4">
               <SelecteurEnfants scoutIds={scoutIds} onChange={setScoutIds} scoutsInitiaux={utilisateur.enfants} />
             </div>

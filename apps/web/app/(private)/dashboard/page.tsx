@@ -3,9 +3,9 @@
 import { useSession } from '@/lib/session-client'
 import { useDashboard } from '@/hooks/useDashboard'
 import Link from 'next/link'
-import { ICONES_KPI, ICONE_KPI_DEFAUT, ICONES_TYPE_ACTIVITE, ClipboardList } from '@/lib/icons'
+import { ICONES_INDICATEUR, ICONE_INDICATEUR_DEFAUT, ICONES_TYPE_ACTIVITE, ClipboardList } from '@/lib/icons'
 import { StatCard, StatCardSkeleton } from '@/components/ui/StatCard'
-import { pageHorsPerimetreV1 } from '@scout/shared'
+import { pageHorsPerimetre } from '@scout/shared'
 
 const TONS_KPI: Array<'primary' | 'accent' | 'warning' | 'info'> = ['primary', 'accent', 'warning', 'info']
 
@@ -90,7 +90,7 @@ export default function DashboardPage() {
               >
                 Personnaliser ma paroisse
               </Link>
-              {!pageHorsPerimetreV1('/dashboard/rapports') && (
+              {!pageHorsPerimetre('/dashboard/rapports') && (
                 <Link
                   href="/dashboard/rapports"
                   className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
@@ -121,7 +121,7 @@ export default function DashboardPage() {
                 key={titre}
                 label={titre}
                 value={valeur}
-                icon={ICONES_KPI[titre] ?? ICONE_KPI_DEFAUT}
+                icon={ICONES_INDICATEUR[titre] ?? ICONE_INDICATEUR_DEFAUT}
                 tone={TONS_KPI[i % TONS_KPI.length]}
               />
             ))}
