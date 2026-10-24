@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { LABELS_BRANCHES, ORDRE_BRANCHES, ROLES_BRANCHE } from '@scout/shared'
+import { brancheSelonAge, calculerAge, LABELS_BRANCHES, ORDRE_BRANCHES, ROLES_BRANCHE } from '@scout/shared'
 import { rechercherDoublons, useCreerScout, type CorrespondanceDoublon } from '@/hooks/useScouts'
 import { useEquipes } from '@/hooks/useEquipes'
 import { useMaBranche } from '@/hooks/useBranches'
@@ -61,6 +61,7 @@ export default function PageNouveauScout() {
   const [dateNaissance, setDateNaissance] = useState('')
   const [sexe, setSexe] = useState('')
   const [brancheChoisie, setBrancheChoisie] = useState('')
+  const [brancheTouchee, setBrancheTouchee] = useState(false)
   const [equipeId, setEquipeId] = useState('')
   const [photo, setPhoto] = useState<string | null>(null)
   const [allergies, setAllergies] = useState('')
@@ -178,7 +179,32 @@ export default function PageNouveauScout() {
               {(p) => <Input {...p} value={prenom} onChange={(e) => setPrenom(e.target.value)} autoComplete="off" />}
             </Field>
             <Field label="Date de naissance" requis erreur={erreurs.dateNaissance}>
-              {(p) => <Input {...p} type="date" value={dateNaissance} onChange={(e) => setDateNaissance(e.target.value)} />}
+              {(p) => (
+                <Input
+                  {...p}
+                  type="date"
+                  value={dateNaissance}
+                  onChange={(e) => {
+                    const valeur = e.target.value
+                    setDateNaissance(valeur)
+                    setErreurs((p) => ({ ...p, dateNaissance: undefined }))
+                    if (brancheTouchee || brancheImposee) return
+                    if (!valeur) {
+                      setBrancheChoisie('')
+                      setEquipeId('')
+                      return
+                    }
+
+                    const naissance = new Date(`${valeur}T00:00:00`)
+                    const suggestion = Number.isNaN(naissance.getTime())
+                      ? null
+                      : brancheSelonAge(calculerAge(naissance, new Date()))
+                    setBrancheChoisie(suggestion ?? '')
+                    if (suggestion) setErreurs((p) => ({ ...p, brancheType: undefined }))
+                    setEquipeId('')
+                  }}
+                />
+              )}
             </Field>
             <Field label="Sexe" requis erreur={erreurs.sexe}>
               {(p) => <Select {...p} value={sexe} onChange={(e) => setSexe(e.target.value)} vide="Sélectionner" options={OPTIONS_SEXE} />}
@@ -187,7 +213,13 @@ export default function PageNouveauScout() {
               label="Branche"
               requis
               erreur={erreurs.brancheType}
-              aide={estRoleBranche ? 'Inscription limitée à votre branche.' : undefined}
+              aide={
+                estRoleBranche
+                  ? 'Inscription limitée à votre branche.'
+                  : !brancheTouchee && brancheChoisie
+                    ? 'Suggérée à partir de la date de naissance — modifiable si besoin.'
+                    : undefined
+              }
             >
               {(p) => (
                 <Select
@@ -196,6 +228,7 @@ export default function PageNouveauScout() {
                   disabled={estRoleBranche}
                   onChange={(e) => {
                     setBrancheChoisie(e.target.value)
+                    setBrancheTouchee(true)
                     setEquipeId('')
                   }}
                   vide="Sélectionner une branche"
