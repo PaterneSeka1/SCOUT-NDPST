@@ -19,6 +19,7 @@ import { HistoireModule } from './modules/histoire/histoire.module'
 import { MaintenanceModule } from './modules/maintenance/maintenance.module'
 import { ProfilModule } from './modules/profil/profil.module'
 import { ProgrammesModule } from './modules/programmes/programmes.module'
+import { ProgressionModule } from './modules/progression/progression.module'
 import { PublicationsModule } from './modules/publications/publications.module'
 import { ReunionsModule } from './modules/reunions/reunions.module'
 import { ScoutsModule } from './modules/scouts/scouts.module'
@@ -50,6 +51,7 @@ import { SanteController } from './sante/sante.controller'
     MaintenanceModule,
     ProfilModule,
     ProgrammesModule,
+    ProgressionModule,
     PublicationsModule,
     ReunionsModule,
     ScoutsModule,

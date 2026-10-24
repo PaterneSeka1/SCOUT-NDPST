@@ -46,6 +46,7 @@ export const LABELS_ACTIONS_AUDIT: Record<string, string> = {
   EQUIPE_CREEE: 'Création équipe',
   EQUIPE_MODIFIEE: 'Modification équipe',
   BAREME_MODIFIE: 'Modification barème de cotisation',
+  REFERENTIEL_MODIFIE: 'Modification du référentiel pédagogique',
   PROFIL_PUBLIC_MODIFIE: 'Modification profil public',
   UTILISATEUR_EDITEUR_CONTENU_MODIFIE: "Droit d'édition des contenus modifié",
   RAPPORT_EXPORTE: 'Export de rapport',
