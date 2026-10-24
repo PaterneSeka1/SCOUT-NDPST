@@ -21,7 +21,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SessionProvider>{children}</SessionProvider>
+      {/* Session « anonyme » par défaut : le site public ne la consulte pas
+          (évite un appel /api/auth/session en 401 à chaque visite) ; l'espace
+          privé fournit sa propre session, lue côté serveur par son layout. */}
+      <SessionProvider sessionInitiale={null}>{children}</SessionProvider>
       <ReactQueryDevtools initialIsOpen={false} />
       <Toaster
         position="top-right"
@@ -29,7 +32,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         closeButton
         duration={4000}
         toastOptions={{
-          style: { fontFamily: 'var(--font-geist-sans)', fontSize: '0.875rem' },
+          style: { fontFamily: 'var(--font-corps)', fontSize: '0.875rem' },
         }}
       />
     </QueryClientProvider>
