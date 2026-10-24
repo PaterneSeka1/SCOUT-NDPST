@@ -1,7 +1,7 @@
 {
-  "name": "scout-ascci",
+  "name": "scout-ndpst",
   "private": true,
-  "description": "Monorepo SCOUT ASCCI : API (NestJS) commune, frontend paroissial et application district (Next.js), chaque plateforme sur sa propre installation.",
+  "description": "Monorepo SCOUT-NDPST : plateforme d'une paroisse — API NestJS et application Next.js (site public et gestion du groupe scout).",
   "engines": {
     "node": "22.23.4",
     "npm": "10.9.9"
@@ -11,8 +11,8 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "npm run build -w @scout/shared && concurrently -k -n shared,api,paroisse,district -c gray,blue,green,magenta \"npm run dev -w @scout/shared\" \"npm run dev -w @scout/api\" \"npm run dev -w @scout/web-paroisse\" \"npm run dev -w @scout/web-district\"",
-    "build": "npm run build -w @scout/shared && npm run build -w @scout/api -w @scout/web-paroisse -w @scout/web-district",
+    "dev": "npm run build -w @scout/shared && concurrently -k -n shared,api,web -c gray,blue,green \"npm run dev -w @scout/shared\" \"npm run dev -w @scout/api\" \"npm run dev -w @scout/web\"",
+    "build": "npm run build -w @scout/shared && npm run build -w @scout/api -w @scout/web",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run build -w @scout/shared && npm run typecheck --workspaces --if-present",
     "test": "npm run build -w @scout/shared && npm run test --workspaces --if-present",

@@ -1,0 +1,158 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Charte SCOUT-NDPST — tirée du logo du groupe : vert scout, terracotta,
+   sable, crème et or discret. Les couleurs institutionnelles (--cp, --ca,
+   --cf, --ch) sont injectées par app/layout.tsx depuis la configuration de
+   l'installation (Administration > Identité et configuration) ; les valeurs
+   ci-dessous ne sont que des replis.
+   --------------------------------------------------------------------------- */
+:root {
+  --cp: #2f5d3a;
+  --ca: #b5653f;
+  --cf: #1f3a28;
+  --ch: #c27a52;
+  --cp-rgb: 47, 93, 58;
+  --ca-rgb: 181, 101, 63;
+  --ch-rgb: 194, 122, 82;
+
+  --background: #fbf8f2;
+  --foreground: #23201b;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  /* Couleurs institutionnelles configurables */
+  --color-primaire: var(--cp);
+  --color-accent: var(--ca);
+  --color-profond: var(--cf);
+  --color-survol: var(--ch);
+
+  --font-sans: var(--font-corps), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-titre), ui-serif, Georgia, serif;
+  --font-mono: var(--font-geist-mono);
+}
+
+@theme {
+  /* Palette fixe de la charte (décors, fonds, états) */
+  --color-creme: #fbf8f2;
+  --color-creme-fonce: #f3ecdf;
+  --color-sable-50: #faf5ec;
+  --color-sable-100: #f1e6d2;
+  --color-sable-200: #e5d3b2;
+  --color-sable-300: #d6bc8d;
+  --color-sable-500: #b89a66;
+  --color-terracotta-50: #fbf0ea;
+  --color-terracotta-100: #f5dccf;
+  --color-terracotta-500: #b5653f;
+  --color-terracotta-600: #9c5232;
+  --color-terracotta-700: #7e4128;
+  --color-foret-50: #eef4ee;
+  --color-foret-100: #d8e6da;
+  --color-foret-500: #3f7a4c;
+  --color-foret-600: #2f5d3a;
+  --color-foret-700: #244a2d;
+  --color-foret-900: #15291b;
+  --color-or-300: #e2c47d;
+  --color-or-500: #b8913a;
+  --color-or-700: #8a6a24;
+  --color-encre: #23201b;
+
+  --shadow-carte: 0 1px 2px rgba(35, 32, 27, 0.04), 0 4px 16px -8px rgba(35, 32, 27, 0.12);
+  --shadow-flottante: 0 12px 40px -12px rgba(35, 32, 27, 0.28);
+
+  --animate-apparition: apparition 0.5s ease-out both;
+
+  @keyframes apparition {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-corps), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Titres éditoriaux du site public */
+.titre-display {
+  font-family: var(--font-titre), ui-serif, Georgia, serif;
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background-color: rgba(var(--cp-rgb), 0.2);
+}
+
+:focus-visible {
+  outline: 2px solid var(--cp);
+  outline-offset: 2px;
+}
+
+/* Navigation de l'espace privé (sidebar sur fond --cf) */
+.snav-link {
+  color: rgba(255, 255, 255, 0.74);
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+.snav-link:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+.snav-active {
+  background-color: rgba(var(--ch-rgb), 0.95) !important;
+  color: white !important;
+}
+
+/* Motif discret inspiré des cercles du logo (fonds décoratifs uniquement) */
+.motif-cercles {
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(var(--ca-rgb), 0.08) 0 2px, transparent 3px),
+    radial-gradient(circle at 70% 60%, rgba(184, 145, 58, 0.1) 0 2px, transparent 3px);
+  background-size: 28px 28px, 36px 36px;
+}
+
+.scrollbar-fine {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
+}
+.scrollbar-fine::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-fine::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.18);
+  border-radius: 999px;
+}
+.scrollbar-fine::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  body {
+    background: white;
+  }
+}

@@ -62,7 +62,7 @@ if [ ! -f "apps/api/.env" ]; then
 else
   ok "apps/api/.env déjà présent"
 fi
-for FRONT in web-paroisse web-district; do
+for FRONT in web; do
   if [ ! -f "apps/$FRONT/.env" ]; then
     cp "apps/$FRONT/.env.example" "apps/$FRONT/.env"
     ok "apps/$FRONT/.env créé"

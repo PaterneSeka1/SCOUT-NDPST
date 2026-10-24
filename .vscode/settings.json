@@ -1,4 +1,4 @@
 {
   "typescript.tsdk": "packages/shared/node_modules/typescript/lib",
-  "eslint.workingDirectories": ["./apps/api", "./apps/web-district", "./apps/web-paroisse"]
+  "eslint.workingDirectories": ["./apps/api", "./apps/web"]
 }

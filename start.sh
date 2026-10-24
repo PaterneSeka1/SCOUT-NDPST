@@ -50,12 +50,11 @@ done
 ok "PostgreSQL prêt"
 
 echo ""
-echo "  Application  → http://localhost:3000"
-echo "  District     → http://localhost:3001"
+echo "  Site public et espace de gestion → http://localhost:3000"
 echo "  API          → http://localhost:4000/api (documentation : /api/docs)"
 echo "  Adminer (DB) → http://localhost:8080"
 echo ""
-echo "  Appuie sur Ctrl+C pour arrêter l’API et les frontends."
+echo "  Appuie sur Ctrl+C pour arrêter l’API et le frontend."
 echo "  (Les conteneurs Docker restent actifs — lance './stop.sh' pour tout arrêter)"
 echo ""
 

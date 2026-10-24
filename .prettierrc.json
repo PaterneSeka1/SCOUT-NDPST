@@ -8,12 +8,8 @@
   "plugins": ["prettier-plugin-tailwindcss"],
   "overrides": [
     {
-      "files": "apps/web-paroisse/**",
-      "options": { "tailwindStylesheet": "./apps/web-paroisse/app/globals.css" }
-    },
-    {
-      "files": "apps/web-district/**",
-      "options": { "tailwindStylesheet": "./apps/web-district/app/globals.css" }
+      "files": "apps/web/**",
+      "options": { "tailwindStylesheet": "./apps/web/app/globals.css" }
     }
   ]
 }

@@ -10,4 +10,5 @@ coverage/
 /playwright-report/
 /test-results/
 
-apps/web-*/.next-e2e/
+apps/web/.next-e2e/
+__pycache__/
