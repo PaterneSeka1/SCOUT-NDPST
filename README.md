@@ -2,7 +2,7 @@
 
 Plateforme numérique du groupe scout d'**une paroisse** catholique de Côte d'Ivoire, qui a accueilli le scoutisme en 1956 :
 
-- un **site public** (histoire, branches, actualités, activités, galerie, équipe, « Nous rejoindre », contact) ;
+- un **site public** (histoire, branches, agenda et actualités, galerie, maîtrise, « Nous rejoindre » avec le contact, données personnelles) ;
 - un **espace de gestion** privé (scouts, branches, équipes, maîtrise, réunions, activités et camps, présences, cotisations, progression pédagogique, documents, rapports) ;
 - une **administration** (comptes et permissions, identité et configuration, contenus publics, demandes d'adhésion, journal d'audit).
 
@@ -53,6 +53,7 @@ npm run test:e2e
 | [Déploiement OVH](docs/deploiement-ovh.md) et [releases](docs/exploitation-releases.md) | Production, sauvegardes, supervision, rollback |
 | [Données sensibles et consentements](docs/donnees-sensibles-et-consentements.md) | Santé, image, conservation |
 | [Rapport de refonte](docs/rapport-refonte.md) | Problèmes identifiés, corrections, validations, risques |
+| [Refonte UX/UI](docs/refonte-ux-ui.md) | Diagnostic, navigation, direction artistique, design system, vérifications |
 
 ## Migrations Prisma
 
