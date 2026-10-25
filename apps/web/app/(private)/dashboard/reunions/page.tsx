@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { LABELS_BRANCHES, ORDRE_BRANCHES, ROLES_BRANCHE, ROLES_GESTION, ROLES_GROUPE } from '@scout/shared'
+import { LABELS_BRANCHES, ORDRE_CATEGORIES_SCOUTS, ROLES_BRANCHE, ROLES_GESTION, ROLES_GROUPE } from '@scout/shared'
 import {
   Alert,
   Button,
@@ -181,7 +181,7 @@ export default function PageReunions() {
                   setPage(1)
                 }}
                 vide="Toutes les branches"
-                options={ORDRE_BRANCHES.map((b) => ({ valeur: b, libelle: LABELS_BRANCHES[b] }))}
+                options={ORDRE_CATEGORIES_SCOUTS.map((b) => ({ valeur: b, libelle: LABELS_BRANCHES[b] }))}
               />
             )}
           </FilterBar>
@@ -349,7 +349,7 @@ function ModaleReunion({ reunion, estGroupe, onFermer }: { reunion: Reunion; est
                 value={brancheType}
                 onChange={(e) => setBrancheType(e.target.value)}
                 vide="Inter-branches"
-                options={ORDRE_BRANCHES.map((b) => ({ valeur: b, libelle: LABELS_BRANCHES[b] }))}
+                options={ORDRE_CATEGORIES_SCOUTS.map((b) => ({ valeur: b, libelle: LABELS_BRANCHES[b] }))}
               />
             )}
           </Field>
@@ -372,7 +372,7 @@ function ConfigurationReunions({ modifiable }: { modifiable: boolean }) {
   if (isLoading)
     return (
       <div className="space-y-3" role="status" aria-label="Chargement">
-        {ORDRE_BRANCHES.map((b) => (
+        {ORDRE_CATEGORIES_SCOUTS.map((b) => (
           <Skeleton key={b} className="h-16 w-full" />
         ))}
       </div>
@@ -386,7 +386,7 @@ function ConfigurationReunions({ modifiable }: { modifiable: boolean }) {
         {!modifiable && ' Seul le Chef de Groupe peut les modifier.'}
       </p>
       <div className="grid gap-4 md:grid-cols-2">
-        {ORDRE_BRANCHES.map((b) => (
+        {ORDRE_CATEGORIES_SCOUTS.map((b) => (
           <CarteConfig key={b} branche={b} config={data?.find((c) => c.brancheType === b) ?? null} modifiable={modifiable} />
         ))}
       </div>

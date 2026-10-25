@@ -8,7 +8,7 @@ import {
   LABELS_BRANCHES,
   LABELS_STATUT_ACTIVITE,
   LABELS_TYPE_ACTIVITE,
-  ORDRE_BRANCHES,
+  ORDRE_CATEGORIES_SCOUTS,
   ROLES_BRANCHE,
 } from '@scout/shared'
 import {
@@ -164,7 +164,7 @@ export default function PageActivites() {
             value={branche}
             onChange={(e) => changerFiltre(setBranche)(e.target.value)}
             vide="Toutes les branches"
-            options={ORDRE_BRANCHES.map((b) => ({ valeur: b, libelle: LABELS_BRANCHES[b] }))}
+            options={ORDRE_CATEGORIES_SCOUTS.map((b) => ({ valeur: b, libelle: LABELS_BRANCHES[b] }))}
           />
         )}
         <Checkbox label="À venir uniquement" checked={aVenir} onChange={(e) => changerFiltre(setAVenir)(e.target.checked)} />

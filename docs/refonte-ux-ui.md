@@ -6,7 +6,7 @@ Branche `feature/refonte-ux-ui-premium`, créée depuis `main` (`280c3d3`). Aucu
 
 | | SCOUT-NDPST | suivi-pedagogique-cmg (+ backend) |
 | --- | --- | --- |
-| Périmètre | Un groupe paroissial, six branches (Oisillons → Ressources adultes) | Branche Route seule, à l’échelle de la région (région › district › paroisse › communauté) |
+| Périmètre | Un groupe paroissial, cinq branches (Oisillons → Routiers), et les ressources adultes hors branches | Branche Route seule, à l’échelle de la région (région › district › paroisse › communauté) |
 | Stack | Next.js 16 / React 19 / Tailwind 4, NestJS + Prisma | Identique côté front ; NestJS 11 + Prisma 6, RBAC en base |
 | Progression | Référentiel d’étapes par branche, saisi par le groupe ; validation sur la fiche scout | Étapes figées (Noviciat → Départ routier), workflow proposé/validé, insignes, matrice âge/étape |
 | Design | Charte du logo (forêt, terracotta), Fraunces + Source Sans 3 | Tokens « route » (bleu roi, rouge, violet), mêmes polices |

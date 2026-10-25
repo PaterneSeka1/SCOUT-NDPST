@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useSession } from '@/lib/session-client'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { LABELS_BRANCHES, ORDRE_BRANCHES } from '@scout/shared'
+import { LABELS_BRANCHES, ORDRE_CATEGORIES_SCOUTS } from '@scout/shared'
 import { BackLink } from '@/components/ui/BackLink'
 import { CalendarDays, Repeat, Check } from '@/lib/icons'
 
@@ -17,7 +17,7 @@ const CLS_LABEL = 'block text-sm font-medium text-stone-700 mb-1'
 
 const BRANCHES = [
   { value: '', label: 'Toutes les branches' },
-  ...ORDRE_BRANCHES.map((branche) => ({ value: branche, label: LABELS_BRANCHES[branche] })),
+  ...ORDRE_CATEGORIES_SCOUTS.map((branche) => ({ value: branche, label: LABELS_BRANCHES[branche] })),
 ]
 const JOURS_SEMAINE = [
   { value: 0, label: 'Dimanche' },

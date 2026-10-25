@@ -6,10 +6,11 @@ import { toast } from 'sonner'
 import { confirmer } from '@/components/ConfirmDialog'
 import { BackLink } from '@/components/ui/BackLink'
 import {
+  DESCRIPTION_RESSOURCES_ADULTES,
   LABELS_BRANCHES,
   COULEURS_BRANCHES,
   TRANCHES_AGE_BRANCHES,
-  ORDRE_BRANCHES,
+  ORDRE_CATEGORIES_SCOUTS,
   formatTrancheAge,
 } from '@scout/shared'
 import { ArrowRight, AlertTriangle, CheckCircle2 } from '@/lib/icons'
@@ -44,7 +45,7 @@ function badgeBranche(branche: string | null) {
 // avant de confirmer, contrairement à un passage classique en fin d'année.
 function estCorrection(p: Proposition): boolean {
   if (!p.brancheProposee) return false
-  return ORDRE_BRANCHES.indexOf(p.brancheProposee) < ORDRE_BRANCHES.indexOf(p.brancheActuelle)
+  return ORDRE_CATEGORIES_SCOUTS.indexOf(p.brancheProposee) < ORDRE_CATEGORIES_SCOUTS.indexOf(p.brancheActuelle)
 }
 
 function dateAujourdhui(): string {
@@ -144,8 +145,9 @@ export default function PagePassageBranche() {
           Propose un changement de branche pour chaque scout dont l&apos;âge ne correspond plus à sa branche actuelle,
           selon les tranches d&apos;âge ci-dessous. Rien n&apos;est modifié tant que vous ne confirmez pas.
         </p>
+        <p className="mt-2 text-sm text-stone-500">{DESCRIPTION_RESSOURCES_ADULTES}</p>
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {ORDRE_BRANCHES.map((branche) => (
+          {ORDRE_CATEGORIES_SCOUTS.map((branche) => (
             <span key={branche} className={`rounded-lg px-2 py-1 text-xs ${COULEURS_BRANCHES[branche]}`}>
               {LABELS_BRANCHES[branche]} · {formatTrancheAge(TRANCHES_AGE_BRANCHES[branche])}
             </span>

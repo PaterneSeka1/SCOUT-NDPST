@@ -1,3 +1,4 @@
+import { DESCRIPTION_RESSOURCES_ADULTES } from '@scout/shared'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { lirePublic } from '@/lib/api-public'
@@ -11,7 +12,7 @@ import type { BranchePublique } from '@/components/public/types'
 
 export const metadata: Metadata = {
   title: 'Nos branches',
-  description: 'Les branches du groupe scout, de l’enfance à l’âge adulte : tranches d’âge, pédagogie et activités.',
+  description: 'Les cinq branches du groupe scout, de l’enfance à l’âge adulte : tranches d’âge, pédagogie et activités.',
   alternates: { canonical: '/nos-branches' },
 }
 
@@ -35,6 +36,10 @@ export default async function PageBranches() {
       </EnTetePage>
 
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+        <aside className="mb-10 rounded-lg border border-stone-200 p-6">
+          <h2 className="text-xl font-semibold text-encre">Les ressources adultes</h2>
+          <p className="mt-2 text-encre-douce">{DESCRIPTION_RESSOURCES_ADULTES} Elles constituent une catégorie distincte des cinq branches.</p>
+        </aside>
         {liste.length === 0 ? (
           <EtatVidePublic
             titre={branches === null ? 'Les branches sont momentanément indisponibles.' : 'La présentation des branches sera bientôt publiée.'}

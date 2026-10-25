@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { LABELS_BRANCHES, ORDRE_BRANCHES, ROLES_BRANCHE } from '@scout/shared'
+import { LABELS_BRANCHES, ORDRE_CATEGORIES_SCOUTS, ROLES_BRANCHE } from '@scout/shared'
 import { useModifierScout, useScout, type FicheScout } from '@/hooks/useScouts'
 import { useEquipes } from '@/hooks/useEquipes'
 import { useSession } from '@/lib/session-client'
@@ -28,7 +28,7 @@ import {
   confirmer,
 } from '@/components/ui'
 
-const OPTIONS_BRANCHES = ORDRE_BRANCHES.map((b) => ({ valeur: b, libelle: LABELS_BRANCHES[b] }))
+const OPTIONS_BRANCHES = ORDRE_CATEGORIES_SCOUTS.map((b) => ({ valeur: b, libelle: LABELS_BRANCHES[b] }))
 const OPTIONS_SEXE = [
   { valeur: 'MASCULIN', libelle: 'Garçon' },
   { valeur: 'FEMININ', libelle: 'Fille' },

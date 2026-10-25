@@ -25,7 +25,7 @@ enum BrancheType {
   ECLAIREURS
   CHEMINOTS
   COMPAGNONS
-  RESSOURCES_ADULTES // Adultes de 21 ans et plus se préparant à devenir chefs/responsables
+  RESSOURCES_ADULTES // Catégorie de gestion hors des cinq branches : scouts de 21 ans ou plus non encore chefs d’unité
 }
 
 enum RoleUtilisateur {

@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { useScouts } from '@/hooks/useScouts'
 import type { Scout } from '@/hooks/useScouts'
-import { LABELS_BRANCHES, ORDRE_BRANCHES } from '@scout/shared'
+import { LABELS_BRANCHES, ORDRE_CATEGORIES_SCOUTS } from '@scout/shared'
 import { ChevronLeft, ChevronRight, X } from '@/lib/icons'
 
 const CLS_INPUT =
@@ -17,7 +17,7 @@ const LIMITE_SCOUTS_PAGE = 20
 
 const OPTIONS_BRANCHES_SCOUT = [
   { valeur: '', label: 'Toutes les branches' },
-  ...ORDRE_BRANCHES.map((branche) => ({ valeur: branche, label: LABELS_BRANCHES[branche] })),
+  ...ORDRE_CATEGORIES_SCOUTS.map((branche) => ({ valeur: branche, label: LABELS_BRANCHES[branche] })),
 ]
 
 export type ScoutLeger = Pick<Scout, 'id' | 'nom' | 'prenom' | 'brancheType' | 'matricule'>

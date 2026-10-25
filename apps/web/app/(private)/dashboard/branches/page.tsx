@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useSession } from '@/lib/session-client'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { LABELS_BRANCHES, COULEURS_BRANCHES, ORDRE_BRANCHES } from '@scout/shared'
+import { LABELS_BRANCHES, COULEURS_BRANCHES, ORDRE_BRANCHES, DESCRIPTION_RESSOURCES_ADULTES } from '@scout/shared'
 import { ROLES_GROUPE } from '@scout/shared'
 import { ArrowRight } from '@/lib/icons'
 
@@ -51,7 +51,7 @@ export default function PageBranches() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-stone-900">Branches</h1>
-          <p className="text-sm text-stone-500 mt-0.5">Organisation des branches scouts de la paroisse</p>
+          <p className="text-sm text-stone-500 mt-0.5">Les cinq branches scoutes de la paroisse</p>
         </div>
         {session?.user && ROLES_GROUPE.includes(session.user.role) && (
           <Link href="/dashboard/branches/passage"
@@ -60,6 +60,13 @@ export default function PageBranches() {
           </Link>
         )}
       </div>
+
+      <section className="rounded-xl border border-stone-200 bg-white p-5">
+        <h2 className="font-bold text-stone-900">Ressources adultes</h2>
+        <p className="mt-1 text-sm text-stone-600">{DESCRIPTION_RESSOURCES_ADULTES}</p>
+        <p className="mt-2 text-sm text-stone-600">{comptes.RESSOURCES_ADULTES ?? 0} scout{(comptes.RESSOURCES_ADULTES ?? 0) > 1 ? 's' : ''} actif{(comptes.RESSOURCES_ADULTES ?? 0) > 1 ? 's' : ''} · Catégorie distincte des cinq branches.</p>
+        <Link href="/dashboard/scouts?branche=RESSOURCES_ADULTES" className="mt-2 inline-block text-sm underline underline-offset-2">Voir les ressources adultes</Link>
+      </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {ORDRE_BRANCHES.map((branche) => {

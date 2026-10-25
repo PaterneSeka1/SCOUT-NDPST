@@ -6,7 +6,7 @@ import {
   LABELS_ROLES,
   LABELS_STATUT_ACTIVITE,
   LABELS_TYPE_ACTIVITE,
-  ORDRE_BRANCHES,
+  ORDRE_CATEGORIES_SCOUTS,
   ROLES_BRANCHE,
 } from '@scout/shared'
 import { Alert, Button, ButtonLink, Card, CardBody, CardHeader, Field, Input, Select, Switch, Textarea, confirmer } from '@/components/ui'
@@ -144,7 +144,7 @@ export function FormulaireActivite({
                   value={brancheType}
                   onChange={(e) => setBrancheType(e.target.value)}
                   vide="Inter-branches (toutes)"
-                  options={ORDRE_BRANCHES.map((b) => ({ valeur: b, libelle: LABELS_BRANCHES[b] }))}
+                  options={ORDRE_CATEGORIES_SCOUTS.map((b) => ({ valeur: b, libelle: LABELS_BRANCHES[b] }))}
                 />
               )
             }

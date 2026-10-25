@@ -3,7 +3,7 @@ export const LABELS_BRANCHES: Record<string, string> = {
   LOUVETEAUX: 'Louveteaux',
   ECLAIREURS: 'Éclaireurs',
   CHEMINOTS: 'Cheminots',
-  COMPAGNONS: 'Compagnons (Routiers)',
+  COMPAGNONS: 'Routiers',
   RESSOURCES_ADULTES: 'Ressources Adultes',
 }
 
@@ -16,8 +16,15 @@ export const COULEURS_BRANCHES: Record<string, string> = {
   RESSOURCES_ADULTES: 'bg-teal-100 text-teal-800',
 }
 
-// Ordre de progression des branches, du plus jeune au plus âgé.
-export const ORDRE_BRANCHES = ['OISILLONS', 'LOUVETEAUX', 'ECLAIREURS', 'CHEMINOTS', 'COMPAGNONS', 'RESSOURCES_ADULTES']
+// Les cinq branches pédagogiques, du plus jeune au plus âgé.
+export const ORDRE_BRANCHES = ['OISILLONS', 'LOUVETEAUX', 'ECLAIREURS', 'CHEMINOTS', 'COMPAGNONS']
+
+// Catégories de gestion : les ressources adultes ne constituent pas une branche.
+// La valeur historique RESSOURCES_ADULTES reste utilisée pour conserver les dossiers.
+export const ORDRE_CATEGORIES_SCOUTS = [...ORDRE_BRANCHES, 'RESSOURCES_ADULTES']
+
+export const DESCRIPTION_RESSOURCES_ADULTES =
+  'Les ressources adultes sont les scouts de 21 ans ou plus qui ne sont pas encore chefs d’unité.'
 
 // Tranches d'âge indicatives par branche, utilisées pour proposer le passage
 // de branche en fin d'année scoute. Ce sont des valeurs par défaut modifiables
@@ -48,9 +55,9 @@ export function formatTrancheAge(tranche: { min: number; max: number | null }): 
   return tranche.max === null ? `${tranche.min} ans et +` : `${tranche.min}-${tranche.max} ans`
 }
 
-/** Branche correspondant à un âge donné, ou null si hors de toutes les tranches (trop jeune). */
+/** Catégorie proposée selon l’âge, sans attribuer de fonction de chef d’unité. */
 export function brancheSelonAge(age: number): string | null {
-  for (const branche of ORDRE_BRANCHES) {
+  for (const branche of ORDRE_CATEGORIES_SCOUTS) {
     const tranche = TRANCHES_AGE_BRANCHES[branche]
     if (age >= tranche.min && (tranche.max === null || age <= tranche.max)) return branche
   }

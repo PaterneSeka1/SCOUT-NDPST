@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
-import { LABELS_BRANCHES, ORDRE_BRANCHES, ROLES_BRANCHE } from '@scout/shared'
+import { LABELS_BRANCHES, ORDRE_CATEGORIES_SCOUTS, ROLES_BRANCHE } from '@scout/shared'
 import { useBasculerActifScout, useScouts, type Scout } from '@/hooks/useScouts'
 import { useSession } from '@/lib/session-client'
 import { dateCourte } from '@/lib/format'
@@ -25,7 +25,7 @@ import {
 
 const LIMITE = 20
 
-const OPTIONS_BRANCHES = ORDRE_BRANCHES.map((b) => ({ valeur: b, libelle: LABELS_BRANCHES[b] }))
+const OPTIONS_BRANCHES = ORDRE_CATEGORIES_SCOUTS.map((b) => ({ valeur: b, libelle: LABELS_BRANCHES[b] }))
 const OPTIONS_STATUT = [
   { valeur: 'true', libelle: 'Actifs' },
   { valeur: 'false', libelle: 'Inactifs' },
@@ -49,7 +49,7 @@ function ListeScouts() {
   // Filtre initial depuis l'URL (lien « Voir les scouts » de la page Branches).
   const [branche, setBranche] = useState(() => {
     const valeur = parametres.get('branche') ?? ''
-    return ORDRE_BRANCHES.includes(valeur) ? valeur : ''
+    return ORDRE_CATEGORIES_SCOUTS.includes(valeur) ? valeur : ''
   })
   const [statut, setStatut] = useState('true')
   const [recherche, setRecherche] = useState('')

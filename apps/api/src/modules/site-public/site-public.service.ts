@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
-import { BrancheTypeSchema, LABELS_BRANCHES, LABELS_ROLES, TRANCHES_AGE_BRANCHES, formatTrancheAge } from '@scout/shared'
+import { BrancheTypeSchema, LABELS_BRANCHES, LABELS_ROLES, ORDRE_BRANCHES, TRANCHES_AGE_BRANCHES, formatTrancheAge } from '@scout/shared'
 import type { BrancheType, Prisma } from '../../generated/prisma/client'
 import { AuditService } from '../../common/audit.service'
 import { lirePagination, metaPagination } from '../../common/lib/pagination'
@@ -126,14 +126,14 @@ export class SitePublicService {
 
   async branches() {
     const branches = await this.prisma.branche.findMany({
-      where: { active: true, publiee: true },
+      where: { active: true, publiee: true, type: { in: ORDRE_BRANCHES as BrancheType[] } },
       orderBy: { ordre: 'asc' },
     })
     return branches.map(versBranche)
   }
 
   async branche(slug: string) {
-    const b = await this.prisma.branche.findFirst({ where: { slug, active: true, publiee: true } })
+    const b = await this.prisma.branche.findFirst({ where: { slug, active: true, publiee: true, type: { in: ORDRE_BRANCHES as BrancheType[] } } })
     if (!b) throw new NotFoundException('Branche introuvable')
     const [responsables, activites] = await Promise.all([
       this.prisma.utilisateur.findMany({
@@ -196,12 +196,12 @@ export class SitePublicService {
   // --- Administration des présentations de branches -------------------------
 
   listerBranchesAdmin() {
-    return this.prisma.branche.findMany({ orderBy: { ordre: 'asc' } })
+    return this.prisma.branche.findMany({ where: { type: { in: ORDRE_BRANCHES as BrancheType[] } }, orderBy: { ordre: 'asc' } })
   }
 
   async modifierBranche(type: string, corps: CorpsBranche, acteurId: string) {
     const brancheType = BrancheTypeSchema.safeParse(type)
-    if (!brancheType.success) throw new NotFoundException('Branche introuvable')
+    if (!brancheType.success || !ORDRE_BRANCHES.includes(brancheType.data)) throw new NotFoundException('Branche introuvable')
     const branche = await this.prisma.branche.update({
       where: { type: brancheType.data as BrancheType },
       data: Object.fromEntries(Object.entries(corps).filter(([, v]) => v !== undefined)),

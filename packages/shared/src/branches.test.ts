@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { calculerAge, brancheSelonAge, ORDRE_BRANCHES, TRANCHES_AGE_BRANCHES } from './branches'
+import { calculerAge, brancheSelonAge, ORDRE_BRANCHES, ORDRE_CATEGORIES_SCOUTS, TRANCHES_AGE_BRANCHES } from './branches'
 
 describe('calculerAge', () => {
   it("calcule l'âge correctement quand l'anniversaire est déjà passé cette année", () => {
@@ -16,6 +16,17 @@ describe('calculerAge', () => {
 })
 
 describe('brancheSelonAge', () => {
+  it('distingue les cinq branches de la catégorie ressources adultes', () => {
+    expect(ORDRE_BRANCHES).toEqual(['OISILLONS', 'LOUVETEAUX', 'ECLAIREURS', 'CHEMINOTS', 'COMPAGNONS'])
+    expect(ORDRE_CATEGORIES_SCOUTS).toEqual([...ORDRE_BRANCHES, 'RESSOURCES_ADULTES'])
+  })
+
+  it('propose les ressources adultes seulement à partir de 21 ans révolus', () => {
+    const naissance = new Date(2005, 9, 25)
+    expect(brancheSelonAge(calculerAge(naissance, new Date(2026, 9, 24)))).toBe('COMPAGNONS')
+    expect(brancheSelonAge(calculerAge(naissance, new Date(2026, 9, 25)))).toBe('RESSOURCES_ADULTES')
+  })
+
   it('retourne la bonne branche pour un âge dans chaque tranche', () => {
     expect(brancheSelonAge(6)).toBe('OISILLONS')
     expect(brancheSelonAge(7)).toBe('OISILLONS')
@@ -35,12 +46,12 @@ describe('brancheSelonAge', () => {
     expect(brancheSelonAge(5)).toBeNull()
   })
 
-  it('les tranches sont contiguës et couvrent ORDRE_BRANCHES sans trou ni chevauchement', () => {
-    // Seule la dernière branche (Ressources Adultes) a un `max` nul (pas de
+  it('les tranches sont contiguës et couvrent toutes les catégories sans trou ni chevauchement', () => {
+    // Seule la dernière catégorie (Ressources Adultes) a un `max` nul (pas de
     // limite d'âge supérieure) — elle n'est donc jamais "actuelle" ici.
-    for (let i = 0; i < ORDRE_BRANCHES.length - 1; i++) {
-      const actuelle = TRANCHES_AGE_BRANCHES[ORDRE_BRANCHES[i]]
-      const suivante = TRANCHES_AGE_BRANCHES[ORDRE_BRANCHES[i + 1]]
+    for (let i = 0; i < ORDRE_CATEGORIES_SCOUTS.length - 1; i++) {
+      const actuelle = TRANCHES_AGE_BRANCHES[ORDRE_CATEGORIES_SCOUTS[i]]
+      const suivante = TRANCHES_AGE_BRANCHES[ORDRE_CATEGORIES_SCOUTS[i + 1]]
       expect(actuelle.max).not.toBeNull()
       expect(suivante.min).toBe((actuelle.max as number) + 1)
     }

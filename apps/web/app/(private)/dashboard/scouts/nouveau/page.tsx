@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { brancheSelonAge, calculerAge, LABELS_BRANCHES, ORDRE_BRANCHES, ROLES_BRANCHE } from '@scout/shared'
+import { brancheSelonAge, calculerAge, LABELS_BRANCHES, ORDRE_CATEGORIES_SCOUTS, ROLES_BRANCHE } from '@scout/shared'
 import { rechercherDoublons, useCreerScout, type CorrespondanceDoublon } from '@/hooks/useScouts'
 import { useEquipes } from '@/hooks/useEquipes'
 import { useMaBranche } from '@/hooks/useBranches'
@@ -40,7 +40,7 @@ type Erreurs = Partial<Record<'nom' | 'prenom' | 'dateNaissance' | 'sexe' | 'bra
 }
 
 const RELATIONS = ['Père', 'Mère', 'Tuteur', 'Tutrice', 'Autre'].map((r) => ({ valeur: r, libelle: r }))
-const OPTIONS_BRANCHES = ORDRE_BRANCHES.map((b) => ({ valeur: b, libelle: LABELS_BRANCHES[b] }))
+const OPTIONS_BRANCHES = ORDRE_CATEGORIES_SCOUTS.map((b) => ({ valeur: b, libelle: LABELS_BRANCHES[b] }))
 const OPTIONS_SEXE = [
   { valeur: 'MASCULIN', libelle: 'Garçon' },
   { valeur: 'FEMININ', libelle: 'Fille' },

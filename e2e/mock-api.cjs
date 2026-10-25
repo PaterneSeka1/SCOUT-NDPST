@@ -32,7 +32,7 @@ const membre = {
 const responsable = { ...membre, id: 'resp-test', prenom: 'Yao', nom: 'Kouassi', matricule: 'TEST002', role: 'RESPONSABLE_BRANCHE', brancheType: 'LOUVETEAUX' }
 
 const branches = ['OISILLONS', 'LOUVETEAUX', 'ECLAIREURS', 'CHEMINOTS', 'COMPAGNONS', 'RESSOURCES_ADULTES'].map((type, i) => ({
-  type, slug: type.toLowerCase(), nom: type.charAt(0) + type.slice(1).toLowerCase(), trancheAge: `${6 + i * 3}-${8 + i * 3} ans`,
+  type, slug: type.toLowerCase(), nom: type === 'COMPAGNONS' ? 'Routiers' : type.charAt(0) + type.slice(1).toLowerCase(), trancheAge: `${6 + i * 3}-${8 + i * 3} ans`,
   presentation: null, imageUrl: null, imageAlt: null,
 }))
 

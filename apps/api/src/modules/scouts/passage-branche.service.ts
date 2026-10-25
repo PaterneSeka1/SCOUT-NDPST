@@ -30,7 +30,7 @@ export class PassageBrancheService {
     if (Number.isNaN(dateReference.getTime())) throw new BadRequestException('Date de référence invalide')
 
     const scouts = await this.prisma.scout.findMany({
-      where: { actif: true },
+      where: { actif: true, OR: [{ utilisateur: null }, { utilisateur: { role: { not: 'RESPONSABLE_BRANCHE' } } }] },
       select: { id: true, nom: true, prenom: true, matricule: true, dateNaissance: true, brancheType: true },
       orderBy: [{ brancheType: 'asc' }, { nom: 'asc' }],
     })
@@ -43,7 +43,7 @@ export class PassageBrancheService {
       // erreur de saisie de la date de naissance) — on ne propose rien dans
       // ce cas. Au-delà de 20 ans révolus, le scout n'est plus "sorti du
       // mouvement" automatiquement : il est proposé en Ressources Adultes
-      // (branche sans limite d'âge supérieure, cf. TRANCHES_AGE_BRANCHES).
+      // (catégorie hors des cinq branches, sans limite d’âge supérieure).
       if (brancheCorrespondante === scout.brancheType) continue
       if (brancheCorrespondante === null && age < 6) continue
 
@@ -71,10 +71,16 @@ export class PassageBrancheService {
     const scoutIds = passages.map((p) => p.scoutId)
     const scoutsExistants = await this.prisma.scout.findMany({
       where: { id: { in: scoutIds } },
-      select: { id: true, brancheType: true },
+      select: { id: true, brancheType: true, utilisateur: { select: { role: true } } },
     })
     if (scoutsExistants.length !== scoutIds.length) {
       throw new NotFoundException('Un ou plusieurs scouts sont introuvables')
+    }
+    for (const passage of passages) {
+      const scout = scoutsExistants.find((s) => s.id === passage.scoutId)
+      if (passage.nouvelleBranche === 'RESSOURCES_ADULTES' && scout?.utilisateur?.role === 'RESPONSABLE_BRANCHE') {
+        throw new BadRequestException('Un chef d’unité ne peut pas être classé comme ressource adulte')
+      }
     }
     const brancheActuelleParScout = new Map(scoutsExistants.map((s) => [s.id, s.brancheType]))
 

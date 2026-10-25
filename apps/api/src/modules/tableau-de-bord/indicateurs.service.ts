@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common'
-import { ORDRE_BRANCHES, ROLES_BRANCHE, ROLES_TOUT_STAFF, anneeScolaireCourante } from '@scout/shared'
+import { ORDRE_CATEGORIES_SCOUTS, ROLES_BRANCHE, ROLES_TOUT_STAFF, anneeScolaireCourante } from '@scout/shared'
 import type { BrancheType, Prisma, RoleUtilisateur } from '../../generated/prisma/client'
 import { PerimetreService } from '../../common/perimetre.service'
 import type { UtilisateurSession } from '../../common/types'
@@ -333,7 +333,7 @@ export class IndicateursService {
 
   private async repartitionBranches() {
     const groupes = await this.prisma.scout.groupBy({ by: ['brancheType'], where: { actif: true }, _count: { _all: true } })
-    return ORDRE_BRANCHES.map((brancheType) => ({
+    return ORDRE_CATEGORIES_SCOUTS.map((brancheType) => ({
       brancheType,
       effectif: groupes.find((g) => g.brancheType === brancheType)?._count._all ?? 0,
     }))

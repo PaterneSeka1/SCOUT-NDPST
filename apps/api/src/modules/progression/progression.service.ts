@@ -1,5 +1,5 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
-import { ORDRE_BRANCHES, ROLES_BRANCHE, ROLES_GROUPE } from '@scout/shared'
+import { ORDRE_CATEGORIES_SCOUTS, ROLES_BRANCHE, ROLES_GROUPE } from '@scout/shared'
 import { Prisma, type BrancheType } from '../../generated/prisma/client'
 import { AuditService } from '../../common/audit.service'
 import { PerimetreService } from '../../common/perimetre.service'
@@ -18,7 +18,7 @@ export class ProgressionService {
   // Branches visibles : toutes pour l'équipe de groupe, la sienne pour
   // l'encadrement de branche.
   private async branchesVisibles(utilisateur: UtilisateurSession): Promise<BrancheType[]> {
-    if (!ROLES_BRANCHE.includes(utilisateur.role)) return ORDRE_BRANCHES as BrancheType[]
+    if (!ROLES_BRANCHE.includes(utilisateur.role)) return ORDRE_CATEGORIES_SCOUTS as BrancheType[]
     const branche = await this.perimetre.brancheUtilisateur(utilisateur.id)
     return branche ? [branche as BrancheType] : []
   }
