@@ -283,6 +283,11 @@ model Utilisateur {
   publications                Publication[]           @relation("PublicationAuteur")
   demandesTraitees            DemandeAdhesion[]       @relation("DemandeTraiteePar")
   mandats                     Mandat[]
+  identiteAdhesion PersonneAdhesion? @relation("IdentiteAdhesion")
+  habilitationsAdhesion HabilitationAdhesion[] @relation("DroitsAdhesion")
+  encaissementsAdhesion EncaissementAdhesion[] @relation("EncaissePar")
+  lotsNationaux LotReversementNational[] @relation("ResponsableLot")
+  confirmationsNationales ConfirmationNationale[] @relation("ConfirmePar")
 
   // Unicité « 1 seul CHEF_GROUPE actif » et « 1 seul RESPONSABLE_BRANCHE actif
   // par branche » : index partiels créés en migration (pas de WHERE en DSL).
@@ -292,8 +297,8 @@ model Utilisateur {
 
 // ---------------------------------------------------------------------------
 // Mandat — historique des responsabilités exercées dans la maîtrise.
-// Le rôle courant reste Utilisateur.role ; un mandat est ouvert à chaque
-// nomination et clos à chaque changement ou désactivation.
+// Les mandats actifs portent les fonctions simultanées. Utilisateur.role
+// conserve le poste principal de compatibilité et le rôle technique.
 // ---------------------------------------------------------------------------
 
 model Mandat {
@@ -378,6 +383,7 @@ model Scout {
   documents         Document[]
   autorisationsCamp AutorisationCamp[]
   cotisations       Cotisation[]
+  identiteAdhesion PersonneAdhesion?
 
   @@index([brancheType])
   @@index([equipeId])
@@ -795,6 +801,7 @@ model JournalAudit {
 // ---------------------------------------------------------------------------
 
 model Cotisation {
+  repriseAdhesion RepriseCotisation?
   id            String           @id @default(cuid())
   type          TypeCotisation   @default(ADHESION_ANNUELLE)
   libelle       String? // Précision libre, surtout utile pour le type AUTRE
@@ -968,4 +975,171 @@ model DemandeAdhesion {
   traiteePar   Utilisateur? @relation("DemandeTraiteePar", fields: [traiteeParId], references: [id], onDelete: SetNull)
 
   @@index([statut, createdAt])
+}
+
+
+enum CategorieAdhesion {
+  SCOUT
+  CHEF
+}
+enum PermissionAdhesion {
+  LIRE
+  CREER
+  ENCAISSER
+  REVERSER
+  CONFIRMER
+  CORRIGER
+  BAREMES
+}
+enum StatutLotNational {
+  PREPARE
+  DECLARE
+  PARTIELLEMENT_CONFIRME
+  CONFIRME
+  ANOMALIE
+  ANNULE
+}
+
+// Identité financière commune : le lien Scout/Utilisateur ne fusionne aucune fiche.
+model PersonneAdhesion {
+  id            String @id @default(cuid())
+  scoutId       String? @unique
+  utilisateurId String? @unique
+  scout         Scout? @relation(fields: [scoutId], references: [id], onDelete: Restrict)
+  utilisateur   Utilisateur? @relation("IdentiteAdhesion", fields: [utilisateurId], references: [id], onDelete: Restrict)
+  createdAt     DateTime @default(now())
+  adhesions     AdhesionAnnuelle[]
+}
+model HabilitationAdhesion {
+  id            String @id @default(cuid())
+  utilisateurId String
+  utilisateur   Utilisateur @relation("DroitsAdhesion", fields: [utilisateurId], references: [id], onDelete: Restrict)
+  permission    PermissionAdhesion
+  brancheType   BrancheType?
+  auteurId      String
+  motif         String
+  createdAt     DateTime @default(now())
+  revoqueeLe    DateTime?
+  @@index([utilisateurId, permission, revoqueeLe])
+}
+model BaremeAdhesion {
+  id            String @id @default(cuid())
+  annee         String
+  categorie     CategorieAdhesion
+  brancheType   BrancheType?
+  montant       Int
+  libelle       String
+  debutValidite DateTime
+  finValidite   DateTime?
+  actif         Boolean @default(true)
+  createdAt     DateTime @default(now())
+  adhesions     AdhesionAnnuelle[]
+  @@index([annee, categorie, actif])
+}
+model AdhesionAnnuelle {
+  id            String @id @default(cuid())
+  annee         String
+  personneId    String
+  personne      PersonneAdhesion @relation(fields: [personneId], references: [id], onDelete: Restrict)
+  categorie     CategorieAdhesion
+  brancheType   BrancheType?
+  baremeId      String?
+  bareme        BaremeAdhesion? @relation(fields: [baremeId], references: [id], onDelete: Restrict)
+  montantDu     Int
+  montantEncaisse Int @default(0)
+  aVerifier     Boolean @default(false)
+  motifVerification String?
+  exoneree      Boolean @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  encaissements EncaissementAdhesion[]
+  lignes        LigneReversementNational[]
+  confirmations ConfirmationNationale[]
+  reprises      RepriseCotisation[]
+  @@unique([personneId, annee])
+  @@index([annee, brancheType, categorie])
+}
+model EncaissementAdhesion {
+  id            String @id @default(cuid())
+  adhesionId    String
+  adhesion      AdhesionAnnuelle @relation(fields: [adhesionId], references: [id], onDelete: Restrict)
+  montant       Int
+  mode          String
+  encaisseLe    DateTime? // Null uniquement pour une reprise historique sans date connue
+  acteurId      String
+  acteur        Utilisateur @relation("EncaissePar", fields: [acteurId], references: [id], onDelete: Restrict)
+  reference     String?
+  note          String?
+  idempotence   String @unique
+  createdAt     DateTime @default(now())
+  annulation    AnnulationEncaissement?
+  @@index([adhesionId, encaisseLe])
+}
+model AnnulationEncaissement {
+  id            String @id @default(cuid())
+  encaissementId String @unique
+  encaissement  EncaissementAdhesion @relation(fields: [encaissementId], references: [id], onDelete: Restrict)
+  acteurId      String
+  motif         String
+  createdAt     DateTime @default(now())
+}
+model LotReversementNational {
+  id            String @id @default(cuid())
+  annee         String
+  statut        StatutLotNational @default(PREPARE)
+  montantTotal  Int
+  responsableId String
+  responsable   Utilisateur @relation("ResponsableLot", fields: [responsableId], references: [id], onDelete: Restrict)
+  verseLe       DateTime?
+  reference     String?
+  justification String?
+  createdAt     DateTime @default(now())
+  lignes        LigneReversementNational[]
+  @@index([annee, statut])
+}
+model LigneReversementNational {
+  id            String @id @default(cuid())
+  lotId         String
+  lot           LotReversementNational @relation(fields: [lotId], references: [id], onDelete: Restrict)
+  adhesionId    String
+  adhesion      AdhesionAnnuelle @relation(fields: [adhesionId], references: [id], onDelete: Restrict)
+  montant       Int
+  engagee       Boolean @default(true)
+  confirmations ConfirmationNationale[]
+  @@unique([lotId, adhesionId])
+  @@index([adhesionId])
+}
+model ConfirmationNationale {
+  id            String @id @default(cuid())
+  adhesionId    String
+  adhesion      AdhesionAnnuelle @relation(fields: [adhesionId], references: [id], onDelete: Restrict)
+  ligneId       String
+  ligne         LigneReversementNational @relation(fields: [ligneId], references: [id], onDelete: Restrict)
+  acteurId      String
+  acteur        Utilisateur @relation("ConfirmePar", fields: [acteurId], references: [id], onDelete: Restrict)
+  reference     String?
+  commentaire   String?
+  createdAt     DateTime @default(now())
+  correction    CorrectionConfirmation?
+  @@index([adhesionId])
+}
+model CorrectionConfirmation {
+  id             String @id @default(cuid())
+  confirmationId String @unique
+  confirmation   ConfirmationNationale @relation(fields: [confirmationId], references: [id], onDelete: Restrict)
+  acteurId       String
+  motif          String
+  createdAt      DateTime @default(now())
+}
+// Lien d'import unique ; les cotisations sources sont conservées sans modification.
+model RepriseCotisation {
+  id           String @id @default(cuid())
+  cotisationId String @unique
+  cotisation Cotisation @relation(fields: [cotisationId], references: [id], onDelete: Restrict)
+  adhesionId   String
+  adhesion     AdhesionAnnuelle @relation(fields: [adhesionId], references: [id], onDelete: Restrict)
+  montantDu    Int
+  montantPaye  Int
+  statutSource String
+  createdAt    DateTime @default(now())
 }
