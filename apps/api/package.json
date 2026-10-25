@@ -20,7 +20,9 @@
     "initialiser": "ts-node --transpile-only scripts/initialiser.ts",
     "sauvegarder": "ts-node --transpile-only scripts/sauvegarder-base.ts",
     "restaurer-sauvegarde": "ts-node --transpile-only scripts/restaurer-sauvegarde.ts",
-    "test:integration": "vitest run --config vitest.postgres.config.mts"
+    "test:integration": "vitest run --config vitest.postgres.config.mts",
+    "test:adhesions:integration": "vitest run --config vitest.adhesions.config.mts",
+    "adhesions:reprise": "ts-node --transpile-only scripts/reprendre-cotisations.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1080.0",

@@ -93,6 +93,19 @@ jobs:
           npm run db:deploy
           npm run test:integration -w @scout/api
 
+      - name: Adhésions nationales et reprise sur PostgreSQL réel (base jetable dédiée)
+        env:
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/scout_test_integration_adhesions_ci
+          SCOUT_TEST_DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/scout_test_integration_adhesions_ci
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: ci
+          PGPASSWORD: ci
+        run: |
+          createdb --maintenance-db=ci scout_test_integration_adhesions_ci
+          npm run db:deploy
+          npm run test:adhesions:integration -w @scout/api
+
       - name: Lint
         run: npm run lint --workspaces --if-present
 
