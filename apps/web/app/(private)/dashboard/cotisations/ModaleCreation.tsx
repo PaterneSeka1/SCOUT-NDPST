@@ -39,7 +39,7 @@ function Formulaire({ onFermer }: { onFermer: () => void }) {
   const [scout, setScout] = useState<ScoutTrouve | null>(null)
   const [branche, setBranche] = useState('')
   const [anneeScolaire, setAnneeScolaire] = useState(anneeScolaireCourante())
-  const [type, setType] = useState('ADHESION_ANNUELLE')
+  const [type, setType] = useState('CAMP')
   const [libelle, setLibelle] = useState('')
   const [montant, setMontant] = useState('')
   const [activiteId, setActiviteId] = useState('')
@@ -158,7 +158,7 @@ function Formulaire({ onFermer }: { onFermer: () => void }) {
           {(p) => <Select {...p} value={anneeScolaire} onChange={(e) => setAnneeScolaire(e.target.value)} options={optionsAnnees()} />}
         </Field>
         <Field label="Type" requis>
-          {(p) => <Select {...p} value={type} onChange={(e) => setType(e.target.value)} options={OPTIONS_TYPES} />}
+          {(p) => <Select {...p} value={type} onChange={(e) => setType(e.target.value)} options={OPTIONS_TYPES.filter(o => Number(anneeScolaire.slice(0, 4)) < 2026 || o.valeur !== 'ADHESION_ANNUELLE')} />}
         </Field>
       </div>
 

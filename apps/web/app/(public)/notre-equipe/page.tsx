@@ -46,7 +46,7 @@ export default async function PageMaitrise({ searchParams }: Props) {
   const membres = await lirePublic<MembrePublic[]>('/equipe')
   const groupes = regrouper(membres ?? [])
   const visibles = groupes.filter((g) => !filtre || g.cle === filtre)
-  const total = membres?.length ?? 0
+  const total = new Set(membres?.map(m => m.id)).size
 
   return (
     <>
@@ -126,7 +126,7 @@ export default async function PageMaitrise({ searchParams }: Props) {
                 </header>
                 <ul className="grid grid-cols-2 gap-x-5 gap-y-10 sm:grid-cols-3 lg:col-span-9 xl:grid-cols-4">
                   {g.membres.map((m) => (
-                    <li key={m.id}>
+                    <li key={`${m.id}-${m.fonction}-${m.brancheType}`}>
                       <CarteMembre membre={m} />
                     </li>
                   ))}

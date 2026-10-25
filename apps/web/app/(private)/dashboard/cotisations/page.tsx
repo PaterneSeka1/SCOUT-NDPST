@@ -34,7 +34,7 @@ export default function PageCotisations() {
     <div className="space-y-5">
       <PageHeader
         titre="Cotisations"
-        description="Montants dus, paiements enregistrés et situation d’adhésion des scouts, en FCFA."
+        description="Suivi local historique en FCFA. Ces paiements ne constituent aucune confirmation nationale. Utilisez la rubrique Adhésions nationales pour le circuit 2026–2027."
         miettes={[{ libelle: 'Tableau de bord', href: '/dashboard' }, { libelle: 'Cotisations' }]}
         actions={
           estDirection ? (

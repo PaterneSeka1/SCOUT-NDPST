@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { ResumeAdhesions } from '@/components/adhesions/ResumeAdhesions'
 import { LABELS_BRANCHES, LABELS_ROLES } from '@scout/shared'
 import { useSession } from '@/lib/session-client'
 import { useDashboard } from '@/hooks/useDashboard'
@@ -50,6 +51,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {!!utilisateur?.habilitationsAdhesion?.length && <ResumeAdhesions />}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm text-encre-pale first-letter:uppercase" suppressHydrationWarning>

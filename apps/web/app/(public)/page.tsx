@@ -300,7 +300,7 @@ export default async function PageAccueil() {
             </div>
             <ul className="flex flex-wrap gap-6 lg:col-span-7 lg:justify-end">
               {equipe.map((m) => (
-                <li key={m.id} className="w-32 text-center sm:w-36">
+                <li key={`${m.id}-${m.fonction}-${m.brancheType}`} className="w-32 text-center sm:w-36">
                   <Portrait membre={m} className="mx-auto w-28 text-base sm:w-32" />
                   <p className="mt-3 font-semibold leading-snug text-encre">
                     {m.prenom} {m.nom}

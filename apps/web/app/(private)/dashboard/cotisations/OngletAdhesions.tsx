@@ -14,10 +14,11 @@ type FiltreSituation = '' | 'cotisants' | 'non-cotisants'
 // Situation d'adhésion annuelle (ADHESION_ANNUELLE payée ou exonérée) par
 // scout actif. Seul le Chef de Groupe bascule la situation (PUT /statuts).
 export function OngletAdhesions({ role }: { role: string }) {
-  const peutModifier = ROLES_GROUPE.includes(role)
+  const direction = ROLES_GROUPE.includes(role)
   const estBranche = ROLES_BRANCHE.includes(role)
 
   const [anneeScolaire, setAnneeScolaire] = useState(anneeScolaireCourante())
+  const peutModifier = direction && Number(anneeScolaire.slice(0, 4)) < 2026
   const [branche, setBranche] = useState('')
   const [situation, setSituation] = useState<FiltreSituation>('')
 
@@ -39,7 +40,7 @@ export function OngletAdhesions({ role }: { role: string }) {
   async function basculer(s: ScoutStatutCotisation, cotisant: boolean) {
     try {
       await definir.mutateAsync({ scoutId: s.id, cotisant, anneeScolaire })
-      toast.success(`${s.prenom} ${s.nom} : ${cotisant ? 'cotisant' : 'non cotisant'}.`)
+      toast.success(`${s.prenom} ${s.nom} : ${cotisant ? 'à jour localement' : 'non à jour localement'}.`)
     } catch (e) {
       toast.error(messageErreur(e))
     }
@@ -67,10 +68,10 @@ export function OngletAdhesions({ role }: { role: string }) {
             checked={s.cotisant}
             onChange={(v) => basculer(s, v)}
             disabled={definir.isPending}
-            label={s.cotisant ? 'Cotisant' : 'Non cotisant'}
+            label={s.cotisant ? 'À jour localement' : 'Non à jour localement'}
           />
         ) : (
-          <Badge ton={s.cotisant ? 'succes' : 'attention'}>{s.cotisant ? 'Cotisant' : 'Non cotisant'}</Badge>
+          <Badge ton={s.cotisant ? 'succes' : 'attention'}>{s.cotisant ? 'À jour localement' : 'Non à jour localement'}</Badge>
         ),
     },
   ]
@@ -79,8 +80,8 @@ export function OngletAdhesions({ role }: { role: string }) {
     <div className="space-y-4">
       {requeteStatuts.data && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <KpiCard libelle="Cotisants" valeur={cotisants} detail={`Adhésion ${anneeScolaire}`} />
-          <KpiCard libelle="Non cotisants" valeur={scouts.length - cotisants} />
+          <KpiCard libelle="À jour localement" valeur={cotisants} detail={`Adhésion ${anneeScolaire}`} />
+          <KpiCard libelle="Non à jour localement" valeur={scouts.length - cotisants} />
           <KpiCard libelle="Scouts actifs" valeur={scouts.length} />
         </div>
       )}
@@ -97,8 +98,8 @@ export function OngletAdhesions({ role }: { role: string }) {
               onChange={(e) => setSituation(e.target.value as FiltreSituation)}
               vide="Toutes les situations"
               options={[
-                { valeur: 'cotisants', libelle: 'Cotisants' },
-                { valeur: 'non-cotisants', libelle: 'Non cotisants' },
+                { valeur: 'cotisants', libelle: 'À jour localement' },
+                { valeur: 'non-cotisants', libelle: 'Non à jour localement' },
               ]}
             />
           </FilterBar>

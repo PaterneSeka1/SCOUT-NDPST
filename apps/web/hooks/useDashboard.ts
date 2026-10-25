@@ -15,7 +15,7 @@ export function useDashboard() {
   const utilisateur = session?.user
   const hydrate = useSyncExternalStore(abonnementHydratation, snapshotClient, snapshotServeur)
   const requete = useQuery({
-    queryKey: ['tableau-de-bord', utilisateur?.id, utilisateur?.role],
+    queryKey: ['tableau-de-bord', utilisateur?.id, utilisateur?.role, utilisateur?.mandatId, utilisateur?.brancheType],
     enabled: Boolean(utilisateur?.id),
     retry: false,
     retryOnMount: false,

@@ -95,7 +95,7 @@ export default async function PageBranche({ params }: Props) {
             {branche.responsables.length > 0 ? (
               <ul className="mt-4 space-y-4">
                 {branche.responsables.map((m) => (
-                  <li key={m.id} className="flex items-center gap-3">
+                  <li key={`${m.id}-${m.fonction}-${m.brancheType}`} className="flex items-center gap-3">
                     <Portrait membre={{ ...m, brancheType: branche.type }} className="w-14 text-[0.55rem]" />
                     <div className="min-w-0">
                       <p className="font-semibold text-encre">

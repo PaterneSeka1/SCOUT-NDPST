@@ -25,6 +25,7 @@ export interface SectionNavigation {
 export interface ProfilNavigation {
   role: string
   editeurContenu: boolean
+  habilitationsAdhesion?: { permission: string; brancheType: string | null }[]
 }
 
 type Regle = (p: ProfilNavigation) => boolean
@@ -74,7 +75,9 @@ const SECTIONS: { titre: string; elements: (ElementNavigation & { visible: Regle
     titre: 'Suivi',
     elements: [
       { libelle: 'Progression pédagogique', href: '/dashboard/progression', icone: NavIcon.progression, visible: role(ROLES_TOUT_STAFF) },
-      { libelle: 'Cotisations', href: '/dashboard/cotisations', icone: NavIcon.cotisations, visible: role(ROLES_TOUT_STAFF) },
+      { libelle: 'Adhésions nationales', href: '/dashboard/adhesions-nationales', icone: NavIcon.cotisations, visible: p => !!p.habilitationsAdhesion?.length },
+      { libelle: 'Mandats', href: '/dashboard/mandats', icone: NavIcon.maitrise, visible: role(ROLES_TOUT_STAFF, ROLES_ADMIN) },
+      { libelle: 'Cotisations locales (historique)', href: '/dashboard/cotisations', icone: NavIcon.cotisations, visible: role(ROLES_TOUT_STAFF) },
       { libelle: 'Documents', href: '/dashboard/documents', icone: NavIcon.documents, visible: role(ROLES_TOUT_STAFF) },
       { libelle: 'Rapports', href: '/dashboard/rapports', icone: NavIcon.rapports, visible: role(ROLES_GROUPE, ROLES_ADMIN) },
     ],
@@ -89,6 +92,7 @@ const SECTIONS: { titre: string; elements: (ElementNavigation & { visible: Regle
   {
     titre: 'Administration',
     elements: [
+      { libelle: 'Habilitations financières', href: '/admin/habilitations-financieres', icone: NavIcon.cotisations, visible: role(ROLES_ADMIN) },
       { libelle: 'Utilisateurs', href: '/admin/utilisateurs', icone: NavIcon.utilisateurs, visible: role(ROLES_ADMIN) },
       { libelle: 'Publications', href: '/admin/publications', icone: NavIcon.publications, visible: editeur },
       { libelle: 'Galerie', href: '/admin/galerie', icone: NavIcon.galerie, visible: editeur },

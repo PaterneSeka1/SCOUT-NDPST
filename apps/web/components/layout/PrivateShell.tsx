@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { LABELS_ROLES } from '@scout/shared'
+import { SelecteurEspace } from '@/components/layout/SelecteurEspace'
+import { useSession } from '@/lib/session-client'
 import { signOut } from '@/lib/session-client'
 import { navigationPour, pageAutorisee, rubriqueActive, type SectionNavigation } from '@/lib/navigation'
 import { ChevronDown, ExternalLink, LogOut, Menu, ShieldCheck, UserCircle, X } from '@/lib/icons'
@@ -146,7 +148,9 @@ export function PrivateShell({
   const chemin = usePathname()
   const [menuOuvert, setMenuOuvert] = useState(false)
   const tiroir = useRef<HTMLDialogElement>(null)
-  const profil = useMemo(() => ({ role, editeurContenu }), [role, editeurContenu])
+  const { data: session } = useSession()
+  const droits = session?.user.habilitationsAdhesion
+  const profil = useMemo(() => ({ role, editeurContenu, habilitationsAdhesion: droits }), [role, editeurContenu, droits])
   const sections = useMemo(() => navigationPour(profil), [profil])
   const autorisee = pageAutorisee(profil, chemin)
 
@@ -172,6 +176,7 @@ export function PrivateShell({
 
       <aside className="hidden w-68 shrink-0 flex-col bg-profond lg:flex print:hidden">
         <Entete {...enteteProps} />
+        <SelecteurEspace />
         <Navigation sections={sections} chemin={chemin} />
       </aside>
 
@@ -193,6 +198,7 @@ export function PrivateShell({
           <X className="h-5 w-5" />
         </button>
         <Entete {...enteteProps} />
+        <SelecteurEspace />
         <Navigation sections={sections} chemin={chemin} onNavigate={() => setMenuOuvert(false)} />
       </dialog>
 

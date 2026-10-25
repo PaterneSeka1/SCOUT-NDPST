@@ -176,22 +176,22 @@ export function OngletListe({ role }: { role: string }) {
           peutEncaisser || peutSupprimer
             ? (c) => (
                 <>
-                  {peutEncaisser && c.statut !== 'PAYEE' && c.statut !== 'EXONEREE' && (
+                  {peutEncaisser && (c.type !== 'ADHESION_ANNUELLE' || Number(c.anneeScolaire.slice(0, 4)) < 2026) && c.statut !== 'PAYEE' && c.statut !== 'EXONEREE' && (
                     <Button taille="sm" variante="secondaire" icone={Coins} onClick={() => setPaiement(c)}>
                       Paiement
                     </Button>
                   )}
-                  {peutEncaisser && c.statut === 'PAYEE' && (
+                  {peutEncaisser && (c.type !== 'ADHESION_ANNUELLE' || Number(c.anneeScolaire.slice(0, 4)) < 2026) && c.statut === 'PAYEE' && (
                     <Button taille="sm" variante="fantome" onClick={() => setPaiement(c)}>
                       Corriger
                     </Button>
                   )}
-                  {peutEncaisser && c.statut !== 'EXONEREE' && (
+                  {peutEncaisser && (c.type !== 'ADHESION_ANNUELLE' || Number(c.anneeScolaire.slice(0, 4)) < 2026) && c.statut !== 'EXONEREE' && (
                     <Button taille="sm" variante="fantome" onClick={() => exonerer(c)} disabled={modifier.isPending}>
                       Exonérer
                     </Button>
                   )}
-                  {peutSupprimer && (
+                  {peutSupprimer && c.type !== 'ADHESION_ANNUELLE' && c.montantPaye === 0 && (
                     <Button taille="sm" variante="fantome" icone={Trash2} aria-label="Supprimer" onClick={() => retirer(c)} disabled={supprimer.isPending}>
                       <span className="sr-only">Supprimer</span>
                     </Button>

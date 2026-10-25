@@ -197,7 +197,7 @@ export default function PageMaitrise() {
               ) : (
                 <ul className="divide-y divide-ligne px-5 pb-2">
                   {g.membres.map((m) => (
-                    <Ligne key={m.id} membre={m} peutModifier={peutModifier} onModifier={() => setEdite(m)} />
+                    <Ligne key={`${m.id}-${m.role}-${m.brancheType ?? 'groupe'}`} membre={m} peutModifier={peutModifier} onModifier={() => setEdite(m)} />
                   ))}
                 </ul>
               )}
