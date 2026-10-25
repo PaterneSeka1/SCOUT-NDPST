@@ -9,9 +9,9 @@ import type { BrancheType, Prisma, RoleUtilisateur } from '../../generated/prism
 // Règles :
 //   - seul un rôle de la maîtrise (ROLES_TOUT_STAFF) ouvre un mandat —
 //     ADMINISTRATEUR, PARENT et SCOUT n'en ont pas ;
-//   - un compte actif de la maîtrise a exactement un mandat ouvert
-//     (finLe = null) ; un compte inactif n'en a aucun ;
-//   - tout changement de rôle ou de branche clôt le mandat ouvert et en ouvre
+//   - un compte actif peut cumuler plusieurs mandats ouverts ; le poste principal
+//     est synchronisé avec le formulaire historique du compte ;
+//   - un changement de rôle ou de branche clôt seulement ce poste et en ouvre
 //     un nouveau ; la désactivation clôt ; la réactivation rouvre.
 // Toujours appelé dans la transaction qui modifie le compte.
 
@@ -70,13 +70,30 @@ export async function historiserMandat(
   let modifie = false
   if (avantActif) {
     const clos = await tx.mandat.updateMany({
-      where: { utilisateurId: contexte.utilisateurId, finLe: null },
+      where: {
+        utilisateurId: contexte.utilisateurId,
+        finLe: null,
+        // Désactivation : fermer les accès du compte. Changement de poste
+        // principal : préserver toutes les autres responsabilités.
+        ...(apres.actif
+          ? { role: avant!.role as RoleUtilisateur, brancheType: avant!.brancheType as BrancheType | null }
+          : {}),
+      },
       data: { finLe: new Date() },
     })
     modifie = clos.count > 0
   }
 
   if (apres.actif && estRoleMaitrise(apres.role)) {
+    const existant = await tx.mandat.findFirst({
+      where: {
+        utilisateurId: contexte.utilisateurId,
+        role: apres.role as RoleUtilisateur,
+        brancheType: apres.brancheType as BrancheType | null,
+        finLe: null,
+      },
+    })
+    if (existant) return modifie
     await tx.mandat.create({
       data: {
         utilisateurId: contexte.utilisateurId,
@@ -117,4 +134,13 @@ export async function listerMandats(client: Prisma.TransactionClient, utilisateu
     select: SELECTION_MANDAT,
     orderBy: { debutLe: 'desc' },
   })
+}
+
+/** Périmètre courant réutilisé par sessions et organigrammes. */
+export function filtreMandatActif(maintenant = new Date()): Prisma.MandatWhereInput {
+  return {
+    debutLe: { lte: maintenant },
+    OR: [{ finLe: null }, { finLe: { gt: maintenant } }],
+    role: { in: ROLES_TOUT_STAFF as RoleUtilisateur[] },
+  }
 }

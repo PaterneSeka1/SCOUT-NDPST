@@ -28,7 +28,7 @@ export class ProgrammesService {
     // toute valeur "branche" fournie par le client est ignorée pour ce rôle.
     let filtreBranche = branche
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
-      const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
+      const bt = await this.perimetre.brancheUtilisateur(utilisateur.id, utilisateur)
       // Compte mal configuré (rôle de branche sans brancheType assigné) :
       // aucun résultat plutôt que tout le groupe par défaut.
       if (!bt) return []
@@ -65,7 +65,7 @@ export class ProgrammesService {
     let brancheEffective: BrancheType | null = brancheType ?? null
     // Un responsable de branche ne peut créer que le programme de sa propre branche
     if (estBranche) {
-      const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
+      const bt = await this.perimetre.brancheUtilisateur(utilisateur.id, utilisateur)
       if (!bt) throw new ForbiddenException('Aucune branche assignée')
       brancheEffective = bt as BrancheType
     }
@@ -209,7 +209,7 @@ export class ProgrammesService {
 
   private async verifierBranche(utilisateur: UtilisateurSession, brancheProgramme: string | null) {
     if (!ROLES_BRANCHE.includes(utilisateur.role)) return
-    const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
+    const bt = await this.perimetre.brancheUtilisateur(utilisateur.id, utilisateur)
     if (!bt || brancheProgramme !== bt) throw new ForbiddenException('Accès refusé à ce programme')
   }
 }

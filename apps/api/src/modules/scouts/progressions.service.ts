@@ -27,7 +27,7 @@ export class ProgressionsService {
   // à un tiers non autorisé qu'un scout existe dans une autre branche.
   async autoriseSurScout(utilisateur: UtilisateurSession, scout: { brancheType: string }): Promise<boolean> {
     if (!ROLES_BRANCHE.includes(utilisateur.role)) return false
-    const brancheUtilisateur = await this.perimetre.brancheUtilisateur(utilisateur.id)
+    const brancheUtilisateur = await this.perimetre.brancheUtilisateur(utilisateur.id, utilisateur)
     return !!brancheUtilisateur && brancheUtilisateur === scout.brancheType
   }
 

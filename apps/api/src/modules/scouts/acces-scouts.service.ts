@@ -27,7 +27,7 @@ export class AccesScoutsService {
   // - sinon la branche gérée.
   async brancheImposee(utilisateur: UtilisateurSession): Promise<BrancheType | null | undefined> {
     if (!this.estRoleBranche(utilisateur)) return undefined
-    return (await this.perimetre.brancheUtilisateur(utilisateur.id)) as BrancheType | null
+    return (await this.perimetre.brancheUtilisateur(utilisateur.id, utilisateur)) as BrancheType | null
   }
 
   // Vérifie que le scout existe (et appartient à la branche de l'utilisateur

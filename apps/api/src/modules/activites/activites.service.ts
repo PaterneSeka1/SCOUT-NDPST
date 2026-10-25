@@ -81,7 +81,7 @@ export class ActivitesService {
     // inter-branches (brancheType null) — toute valeur "brancheType" fournie
     // par le client est ignorée pour ce groupe de rôles.
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
-      const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
+      const bt = await this.perimetre.brancheUtilisateur(utilisateur.id, utilisateur)
       // Compte mal configuré (rôle de branche sans brancheType assigné) :
       // aucun résultat plutôt que toutes les branches par défaut.
       if (!bt) {
@@ -167,7 +167,7 @@ export class ActivitesService {
     // branche — décider d'une activité inter-branches (brancheType null) reste
     // une décision du groupe.
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
-      const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
+      const bt = await this.perimetre.brancheUtilisateur(utilisateur.id, utilisateur)
       if (!bt) throw new ForbiddenException('Aucune branche assignée')
       brancheEffective = bt as BrancheType
     }
@@ -203,7 +203,7 @@ export class ActivitesService {
   // undefined pour le groupe. Compte de branche sans branche assignée : 404.
   private async filtreBrancheLecture(utilisateur: UtilisateurSession): Promise<Prisma.ActiviteWhereInput> {
     if (!ROLES_BRANCHE.includes(utilisateur.role)) return {}
-    const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
+    const bt = await this.perimetre.brancheUtilisateur(utilisateur.id, utilisateur)
     if (!bt) throw new NotFoundException('Activité introuvable')
     return { OR: [{ brancheType: bt as BrancheType }, { brancheType: null }] }
   }
@@ -315,7 +315,7 @@ export class ActivitesService {
     if (ROLES_TOUT_STAFF.includes(utilisateur.role)) {
       // Un responsable de branche ne peut agir que sur les scouts de sa propre branche.
       if (ROLES_BRANCHE.includes(utilisateur.role)) {
-        const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
+        const bt = await this.perimetre.brancheUtilisateur(utilisateur.id, utilisateur)
         return bt === scoutBranche
       }
       return true
@@ -409,7 +409,7 @@ export class ActivitesService {
     if (!activite) throw new NotFoundException('Activité introuvable')
 
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
-      const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
+      const bt = await this.perimetre.brancheUtilisateur(utilisateur.id, utilisateur)
       if (activite.brancheType && activite.brancheType !== bt) {
         throw new ForbiddenException('Accès refusé à cette activité')
       }

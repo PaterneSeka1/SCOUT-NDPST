@@ -34,7 +34,7 @@ export class DocumentsService {
 
     let brancheType: string | null = null
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
-      brancheType = await this.perimetre.brancheUtilisateur(utilisateur.id)
+      brancheType = await this.perimetre.brancheUtilisateur(utilisateur.id, utilisateur)
       // Compte mal configuré (rôle de branche sans brancheType assigné) :
       // aucun résultat plutôt que tout le groupe par défaut.
       if (!brancheType) return { documents: [] }

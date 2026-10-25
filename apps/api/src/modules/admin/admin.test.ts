@@ -87,6 +87,7 @@ function simulations() {
       update: vi.fn().mockResolvedValue({ id: 'u2' }),
     },
     mandat: {
+      findFirst: vi.fn().mockResolvedValue(null),
       create: vi.fn().mockResolvedValue({}),
       updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       findMany: vi.fn().mockResolvedValue([]),
@@ -262,7 +263,7 @@ describe('AdminUtilisateursService — mandats, éditeur de contenus et profil p
     avecCompte(s, compte({ role: 'RESPONSABLE_BRANCHE', brancheType: 'LOUVETEAUX' }))
     await s.utilisateurs.modifier('u2', SchemaModificationUtilisateur.parse({ brancheType: 'ECLAIREURS' }), 'admin')
     expect(s.prisma.mandat.updateMany).toHaveBeenCalledWith({
-      where: { utilisateurId: 'u2', finLe: null },
+      where: { utilisateurId: 'u2', finLe: null, role: 'RESPONSABLE_BRANCHE', brancheType: 'LOUVETEAUX' },
       data: { finLe: expect.any(Date) },
     })
     expect(s.prisma.mandat.create).toHaveBeenCalledWith({

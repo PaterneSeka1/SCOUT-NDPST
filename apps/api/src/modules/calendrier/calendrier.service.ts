@@ -42,7 +42,7 @@ export class CalendrierService {
 
     let filtreBranche: string | null = null
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
-      filtreBranche = await this.perimetre.brancheUtilisateur(utilisateur.id)
+      filtreBranche = await this.perimetre.brancheUtilisateur(utilisateur.id, utilisateur)
       // Compte mal configuré (rôle de branche sans brancheType assigné) :
       // aucun résultat plutôt que tout le groupe par défaut.
       if (!filtreBranche) return { evenements: [] }

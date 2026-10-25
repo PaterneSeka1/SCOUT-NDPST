@@ -194,3 +194,31 @@ describe('CotisationsService — barème', () => {
     await expect(service.listerBaremes('2026')).rejects.toThrow('Année scolaire invalide')
   })
 })
+
+describe('Cotisations historiques — frontière avec le nouveau circuit', () => {
+  it('refuse une nouvelle adhésion annuelle 2026–2027 dans le module historique', async () => {
+    const { service, prisma } = construire(null)
+    await expect(
+      service.creer(chefGroupe, {
+        cibles: ['s1'],
+        type: 'ADHESION_ANNUELLE',
+        montant: 5000,
+        activiteId: undefined,
+        anneeScolaire: '2026-2027',
+      }),
+    ).rejects.toThrow('adhésions nationales')
+    expect(prisma.cotisation.create).not.toHaveBeenCalled()
+  })
+  it('interdit la bascule arbitraire du statut pour les nouvelles années', async () => {
+    const { service, prisma } = construire(null)
+    await expect(
+      service.definirStatut(chefGroupe, { scoutId: 's1', cotisant: true, anneeScolaire: '2026-2027' }),
+    ).rejects.toThrow('remplace cette bascule')
+    expect(prisma.cotisation.update).not.toHaveBeenCalled()
+  })
+  it('préserve les annuelles historiques contre la suppression physique', async () => {
+    const { service, prisma } = construire(null)
+    prisma.cotisation.findFirst.mockResolvedValue({ id: 'c1', type: 'ADHESION_ANNUELLE', montantPaye: 5000 })
+    await expect(service.supprimer(chefGroupe, 'c1')).rejects.toThrow('conservée pour audit')
+  })
+})

@@ -14,7 +14,6 @@ import {
   ROLES_ASSIGNABLES_PAROISSE,
   ROLES_BRANCHE,
   ROLES_GROUPE_ETENDU,
-  ROLES_TOUT_STAFF,
 } from '@scout/shared'
 import type { Prisma, RoleUtilisateur } from '../../generated/prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
@@ -24,7 +23,7 @@ import { envoyerEmailBienvenue } from '../../common/lib/notifications'
 import { logger } from '../../common/lib/logger'
 import { env } from '../../config/env'
 import type { UtilisateurSession } from '../../common/types'
-import { historiserMandat, listerMandats, verrouillerPoste } from './mandats'
+import { historiserMandat, listerMandats, verrouillerPoste, filtreMandatActif } from './mandats'
 import { conflitPosteUnique, estErreurUnicite } from './postes'
 import { champsProfilModifies, donneesProfilPublic, profilPublicFinal, SELECTION_PROFIL_PUBLIC } from './profil-public'
 import type {
@@ -165,11 +164,17 @@ export class UtilisateursService {
   // encadrement par branche (toutes les branches, même sans encadrement).
   async maitrise() {
     const membres = await this.prisma.utilisateur.findMany({
-      where: { actif: true, role: { in: ROLES_TOUT_STAFF as RoleUtilisateur[] } },
-      select: SELECTION_ORGANIGRAMME,
+      where: { actif: true, mandats: { some: filtreMandatActif() } },
+      select: {
+        ...SELECTION_ORGANIGRAMME,
+        mandats: { where: filtreMandatActif(), select: { role: true, brancheType: true } },
+      },
       orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
     })
-    const tries = [...membres].sort((a, b) => rangRole(a.role) - rangRole(b.role))
+    const responsabilites = membres.flatMap((m) =>
+      m.mandats.map((f) => ({ ...m, role: f.role, brancheType: f.brancheType })),
+    )
+    const tries = responsabilites.sort((a, b) => rangRole(a.role) - rangRole(b.role))
 
     return {
       direction: tries.filter((m) => ROLES_GROUPE_ETENDU.includes(m.role)),

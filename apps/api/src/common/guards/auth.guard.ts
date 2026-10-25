@@ -1,3 +1,5 @@
+import { filtreMandatActif } from '../../modules/utilisateurs/mandats'
+import { espaceAutorise } from '@scout/shared'
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 import { JwtService } from '@nestjs/jwt'
@@ -33,6 +35,13 @@ export class AuthGuard implements CanActivate {
     if (jeton) {
       try {
         requete.utilisateur = await this.verifier(jeton)
+        const u = requete.utilisateur
+        const choix = (requete.cookies as Record<string, string> | undefined)?.scout_espace
+        if (u.mandats) {
+          const espace = espaceAutorise(u.role, u.mandats, choix) ?? espaceAutorise(u.role, u.mandats)
+          if (!espace) throw new ForbiddenException('Espace non autorisé ou mandat expiré')
+          requete.utilisateur = { ...u, roleTechnique: u.role, ...espace }
+        }
       } catch {
         if (!estPublique) throw new UnauthorizedException('Session expirée')
       }
@@ -84,6 +93,11 @@ export class AuthGuard implements CanActivate {
             role: true,
             editeurContenu: true,
             actif: true,
+            mandats: {
+              where: filtreMandatActif(),
+              select: { id: true, role: true, brancheType: true, debutLe: true, finLe: true },
+            },
+            habilitationsAdhesion: { where: { revoqueeLe: null }, select: { permission: true, brancheType: true } },
             doitChangerMotDePasse: true,
           },
         },
@@ -107,12 +121,13 @@ export class AuthGuard implements CanActivate {
       nom: u.nom,
       prenom: u.prenom,
       role: u.role,
+      mandats: u.mandats,
+      habilitationsAdhesion: u.habilitationsAdhesion,
       editeurContenu: u.editeurContenu,
       doitChangerMotDePasse: u.doitChangerMotDePasse,
     }
   }
 }
-
 
 function extraireJeton(requete: RequeteAuthentifiee): string | null {
   const entete = requete.headers.authorization

@@ -19,7 +19,7 @@ export class ProgressionService {
   // l'encadrement de branche.
   private async branchesVisibles(utilisateur: UtilisateurSession): Promise<BrancheType[]> {
     if (!ROLES_BRANCHE.includes(utilisateur.role)) return ORDRE_CATEGORIES_SCOUTS as BrancheType[]
-    const branche = await this.perimetre.brancheUtilisateur(utilisateur.id)
+    const branche = await this.perimetre.brancheUtilisateur(utilisateur.id, utilisateur)
     return branche ? [branche as BrancheType] : []
   }
 
@@ -27,7 +27,7 @@ export class ProgressionService {
   private async verifierEcriture(utilisateur: UtilisateurSession, brancheType: string) {
     if (ROLES_GROUPE.includes(utilisateur.role)) return
     if (['RESPONSABLE_BRANCHE', 'ADJOINT_BRANCHE'].includes(utilisateur.role)) {
-      if ((await this.perimetre.brancheUtilisateur(utilisateur.id)) === brancheType) return
+      if ((await this.perimetre.brancheUtilisateur(utilisateur.id, utilisateur)) === brancheType) return
     }
     throw new ForbiddenException('Accès refusé')
   }

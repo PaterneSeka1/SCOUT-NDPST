@@ -1,6 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
-import { BrancheTypeSchema, LABELS_BRANCHES, LABELS_ROLES, ORDRE_BRANCHES, TRANCHES_AGE_BRANCHES, formatTrancheAge } from '@scout/shared'
-import type { BrancheType, Prisma } from '../../generated/prisma/client'
+import {
+  BrancheTypeSchema,
+  LABELS_BRANCHES,
+  LABELS_ROLES,
+  ORDRE_BRANCHES,
+  TRANCHES_AGE_BRANCHES,
+  formatTrancheAge,
+} from '@scout/shared'
+import { filtreMandatActif } from '../utilisateurs/mandats'
+import type { BrancheType, Prisma, RoleUtilisateur } from '../../generated/prisma/client'
 import { AuditService } from '../../common/audit.service'
 import { lirePagination, metaPagination } from '../../common/lib/pagination'
 import { PrismaService } from '../../prisma/prisma.service'
@@ -10,7 +18,14 @@ import { PublicationsService } from '../publications/publications.service'
 import type { CorpsBranche } from './site-public.schemas'
 
 // Ordre d'affichage de la maîtrise sur la page publique.
-const ORDRE_ROLES = ['CHEF_GROUPE', 'ADJOINT_GROUPE', 'ASSISTANT_GROUPE', 'RESPONSABLE_BRANCHE', 'ADJOINT_BRANCHE', 'ASSISTANT_BRANCHE']
+const ORDRE_ROLES = [
+  'CHEF_GROUPE',
+  'ADJOINT_GROUPE',
+  'ASSISTANT_GROUPE',
+  'RESPONSABLE_BRANCHE',
+  'ADJOINT_BRANCHE',
+  'ASSISTANT_BRANCHE',
+]
 
 // Seuls les champs destinés au public : jamais la description interne, les
 // participants ou les présences.
@@ -38,6 +53,21 @@ const SELECTION_MEMBRE_PUBLIC = {
   ordrePublic: true,
 } as const
 
+function filtreResponsabilite(roles: string[], brancheType?: BrancheType): Prisma.MandatWhereInput {
+  return { ...filtreMandatActif(), role: { in: roles as RoleUtilisateur[] }, ...(brancheType ? { brancheType } : {}) }
+}
+function selectionResponsabilites(roles: string[], brancheType?: BrancheType) {
+  return {
+    ...SELECTION_MEMBRE_PUBLIC,
+    mandats: { where: filtreResponsabilite(roles, brancheType), select: { role: true, brancheType: true } },
+  } as const
+}
+function developperResponsabilites(
+  membres: Prisma.UtilisateurGetPayload<{ select: ReturnType<typeof selectionResponsabilites> }>[],
+) {
+  return membres.flatMap((m) => m.mandats.map((f) => ({ ...m, role: f.role, brancheType: f.brancheType })))
+}
+
 type MembrePublic = Prisma.UtilisateurGetPayload<{ select: typeof SELECTION_MEMBRE_PUBLIC }>
 
 function versMembre(m: MembrePublic) {
@@ -56,7 +86,10 @@ function versMembre(m: MembrePublic) {
 
 function trierMembres(membres: MembrePublic[]) {
   return [...membres].sort(
-    (a, b) => ORDRE_ROLES.indexOf(a.role) - ORDRE_ROLES.indexOf(b.role) || a.ordrePublic - b.ordrePublic || a.nom.localeCompare(b.nom),
+    (a, b) =>
+      ORDRE_ROLES.indexOf(a.role) - ORDRE_ROLES.indexOf(b.role) ||
+      a.ordrePublic - b.ordrePublic ||
+      a.nom.localeCompare(b.nom),
   )
 }
 
@@ -103,8 +136,12 @@ export class SitePublicService {
       }),
       this.galerie.apercuPublic(8),
       this.prisma.utilisateur.findMany({
-        where: { actif: true, profilPublic: true, role: { in: ['CHEF_GROUPE', 'ADJOINT_GROUPE', 'ASSISTANT_GROUPE'] } },
-        select: SELECTION_MEMBRE_PUBLIC,
+        where: {
+          actif: true,
+          profilPublic: true,
+          mandats: { some: filtreResponsabilite(['CHEF_GROUPE', 'ADJOINT_GROUPE', 'ASSISTANT_GROUPE']) },
+        },
+        select: selectionResponsabilites(['CHEF_GROUPE', 'ADJOINT_GROUPE', 'ASSISTANT_GROUPE']),
       }),
       this.prisma.evenementHistorique.findMany({
         where: { publie: true },
@@ -119,7 +156,7 @@ export class SitePublicService {
       actualites: actualites.publications,
       activites,
       photos,
-      equipe: trierMembres(equipe).map(versMembre),
+      equipe: trierMembres(developperResponsabilites(equipe)).map(versMembre),
       histoire,
     }
   }
@@ -133,12 +170,20 @@ export class SitePublicService {
   }
 
   async branche(slug: string) {
-    const b = await this.prisma.branche.findFirst({ where: { slug, active: true, publiee: true, type: { in: ORDRE_BRANCHES as BrancheType[] } } })
+    const b = await this.prisma.branche.findFirst({
+      where: { slug, active: true, publiee: true, type: { in: ORDRE_BRANCHES as BrancheType[] } },
+    })
     if (!b) throw new NotFoundException('Branche introuvable')
     const [responsables, activites] = await Promise.all([
       this.prisma.utilisateur.findMany({
-        where: { actif: true, profilPublic: true, brancheType: b.type, role: { in: ['RESPONSABLE_BRANCHE', 'ADJOINT_BRANCHE', 'ASSISTANT_BRANCHE'] } },
-        select: SELECTION_MEMBRE_PUBLIC,
+        where: {
+          actif: true,
+          profilPublic: true,
+          mandats: {
+            some: filtreResponsabilite(['RESPONSABLE_BRANCHE', 'ADJOINT_BRANCHE', 'ASSISTANT_BRANCHE'], b.type),
+          },
+        },
+        select: selectionResponsabilites(['RESPONSABLE_BRANCHE', 'ADJOINT_BRANCHE', 'ASSISTANT_BRANCHE'], b.type),
       }),
       this.prisma.activite.findMany({
         where: {
@@ -158,17 +203,17 @@ export class SitePublicService {
       objectifs: b.objectifs,
       pedagogie: b.pedagogie,
       activitesTypes: b.activitesTypes,
-      responsables: trierMembres(responsables).map(versMembre),
+      responsables: trierMembres(developperResponsabilites(responsables)).map(versMembre),
       activites,
     }
   }
 
   async equipe() {
     const membres = await this.prisma.utilisateur.findMany({
-      where: { actif: true, profilPublic: true, role: { in: ORDRE_ROLES as never } },
-      select: SELECTION_MEMBRE_PUBLIC,
+      where: { actif: true, profilPublic: true, mandats: { some: filtreResponsabilite(ORDRE_ROLES) } },
+      select: selectionResponsabilites(ORDRE_ROLES),
     })
-    return trierMembres(membres).map(versMembre)
+    return trierMembres(developperResponsabilites(membres)).map(versMembre)
   }
 
   async activites(requete: Record<string, unknown>) {
@@ -196,17 +241,27 @@ export class SitePublicService {
   // --- Administration des présentations de branches -------------------------
 
   listerBranchesAdmin() {
-    return this.prisma.branche.findMany({ where: { type: { in: ORDRE_BRANCHES as BrancheType[] } }, orderBy: { ordre: 'asc' } })
+    return this.prisma.branche.findMany({
+      where: { type: { in: ORDRE_BRANCHES as BrancheType[] } },
+      orderBy: { ordre: 'asc' },
+    })
   }
 
   async modifierBranche(type: string, corps: CorpsBranche, acteurId: string) {
     const brancheType = BrancheTypeSchema.safeParse(type)
-    if (!brancheType.success || !ORDRE_BRANCHES.includes(brancheType.data)) throw new NotFoundException('Branche introuvable')
+    if (!brancheType.success || !ORDRE_BRANCHES.includes(brancheType.data))
+      throw new NotFoundException('Branche introuvable')
     const branche = await this.prisma.branche.update({
       where: { type: brancheType.data as BrancheType },
       data: Object.fromEntries(Object.entries(corps).filter(([, v]) => v !== undefined)),
     })
-    await this.audit.enregistrer({ acteurId, action: 'BRANCHE_MODIFIEE', entite: 'Branche', entiteId: branche.id, details: { type } })
+    await this.audit.enregistrer({
+      acteurId,
+      action: 'BRANCHE_MODIFIEE',
+      entite: 'Branche',
+      entiteId: branche.id,
+      details: { type },
+    })
     return branche
   }
 }

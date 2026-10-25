@@ -46,7 +46,7 @@ export class ReunionsService {
   // inter-branches (brancheType null) relèvent du groupe.
   private async verifierAccesBranche(utilisateur: UtilisateurSession, brancheReunion: string | null) {
     if (!ROLES_BRANCHE.includes(utilisateur.role)) return
-    const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
+    const bt = await this.perimetre.brancheUtilisateur(utilisateur.id, utilisateur)
     if (!bt || bt !== brancheReunion) throw new ForbiddenException('Accès refusé à cette réunion')
   }
 
@@ -54,7 +54,7 @@ export class ReunionsService {
   // branche assignée : 404.
   private async brancheRequise(utilisateur: UtilisateurSession): Promise<BrancheType | undefined> {
     if (!ROLES_BRANCHE.includes(utilisateur.role)) return undefined
-    const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
+    const bt = await this.perimetre.brancheUtilisateur(utilisateur.id, utilisateur)
     if (!bt) throw new NotFoundException('Réunion introuvable')
     return bt as BrancheType
   }
@@ -84,7 +84,7 @@ export class ReunionsService {
     // les routes /reunions/:id les refusent aux rôles de branche.
     let filtreBranche: Prisma.JourReunionWhereInput = {}
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
-      const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
+      const bt = await this.perimetre.brancheUtilisateur(utilisateur.id, utilisateur)
       // Compte mal configuré (rôle de branche sans brancheType assigné) :
       // aucun résultat plutôt que toutes les branches par défaut.
       if (!bt) return pagine ? { reunions: [], pagination: { page, limite, total: 0, totalPages: 0 } } : []
@@ -133,7 +133,7 @@ export class ReunionsService {
     // Un chef de branche ne peut créer que pour sa propre branche
     let brancheEffective: BrancheType | null = brancheType ?? null
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
-      const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
+      const bt = await this.perimetre.brancheUtilisateur(utilisateur.id, utilisateur)
       if (!bt) throw new ForbiddenException('Aucune branche assignée')
       brancheEffective = bt as BrancheType
     }

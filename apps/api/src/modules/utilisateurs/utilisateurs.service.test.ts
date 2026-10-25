@@ -58,6 +58,7 @@ function creerContexte() {
       deleteMany: vi.fn(),
     },
     mandat: {
+      findFirst: vi.fn().mockResolvedValue(null),
       create: vi.fn().mockResolvedValue({}),
       updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       findMany: vi.fn().mockResolvedValue([]),
@@ -250,7 +251,7 @@ describe('UtilisateursService — gestion de la maîtrise', () => {
       await ctx.service.modifier(CHEF, 'cible', { role: 'ASSISTANT_GROUPE' })
       expect(ctx.prisma.$queryRaw).toHaveBeenCalled()
       expect(ctx.prisma.mandat.updateMany).toHaveBeenCalledWith({
-        where: { utilisateurId: 'cible', finLe: null },
+        where: { utilisateurId: 'cible', finLe: null, role: 'ADJOINT_GROUPE', brancheType: null },
         data: { finLe: expect.any(Date) },
       })
       expect(ctx.prisma.mandat.create).toHaveBeenCalledWith({
@@ -341,10 +342,25 @@ describe('UtilisateursService — gestion de la maîtrise', () => {
 
     it('groupe la maîtrise active : direction puis branches', async () => {
       ctx.prisma.utilisateur.findMany.mockResolvedValue([
-        { id: 'a', role: 'ASSISTANT_GROUPE', brancheType: null },
-        { id: 'r', role: 'RESPONSABLE_BRANCHE', brancheType: 'LOUVETEAUX' },
-        { id: 'c', role: 'CHEF_GROUPE', brancheType: null },
-        { id: 'x', role: 'ASSISTANT_BRANCHE', brancheType: 'LOUVETEAUX' },
+        {
+          id: 'a',
+          role: 'ASSISTANT_GROUPE',
+          brancheType: null,
+          mandats: [{ role: 'ASSISTANT_GROUPE', brancheType: null }],
+        },
+        {
+          id: 'r',
+          role: 'RESPONSABLE_BRANCHE',
+          brancheType: 'LOUVETEAUX',
+          mandats: [{ role: 'RESPONSABLE_BRANCHE', brancheType: 'LOUVETEAUX' }],
+        },
+        { id: 'c', role: 'CHEF_GROUPE', brancheType: null, mandats: [{ role: 'CHEF_GROUPE', brancheType: null }] },
+        {
+          id: 'x',
+          role: 'ASSISTANT_BRANCHE',
+          brancheType: 'LOUVETEAUX',
+          mandats: [{ role: 'ASSISTANT_BRANCHE', brancheType: 'LOUVETEAUX' }],
+        },
       ])
       const organigramme = await ctx.service.maitrise()
       expect(ctx.prisma.utilisateur.findMany).toHaveBeenCalledWith(

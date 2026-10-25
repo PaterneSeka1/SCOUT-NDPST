@@ -48,7 +48,11 @@ export class MaintenanceService {
     let journalAudit: number | null = null
     if (RETENTION_AUDIT_JOURS) {
       const avant = new Date(maintenant.getTime() - RETENTION_AUDIT_JOURS * JOUR_MS)
-      journalAudit = (await this.prisma.journalAudit.deleteMany({ where: { createdAt: { lt: avant } } })).count
+      journalAudit = (
+        await this.prisma.journalAudit.deleteMany({
+          where: { createdAt: { lt: avant }, entite: { not: 'AdhesionNationale' } },
+        })
+      ).count
     }
 
     let scoutsAnonymises: number | null = null

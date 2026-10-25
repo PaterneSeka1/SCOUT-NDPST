@@ -37,7 +37,9 @@ describe('SitePublicService — données publiées uniquement', () => {
 
   it('refuse de modifier les ressources adultes comme une sixième branche', async () => {
     const { service } = construire()
-    await expect(service.modifierBranche('RESSOURCES_ADULTES', SchemaBranche.parse({}), 'admin')).rejects.toMatchObject({ status: 404 })
+    await expect(service.modifierBranche('RESSOURCES_ADULTES', SchemaBranche.parse({}), 'admin')).rejects.toMatchObject(
+      { status: 404 },
+    )
   })
 
   it("n'affiche que les membres actifs ayant accepté un profil public, sans données de contact", async () => {
@@ -47,16 +49,32 @@ describe('SitePublicService — données publiées uniquement', () => {
     expect(appel.where).toMatchObject({ actif: true, profilPublic: true })
     expect(appel.select).not.toHaveProperty('telephone')
     expect(appel.select).not.toHaveProperty('email')
-    expect(appel.where.role.in).not.toContain('PARENT')
-    expect(appel.where.role.in).not.toContain('SCOUT')
+    expect(appel.where.mandats.some.role.in).not.toContain('PARENT')
+    expect(appel.where.mandats.some.role.in).not.toContain('SCOUT')
   })
 
   it('expose le code de branche (null pour la direction) et trie la direction en premier', async () => {
     const { prisma, service } = construire()
     const base = { fonctionPublique: null, photoPublique: null, biographie: null, ordrePublic: 0 }
     prisma.utilisateur.findMany.mockResolvedValueOnce([
-      { ...base, id: 'b', prenom: 'Awa', nom: 'Koné', role: 'RESPONSABLE_BRANCHE', brancheType: 'LOUVETEAUX' },
-      { ...base, id: 'g', prenom: 'Yao', nom: 'Kouassi', role: 'CHEF_GROUPE', brancheType: null },
+      {
+        ...base,
+        id: 'b',
+        prenom: 'Awa',
+        nom: 'Koné',
+        role: 'ADMINISTRATEUR',
+        brancheType: null,
+        mandats: [{ role: 'RESPONSABLE_BRANCHE', brancheType: 'LOUVETEAUX' }],
+      },
+      {
+        ...base,
+        id: 'g',
+        prenom: 'Yao',
+        nom: 'Kouassi',
+        role: 'CHEF_GROUPE',
+        brancheType: null,
+        mandats: [{ role: 'CHEF_GROUPE', brancheType: null }],
+      },
     ])
     const equipe = await service.equipe()
     expect(equipe.map((m) => [m.id, m.brancheType, m.branche])).toEqual([
@@ -77,6 +95,10 @@ describe('SitePublicService — données publiées uniquement', () => {
   it('renvoie 404 pour une branche non publiée', async () => {
     const { prisma, service } = construire()
     await expect(service.branche('oisillons')).rejects.toMatchObject({ status: 404 })
-    expect(prisma.branche.findFirst.mock.calls[0][0].where).toMatchObject({ active: true, publiee: true, type: { in: ORDRE_BRANCHES } })
+    expect(prisma.branche.findFirst.mock.calls[0][0].where).toMatchObject({
+      active: true,
+      publiee: true,
+      type: { in: ORDRE_BRANCHES },
+    })
   })
 })

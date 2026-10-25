@@ -8,7 +8,11 @@ export class PerimetreService {
   constructor(private readonly prisma: PrismaService) {}
 
   // Branche gérée par un compte RESPONSABLE/ADJOINT/ASSISTANT_BRANCHE.
-  async brancheUtilisateur(utilisateurId: string): Promise<string | null> {
+  async brancheUtilisateur(
+    utilisateurId: string,
+    contexte?: { mandatId?: string; brancheType?: string | null },
+  ): Promise<string | null> {
+    if (contexte?.mandatId) return contexte.brancheType ?? null
     const utilisateur = await this.prisma.utilisateur.findUnique({
       where: { id: utilisateurId },
       select: { brancheType: true },

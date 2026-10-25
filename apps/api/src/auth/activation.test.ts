@@ -33,7 +33,7 @@ describe('activation et secret temporaire', () => {
 
   it('crée un compte avec un secret généré haché et impose le changement', async () => {
     const prisma: Record<string, unknown> = {
-      mandat: { create: vi.fn(), updateMany: vi.fn() },
+      mandat: { create: vi.fn(), updateMany: vi.fn(), findFirst: vi.fn().mockResolvedValue(null) },
       utilisateur: {
         findUnique: vi.fn().mockResolvedValue(null),
         findFirst: vi.fn().mockResolvedValue(null),

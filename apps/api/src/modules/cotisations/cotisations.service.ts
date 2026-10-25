@@ -50,7 +50,7 @@ export class CotisationsService {
     // "branche" fournie par le client est ignorée pour ce groupe de rôles.
     let filtreBranche = filtres.branche
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
-      const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
+      const bt = await this.perimetre.brancheUtilisateur(utilisateur.id, utilisateur)
       // Compte mal configuré (rôle de branche sans brancheType assigné) :
       // aucun résultat plutôt que toutes les branches par défaut.
       if (!bt) return { cotisations: [], pagination: { page, limite, total: 0, totalPages: 0 } }
@@ -119,6 +119,8 @@ export class CotisationsService {
     const { cibles, type, montant, libelle, activiteId } = corps
     const annee = corps.anneeScolaire?.trim() || anneeScolaireCourante()
     if (!anneeScolaireValide(annee)) throw new BadRequestException('Année scolaire invalide')
+    if (type === 'ADHESION_ANNUELLE' && Number(annee.slice(0, 4)) >= 2026)
+      throw new BadRequestException('Utilisez les adhésions nationales pour les années 2026–2027 et suivantes')
 
     const scouts = await this.prisma.scout.findMany({
       where: { id: { in: cibles } },
@@ -177,7 +179,7 @@ export class CotisationsService {
     // scout de sa propre branche.
     let brancheRequise: string | undefined
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
-      const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
+      const bt = await this.perimetre.brancheUtilisateur(utilisateur.id, utilisateur)
       if (!bt) throw new NotFoundException('Cotisation introuvable')
       brancheRequise = bt
     }
@@ -189,6 +191,8 @@ export class CotisationsService {
       },
     })
     if (!existante) throw new NotFoundException('Cotisation introuvable')
+    if (existante.type === 'ADHESION_ANNUELLE' && Number(existante.anneeScolaire.slice(0, 4)) >= 2026)
+      throw new ConflictException('Reprenez cette adhésion historique dans le nouveau circuit avant toute correction')
 
     // Forme déjà validée par SchemaModificationCotisation ; reste ici la
     // cohérence du montant payé avec le montant dû.
@@ -273,6 +277,8 @@ export class CotisationsService {
       where: { id },
     })
     if (!existante) throw new NotFoundException('Cotisation introuvable')
+    if (existante.type === 'ADHESION_ANNUELLE' || existante.montantPaye > 0)
+      throw new ConflictException('Une cotisation annuelle ou encaissée doit être conservée pour audit')
 
     await this.prisma.cotisation.delete({ where: { id } })
 
@@ -307,7 +313,7 @@ export class CotisationsService {
 
     let filtreBranche = filtres.branche || undefined
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
-      const bt = await this.perimetre.brancheUtilisateur(utilisateur.id)
+      const bt = await this.perimetre.brancheUtilisateur(utilisateur.id, utilisateur)
       if (!bt) return { anneeScolaire, scouts: [] }
       filtreBranche = bt
     }
@@ -353,6 +359,8 @@ export class CotisationsService {
   async definirStatut(utilisateur: UtilisateurSession, corps: CorpsStatutCotisant) {
     const { scoutId, cotisant } = corps
     const anneeScolaire = corps.anneeScolaire ?? anneeScolaireCourante()
+    if (Number(anneeScolaire.slice(0, 4)) >= 2026)
+      throw new BadRequestException('Le suivi des adhésions nationales remplace cette bascule à partir de 2026–2027')
 
     const scout = await this.prisma.scout.findFirst({
       where: { id: scoutId },
@@ -451,7 +459,12 @@ export class CotisationsService {
   // Un même barème (année, type, branche, libellé) ne doit exister qu'une fois :
   // deux montants concurrents rendraient la référence ambiguë.
   private async verifierBaremeUnique(
-    cle: { anneeScolaire: string; type: CorpsCreationBareme['type']; brancheType: BrancheType | null; libelle: string | null },
+    cle: {
+      anneeScolaire: string
+      type: CorpsCreationBareme['type']
+      brancheType: BrancheType | null
+      libelle: string | null
+    },
     exclureId?: string,
   ) {
     const doublon = await this.prisma.baremeCotisation.findFirst({

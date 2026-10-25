@@ -1,6 +1,7 @@
+import { filtreMandatActif } from '../utilisateurs/mandats'
 import { Injectable } from '@nestjs/common'
-import { ORDRE_CATEGORIES_SCOUTS, ROLES_BRANCHE, ROLES_TOUT_STAFF, anneeScolaireCourante } from '@scout/shared'
-import type { BrancheType, Prisma, RoleUtilisateur } from '../../generated/prisma/client'
+import { ORDRE_CATEGORIES_SCOUTS, ROLES_BRANCHE, anneeScolaireCourante } from '@scout/shared'
+import type { BrancheType, Prisma } from '../../generated/prisma/client'
 import { PerimetreService } from '../../common/perimetre.service'
 import type { UtilisateurSession } from '../../common/types'
 import { utiliseStockageExterne } from '../../common/lib/storage'
@@ -76,7 +77,7 @@ export class IndicateursService {
     if (utilisateur.role === 'CHEF_GROUPE') return this.direction()
     if (['ADJOINT_GROUPE', 'ASSISTANT_GROUPE'].includes(utilisateur.role)) return this.equipeGroupe()
     if (ROLES_BRANCHE.includes(utilisateur.role)) {
-      const branche = (await this.perimetre.brancheUtilisateur(utilisateur.id)) as BrancheType | null
+      const branche = (await this.perimetre.brancheUtilisateur(utilisateur.id, utilisateur)) as BrancheType | null
       return this.branche(branche)
     }
     return this.famille(utilisateur)
@@ -165,7 +166,7 @@ export class IndicateursService {
     const annee = anneeScolaireCourante(new Date())
     const [repartition, maitrise, activites, presences, cotisations, evolution, alertes, demandes] = await Promise.all([
       this.repartitionBranches(),
-      this.prisma.utilisateur.count({ where: { actif: true, role: { in: ROLES_TOUT_STAFF as RoleUtilisateur[] } } }),
+      this.prisma.utilisateur.count({ where: { actif: true, mandats: { some: filtreMandatActif() } } }),
       this.activitesAVenir(),
       this.presencesRecentes(),
       this.syntheseCotisations(annee),

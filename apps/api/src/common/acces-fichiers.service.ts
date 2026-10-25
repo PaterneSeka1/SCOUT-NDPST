@@ -155,7 +155,7 @@ export class AccesFichiersService {
     if (scout.utilisateurId === utilisateur.id) return true
     if (ROLES_TOUT_STAFF.includes(utilisateur.role)) {
       if (!ROLES_BRANCHE.includes(utilisateur.role)) return true
-      if ((await this.perimetre.brancheUtilisateur(utilisateur.id)) === scout.brancheType) return true
+      if ((await this.perimetre.brancheUtilisateur(utilisateur.id, utilisateur)) === scout.brancheType) return true
     }
     const lien = await this.prisma.lienParentScout.count({ where: { parentId: utilisateur.id, scoutId: scout.id } })
     return lien > 0

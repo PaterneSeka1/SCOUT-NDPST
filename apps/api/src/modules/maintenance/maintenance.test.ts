@@ -88,7 +88,9 @@ describe('cron/purge', () => {
     const { prisma, service } = construire()
     const resultat = await service.purger(MAINTENANCE)
     expect(resultat.journalAudit).toBe(10)
-    expect(prisma.journalAudit.deleteMany).toHaveBeenCalledWith({ where: { createdAt: { lt: jours(1095) } } })
+    expect(prisma.journalAudit.deleteMany).toHaveBeenCalledWith({
+      where: { createdAt: { lt: jours(1095) }, entite: { not: 'AdhesionNationale' } },
+    })
   })
 
   it('anonymise les scouts inactifs depuis plus de ANONYMISATION_SCOUTS_INACTIFS_JOURS', async () => {
@@ -121,6 +123,8 @@ describe('cron/purge', () => {
       '/api/fichiers/groupe/fiche.pdf',
       '/api/fichiers/groupe/autorisation.pdf',
     ])
-    expect(audit.enregistrer).toHaveBeenCalledWith(expect.objectContaining({ action: 'SCOUT_ANONYMISE', entiteId: 's1' }))
+    expect(audit.enregistrer).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'SCOUT_ANONYMISE', entiteId: 's1' }),
+    )
   })
 })
