@@ -25,7 +25,35 @@ SCOUT-NDPST est la plateforme d'une paroisse et de son groupe scout : un site pu
 - Espace de gestion : <http://localhost:3000/connexion>
 - Documentation de l'API : <http://localhost:4000/api/docs> (si `SWAGGER_ACTIF=true`)
 
-Comptes de démonstration (données fictives, `npm run db:seed`, relançable) : administrateur `ADMIN001A` / `Admin1234!` ; maîtrise `DEMOCG` (Chef de Groupe), `DEMOAG`, `DEMOSG`, `DEMORB` (Responsable Louveteaux), `DEMOAB`, `DEMOSB` ; mot de passe commun `Scout1234!`. `DEMOIN` est un compte désactivé (refus de connexion attendu). Le seed ne remplace jamais une identité de paroisse déjà renseignée.
+Comptes de démonstration fictifs : lancer `npm run db:seed` après les migrations. Le seed est relançable ; il réinitialise les mots de passe et permissions des comptes de démonstration. Il ne remplace jamais une identité de paroisse déjà renseignée.
+
+| Rôle / scénario | Identifiant |
+| --- | --- |
+| Administrateur technique | `ADMIN001A` |
+| Chef de Groupe | `DEMOCG` |
+| Adjoint de Groupe | `DEMOAG` |
+| Assistant de Groupe | `DEMOSG` |
+| Assistant de Groupe avec permission de gérer les contenus publics | `DEMOEDIT` |
+| Parent de deux enfants (Louveteaux et Éclaireurs) | téléphone `0000000101` |
+| Scout lié à une fiche Routiers | `DEMOSC` |
+| Compte désactivé : connexion refusée | `DEMOIN` |
+
+Mot de passe administrateur par défaut : `Admin1234!` (`ADMIN_PASSWORD`). Pour tous les autres comptes : `Scout1234!` (`SEED_MOT_DE_PASSE`). `SEED_DEMO=false` crée uniquement l'administrateur. Ces comptes sont réservés au développement ; le seed refuse de s'exécuter avec `NODE_ENV=production`.
+
+Les trois rôles d'encadrement sont disponibles dans chaque branche :
+
+| Branche | Responsable | Adjoint | Assistant |
+| --- | --- | --- | --- |
+| Oisillons | `DEMORB1` | `DEMOAB1` | `DEMOSB1` |
+| Louveteaux | `DEMORB` | `DEMOAB` | `DEMOSB2` |
+| Éclaireurs | `DEMORB3` | `DEMOAB3` | `DEMOSB` |
+| Cheminots | `DEMORB4` | `DEMOAB4` | `DEMOSB4` |
+| Routiers | `DEMORB5` | `DEMOAB5` | `DEMOSB5` |
+| Ressources adultes | `DEMORB6` | `DEMOAB6` | `DEMOSB6` |
+
+Chaque branche possède des scouts, une activité interne avec inscription, une réunion avec présence et un programme lié à cette activité. Pour tester les autorisations, comparer deux comptes de branches différentes, puis `DEMOSG` et `DEMOEDIT` pour les contenus publics. L'administrateur technique reste distinct de la direction scoute.
+
+Les comptes parent et scout sont créés avec leurs liens familiaux, mais leurs espaces restent fermés par `ESPACES_FAMILLES_ACTIFS=false` dans `packages/shared/src/perimetre.ts`.
 
 ### Commandes utiles
 

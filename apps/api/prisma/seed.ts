@@ -1,7 +1,8 @@
 // Seed — SCOUT-NDPST (développement local uniquement)
 // Crée le compte administrateur puis, sauf SEED_DEMO=false, un jeu de
 // démonstration FICTIF couvrant chaque rôle de l'application : un compte par
-// rôle de la maîtrise, un parent, un scout, un compte désactivé (refus de
+// rôle de la maîtrise dans chaque branche, un éditeur de contenu, un parent,
+// un scout, un compte désactivé (refus de
 // connexion attendu), des scouts de chaque branche, contacts d'urgence,
 // activités (dont une publique), réunion, cotisations, un article et un
 // événement historique de démonstration.
@@ -36,7 +37,7 @@ async function upsert(
   table: string,
   columns: ColumnValue[],
   horodatage: string[] = ['createdAt', 'updatedAt'],
-): Promise<Record<string, any>> {
+): Promise<Record<string, Val>> {
   const colNames = columns.map((c) => c.name)
   const placeholders = columns.map((c, i) => `$${i + 1}${c.cast ? `::${c.cast}` : ''}`)
 
@@ -92,8 +93,20 @@ const COMPTES: CompteDemo[] = [
     matricule: 'DEMORB',
     brancheType: 'LOUVETEAUX',
   },
-  { id: 'seed-u-adjb', prenom: 'Adjoint Louveteaux', role: 'ADJOINT_BRANCHE', matricule: 'DEMOAB', brancheType: 'LOUVETEAUX' },
-  { id: 'seed-u-assb', prenom: 'Assistant Éclaireurs', role: 'ASSISTANT_BRANCHE', matricule: 'DEMOSB', brancheType: 'ECLAIREURS' },
+  {
+    id: 'seed-u-adjb',
+    prenom: 'Adjoint Louveteaux',
+    role: 'ADJOINT_BRANCHE',
+    matricule: 'DEMOAB',
+    brancheType: 'LOUVETEAUX',
+  },
+  {
+    id: 'seed-u-assb',
+    prenom: 'Assistant Éclaireurs',
+    role: 'ASSISTANT_BRANCHE',
+    matricule: 'DEMOSB',
+    brancheType: 'ECLAIREURS',
+  },
   { id: 'seed-u-parent', prenom: 'Parent', role: 'PARENT', telephone: '0000000101' },
   { id: 'seed-u-scout', prenom: 'Scout', role: 'SCOUT', matricule: 'DEMOSC' },
   {
@@ -106,7 +119,14 @@ const COMPTES: CompteDemo[] = [
   },
 ]
 
-const ROLES_MAITRISE = ['CHEF_GROUPE', 'ADJOINT_GROUPE', 'ASSISTANT_GROUPE', 'RESPONSABLE_BRANCHE', 'ADJOINT_BRANCHE', 'ASSISTANT_BRANCHE']
+const ROLES_MAITRISE = [
+  'CHEF_GROUPE',
+  'ADJOINT_GROUPE',
+  'ASSISTANT_GROUPE',
+  'RESPONSABLE_BRANCHE',
+  'ADJOINT_BRANCHE',
+  'ASSISTANT_BRANCHE',
+]
 
 // Âge type par branche, pour des dates de naissance cohérentes.
 const AGES_BRANCHE: Record<string, number> = {
@@ -123,9 +143,36 @@ const NOMS_BRANCHE: Record<string, string> = {
   LOUVETEAUX: 'Louveteaux',
   ECLAIREURS: 'Éclaireurs',
   CHEMINOTS: 'Cheminots',
-  COMPAGNONS: 'Compagnons',
+  COMPAGNONS: 'Routiers',
   RESSOURCES_ADULTES: 'Ressources adultes',
 }
+
+// Conserver les identifiants historiques tout en couvrant chaque périmètre.
+for (const [index, [brancheType, nom]] of Object.entries(NOMS_BRANCHE).entries()) {
+  for (const [role, prefixe, libelle] of [
+    ['RESPONSABLE_BRANCHE', 'RB', 'Responsable'],
+    ['ADJOINT_BRANCHE', 'AB', 'Adjoint'],
+    ['ASSISTANT_BRANCHE', 'SB', 'Assistant'],
+  ]) {
+    if (COMPTES.some((c) => c.role === role && c.brancheType === brancheType && c.actif !== false)) continue
+    COMPTES.push({
+      id: `seed-u-${prefixe.toLowerCase()}-${brancheType.toLowerCase()}`,
+      prenom: `${libelle} ${nom}`,
+      role,
+      matricule: `DEMO${prefixe}${index + 1}`,
+      brancheType,
+    })
+  }
+}
+
+// Même rôle que DEMOSG, avec la permission CMS pour comparer les accès.
+COMPTES.push({
+  id: 'seed-u-editeur',
+  prenom: 'Assistant éditeur',
+  role: 'ASSISTANT_GROUPE',
+  matricule: 'DEMOEDIT',
+  editeurContenu: true,
+})
 
 type ScoutDemo = {
   id: string
@@ -141,7 +188,7 @@ const SCOUTS: ScoutDemo[] = [
     prenom: `Scout ${NOMS_BRANCHE[branche]}`,
     brancheType: branche,
     sexe: i % 2 ? 'FEMININ' : 'MASCULIN',
-    // Le compte SCOUT de démonstration est rattaché à la fiche Compagnons.
+    // Le compte SCOUT de démonstration est rattaché à la fiche Routiers.
     utilisateurId: branche === 'COMPAGNONS' ? 'seed-u-scout' : undefined,
   })),
   { id: 'seed-s-louveteaux-2', prenom: 'Scout Louveteaux bis', brancheType: 'LOUVETEAUX', sexe: 'FEMININ' },
@@ -271,7 +318,10 @@ async function seedDemo(motDePasseHache: string) {
     { name: 'id', value: 'seed-act-publique' },
     { name: 'titre', value: 'Journée portes ouvertes (démonstration)' },
     { name: 'description', value: 'Organisation interne : accueil des familles.' },
-    { name: 'descriptionPublique', value: 'Venez découvrir le scoutisme et rencontrer la maîtrise (contenu de démonstration).' },
+    {
+      name: 'descriptionPublique',
+      value: 'Venez découvrir le scoutisme et rencontrer la maîtrise (contenu de démonstration).',
+    },
     { name: 'dateDebut', value: dansJours(14, 9) },
     { name: 'dateFin', value: dansJours(14, 13) },
     { name: 'lieu', value: 'Cour de la paroisse' },
@@ -291,6 +341,63 @@ async function seedDemo(motDePasseHache: string) {
     { name: 'creePar', value: 'seed-u-chef' },
   ])
 
+  // Données propres à chaque branche : vérifier le filtrage et les accès
+  // croisés avec les responsables, adjoints et assistants correspondants.
+  for (const [brancheType, nom] of Object.entries(NOMS_BRANCHE)) {
+    const suffixe = brancheType.toLowerCase()
+    const responsable = COMPTES.find((c) => c.role === 'RESPONSABLE_BRANCHE' && c.brancheType === brancheType)!
+    const scoutId = `seed-s-${suffixe}`
+    await upsert('Activite', [
+      { name: 'id', value: `seed-act-${suffixe}` },
+      { name: 'titre', value: `Atelier ${nom} (démonstration)` },
+      { name: 'description', value: 'Activité interne pour tester les accès de cette branche.' },
+      { name: 'dateDebut', value: dansJours(5) },
+      { name: 'dateFin', value: dansJours(5, 12) },
+      { name: 'type', value: 'FORMATION', cast: '"TypeActivite"' },
+      { name: 'brancheType', value: brancheType, cast: '"BrancheType"' },
+      { name: 'publique', value: false },
+      { name: 'creePar', value: responsable.id },
+      { name: 'responsableId', value: responsable.id },
+    ])
+    await upsert('Presence', [
+      { name: 'id', value: `seed-part-${suffixe}` },
+      { name: 'scoutId', value: scoutId },
+      { name: 'activiteId', value: `seed-act-${suffixe}` },
+      { name: 'present', value: false },
+    ])
+    await upsert('JourReunion', [
+      { name: 'id', value: `seed-reu-${suffixe}` },
+      { name: 'titre', value: `Réunion ${nom} (démonstration)` },
+      { name: 'brancheType', value: brancheType, cast: '"BrancheType"' },
+      { name: 'dateHeure', value: dansJours(-3, 15) },
+      { name: 'dureeMinutes', value: 90 },
+      { name: 'statut', value: 'TERMINEE', cast: '"StatutReunion"' },
+      { name: 'creePar', value: responsable.id },
+    ])
+    await upsert('PresenceReunion', [
+      { name: 'id', value: `seed-pres-${suffixe}` },
+      { name: 'jourReunionId', value: `seed-reu-${suffixe}` },
+      { name: 'scoutId', value: scoutId },
+      { name: 'statut', value: 'PRESENT', cast: '"StatutPresenceReunion"' },
+      { name: 'marqueParId', value: responsable.id },
+    ])
+    await upsert('Programme', [
+      { name: 'id', value: `seed-prog-${suffixe}` },
+      { name: 'titre', value: `Programme ${nom} (démonstration)` },
+      { name: 'brancheType', value: brancheType, cast: '"BrancheType"' },
+      { name: 'periodeDebut', value: dansJours(0) },
+      { name: 'periodeFin', value: dansJours(30) },
+      { name: 'creePar', value: responsable.id },
+    ])
+    await upsert('LigneProgramme', [
+      { name: 'id', value: `seed-ligne-${suffixe}` },
+      { name: 'theme', value: 'Découverte et entraide (démonstration)' },
+      { name: 'programmeId', value: `seed-prog-${suffixe}` },
+      { name: 'activiteId', value: `seed-act-${suffixe}` },
+      { name: 'datePrevue', value: dansJours(5) },
+    ])
+  }
+
   // Contenus publics de démonstration, explicitement signalés comme tels.
   await upsert(
     'CategoriePublication',
@@ -308,7 +415,8 @@ async function seedDemo(motDePasseHache: string) {
     { name: 'resume', value: 'Contenu fictif créé par le seed de développement.' },
     {
       name: 'contenu',
-      value: "## Un article d'exemple\nCe texte sert uniquement à tester le site en développement.\n\n- Il est publié\n- Il appartient à une catégorie",
+      value:
+        "## Un article d'exemple\nCe texte sert uniquement à tester le site en développement.\n\n- Il est publié\n- Il appartient à une catégorie",
     },
     { name: 'statut', value: 'PUBLIEE', cast: '"StatutPublication"' },
     { name: 'datePublication', value: dansJours(-2) },
