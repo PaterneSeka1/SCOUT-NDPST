@@ -1,3 +1,4 @@
+import type { MandatSession, PermissionAdhesion } from '@scout/shared'
 import type { Request } from 'express'
 
 // Identité vérifiée contre la session et le compte courant à chaque requête.
@@ -8,6 +9,11 @@ export interface UtilisateurSession {
   nom: string
   prenom: string
   role: string
+  roleTechnique?: string
+  mandatId?: string
+  brancheType?: string | null
+  mandats?: MandatSession[]
+  habilitationsAdhesion?: { permission: PermissionAdhesion; brancheType: string | null }[]
   // Permission explicite de gérer les contenus publics (voir peutGererContenus).
   editeurContenu: boolean
   doitChangerMotDePasse?: boolean

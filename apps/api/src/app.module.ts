@@ -1,3 +1,4 @@
+import { AdhesionsNationalesModule } from './modules/adhesions-nationales/adhesions-nationales.module'
 import { Module } from '@nestjs/common'
 import { APP_FILTER, APP_GUARD } from '@nestjs/core'
 import { JwtModule } from '@nestjs/jwt'
@@ -41,6 +42,7 @@ import { SanteController } from './sante/sante.controller'
     ConfigurationModule,
     ActivitesModule,
     AdhesionsModule,
+    AdhesionsNationalesModule,
     AdminModule,
     CalendrierModule,
     CotisationsModule,
