@@ -43,7 +43,7 @@ export default async function PageBranche({ params }: Props) {
             <ImagePublique src={branche.imageUrl} alt="" prioritaire />
           </div>
         )}
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-profond via-profond/85 to-profond/40" aria-hidden />
+        <div className="absolute inset-0 -z-10 bg-linear-to-r from-profond via-profond/85 to-profond/40" aria-hidden />
         <div className="motif-topo-clair absolute inset-0 -z-10 opacity-[0.07]" aria-hidden />
         <span className="absolute inset-x-0 bottom-0 h-1.5 bg-(--accent-branche)" aria-hidden />
         <div className="mx-auto max-w-7xl px-4 pt-10 pb-12 sm:px-6 sm:pt-14 sm:pb-16 lg:px-8">
@@ -80,7 +80,7 @@ export default async function PageBranche({ params }: Props) {
           )}
           {branche.imageUrl && branche.imageAlt && (
             <figure className="mt-10 overflow-hidden rounded-lg">
-              <div className="aspect-[16/9]">
+              <div className="aspect-video">
                 <ImagePublique src={branche.imageUrl} alt={branche.imageAlt} />
               </div>
             </figure>

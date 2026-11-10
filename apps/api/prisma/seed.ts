@@ -130,12 +130,12 @@ const ROLES_MAITRISE = [
 
 // Âge type par branche, pour des dates de naissance cohérentes.
 const AGES_BRANCHE: Record<string, number> = {
-  OISILLONS: 7,
-  LOUVETEAUX: 9,
-  ECLAIREURS: 13,
-  CHEMINOTS: 16,
-  COMPAGNONS: 19,
-  RESSOURCES_ADULTES: 23,
+  OISILLONS: 6,
+  LOUVETEAUX: 8,
+  ECLAIREURS: 12,
+  CHEMINOTS: 15,
+  COMPAGNONS: 18,
+  RESSOURCES_ADULTES: 21,
 }
 
 const NOMS_BRANCHE: Record<string, string> = {

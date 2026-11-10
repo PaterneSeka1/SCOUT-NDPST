@@ -56,7 +56,7 @@ export default async function PageBranches() {
               >
                 {b.imageUrl ? (
                   <div className={`overflow-hidden rounded-lg lg:col-span-6 ${i % 2 === 1 ? 'lg:order-2' : ''}`}>
-                    <div className="aspect-[3/2]">
+                    <div className="aspect-3/2">
                       <ImagePublique src={b.imageUrl} alt={b.imageAlt ?? ''} />
                     </div>
                   </div>
